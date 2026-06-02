@@ -1,0 +1,14 @@
+@import url('base.css');
+@import url('layout.css');
+
+/* Компоненти */
+@import url('components/ui.css');
+@import url('components/comic-card.css');
+@import url('components/pagination.css');
+@import url('components/filter-bar.css');
+@import url('components/skeleton.css');
+
+/* Сторінки */
+@import url('views/home.css');
+@import url('views/catalog.css');
+@import url('views/volume-detail.css');

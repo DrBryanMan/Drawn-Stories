@@ -1,0 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+/* ── Variables ──────────────────────────────────────── */
+:root {
+  /* Базові світлі кольори (Manga Pulse Light) */
+  --bg:           #f2f4f8;
+  --bg-2:         #ffffff;
+  --bg-card:      #ffffff;
+  --bg-card-h:    #edf0f7;
+  --bg-input:     #ffffff;
+  --border:       #d4dae8;
+  --border-s:     #e8ecf5;
+  
+  --text:         #1a2235;
+  --text-2:       #5a6b88;
+  --text-muted:   #9caabb;
+
+  --accent:       #2563eb;
+  --accent-h:     #1d4ed8;
+  --accent-glow:  #2563eb18;
+  
+  --gold:         #b45309;
+  --green:        #0d9e5e;
+  --red:          #dc2626;
+  --orange:       #c2410c;
+  --purple:       #7c3aed;
+  --pink:         #db2777;
+  --cyan:         #0e7490;
+
+  --font:         'DM Sans', sans-serif;
+  --font-head:    'DM Mono', sans-serif;
+  --font-mono:    'DM Mono', monospace;
+
+  --r:            8px;
+  --r-s:          4px;
+  --r-lg:         12px;
+  --r-xl:         16px;
+  --t:            150ms ease;
+  --t-slow:       250ms ease;
+  --container:    1140px;
+}
+
+/* ── Reset ──────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+main { animation: fadeIn .22s ease; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-h); }
+img { display: block; max-width: 100%; }
+button { font-family: var(--font); cursor: pointer; border: none; background: none; }
+
+/* ── Layout ─────────────────────────────────────────── */
+.container   { max-width: var(--container); margin: 0 auto; padding: 0 24px; }
+.hidden      { display: none !important; }
+
+/* ── App shell ──────────────────────────────────────── */
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+}
+
+#app > [data-shell-main] {
+  flex: 1;
+}
+
+/* ── Fade in ─────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}

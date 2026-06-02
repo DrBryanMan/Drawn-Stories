@@ -1,0 +1,48 @@
+/* ══════════════════════════════════════════════════════
+   COMIC GRID CARD
+══════════════════════════════════════════════════════ */
+.comic-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+.comic-card {
+  background: var(--bg-card); border: 1px solid var(--border-s);
+  border-radius: var(--r-xl); overflow: hidden;
+  transition: all var(--t); cursor: pointer; text-decoration: none; display: block;
+}
+.comic-card:hover { background: var(--bg-card-h); border-color: var(--border); transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,.1); }
+.comic-cover {
+  width: 100%; aspect-ratio: 2/3; object-fit: cover;
+  background: var(--bg-2); display: block;
+}
+.comic-cover-placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 2/3;
+  background: var(--bg-2);
+  color: var(--text-muted);
+}
+.comic-cover-placeholder svg {
+  width: 32px; height: 32px; opacity: .4;
+}
+.comic-body   { padding: 10px 12px; }
+.comic-title  { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.comic-meta   { font-size: 11px; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; justify-content: space-between; }
+.comic-year   { font-family: var(--font-mono); font-size: 12px; color: var(--text-2); }
+.comic-lang   { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+.comic-publisher { font-size: 11px; color: var(--text-2); margin-top: 4px; }
+
+/* Empty state */
+.empty-state {
+  grid-column: 1 / -1;
+  text-align: center; padding: 60px 20px;
+  color: var(--text-muted);
+}
+.empty-state svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: .4; }
+.empty-state h3 { font-family: var(--font-head); font-size: 16px; color: var(--text-2); margin-bottom: 6px; }
+.empty-state p { font-size: 13px; }
+
+@media (max-width: 768px) {
+  .comic-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 480px) {
+  .comic-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+}
