@@ -94,6 +94,7 @@ export async function renderCatalog(main, query = {}) {
   let sortField = query.sort || DEFAULT_SORT_FIELD;
   let sortOrder = query.order_dir || DEFAULT_SORT_ORDER;
   let contentType = query.content_type || 'comics';
+  let viewType = query.view_type || 'series';
   let collectionOnly = query.collection === 'true';
   let filtersOpen = readStoredFiltersPanelState();
   let selectedPublishers = [];
@@ -166,10 +167,12 @@ export async function renderCatalog(main, query = {}) {
 
         <div class="catalog-primary-actions" aria-label="Основні фільтри каталогу">
           <div class="catalog-segmented" role="group" aria-label="Тип контенту">
-            <button class="catalog-segment is-active" type="button" data-content-type="comics">Комікси</button>
-            <button class="catalog-segment" type="button" data-content-type="manga">Манга</button>
+            <button class="catalog-segment" type="button" data-view-type="series">Серії</button>
+            <button class="catalog-segment" type="button" data-view-type="issues">Випуски</button>
           </div>
-          <button class="catalog-filter-chip" type="button" id="collection-filter-btn" aria-pressed="false">Збірники</button>
+          <button class="catalog-filter-chip" type="button" id="collection-filter-btn" aria-pressed="false">
+            ${contentType === 'manga' ? 'Томи' : 'Збірники'}
+          </button>
         </div>
       </div>
 
@@ -248,7 +251,7 @@ export async function renderCatalog(main, query = {}) {
   const sortControls = document.getElementById('catalog-sort-controls');
   const sortQuickSlot = document.getElementById('catalog-sort-quick-slot');
   const sortPanelSlot = document.getElementById('catalog-sort-panel-slot');
-  const typeButtons = [...document.querySelectorAll('[data-content-type]')];
+  const viewTypeButtons = [...document.querySelectorAll('[data-view-type]')];
   const collectionBtn = document.getElementById('collection-filter-btn');
   const breadcrumbCurrent = document.getElementById('catalog-breadcrumb-current');
   const publisherFilterDropdownWrap = document.getElementById('publisher-filter-dropdown-wrap');
@@ -263,7 +266,7 @@ export async function renderCatalog(main, query = {}) {
   const actionsPanel = document.getElementById('catalog-actions-panel');
 
   const reloadCatalog = () => {
-    fetchAndRender(sortField, sortOrder, contentType, collectionOnly, selectedPublishers, selectedThemes, excludedThemes);
+    fetchAndRender(sortField, sortOrder, contentType, viewType, collectionOnly, selectedPublishers, selectedThemes, excludedThemes);
   };
 
   const positionSidebarDropdown = (wrap, list) => {
@@ -325,14 +328,15 @@ export async function renderCatalog(main, query = {}) {
   };
 
   const updateCatalogControls = () => {
-    typeButtons.forEach((button) => {
-      button.classList.toggle('is-active', button.dataset.contentType === contentType);
+    viewTypeButtons.forEach((button) => {
+      button.classList.toggle('is-active', button.dataset.viewType === viewType);
     });
     collectionBtn.classList.toggle('is-active', collectionOnly);
     collectionBtn.setAttribute('aria-pressed', String(collectionOnly));
-    breadcrumbCurrent.textContent = collectionOnly
-      ? `${contentType === 'manga' ? 'Манга' : 'Комікси'} / Збірники`
-      : contentType === 'manga' ? 'Манга' : 'Комікси';
+    
+    const baseLabel = contentType === 'manga' ? 'Манга' : 'Комікси';
+    const viewLabel = viewType === 'series' ? 'Серії' : 'Випуски';
+    breadcrumbCurrent.textContent = `${baseLabel} / ${viewLabel}${collectionOnly ? (contentType === 'manga' ? ' / Томи' : ' / Збірники') : ''}`;
   };
 
   const renderSelectedPublishers = () => {
@@ -518,9 +522,9 @@ export async function renderCatalog(main, query = {}) {
     setFiltersPanelOpen(!filtersOpen);
   });
 
-  typeButtons.forEach((button) => {
+  viewTypeButtons.forEach((button) => {
     button.addEventListener('click', () => {
-      contentType = button.dataset.contentType;
+      viewType = button.dataset.viewType;
       paginator.reset();
       updateCatalogControls();
       reloadCatalog();
@@ -669,6 +673,7 @@ async function fetchAndRender(
   sort,
   order = 'asc',
   contentType = 'comics',
+  viewType = 'series',
   collectionOnly = false,
   publishers = [],
   themes = [],
@@ -702,10 +707,12 @@ async function fetchAndRender(
     const data = await API.get('/catalog', {
       page: paginator.getPage(),
       limit: paginator.getPageSize(),
+      cursor: paginator.getCursor() || undefined,
       search: searchQuery || undefined,
       sort: sort,
       order_dir: order,
       content_type: contentType,
+      view_type: viewType,
       collection: collectionOnly ? 'true' : undefined,
       publisher_ids: publishers.length ? publishers.map((publisher) => publisher.id).join(',') : undefined,
       theme_ids: themes.length ? themes.map((theme) => theme.id).join(',') : undefined,
@@ -713,6 +720,7 @@ async function fetchAndRender(
     });
 
     if (countEl) countEl.textContent = data.total.toLocaleString('uk-UA');
+    paginator.setNextCursor(data.next_cursor);
 
     // Render cards
     grid.innerHTML = '';
@@ -733,8 +741,8 @@ async function fetchAndRender(
     // Render pagination
     paginationWrap.innerHTML = '';
     if (data.pages > 1) {
-      const nav = paginator.render(data.total, () => {
-        fetchAndRender(sort, order, contentType, collectionOnly, publishers, themes, excludedThemes);
+      const nav = paginator.render(data.total, (cursor) => {
+        fetchAndRender(sort, order, contentType, viewType, collectionOnly, publishers, themes, excludedThemes);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
       paginationWrap.appendChild(nav);

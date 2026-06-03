@@ -3,9 +3,30 @@
 ══════════════════════════════════════════════════════ */
 .comic-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
 .comic-card {
+  position: relative;
   background: var(--bg-card); border: 1px solid var(--border-s);
   border-radius: var(--r-xl); overflow: hidden;
   transition: all var(--t); cursor: pointer; text-decoration: none; display: block;
+}
+
+.comic-type-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 3px 8px;
+  border-radius: var(--r-s);
+  background: rgba(15, 23, 42, .75);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  z-index: 2;
+}
+
+.comic-type-badge--collection {
+  background: color-mix(in srgb, var(--purple) 85%, transparent);
 }
 .comic-card:hover { background: var(--bg-card-h); border-color: var(--border); transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,.1); }
 .comic-cover {

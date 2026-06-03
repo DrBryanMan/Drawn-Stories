@@ -3,17 +3,13 @@ import { router } from './helpers/router.js';
 // ── Nav config ───────────────────────────────────────
 const NAV = [
   {
-    route: '/',
-    href: '#/',
-    label: 'Головна',
-    icon: `<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>`,
-  },
-  {
-    route: '/catalog',
-    href: '#/catalog',
     label: 'Каталог',
     icon: `<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
            <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>`,
+    children: [
+      { label: 'Комікси', href: '#/catalog?content_type=comics', route: '/catalog', contentType: 'comics' },
+      { label: 'Манга', href: '#/catalog?content_type=manga', route: '/catalog', contentType: 'manga' },
+    ]
   },
 ];
 
@@ -39,11 +35,21 @@ export function initShell() {
         </a>
 
         <nav class="header-nav" id="main-nav">
-          ${NAV.map(({ route, href, label, icon: d }) =>
-    `<a class="nav-link" data-route="${route}" href="${href}">
-              ${icon(d)}<span>${label}</span>
-            </a>`
-  ).join('')}
+          ${NAV.map(item => `
+            <div class="nav-dropdown">
+              <a class="nav-link nav-dropdown-trigger" href="#/catalog">
+                ${icon(item.icon)}<span>${item.label}</span>
+                ${icon('<path d="m6 9 6 6 6-6"/>')}
+              </a>
+              <div class="nav-dropdown-content">
+                ${item.children.map(child => `
+                  <a class="nav-dropdown-link" href="${child.href}" data-route="${child.route}" data-content-type="${child.contentType}">
+                    ${child.label}
+                  </a>
+                `).join('')}
+              </div>
+            </div>
+          `).join('')}
         </nav>
 
         <div class="header-actions">
@@ -61,18 +67,46 @@ export function initShell() {
     </footer>
   `;
 
-router.onChange((path) => {
-  syncActiveNav(path);
+  // ── Active nav ───────────────────────────────────────
+  const navDropdowns = document.querySelectorAll('.nav-dropdown');
+  navDropdowns.forEach(dropdown => {
+    let timeout = null;
+    const trigger = dropdown.querySelector('.nav-dropdown-trigger');
+    const content = dropdown.querySelector('.nav-dropdown-content');
+
+    dropdown.addEventListener('mouseenter', () => {
+      clearTimeout(timeout);
+      dropdown.classList.add('is-open');
+    });
+
+    dropdown.addEventListener('mouseleave', () => {
+      timeout = setTimeout(() => {
+        dropdown.classList.remove('is-open');
+      }, 200);
+    });
+  });
+
+router.onChange((path, query) => {
+  syncActiveNav(path, query);
   window.scrollTo(0, 0);
 });
   return document.querySelector('[data-shell-main]');
 }
 
 // ── Active nav ───────────────────────────────────────
-function syncActiveNav(path) {
-  document.querySelectorAll('.nav-link[data-route]').forEach(el => {
-    const r = el.dataset.route;
-    const active = r === '/' ? path === '/' : path.startsWith(r);
-    el.classList.toggle('active', active);
+function syncActiveNav(path, query) {
+  const currentContentType = query.content_type || 'comics';
+  
+  document.querySelectorAll('.nav-dropdown-link').forEach(el => {
+    const route = el.dataset.route;
+    const contentType = el.dataset.contentType;
+    const isActive = path === route && currentContentType === contentType;
+    el.classList.toggle('active', isActive);
+  });
+
+  // Highlight parent if any child is active
+  document.querySelectorAll('.nav-dropdown').forEach(dropdown => {
+    const hasActive = dropdown.querySelector('.nav-dropdown-link.active');
+    dropdown.querySelector('.nav-dropdown-trigger').classList.toggle('active', !!hasActive);
   });
 }

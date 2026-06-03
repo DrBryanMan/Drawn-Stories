@@ -191,56 +191,66 @@ async def get_volume_collections_from_issues(volume_id: int):
     if not volume:
         return {"data": []}
 
-    is_manga_vol = not volume.get("cv_id") and bool(volume.get("hikka_slug"))
-    
-    if is_manga_vol:
-        collections = db.get_all(
-            """
-            SELECT DISTINCT c.*, pv.id as parent_vol_id, pv.name as parent_vol_name, pv.lang as parent_vol_lang
-            FROM collections c
-            LEFT JOIN volumes pv ON c.volume_id = pv.id
-            WHERE c.volume_id = ?
-            ORDER BY pv.name ASC, CAST(c.issue_number AS REAL) ASC, c.name ASC
-            """,
-            [volume_id]
-        )
-    else:
-        collections = db.get_all(
-            """
-            SELECT DISTINCT c.*, pv.id as parent_vol_id, pv.name as parent_vol_name, pv.lang as parent_vol_lang
-            FROM collections c
-            JOIN collection_issues ci ON c.id = ci.collection_id
-            JOIN issues i ON ci.issue_id = i.id
-            LEFT JOIN volumes pv ON (c.cv_vol_id = pv.cv_id AND c.cv_vol_id IS NOT NULL) OR (c.volume_id = pv.id AND c.volume_id IS NOT NULL)
-            WHERE i.cv_vol_id = ? AND i.cv_vol_id IS NOT NULL
-            ORDER BY pv.name ASC, CAST(c.issue_number AS REAL) ASC, c.name ASC
-            """,
-            [volume.get("cv_id")]
-        )
+    cv_id = volume.get("cv_id")
+    vol_lang = volume.get("lang")
 
-    # For each collection, find the issue numbers from THIS volume
+    # Find related volumes in the same language (including current volume)
+    lang_clause = "AND v.lang = ?" if vol_lang else ""
+    lang_params = [vol_lang] if vol_lang else []
+
+    related = db.get_all(
+        f"""
+        SELECT DISTINCT v.id FROM volume_translations vt
+        JOIN volumes v ON v.id = vt.child_id
+        WHERE (
+            vt.parent_id = ?
+            OR vt.parent_id IN (SELECT parent_id FROM volume_translations WHERE child_id = ?)
+        )
+        AND v.id != ?
+        {lang_clause}
+        """,
+        [volume_id, volume_id, volume_id] + lang_params,
+    )
+
+    vol_ids = [volume_id] + [r["id"] for r in related]
+    placeholders = ",".join("?" * len(vol_ids))
+    
+    cv_clause = "OR (i.cv_vol_id = ? AND i.cv_vol_id IS NOT NULL)" if cv_id else ""
+    cv_params = [cv_id] if cv_id else []
+
+    # Get collections linked directly or via issues
+    collections = db.get_all(
+        f"""
+        SELECT DISTINCT c.*, pv.id as parent_vol_id, pv.name as parent_vol_name, pv.lang as parent_vol_lang
+        FROM collections c
+        LEFT JOIN collection_issues ci ON c.id = ci.collection_id
+        LEFT JOIN issues i ON ci.issue_id = i.id
+        LEFT JOIN volumes pv ON (c.volume_id = pv.id) OR (c.cv_vol_id = pv.cv_id AND c.cv_vol_id IS NOT NULL)
+        WHERE (
+            c.volume_id IN ({placeholders})
+            OR i.ds_vol_id IN ({placeholders})
+            {cv_clause}
+        )
+        { "AND (pv.lang = ? OR pv.lang IS NULL)" if vol_lang else "" }
+        ORDER BY pv.name ASC, CAST(c.issue_number AS REAL) ASC, c.name ASC
+        """,
+        vol_ids + vol_ids + cv_params + ([vol_lang] if vol_lang else [])
+    )
+
+    # For each collection, find the issue numbers from THIS volume context
     result = []
     for col in collections:
-        if is_manga_vol:
-            nums = db.get_all(
-                """
-                SELECT i.issue_number FROM collection_issues ci
-                JOIN issues i ON ci.issue_id = i.id
-                WHERE ci.collection_id = ? AND i.ds_vol_id = ? AND i.issue_number IS NOT NULL
-                ORDER BY CAST(i.issue_number AS REAL) ASC
-                """,
-                [col["id"], volume_id]
-            )
-        else:
-            nums = db.get_all(
-                """
-                SELECT i.issue_number FROM collection_issues ci
-                JOIN issues i ON ci.issue_id = i.id
-                WHERE ci.collection_id = ? AND i.cv_vol_id = ? AND i.issue_number IS NOT NULL
-                ORDER BY CAST(i.issue_number AS REAL) ASC
-                """,
-                [col["id"], volume.get("cv_id")]
-            )
+        nums = db.get_all(
+            f"""
+            SELECT i.issue_number FROM collection_issues ci
+            JOIN issues i ON ci.issue_id = i.id
+            WHERE ci.collection_id = ? 
+              AND (i.ds_vol_id IN ({placeholders}) {cv_clause})
+              AND i.issue_number IS NOT NULL
+            ORDER BY CAST(i.issue_number AS REAL) ASC
+            """,
+            [col["id"]] + vol_ids + cv_params
+        )
         col["volume_issue_numbers"] = [r["issue_number"] for r in nums]
         result.append(col)
 

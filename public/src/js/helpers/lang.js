@@ -32,9 +32,15 @@ export const LANG_MAP = {
 };
 
 export function langDisplay(code) {
-    if (!code) return '';
-    const entry = LANG_MAP[code.toLowerCase()];
-    // The user said "використовуй монотонні Lucide Icon, а не емоджі" (use monotone Lucide icons, not emoji)
-    // So I will return ONLY the label here, the icon will be handled by the SVG in the view.
-    return code
+    if (!code) return { code: '', name: '' };
+    const lower = code.toLowerCase();
+    const entry = LANG_MAP[lower];
+    return {
+        code: lower,
+        name: entry ? entry.label : code
+    };
+}
+
+export function langName(code) {
+    return langDisplay(code).name;
 }

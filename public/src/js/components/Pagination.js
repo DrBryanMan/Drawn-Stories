@@ -3,6 +3,7 @@
  */
 export function createPaginator({ pageSize = 20 } = {}) {
   let currentPage = 1;
+  let nextCursor = null;
 
   function clampPage(page, totalPages = Number.POSITIVE_INFINITY) {
     const parsed = Number.parseInt(page, 10);
@@ -12,17 +13,22 @@ export function createPaginator({ pageSize = 20 } = {}) {
 
   function reset() {
     currentPage = 1;
+    nextCursor = null;
   }
 
   function setPage(page) {
     currentPage = clampPage(page);
   }
 
+  function setNextCursor(cursor) {
+    nextCursor = cursor;
+  }
+
   function render(total, onChange) {
     const totalPages  = Math.ceil(total / pageSize) || 1;
     currentPage       = clampPage(currentPage, totalPages);
     const hasPrev     = currentPage > 1;
-    const hasNext     = currentPage < totalPages;
+    const hasNext     = !!nextCursor || currentPage < totalPages;
     const from        = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
     const to          = Math.min(currentPage * pageSize, total);
 
@@ -41,6 +47,9 @@ export function createPaginator({ pageSize = 20 } = {}) {
     prevBtn.addEventListener('click', () => {
       if (!hasPrev) return;
       currentPage--;
+      // For simplicity in this SPA, we reset cursor on prev and let API handle it via offset
+      // or we could store a stack of cursors. For now, we only use cursor for "Next"
+      nextCursor = null; 
       onChange();
     });
 
@@ -59,6 +68,7 @@ export function createPaginator({ pageSize = 20 } = {}) {
       pageInput.value = String(nextPage);
       if (nextPage === currentPage) return;
       currentPage = nextPage;
+      nextCursor = null;
       onChange();
     };
 
@@ -103,7 +113,8 @@ export function createPaginator({ pageSize = 20 } = {}) {
     nextBtn.addEventListener('click', () => {
       if (!hasNext) return;
       currentPage++;
-      onChange();
+      // Pass the current cursor to the onChange callback
+      onChange(nextCursor);
     });
 
     nav.append(prevBtn, info, nextBtn);
@@ -113,8 +124,10 @@ export function createPaginator({ pageSize = 20 } = {}) {
   return {
     reset,
     setPage,
+    setNextCursor,
     render,
     getPageSize: () => pageSize,
     getPage:     () => currentPage,
+    getCursor:   () => nextCursor,
   };
 }

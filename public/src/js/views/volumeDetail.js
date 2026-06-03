@@ -1,6 +1,7 @@
 import { API } from '../helpers/api.js';
 import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
-import { langDisplay } from '../helpers/lang.js';
+import { langDisplay, langName } from '../helpers/lang.js';
+import { createPaginator } from '../components/Pagination.js';
 
 let currentItems = [];
 let currentView = localStorage.getItem('ds-volume-view') || 'grid';
@@ -112,6 +113,7 @@ function relationCardHTML(item, { title, icon }) {
     const cover = comicVineImageUrl(item.cv_img || item.hikka_img);
     const name = escapeHtmlAttribute(item.name_uk || item.name || 'Без назви');
     const originalName = item.name_uk && item.name_uk !== item.name ? item.name : '';
+    const lang = langDisplay(item.lang);
 
     return `
         <a class="volume-relation-card" href="#/volumes/${item.id}">
@@ -123,7 +125,7 @@ function relationCardHTML(item, { title, icon }) {
             <span class="volume-relation-content">
                 <span class="volume-relation-label">${icon}${title}</span>
                 <span class="volume-relation-title">
-                    ${item.lang ? `<span class="volume-relation-lang">${escapeHtmlAttribute(item.lang)}</span>` : ''}
+                    ${lang.code ? `<span class="volume-relation-lang">${escapeHtmlAttribute(lang.code)}</span>` : ''}
                     ${name}
                 </span>
                 ${originalName ? `<span class="volume-relation-meta">${escapeHtmlAttribute(originalName)}</span>` : ''}
@@ -151,6 +153,7 @@ function translationCardHTML(item) {
     const title = escapeHtmlAttribute(item.name_uk || item.name || 'Без назви');
     const originalTitle = item.name_uk && item.name_uk !== item.name ? item.name : '';
     const collectionsCount = Number(item.collections_count || 0);
+    const lang = langDisplay(item.lang);
 
     return `
         <a class="volume-translation-card" href="#/volumes/${item.id}">
@@ -160,7 +163,7 @@ function translationCardHTML(item) {
                     : ICON.bookOpen}
             </span>
             <span class="volume-translation-body">
-                <span class="volume-translation-title">${item.lang ? `<span class="volume-translation-lang">${langDisplay(item.lang)}</span>` : ''} ${title}</span>
+                <span class="volume-translation-title">${lang.code ? `<span class="volume-translation-lang">${escapeHtmlAttribute(lang.code)}</span>` : ''} ${title}</span>
                 ${originalTitle ? `<span class="volume-translation-original">${escapeHtmlAttribute(originalTitle)}</span>` : ''}
                 <span class="volume-translation-count">${collectionsCount.toLocaleString('uk-UA')} збірн.</span>
             </span>
@@ -420,7 +423,7 @@ export async function renderVolumeDetail(main, params = {}) {
                                 ${volume.lang ? `
                                     <span class="volume-badge volume-lang-badge" title="Мова видання">
                                         ${ICON.languages}
-                                        ${langDisplay(volume.lang)}
+                                        ${langName(volume.lang)}
                                     </span>
                                 ` : ''}
                                 <span class="volume-badge volume-year-badge" title="Період видання">
@@ -492,6 +495,7 @@ export async function renderVolumeDetail(main, params = {}) {
                             </div>
 
                             <div class="volume-toolbar-right" id="issues-toolbar-right">
+                                <div id="volume-pagination-container"></div>
                                 <div class="filter-group volume-sort-group">
                                     <select class="filter-select" id="volume-issue-sort">
                                         <button>
@@ -530,19 +534,53 @@ export async function renderVolumeDetail(main, params = {}) {
         const viewSwitcher = document.getElementById('issues-view-switcher');
         const toolbarRight = document.getElementById('issues-toolbar-right');
         const sortSelect = document.getElementById('volume-issue-sort');
+        const paginationContainer = document.getElementById('volume-pagination-container');
+        const sortGroup = main.querySelector('.volume-sort-group');
+
+        let currentTab = 'issues';
+        let currentCollections = [];
+        const paginator = createPaginator({ pageSize: 12 });
 
         const refreshItems = () => {
-            const sorted = sortItems([...currentItems], sortSelect.value);
+            const isIssues = currentTab === 'issues';
+            const source = isIssues ? currentItems : currentCollections;
+            const total = source.length;
+
+            // Update pagination UI
+            paginationContainer.innerHTML = '';
+            if (total > paginator.getPageSize()) {
+                paginationContainer.appendChild(paginator.render(total, () => {
+                    refreshItems();
+                    window.scrollTo({ top: main.querySelector('.volume-issues-section').offsetTop - 80, behavior: 'smooth' });
+                }));
+            }
+
+            const page = paginator.getPage();
+            const pageSize = paginator.getPageSize();
+            const start = (page - 1) * pageSize;
+            const end = start + pageSize;
+
             itemsView.innerHTML = '';
-            renderItems(itemsView, sorted);
+            if (isIssues) {
+                const sorted = sortItems([...currentItems], sortSelect.value);
+                const sliced = sorted.slice(start, end);
+                renderItems(itemsView, sliced);
+            } else {
+                const sliced = currentCollections.slice(start, end);
+                renderCollectionsFromIssues(itemsView, sliced, {
+                    emptyMessage: isMangaWithMagazine ? 'Для цього тому немає томів' : 'Цей том не входить у жоден відомий збірник',
+                    typeLabel: isMangaWithMagazine ? 'Том' : 'Збірник',
+                });
+            }
         };
 
         const switchTab = async (tabName) => {
+            currentTab = tabName;
+            paginator.reset();
             tabs.forEach(t => t.classList.toggle('is-active', t.dataset.tab === tabName));
 
-            // Show sort/view only for issues tab
-            if (toolbarRight) {
-                toolbarRight.style.display = tabName === 'issues' ? 'flex' : 'none';
+            if (sortGroup) {
+                sortGroup.style.display = tabName === 'issues' ? 'block' : 'none';
             }
 
             itemsView.classList.remove('is-visible');
@@ -551,16 +589,17 @@ export async function renderVolumeDetail(main, params = {}) {
                 if (tabName === 'issues') {
                     refreshItems();
                 } else {
-                    itemsView.innerHTML = `<div class="loading-state">Завантаження ${isMangaWithMagazine ? 'томів' : 'збірників'}...</div>`;
-                    try {
-                        const response = await API.get(`/volumes/${volumeId}/collections-from-issues`);
-                        renderCollectionsFromIssues(itemsView, response.data || [], {
-                            emptyMessage: isMangaWithMagazine ? 'Для цього тому немає томів' : 'Цей том не входить у жоден відомий збірник',
-                            typeLabel: isMangaWithMagazine ? 'Том' : 'Збірник',
-                        });
-                    } catch (err) {
-                        itemsView.innerHTML = `<div class="error-state">Помилка: ${err.message}</div>`;
+                    if (currentCollections.length === 0) {
+                        itemsView.innerHTML = `<div class="loading-state">Завантаження ${isMangaWithMagazine ? 'томів' : 'збірників'}...</div>`;
+                        try {
+                            const response = await API.get(`/volumes/${volumeId}/collections-from-issues`);
+                            currentCollections = response.data || [];
+                        } catch (err) {
+                            itemsView.innerHTML = `<div class="error-state">Помилка: ${err.message}</div>`;
+                            return;
+                        }
                     }
+                    refreshItems();
                 }
                 itemsView.classList.add('is-visible');
             }, 100);
@@ -589,6 +628,7 @@ export async function renderVolumeDetail(main, params = {}) {
             const selectedOption = e.target.options[e.target.selectedIndex];
             const label = main.querySelector('.volume-sort-group .select-label');
             if (label) label.textContent = selectedOption.text;
+            paginator.reset();
             refreshItems();
         });
 
