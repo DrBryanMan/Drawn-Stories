@@ -1,0 +1,81 @@
+.auth-trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: var(--r);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-2);
+    font-size: 13px;
+    font-weight: 500;
+    transition: all var(--t);
+    text-decoration: none;
+}
+
+.auth-trigger:hover {
+    color: var(--text);
+    border-color: var(--accent);
+    background: var(--bg-card-h);
+}
+
+.auth-user-btn {
+    display: flex;
+    align-items: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    font-weight: 600;
+    transition: all var(--t);
+}
+
+.auth-user-btn:hover {
+    color: var(--text);
+    border-color: var(--accent);
+}
+
+.dropdown-right {
+    left: auto;
+    right: 0;
+    min-width: 200px;
+}
+
+.dropdown-info {
+    padding: 12px;
+    border-bottom: 1px solid var(--border-s);
+}
+
+.user-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.user-role {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.dropdown-right .nav-dropdown-link {
+    border-bottom: 1px solid var(--border-s);
+}
+
+.dropdown-right .nav-dropdown-link:last-child {
+    border-bottom: none;
+}
+
+.logout-btn {
+    width: 100%;
+    border: none;
+    background: none;
+    cursor: pointer;
+    text-align: left;
+    color: var(--red) !important;
+}
+
+.logout-btn:hover {
+    background: color-mix(in srgb, var(--red) 8%, transparent) !important;
+}
+
+.logout-btn svg {
+    color: var(--red) !important;
+}

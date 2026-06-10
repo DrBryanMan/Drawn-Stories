@@ -16,14 +16,19 @@
 
 .catalog-top-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: stretch;
   gap: 12px;
   margin-bottom: 16px;
 }
 
-.catalog-top-row .filter-bar {
+#catalog-filter-bar-container {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+.catalog-top-row .filter-bar {
+  width: 100%;
   margin-bottom: 0;
 }
 
@@ -42,6 +47,8 @@
 }
 
 .catalog-actions-panel {
+  flex: 0 0 100%;
+  width: 100%;
   min-height: 48px;
   padding: 10px 12px;
   border: 1px solid var(--border-s);
@@ -260,6 +267,12 @@
   border: 1px solid color-mix(in srgb, var(--purple) 22%, transparent);
   background: color-mix(in srgb, var(--purple) 8%, #ffffff);
   color: #5b21b6;
+}
+
+.catalog-selected-filter--magazine {
+  border: 1px solid color-mix(in srgb, var(--orange) 22%, transparent);
+  background: color-mix(in srgb, var(--orange) 8%, #ffffff);
+  color: #9a3412;
 }
 
 .catalog-selected-filter.is-excluded {

@@ -3,12 +3,17 @@
 
 /* Компоненти */
 @import url('components/ui.css');
+@import url('components/header.css');
 @import url('components/comic-card.css');
 @import url('components/pagination.css');
 @import url('components/filter-bar.css');
 @import url('components/skeleton.css');
+@import url('components/auth-dropdown.css');
 
 /* Сторінки */
 @import url('views/home.css');
 @import url('views/catalog.css');
 @import url('views/volume-detail.css');
+@import url('views/publishers.css');
+@import url('views/auth.css');
+@import url('views/bookmarks.css');

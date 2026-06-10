@@ -39,9 +39,25 @@ export function createComicCard(item) {
              </svg>
            </div>`;
 
-    const metaInfo = (isIssue || isCollection)
-        ? `<span>#${escapeHtmlAttribute(item.issue_number || '?')}</span>`
-        : `<span>${year}</span>`;
+    let metaText = '';
+    const issueIcon = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 12 12 17 22 12"/><polyline points="2 17 12 22 22 17"/></svg>';
+    const calendarIcon = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>';
+
+    if (isIssue || isCollection) {
+        metaText = `
+            <span class="comic-meta-item">${issueIcon} #${escapeHtmlAttribute(item.issue_number || '?')}</span>
+            <span class="comic-meta-sep">·</span>
+            <span class="comic-meta-item">${calendarIcon} ${year}</span>
+        `;
+    } else {
+        metaText = `
+            <span class="comic-meta-item">${issueIcon} ${item.issue_count || 0}</span>
+            <span class="comic-meta-sep">·</span>
+            <span class="comic-meta-item">${calendarIcon} ${year}</span>
+        `;
+    }
+
+    const langBadge = lang ? `<span class="comic-lang-badge">${escapeHtmlAttribute(lang)}</span>` : '';
 
     const subTitle = (isIssue || isCollection)
         ? `<div class="comic-publisher">${escapeHtmlAttribute(item.volume_name || '')}</div>`
@@ -59,9 +75,9 @@ export function createComicCard(item) {
         ${badge}
         <div class="comic-body">
             <div class="comic-title">${title}</div>
-            <div class="comic-meta">
-                ${metaInfo}
-                <span class="comic-year">${lang}</span>
+            <div class="comic-meta-pill">
+                <span>${metaText}</span>
+                ${langBadge}
             </div>
             ${subTitle}
         </div>

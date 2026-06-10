@@ -9,7 +9,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from server.db import init_db, close_db
-from server.routes import stats, catalog, volumes, publishers, themes
+from server.routes import stats, catalog, volumes, publishers, themes, auth, user_readlist, favorites
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -31,6 +31,9 @@ app.include_router(catalog.router)
 app.include_router(volumes.router)
 app.include_router(publishers.router)
 app.include_router(themes.router)
+app.include_router(auth.router)
+app.include_router(user_readlist.router)
+app.include_router(favorites.router)
 
 @app.get("/api/health")
 async def health_check():
@@ -38,6 +41,7 @@ async def health_check():
 
 # ── Static files & SPA fallback ──────────────────────
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/admin", StaticFiles(directory=os.path.join(BASE_DIR, "admin")), name="admin")
 
 @app.get("/{full_path:path}")
 async def read_index(request: Request, full_path: str):

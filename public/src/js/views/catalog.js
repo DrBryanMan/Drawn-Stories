@@ -3,6 +3,8 @@ import { THEME_GROUP_LABELS, mountCatalogFilters, themeIcon, themeLabel } from '
 import { createComicCard } from '../components/ComicCard.js';
 import { createPaginator } from '../components/Pagination.js';
 import { escapeHtmlAttribute } from '../helpers/image.js';
+import { mountFilterBar } from '../components/FilterBar.js';
+import { router } from '../helpers/router.js';
 
 const paginator = createPaginator({ pageSize: 20 });
 const FILTER_PANEL_OPEN_ICON = `
@@ -45,30 +47,20 @@ const SORT_ORDER_TITLES = {
   },
 };
 const FILTER_PANEL_STORAGE_KEY = 'drawn-stories.catalog.filters-panel-open';
-const SORT_CONTROL_TEMPLATE = `
-  <div class="filter-group" id="catalog-sort-controls">
-    <select class="filter-select" id="sort-select">
-      <button>
-        <span class="select-label">${SORT_OPTIONS.find((option) => option.value === DEFAULT_SORT_FIELD).label}</span>
-        <span class="select-chevron-v">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg>
-        </span>
-      </button>
-      ${SORT_OPTIONS.map((option) => `
-        <option value="${option.value}"${option.value === DEFAULT_SORT_FIELD ? ' selected' : ''}>
-          <span>${option.label}</span>
-        </option>
-      `).join('')}
-    </select>
-    
-    <button class="filter-btn-icon sort-order-btn" id="sort-order-btn" type="button">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="sort-order-icon">
-      </svg>
-    </button>
-  </div>
-`;
+
 let searchQuery = '';
-let searchTimer = null;
+let filterBar = null;
+
+// State shared between renderCatalog and fetchAndRender
+let currentSortField = DEFAULT_SORT_FIELD;
+let currentSortOrder = DEFAULT_SORT_ORDER;
+let currentContentType = '';
+let currentViewType = 'series';
+let currentCollectionOnly = false;
+let currentPublishers = [];
+let currentThemes = [];
+let currentExcludedThemes = [];
+let currentMagazines = [];
 
 function readStoredFiltersPanelState() {
   try {
@@ -84,48 +76,85 @@ function storeFiltersPanelState(open) {
   } catch { /* localStorage can be unavailable in restricted contexts */ }
 }
 
+function syncUrl() {
+  const params = new URLSearchParams();
+  if (searchQuery) params.set('search', searchQuery);
+  if (currentSortField !== DEFAULT_SORT_FIELD) params.set('sort', currentSortField);
+  if (currentSortOrder !== DEFAULT_SORT_ORDER) params.set('order_dir', currentSortOrder);
+  if (currentContentType) params.set('content_type', currentContentType);
+  if (currentViewType !== 'series') params.set('view_type', currentViewType);
+  if (currentCollectionOnly) params.set('collection', 'true');
+  if (currentPublishers.length) params.set('publisher_ids', currentPublishers.map(p => p.id).join(','));
+  if (currentThemes.length) params.set('theme_ids', currentThemes.map(t => t.id).join(','));
+  if (currentExcludedThemes.length) params.set('exclude_theme_ids', currentExcludedThemes.map(t => t.id).join(','));
+  if (currentMagazines.length) params.set('magazine_ids', currentMagazines.map(m => m.id).join(','));
+  
+  const page = paginator.getPage();
+  if (page > 1) params.set('page', page);
+
+  const queryString = params.toString();
+  const newHash = `#${router.currentPath}${queryString ? '?' + queryString : ''}`;
+  if (location.hash !== newHash) {
+    history.replaceState(null, '', newHash);
+  }
+}
+
 /**
  * Renders the catalog page into the given container.
  * @param {HTMLElement} main
  */
 export async function renderCatalog(main, query = {}) {
   paginator.reset();
+  if (query.page) {
+    paginator.setPage(Number(query.page));
+  }
   searchQuery = query.search || '';
-  let sortField = query.sort || DEFAULT_SORT_FIELD;
-  let sortOrder = query.order_dir || DEFAULT_SORT_ORDER;
-  let contentType = query.content_type || 'comics';
-  let viewType = query.view_type || 'series';
-  let collectionOnly = query.collection === 'true';
+  currentSortField = query.sort || DEFAULT_SORT_FIELD;
+  currentSortOrder = query.order_dir || DEFAULT_SORT_ORDER;
+  currentContentType = query.content_type || '';
+  currentViewType = query.view_type || 'series';
+  currentCollectionOnly = query.collection === 'true';
   let filtersOpen = readStoredFiltersPanelState();
-  let selectedPublishers = [];
-  let selectedThemes = [];
-  let excludedThemes = [];
+  currentPublishers = [];
+  currentThemes = [];
+  currentExcludedThemes = [];
   let publisherSearchTimer = null;
   let themeSearchTimer = null;
 
   // Initial load of labels for IDs in query string if needed
   if (query.publisher_ids) {
     try {
-      const ids = query.publisher_ids.split(',');
       const res = await API.get('/publishers', { ids: query.publisher_ids });
-      selectedPublishers = res.items || [];
+      currentPublishers = res.items || [];
     } catch (e) { console.error('Failed to load initial publishers', e); }
   }
 
   if (query.theme_ids) {
     try {
-      const ids = query.theme_ids.split(',');
       const res = await API.get('/themes', { ids: query.theme_ids });
-      selectedThemes = res.items || [];
+      currentThemes = res.items || [];
     } catch (e) { console.error('Failed to load initial themes', e); }
   }
   
   if (query.exclude_theme_ids) {
     try {
-      const ids = query.exclude_theme_ids.split(',');
       const res = await API.get('/themes', { ids: query.exclude_theme_ids });
-      excludedThemes = res.items || [];
+      currentExcludedThemes = res.items || [];
     } catch (e) { console.error('Failed to load initial excluded themes', e); }
+  }
+
+  currentMagazines = [];
+  if (query.magazine_ids) {
+    try {
+      const ids = query.magazine_ids.split(',');
+      currentMagazines = await Promise.all(ids.map(async (id) => {
+        const res = await API.get(`/volumes/${id}`);
+        return { id: Number(id), name: res.volume.name };
+      }));
+      if (currentMagazines.length > 0) {
+        currentContentType = 'manga';
+      }
+    } catch (e) { console.error('Failed to load initial magazines', e); }
   }
 
   main.innerHTML = `
@@ -141,29 +170,7 @@ export async function renderCatalog(main, query = {}) {
       </div>
 
       <div class="catalog-top-row">
-        <div class="filter-bar" id="catalog-filter-bar">
-          <div class="filter-section results-section">
-            <div class="results-label">Знайдено</div>
-            <div class="results-value" id="results-count">0</div>
-          </div>
-
-          <div class="filter-section search-section">
-            <div class="search-inner">
-              <span class="search-icon">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              </span>
-              <input type="text" placeholder="Пошук коміксів..." class="search-input-pill" id="catalog-search">
-            </div>
-          </div>
-
-          <div class="filter-section filters-section">
-            <div class="catalog-sort-slot" id="catalog-sort-quick-slot">${SORT_CONTROL_TEMPLATE}</div>
-
-            <button class="filter-btn-icon btn-filters-panel" id="open-filters-btn" title="Фільтри" aria-controls="catalog-filter-sidebar" aria-expanded="false">
-              ${FILTER_PANEL_OPEN_ICON}
-            </button>
-          </div>
-        </div>
+        <div id="catalog-filter-bar-container"></div>
 
         <div class="catalog-primary-actions" aria-label="Основні фільтри каталогу">
           <div class="catalog-segmented" role="group" aria-label="Тип контенту">
@@ -171,15 +178,15 @@ export async function renderCatalog(main, query = {}) {
             <button class="catalog-segment" type="button" data-view-type="issues">Випуски</button>
           </div>
           <button class="catalog-filter-chip" type="button" id="collection-filter-btn" aria-pressed="false">
-            ${contentType === 'manga' ? 'Томи' : 'Збірники'}
+            ${currentContentType === 'manga' ? 'Томи' : 'Збірки'}
           </button>
         </div>
+
+        <div class="catalog-actions-panel" id="catalog-actions-panel" aria-label="Фільтри каталогу"></div>
       </div>
 
       <div class="catalog-layout" id="catalog-layout">
         <div class="catalog-main-column">
-          <div class="catalog-actions-panel" id="catalog-actions-panel" aria-label="Фільтри каталогу"></div>
-
           <main class="catalog-results">
             <div class="comic-grid" id="catalog-grid">
               <div class="loader-container"><div class="loader"></div></div>
@@ -221,6 +228,14 @@ export async function renderCatalog(main, query = {}) {
               </div>
             </section>
 
+            <section class="catalog-filter-block" id="magazine-filter-block" hidden>
+              <div class="catalog-filter-block__title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18h-5"/><path d="M18 14h-8"/><path d="M4 22h16a2 2 0 0 0 2-2V4H8v16a2 2 0 0 1-4 0V6H2v14a2 2 0 0 0 2 2Z"/><path d="M10 6h8v4h-8V6Z"/></svg>
+                <span>Журнал</span>
+              </div>
+              <div class="sidebar-selected-list" id="magazine-selected-list"></div>
+            </section>
+
             <section class="catalog-filter-block">
               <div class="catalog-filter-block__title">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L3 13V3h10l7.59 7.59a2 2 0 0 1 0 2.82Z"/><path d="M7 7h.01"/></svg>
@@ -240,16 +255,8 @@ export async function renderCatalog(main, query = {}) {
     </div>
   `;
 
-  const searchInput = document.getElementById('catalog-search');
-  const sortSelect = document.getElementById('sort-select');
-  const orderBtn = document.getElementById('sort-order-btn');
-  const orderIcon = document.getElementById('sort-order-icon');
-  const sortLabel = sortSelect.querySelector('.select-label');
-  const filtersToggleBtn = document.getElementById('open-filters-btn');
   const catalogLayout = document.getElementById('catalog-layout');
   const filterSidebar = document.getElementById('catalog-filter-sidebar');
-  const sortControls = document.getElementById('catalog-sort-controls');
-  const sortQuickSlot = document.getElementById('catalog-sort-quick-slot');
   const sortPanelSlot = document.getElementById('catalog-sort-panel-slot');
   const viewTypeButtons = [...document.querySelectorAll('[data-view-type]')];
   const collectionBtn = document.getElementById('collection-filter-btn');
@@ -264,9 +271,46 @@ export async function renderCatalog(main, query = {}) {
   const selectedThemeList = document.getElementById('theme-selected-list');
   const clearAllFiltersBtn = document.getElementById('clear-all-filters-btn');
   const actionsPanel = document.getElementById('catalog-actions-panel');
+  const magazineFilterBlock = document.getElementById('magazine-filter-block');
+  const selectedMagazineList = document.getElementById('magazine-selected-list');
+
+  filterBar = mountFilterBar(main.querySelector('#catalog-filter-bar-container'), {
+    resultsCount: 0,
+    searchPlaceholder: 'Пошук коміксів...',
+    searchValue: searchQuery,
+    sortValue: currentSortField,
+    sortOptions: SORT_OPTIONS,
+    sortOrderValue: currentSortOrder,
+    showFiltersBtn: true,
+    filtersBtnActive: filtersOpen,
+    onSearch: (val) => {
+      searchQuery = val;
+      paginator.reset();
+      reloadCatalog();
+    },
+    onSortChange: (val) => {
+      currentSortField = val;
+      updateSortControl();
+      paginator.reset();
+      reloadCatalog();
+    },
+    onSortOrderChange: (dir) => {
+      currentSortOrder = dir;
+      updateSortControl();
+      paginator.reset();
+      reloadCatalog();
+    },
+    onFiltersBtnClick: () => {
+      setFiltersPanelOpen(!filtersOpen);
+    }
+  });
 
   const reloadCatalog = () => {
-    fetchAndRender(sortField, sortOrder, contentType, viewType, collectionOnly, selectedPublishers, selectedThemes, excludedThemes);
+    if (currentMagazines.length > 0) {
+      currentContentType = 'manga';
+      updateCatalogControls();
+    }
+    fetchAndRender();
   };
 
   const positionSidebarDropdown = (wrap, list) => {
@@ -306,42 +350,73 @@ export async function renderCatalog(main, query = {}) {
   };
 
   const updateSortControl = () => {
-    const selectedSort = SORT_OPTIONS.find((option) => option.value === sortField) || SORT_OPTIONS[0];
-    const title = SORT_ORDER_TITLES[sortField]?.[sortOrder] || `За ${sortOrder === 'asc' ? 'зростанням' : 'спаданням'}`;
-    sortSelect.value = selectedSort.value;
-    sortSelect.title = selectedSort.label;
+    const selectedSort = SORT_OPTIONS.find((option) => option.value === currentSortField) || SORT_OPTIONS[0];
+    const title = SORT_ORDER_TITLES[currentSortField]?.[currentSortOrder] || `За ${currentSortOrder === 'asc' ? 'зростанням' : 'спаданням'}`;
+    
+    if (filterBar) {
+      filterBar.setSortValue(currentSortField);
+      filterBar.setSortOrder(currentSortOrder);
+    }
+
+    const sortSelect = document.getElementById('sort-select');
+    const orderBtn = document.getElementById('sort-order-btn');
+    const orderIcon = document.getElementById('sort-order-icon');
+    const sortLabel = sortSelect?.querySelector('.select-label');
+
+    if (sortSelect) {
+      sortSelect.value = selectedSort.value;
+      sortSelect.title = selectedSort.label;
+    }
     if (sortLabel) sortLabel.textContent = selectedSort.label;
-    orderIcon.innerHTML = SORT_ORDER_ICONS[sortOrder];
-    orderBtn.title = title;
-    orderBtn.setAttribute('aria-label', title);
+    if (orderIcon) orderIcon.innerHTML = SORT_ORDER_ICONS[currentSortOrder];
+    if (orderBtn) {
+      orderBtn.title = title;
+      orderBtn.setAttribute('aria-label', title);
+    }
   };
 
   const setFiltersPanelOpen = (open, { persist = true } = {}) => {
     filtersOpen = open;
     catalogLayout.classList.toggle('is-filters-open', filtersOpen);
     filterSidebar.hidden = !filtersOpen;
-    filtersToggleBtn.classList.toggle('is-active', filtersOpen);
-    filtersToggleBtn.setAttribute('aria-expanded', String(filtersOpen));
-    filtersToggleBtn.innerHTML = filtersOpen ? FILTER_PANEL_CLOSE_ICON : FILTER_PANEL_OPEN_ICON;
-    (filtersOpen ? sortPanelSlot : sortQuickSlot).appendChild(sortControls);
+    
+    if (actionsPanel) {
+      actionsPanel.style.display = filtersOpen ? 'none' : '';
+    }
+
+    if (filterBar) {
+      filterBar.setFiltersBtnActive(filtersOpen);
+    }
+
+    const filtersToggleBtn = document.getElementById('open-filters-btn');
+    if (filtersToggleBtn) {
+      filtersToggleBtn.innerHTML = filtersOpen ? FILTER_PANEL_CLOSE_ICON : FILTER_PANEL_OPEN_ICON;
+    }
+
+    const sortControls = document.getElementById('catalog-sort-controls');
+    const sortQuickSlot = document.getElementById('catalog-sort-quick-slot');
+    if (sortControls) {
+      const slot = filtersOpen ? sortPanelSlot : sortQuickSlot;
+      if (slot) slot.appendChild(sortControls);
+    }
     if (persist) storeFiltersPanelState(filtersOpen);
   };
 
   const updateCatalogControls = () => {
     viewTypeButtons.forEach((button) => {
-      button.classList.toggle('is-active', button.dataset.viewType === viewType);
+      button.classList.toggle('is-active', button.dataset.viewType === currentViewType);
     });
-    collectionBtn.classList.toggle('is-active', collectionOnly);
-    collectionBtn.setAttribute('aria-pressed', String(collectionOnly));
+    collectionBtn.classList.toggle('is-active', currentCollectionOnly);
+    collectionBtn.setAttribute('aria-pressed', String(currentCollectionOnly));
     
-    const baseLabel = contentType === 'manga' ? 'Манга' : 'Комікси';
-    const viewLabel = viewType === 'series' ? 'Серії' : 'Випуски';
-    breadcrumbCurrent.textContent = `${baseLabel} / ${viewLabel}${collectionOnly ? (contentType === 'manga' ? ' / Томи' : ' / Збірники') : ''}`;
+    const baseLabel = currentContentType === 'manga' ? 'Манга' : currentContentType === 'comics' ? 'Комікси' : 'Каталог';
+    const viewLabel = currentViewType === 'series' ? 'Серії' : 'Випуски';
+    breadcrumbCurrent.textContent = `${baseLabel} / ${viewLabel}${currentCollectionOnly ? (currentContentType === 'manga' ? ' / Томи' : ' / Збірки') : ''}`;
   };
 
   const renderSelectedPublishers = () => {
-    selectedPublisherList.innerHTML = selectedPublishers.length
-      ? selectedPublishers.map((publisher) => `
+    selectedPublisherList.innerHTML = currentPublishers.length
+      ? currentPublishers.map((publisher) => `
           <button class="publisher-chip" type="button" data-remove-publisher="${publisher.id}" title="Прибрати видавництво">
             <span>${escapeHtmlAttribute(publisher.name)}</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
@@ -350,10 +425,25 @@ export async function renderCatalog(main, query = {}) {
       : '<div class="publisher-filter-empty">Видавництва не вибрані</div>';
   };
 
+  const renderSelectedMagazines = () => {
+    if (!selectedMagazineList) return;
+    selectedMagazineList.innerHTML = currentMagazines.length
+      ? currentMagazines.map((magazine) => `
+          <button class="publisher-chip" type="button" data-remove-magazine="${magazine.id}" title="Прибрати журнал">
+            <span>${escapeHtmlAttribute(magazine.name)}</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        `).join('')
+      : '';
+    if (magazineFilterBlock) {
+      magazineFilterBlock.hidden = currentMagazines.length === 0;
+    }
+  };
+
   const renderSelectedThemes = () => {
     const themes = [
-      ...selectedThemes.map((theme) => ({ ...theme, exclude: false })),
-      ...excludedThemes.map((theme) => ({ ...theme, exclude: true })),
+      ...currentThemes.map((theme) => ({ ...theme, exclude: false })),
+      ...currentExcludedThemes.map((theme) => ({ ...theme, exclude: true })),
     ];
     selectedThemeList.innerHTML = themes.length
       ? themes.map((theme) => `
@@ -370,7 +460,7 @@ export async function renderCatalog(main, query = {}) {
   const renderPublishers = (publishers) => {
     publisherList.innerHTML = publishers.length
       ? publishers.map((publisher) => {
-          const checked = selectedPublishers.some((item) => item.id === publisher.id);
+          const checked = currentPublishers.some((item) => item.id === publisher.id);
           const name = escapeHtmlAttribute(publisher.name);
           return `
             <button class="publisher-filter-option${checked ? ' is-selected' : ''}" type="button" data-publisher-id="${publisher.id}" data-publisher-name="${name}">
@@ -411,8 +501,8 @@ export async function renderCatalog(main, query = {}) {
       html += `<div class="catalog-filter-dropdown__group">${themeIcon(group)}<span>${THEME_GROUP_LABELS[group]}</span></div>`;
       html += items.map((theme) => {
         const id = Number(theme.id);
-        const included = selectedThemes.some((item) => item.id === id);
-        const excluded = excludedThemes.some((item) => item.id === id);
+        const included = currentThemes.some((item) => item.id === id);
+        const excluded = currentExcludedThemes.some((item) => item.id === id);
         const name = themeLabel(theme);
         return `
           <div class="catalog-filter-dropdown__item catalog-filter-dropdown__item--theme${included ? ' is-included' : ''}${excluded ? ' is-excluded' : ''}" data-sidebar-theme-id="${id}" data-sidebar-theme-name="${escapeHtmlAttribute(name)}" data-sidebar-theme-type="${theme.type || 'theme'}">
@@ -448,29 +538,36 @@ export async function renderCatalog(main, query = {}) {
 
   const inlineFilters = mountCatalogFilters({
     container: actionsPanel,
-    selectedPublishers,
-    selectedThemes,
-    excludedThemes,
+    selectedPublishers: currentPublishers,
+    selectedThemes: currentThemes,
+    excludedThemes: currentExcludedThemes,
+    selectedMagazines: currentMagazines,
     onPublishersChange: (publishers) => {
-      selectedPublishers = publishers;
+      currentPublishers = publishers;
       paginator.reset();
       renderSelectedPublishers();
       loadPublishers(publisherSearchInput.value.trim());
       reloadCatalog();
     },
     onThemesChange: (includedThemes, nextExcludedThemes) => {
-      selectedThemes = includedThemes;
-      excludedThemes = nextExcludedThemes;
+      currentThemes = includedThemes;
+      currentExcludedThemes = nextExcludedThemes;
       paginator.reset();
       renderSelectedThemes();
       if (!themeList.hidden) loadThemes(themeSearchInput.value.trim());
+      reloadCatalog();
+    },
+    onMagazinesChange: (magazines) => {
+      currentMagazines = magazines;
+      paginator.reset();
+      renderSelectedMagazines();
       reloadCatalog();
     },
   });
 
   const selectSidebarTheme = (row, exclude) => {
     const id = Number(row.dataset.sidebarThemeId);
-    const existing = [...selectedThemes, ...excludedThemes].find((theme) => theme.id === id);
+    const existing = [...currentThemes, ...currentExcludedThemes].find((theme) => theme.id === id);
     const nextTheme = {
       id,
       name: row.dataset.sidebarThemeName,
@@ -478,53 +575,28 @@ export async function renderCatalog(main, query = {}) {
     };
 
     if (exclude) {
-      excludedThemes = existing && excludedThemes.some((theme) => theme.id === id)
-        ? excludedThemes.filter((theme) => theme.id !== id)
-        : [...excludedThemes.filter((theme) => theme.id !== id), nextTheme];
-      selectedThemes = selectedThemes.filter((theme) => theme.id !== id);
+      currentExcludedThemes = existing && currentExcludedThemes.some((theme) => theme.id === id)
+        ? currentExcludedThemes.filter((theme) => theme.id !== id)
+        : [...currentExcludedThemes.filter((theme) => theme.id !== id), nextTheme];
+      currentThemes = currentThemes.filter((theme) => theme.id !== id);
     } else {
-      selectedThemes = existing && selectedThemes.some((theme) => theme.id === id)
-        ? selectedThemes.filter((theme) => theme.id !== id)
-        : [...selectedThemes.filter((theme) => theme.id !== id), nextTheme];
-      excludedThemes = excludedThemes.filter((theme) => theme.id !== id);
+      currentThemes = existing && currentThemes.some((theme) => theme.id === id)
+        ? currentThemes.filter((theme) => theme.id !== id)
+        : [...currentThemes.filter((theme) => theme.id !== id), nextTheme];
+      currentExcludedThemes = currentExcludedThemes.filter((theme) => theme.id !== id);
     }
 
     paginator.reset();
     renderSelectedThemes();
-    inlineFilters?.setFilters(selectedPublishers, selectedThemes, excludedThemes);
+    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines);
     themeList.hidden = false;
     loadThemes(themeSearchInput.value.trim());
     reloadCatalog();
   };
 
-  searchInput.addEventListener('input', (e) => {
-    searchQuery = e.target.value;
-    paginator.reset();
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(reloadCatalog, 300);
-  });
-
-  sortSelect.addEventListener('change', (e) => {
-    sortField = e.target.value;
-    updateSortControl();
-    paginator.reset();
-    reloadCatalog();
-  });
-
-  orderBtn.addEventListener('click', () => {
-    sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-    updateSortControl();
-    paginator.reset();
-    reloadCatalog();
-  });
-
-  filtersToggleBtn.addEventListener('click', () => {
-    setFiltersPanelOpen(!filtersOpen);
-  });
-
   viewTypeButtons.forEach((button) => {
     button.addEventListener('click', () => {
-      viewType = button.dataset.viewType;
+      currentViewType = button.dataset.viewType;
       paginator.reset();
       updateCatalogControls();
       reloadCatalog();
@@ -532,7 +604,7 @@ export async function renderCatalog(main, query = {}) {
   });
 
   collectionBtn.addEventListener('click', () => {
-    collectionOnly = !collectionOnly;
+    currentCollectionOnly = !currentCollectionOnly;
     paginator.reset();
     updateCatalogControls();
     reloadCatalog();
@@ -555,14 +627,14 @@ export async function renderCatalog(main, query = {}) {
     if (!option) return;
 
     const id = Number(option.dataset.publisherId);
-    const exists = selectedPublishers.some((publisher) => publisher.id === id);
-    selectedPublishers = exists
-      ? selectedPublishers.filter((publisher) => publisher.id !== id)
-      : [...selectedPublishers, { id, name: option.dataset.publisherName }];
+    const exists = currentPublishers.some((publisher) => publisher.id === id);
+    currentPublishers = exists
+      ? currentPublishers.filter((publisher) => publisher.id !== id)
+      : [...currentPublishers, { id, name: option.dataset.publisherName }];
 
     paginator.reset();
     renderSelectedPublishers();
-    inlineFilters?.setFilters(selectedPublishers, selectedThemes, excludedThemes);
+    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines);
     loadPublishers(publisherSearchInput.value.trim());
     reloadCatalog();
   });
@@ -600,11 +672,22 @@ export async function renderCatalog(main, query = {}) {
     const removeBtn = e.target.closest('[data-remove-publisher]');
     if (!removeBtn) return;
 
-    selectedPublishers = selectedPublishers.filter((publisher) => publisher.id !== Number(removeBtn.dataset.removePublisher));
+    currentPublishers = currentPublishers.filter((publisher) => publisher.id !== Number(removeBtn.dataset.removePublisher));
     paginator.reset();
     renderSelectedPublishers();
-    inlineFilters?.setFilters(selectedPublishers, selectedThemes, excludedThemes);
+    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines);
     loadPublishers(publisherSearchInput.value.trim());
+    reloadCatalog();
+  });
+
+  selectedMagazineList.addEventListener('click', (e) => {
+    const removeBtn = e.target.closest('[data-remove-magazine]');
+    if (!removeBtn) return;
+
+    currentMagazines = currentMagazines.filter((magazine) => magazine.id !== Number(removeBtn.dataset.removeMagazine));
+    paginator.reset();
+    renderSelectedMagazines();
+    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines);
     reloadCatalog();
   });
 
@@ -613,76 +696,71 @@ export async function renderCatalog(main, query = {}) {
     const toggleBtn = e.target.closest('[data-toggle-sidebar-theme]');
 
     if (removeBtn) {
-      selectedThemes = selectedThemes.filter((theme) => theme.id !== Number(removeBtn.dataset.removeSidebarTheme));
-      excludedThemes = excludedThemes.filter((theme) => theme.id !== Number(removeBtn.dataset.removeSidebarTheme));
+      currentThemes = currentThemes.filter((theme) => theme.id !== Number(removeBtn.dataset.removeSidebarTheme));
+      currentExcludedThemes = currentExcludedThemes.filter((theme) => theme.id !== Number(removeBtn.dataset.removeSidebarTheme));
     }
 
     if (toggleBtn) {
       const id = Number(toggleBtn.dataset.toggleSidebarTheme);
-      const includedTheme = selectedThemes.find((theme) => theme.id === id);
-      const excludedTheme = excludedThemes.find((theme) => theme.id === id);
+      const includedTheme = currentThemes.find((theme) => theme.id === id);
+      const excludedTheme = currentExcludedThemes.find((theme) => theme.id === id);
       if (includedTheme) {
-        selectedThemes = selectedThemes.filter((theme) => theme.id !== id);
-        excludedThemes = [...excludedThemes, includedTheme];
+        currentThemes = currentThemes.filter((theme) => theme.id !== id);
+        currentExcludedThemes = [...currentExcludedThemes, includedTheme];
       } else if (excludedTheme) {
-        excludedThemes = excludedThemes.filter((theme) => theme.id !== id);
-        selectedThemes = [...selectedThemes, excludedTheme];
+        currentExcludedThemes = currentExcludedThemes.filter((theme) => theme.id !== id);
+        currentThemes = [...currentThemes, excludedTheme];
       }
     }
 
     if (!removeBtn && !toggleBtn) return;
     paginator.reset();
     renderSelectedThemes();
-    inlineFilters?.setFilters(selectedPublishers, selectedThemes, excludedThemes);
+    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines);
     if (!themeList.hidden) loadThemes(themeSearchInput.value.trim());
     reloadCatalog();
   });
 
   clearAllFiltersBtn.addEventListener('click', () => {
-    collectionOnly = false;
-    selectedPublishers = [];
-    selectedThemes = [];
-    excludedThemes = [];
+    currentCollectionOnly = false;
+    currentPublishers = [];
+    currentThemes = [];
+    currentExcludedThemes = [];
+    currentMagazines = [];
     publisherSearchInput.value = '';
     themeSearchInput.value = '';
     paginator.reset();
-    inlineFilters?.setFilters(selectedPublishers, selectedThemes, excludedThemes);
+    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines);
     updateCatalogControls();
     renderSelectedPublishers();
     renderSelectedThemes();
+    renderSelectedMagazines();
     closePublisherDropdown();
     closeThemeDropdown();
     reloadCatalog();
   });
 
-  searchInput.value = searchQuery;
+  if (filterBar) filterBar.setSearchValue(searchQuery);
   updateSortControl();
   updateCatalogControls();
   setFiltersPanelOpen(filtersOpen, { persist: false });
   renderSelectedPublishers();
   renderSelectedThemes();
+  renderSelectedMagazines();
   
-  if (selectedPublishers.length || selectedThemes.length || excludedThemes.length) {
-    inlineFilters?.setFilters(selectedPublishers, selectedThemes, excludedThemes);
+  if (currentPublishers.length || currentThemes.length || currentExcludedThemes.length || currentMagazines.length) {
+    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines);
   }
   
   reloadCatalog();
 }
 
-async function fetchAndRender(
-  sort,
-  order = 'asc',
-  contentType = 'comics',
-  viewType = 'series',
-  collectionOnly = false,
-  publishers = [],
-  themes = [],
-  excludedThemes = [],
-) {
+async function fetchAndRender() {
   const grid = document.getElementById('catalog-grid');
   const paginationWrap = document.getElementById('catalog-pagination');
-  const countEl = document.getElementById('results-count');
   if (!grid) return;
+
+  syncUrl();
 
   const renderSkeletons = () => {
     grid.innerHTML = '';
@@ -709,17 +787,18 @@ async function fetchAndRender(
       limit: paginator.getPageSize(),
       cursor: paginator.getCursor() || undefined,
       search: searchQuery || undefined,
-      sort: sort,
-      order_dir: order,
-      content_type: contentType,
-      view_type: viewType,
-      collection: collectionOnly ? 'true' : undefined,
-      publisher_ids: publishers.length ? publishers.map((publisher) => publisher.id).join(',') : undefined,
-      theme_ids: themes.length ? themes.map((theme) => theme.id).join(',') : undefined,
-      exclude_theme_ids: excludedThemes.length ? excludedThemes.map((theme) => theme.id).join(',') : undefined
+      sort: currentSortField,
+      order_dir: currentSortOrder,
+      content_type: currentContentType || undefined,
+      view_type: currentViewType,
+      collection: currentCollectionOnly ? 'true' : undefined,
+      publisher_ids: currentPublishers.length ? currentPublishers.map((p) => p.id).join(',') : undefined,
+      theme_ids: currentThemes.length ? currentThemes.map((t) => t.id).join(',') : undefined,
+      exclude_theme_ids: currentExcludedThemes.length ? currentExcludedThemes.map((t) => t.id).join(',') : undefined,
+      magazine_ids: currentMagazines.length ? currentMagazines.map((m) => m.id).join(',') : undefined
     });
 
-    if (countEl) countEl.textContent = data.total.toLocaleString('uk-UA');
+    if (filterBar) filterBar.updateCount(data.total);
     paginator.setNextCursor(data.next_cursor);
 
     // Render cards
@@ -742,7 +821,7 @@ async function fetchAndRender(
     paginationWrap.innerHTML = '';
     if (data.pages > 1) {
       const nav = paginator.render(data.total, (cursor) => {
-        fetchAndRender(sort, order, contentType, viewType, collectionOnly, publishers, themes, excludedThemes);
+        fetchAndRender();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
       paginationWrap.appendChild(nav);

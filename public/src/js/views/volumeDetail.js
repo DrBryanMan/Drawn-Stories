@@ -1,7 +1,11 @@
 import { API } from '../helpers/api.js';
+import { currentUser } from '../shell.js';
+import { Bookmarks } from '../helpers/bookmarks.js';
 import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { langDisplay, langName } from '../helpers/lang.js';
 import { createPaginator } from '../components/Pagination.js';
+import { VolumeEditor } from '/admin/js/VolumeEditor.js';
+import { VolumePicker } from '/admin/js/VolumePicker.js';
 
 let currentItems = [];
 let currentView = localStorage.getItem('ds-volume-view') || 'grid';
@@ -27,6 +31,20 @@ function isMangaVolume(volume, themes = [], translationParents = []) {
     return themes.some(theme => {
         const name = `${theme.name || ''} ${theme.ua_name || ''}`.toLowerCase();
         return name.includes('manga') || name.includes('манга') || name.includes('манґа');
+    });
+}
+
+function isCollectionVolume(themes = []) {
+    return themes.some(theme => {
+        const name = `${theme.name || ''} ${theme.ua_name || ''}`.toLowerCase();
+        return name.includes('collection') || name.includes('збірник') || name.includes('збірка');
+    });
+}
+
+function isTranslatedVolume(themes = []) {
+    return themes.some(theme => {
+        const name = (theme.name || '').toLowerCase();
+        return name === 'translated';
     });
 }
 
@@ -65,6 +83,7 @@ function formatIssueRanges(nums) {
 
 // ── Lucide SVG icons ────────────────────────────────
 const ICON = {
+    edit: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
     chevronRight: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
     arrowLeft: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>',
     externalLink: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
@@ -82,7 +101,26 @@ const ICON = {
     book: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>',
     link: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
     newspaper: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18h-5"/><path d="M18 14h-8"/><path d="M4 22h16a2 2 0 0 0 2-2V4H8v16a2 2 0 0 1-4 0V6H2v14a2 2 0 0 0 2 2Z"/><path d="M10 6h8v4h-8V6Z"/></svg>',
+    heart: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>',
+    bookmark: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>',
+    star: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+    trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
+    plus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
 };
+
+// ── Readlist options config ──────────────────────────
+const READLIST_OPTIONS = [
+    { value: '',          label: 'Додати в список', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>', color: '#94a3b8', bg: 'var(--bg-card)', borderColor: 'var(--border-s)' },
+    { value: 'Planned',   label: 'Заплановано',     icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', color: '#2563eb', bg: 'color-mix(in srgb, #2563eb 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, #2563eb 20%, var(--border-s))' },
+    { value: 'Reading',   label: 'Читаю',           icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>', color: '#16a34a', bg: 'color-mix(in srgb, #16a34a 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, #16a34a 20%, var(--border-s))' },
+    { value: 'Completed', label: 'Прочитано',        icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>', color: '#059669', bg: 'color-mix(in srgb, #059669 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, #059669 20%, var(--border-s))' },
+    { value: 'On Hold',   label: 'Відкладено',       icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="10" y1="15" x2="10" y2="9"/><line x1="14" y1="15" x2="14" y2="9"/></svg>', color: '#d97706', bg: 'color-mix(in srgb, #d97706 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, #d97706 20%, var(--border-s))' },
+    { value: 'Dropped',   label: 'Закинуто',         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>', color: '#dc2626', bg: 'color-mix(in srgb, #dc2626 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, #dc2626 20%, var(--border-s))' },
+];
+
+function readlistOptionLabel(value) {
+    return READLIST_OPTIONS.find(o => o.value === value) || READLIST_OPTIONS[0];
+}
 
 const THEME_ICON = {
     type: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>',
@@ -107,7 +145,7 @@ function themeChipHTML(theme) {
     return `<a href="${url}" class="volume-theme-chip volume-theme-chip--${themeType(theme)}">${name}</a>`;
 }
 
-function relationCardHTML(item, { title, icon }) {
+function relationCardHTML(item, { title, icon, isModerator, onRemove }) {
     if (!item?.id) return '';
 
     const cover = comicVineImageUrl(item.cv_img || item.hikka_img);
@@ -117,6 +155,7 @@ function relationCardHTML(item, { title, icon }) {
 
     return `
         <a class="volume-relation-card" href="#/volumes/${item.id}">
+            ${isModerator && onRemove ? `<button class="btn-remove-rel" onclick="${onRemove}" title="Видалити зв'язок">✕</button>` : ''}
             <span class="volume-relation-cover">
                 ${cover
                     ? `<img src="${escapeHtmlAttribute(cover)}" alt="${name}" loading="lazy">`
@@ -136,19 +175,37 @@ function relationCardHTML(item, { title, icon }) {
     `;
 }
 
-function heroRelationsHTML({ translationParents, magazineParents, magazine }) {
+function heroRelationsHTML({ translationParents, magazineParents, magazine, isModerator, currentVolumeId }) {
     const source = translationParents.find(parent => parent.rel_type === 'source' || parent.rel_type === 'translation');
     const magazines = magazineParents.length ? magazineParents : (magazine ? [magazine] : []);
+    const original = magazines.length > 0 ? null : translationParents.find(parent => parent.rel_type === 'original');
+    
     const cards = [
-        source ? relationCardHTML(source, { title: 'Джерело', icon: ICON.link }) : '',
-        ...magazines.map(item => relationCardHTML(item, { title: 'Батьківський журнал', icon: ICON.newspaper })),
+        original ? relationCardHTML(original, { 
+            title: 'Оригінал', 
+            icon: ICON.bookOpen,
+            isModerator,
+            onRemove: `event.stopPropagation(); window.removeTranslation(${original.id}, ${currentVolumeId})`
+        }) : '',
+        source ? relationCardHTML(source, { 
+            title: 'Джерело', 
+            icon: ICON.link,
+            isModerator,
+            onRemove: `event.stopPropagation(); window.removeTranslation(${source.id}, ${currentVolumeId})`
+        }) : '',
+        ...magazines.map(item => relationCardHTML(item, { 
+            title: 'Журнал', 
+            icon: ICON.newspaper,
+            isModerator,
+            onRemove: `event.stopPropagation(); window.removeMagazineChild(${item.id}, ${currentVolumeId})`
+        })),
     ].filter(Boolean);
 
     if (!cards.length) return '';
     return `<div class="volume-hero-relations">${cards.join('')}</div>`;
 }
 
-function translationCardHTML(item) {
+function translationCardHTML(item, { isModerator, currentVolumeId }) {
     const cover = comicVineImageUrl(item.cv_img || item.hikka_img);
     const title = escapeHtmlAttribute(item.name_uk || item.name || 'Без назви');
     const originalTitle = item.name_uk && item.name_uk !== item.name ? item.name : '';
@@ -157,6 +214,7 @@ function translationCardHTML(item) {
 
     return `
         <a class="volume-translation-card" href="#/volumes/${item.id}">
+            ${isModerator ? `<button class="btn-remove-rel" onclick="event.stopPropagation(); window.removeTranslation(${currentVolumeId}, ${item.id})" title="Видалити переклад">✕</button>` : ''}
             <span class="volume-translation-poster">
                 ${cover
                     ? `<img src="${escapeHtmlAttribute(cover)}" alt="${title}" loading="lazy">`
@@ -171,18 +229,56 @@ function translationCardHTML(item) {
     `;
 }
 
-function translationsSectionHTML(translations) {
-    if (!translations.length) return '';
+function translationsSectionHTML(translations, { isTranslated, isModerator, currentVolumeId }) {
+    if (!isModerator && (!translations.length || isTranslated)) return '';
 
     return `
         <section class="volume-translations-section block">
             <div class="volume-section-heading">
-                <h2>Інші переклади</h2>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <h2>Збірні видання</h2>
+                    ${isModerator ? `<button class="btn-admin btn-admin--secondary" id="volume-add-translation-btn" title="Додати переклад" style="width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center;">${ICON.plus}</button>` : ''}
+                </div>
             </div>
             <div class="volume-translations-grid">
-                ${translations.map(translationCardHTML).join('')}
+                ${translations.map(t => translationCardHTML(t, { isModerator, currentVolumeId })).join('')}
             </div>
         </section>
+    `;
+}
+
+function readlistUIHTML() {
+    const defaultOpt = READLIST_OPTIONS[0];
+    const activeOpts = READLIST_OPTIONS.filter(opt => opt.value !== '');
+    return `
+        <div class="volume-readlist-controls">
+            <div class="readlist-select-wrap">
+                <select class="filter-select readlist-select" id="readlist-select" ${!currentUser ? 'disabled' : ''}>
+                    <button>
+                        <span class="readlist-select-chosen">
+                            <span class="readlist-icon" style="color: ${defaultOpt.color}">${defaultOpt.icon}</span>
+                            <span class="select-label">${defaultOpt.label}</span>
+                        </span>
+                        <span class="select-chevron-v">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg>
+                        </span>
+                    </button>
+                    ${activeOpts.map(opt => `
+                        <option value="${opt.value}">
+                            <span class="readlist-icon" style="color: ${opt.color}">${opt.icon}</span>
+                            <span>${opt.label}</span>
+                        </option>
+                    `).join('')}
+                    <option value="" class="readlist-remove-option">
+                        <span class="readlist-icon" style="color: #dc2626"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></span>
+                        <span>Видалити</span>
+                    </option>
+                </select>
+            </div>
+            <button class="readlist-btn ${!currentUser ? 'readlist-btn--anon' : ''}" id="readlist-favorite-btn" title="${currentUser ? 'В обране' : 'У закладки'}">
+                ${currentUser ? ICON.heart : ICON.bookmark}
+            </button>
+        </div>
     `;
 }
 
@@ -230,28 +326,31 @@ function renderItems(container, items) {
         container.innerHTML = `
             <div class="issues-view-grid">
                 ${items.map(item => {
-                    const cover = comicVineImageUrl(item.cv_img);
-                    const isCollection = item.type === 'collection' || item.is_collection;
-                    return `
-                        <div class="issue-grid-card">
-                            <div class="issue-grid-cover-wrap">
-                                ${cover
-                                    ? `<img class="issue-grid-cover" src="${escapeHtmlAttribute(cover)}" loading="lazy">`
-                                    : `<div class="issue-grid-cover-empty" style="display: inline-block;"><svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>`}
-                                ${item.issue_number ? `<div class="issue-grid-number">#${escapeHtmlAttribute(item.issue_number)}</div>` : ''}
-                                ${isCollection ? '<div class="issue-grid-type-badge">Збірник</div>' : ''}
-                                ${!isCollection ? `
-                                    <button class="issue-grid-membership-btn" data-issue-id="${item.id}" title="У збірниках">
-                                        ${ICON.layers}
-                                        ${item.collection_count > 0 ? `<span class="membership-count">${item.collection_count}</span>` : ''}
-                                    </button>` : ''}
-                            </div>
-                            <div class="issue-grid-body">
-                                <div class="issue-grid-title">${escapeHtmlAttribute(item.name || 'Без назви')}</div>
-                                <div class="issue-grid-date">${formatDate(item.cover_date || item.release_date)}</div>
-                            </div>
-                        </div>
-                    `;
+                   const cover = comicVineImageUrl(item.cv_img || item.hikka_img);
+                   const isCollection = item.type === 'collection' || item.is_collection;
+                   const isVolume = item.type === 'volume';
+                   const link = isVolume ? `#/volumes/${item.id}` : null;
+
+                   return `
+                       <div class="issue-grid-card" ${link ? `onclick="location.hash='${link}'" style="cursor: pointer;"` : ''}>
+                           <div class="issue-grid-cover-wrap">
+                               ${cover
+                                   ? `<img class="issue-grid-cover" src="${escapeHtmlAttribute(cover)}" loading="lazy">`
+                                   : `<div class="issue-grid-cover-empty" style="display: inline-block;"><svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>`}
+                               ${item.issue_number ? `<div class="issue-grid-number">#${escapeHtmlAttribute(item.issue_number)}</div>` : ''}
+                               ${isVolume ? '<div class="issue-grid-type-badge">Манґа</div>' : (isCollection ? '<div class="issue-grid-type-badge">Збірник</div>' : '')}
+                               ${(!isCollection && !isVolume) ? `
+                                   <button class="issue-grid-membership-btn" data-issue-id="${item.id}" title="У збірниках">
+                                       ${ICON.layers}
+                                       ${item.collection_count > 0 ? `<span class="membership-count">${item.collection_count}</span>` : ''}
+                                   </button>` : ''}
+                           </div>
+                           <div class="issue-grid-body">
+                               <div class="issue-grid-title">${escapeHtmlAttribute(item.name_uk || item.name || 'Без назви')}</div>
+                               <div class="issue-grid-date">${isVolume ? (item.start_year || '') : formatDate(item.cover_date || item.release_date)}</div>
+                           </div>
+                       </div>
+                   `;
                 }).join('')}
             </div>
         `;
@@ -269,25 +368,29 @@ function renderItems(container, items) {
                     </thead>
                     <tbody>
                         ${items.map(item => {
-                            const cover = comicVineImageUrl(item.cv_img);
+                            const cover = comicVineImageUrl(item.cv_img || item.hikka_img);
                             const isCollection = item.type === 'collection' || item.is_collection;
+                            const isVolume = item.type === 'volume';
+                            const link = isVolume ? `#/volumes/${item.id}` : null;
+                            const title = escapeHtmlAttribute(item.name_uk || item.name || 'Без назви');
+
                             return `
-                                <tr>
+                                <tr ${link ? `onclick="location.hash='${link}'" style="cursor: pointer;"` : ''}>
                                     <td class="table-issue-num">${escapeHtmlAttribute(item.issue_number || '—')}</td>
                                     <td>
                                         <div class="table-issue-info">
                                             ${cover ? `<img class="table-issue-thumb" src="${escapeHtmlAttribute(cover)}" loading="lazy">` : ''}
-                                            <span class="table-issue-name">${escapeHtmlAttribute(item.name || 'Без назви')}</span>
+                                            <span class="table-issue-name">${title}</span>
+                                            ${isVolume ? '<span class="issue-grid-type-badge" style="position:static; margin-left:8px; padding:2px 6px;">Манґа</span>' : (isCollection ? '<span class="issue-grid-type-badge" style="position:static; margin-left:8px; padding:2px 6px;">Збірник</span>' : '')}
                                         </div>
                                     </td>
-                                    <td class="table-issue-date">${formatDate(item.cover_date || item.release_date)}</td>
+                                    <td class="table-issue-date">${isVolume ? (item.start_year || '') : formatDate(item.cover_date || item.release_date)}</td>
                                     <td>
-                                        ${!isCollection ? `
+                                        ${(!isCollection && !isVolume) ? `
                                             <button class="table-membership-btn" data-issue-id="${item.id}">
                                                 ${ICON.layers}
                                                 ${item.collection_count > 0 ? `<span class="membership-count">${item.collection_count}</span>` : ''}
-                                            </button>
-                                        ` : ''}
+                                            </button>` : ''}
                                     </td>
                                 </tr>
                             `;
@@ -327,7 +430,11 @@ export async function renderVolumeDetail(main, params = {}) {
     renderSkeleton(main);
 
     try {
-        const data = await API.get(`/volumes/${volumeId}`);
+        const [data, readlistStatus] = await Promise.all([
+            API.get(`/volumes/${volumeId}`),
+            API.get(`/user/readlist/${volumeId}`)
+        ]);
+
         const {
             volume,
             themes = [],
@@ -336,21 +443,41 @@ export async function renderVolumeDetail(main, params = {}) {
             translation_parents: translationParents = [],
             translations = [],
             magazine_parents: magazineParents = [],
+            magazine_children: magazineChildren = [],
         } = data;
 
         const coverUrl = comicVineImageUrl(volume.cv_img || volume.hikka_img);
-        const bannerUrl = comicVineImageUrl(volume.cover_img);
+        const bannerUrl = comicVineImageUrl(volume.cover_img || coverUrl);
         const heroBannerStyle = bannerUrl ? ` style="--volume-banner-url: url('${escapeHtmlAttribute(bannerUrl)}')"` : '';
         const heroBannerClass = bannerUrl ? ' volume-hero-band--banner' : '';
-        const title = escapeHtmlAttribute(volume.name_uk || volume.name);
-        const originalTitle = volume.name_uk && volume.name_uk !== volume.name ? volume.name : '';
+        const title = escapeHtmlAttribute(volume.name_uk || volume.name_en || volume.name);
+        const subTitleValue = volume.name && volume.name !== (volume.name_uk || volume.name_en || volume.name) ? volume.name : '';
+        const subTitle = escapeHtmlAttribute(subTitleValue);
         const publisherName = escapeHtmlAttribute(volume.publisher_name || 'Невідоме видавництво');
         const hasThemes = themes.length > 0;
-        const heroRelations = heroRelationsHTML({ translationParents, magazineParents, magazine });
-        const isMangaWithMagazine = isMangaVolume(volume, themes, translationParents) && Boolean(magazine);
-        const issuesTabLabel = isMangaWithMagazine ? 'Розділи' : 'Випуски';
-        const collectionsTabLabel = isMangaWithMagazine ? 'Томи' : 'Збірники';
-        currentItems = isMangaWithMagazine ? (data.issues || []) : (data.items || data.issues || []);
+        const isModerator = currentUser && (currentUser.role === 'admin' || currentUser.role === 'moderator');
+        const heroRelations = heroRelationsHTML({ 
+            translationParents, 
+            magazineParents, 
+            magazine, 
+            isModerator, 
+            currentVolumeId: volumeId 
+        });
+
+        const isManga = isMangaVolume(volume, themes, translationParents);
+        const isCollection = isCollectionVolume(themes);
+        const isTranslated = isTranslatedVolume(themes);
+        const isMagazine = themes.some(t => t.id === 35);
+        const isMangaWithMagazine = isManga && Boolean(magazine);
+
+        const issuesTabLabel = isMagazine ? 'Номери' : (isManga ? 'Розділи' : 'Випуски');
+        const collectionsTabLabel = isMagazine ? 'Томи манґи' : (isManga ? 'Томи' : 'Збірники');
+        
+        const shouldSeparate = isManga || isCollection;
+        currentItems = shouldSeparate ? (data.issues || []) : (data.items || data.issues || []);
+
+        const hasUaSynopsis = !!(volume.synopsis_ua || volume.description);
+        const activeTab = hasUaSynopsis ? 'ua' : 'en';
 
         main.innerHTML = `
             <div class="volume-detail">
@@ -365,8 +492,8 @@ export async function renderVolumeDetail(main, params = {}) {
                 </div>
 
                 <section class="volume-hero-band${heroBannerClass}"${heroBannerStyle}>
-                <div class="container">
-                </div>
+                    <div class="container">
+                    </div>
                     <div class="container volume-hero">
                         <div class="volume-cover-column">
                             ${coverUrl
@@ -376,41 +503,44 @@ export async function renderVolumeDetail(main, params = {}) {
                                         <rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h5"/>
                                     </svg>
                                   </div>`}
-                            
-                            <div class="source-links">
-                                ${volume.cv_id ? `
-                                    <a href="https://comicvine.gamespot.com/${volume.cv_slug}/4050-${volume.cv_id}/" class="source-link-cv" target="_blank" rel="noreferrer">
-                                        CV
-                                        ${ICON.externalLink}
-                                    </a>
-                                ` : ''}
-                                ${volume.hikka_slug ? `
-                                    <a href="https://hikka.io/manga/${volume.hikka_slug}" class="source-link-hikka" target="_blank" rel="noreferrer">
-                                        Hikka
-                                        ${ICON.externalLink}
-                                    </a>
-                                ` : ''}
-                                ${volume.mal_id ? `
-                                    <a href="https://myanimelist.net/manga/${volume.mal_id}" class="source-link-mal" target="_blank" rel="noreferrer">
-                                        MAL
-                                        ${ICON.externalLink}
-                                    </a>
-                                ` : ''}
-                                ${volume.site_link ? `
-                                    <a href="${escapeHtmlAttribute(volume.site_link)}" class="source-link-site" target="_blank" rel="noreferrer">
-                                        SITE
-                                        ${ICON.externalLink}
-                                    </a>
-                                ` : ''}
-                            </div>
+                            ${readlistUIHTML()}
                         </div>
 
                         <div class="volume-hero-info">
-                            <h1>${title}</h1>
-                            ${originalTitle ? `<p class="volume-original-title">${escapeHtmlAttribute(originalTitle)}</p>` : ''}
+                            <div class="volume-header">
+                                <div class="volume-title">
+                                    <span class="volume-main-title">
+                                        <h1>
+                                            ${title}
+                                            <button class="btn-synonyms" id="btn-show-synonyms" title="Всі назви та синоніми">
+                                                ${ICON.languages}
+                                            </button>
+                                        </h1>
+                                    </span>
+                                    <span class="volume-original-title">${subTitle}</span>
+                                </div>
+                                <div class="volume-ratings">
+                                    <div class="rating-item rating-main" title="Системний рейтинг (незабаром)">
+                                        ${ICON.star}
+                                        <span class="rating-value">—</span>
+                                    </div>
+                                    ${volume.hikka_score ? `
+                                        <div class="rating-item rating--hikka" title="Голосів на Hikka: ${volume.hikka_scored_by || 0}">
+                                            <span class="rating-value">${volume.hikka_score}</span>
+                                            <span class="rating-label rating--hikka">Hikka</span>
+                                        </div>
+                                    ` : ''}
+                                    ${volume.mal_score ? `
+                                        <div class="rating-item rating--mal" title="Голосів на MAL: ${volume.mal_scored_by || 0}">
+                                            <span class="rating-value">${volume.mal_score}</span>
+                                            <span class="rating-label">MAL</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
                             <div class="volume-hero-badges">
                                 ${magazine ? `
-                                    <a href="#/volumes/${magazine.id}" class="volume-badge volume-magazine-badge" title="Журнал">
+                                    <a href="#/catalog?magazine_ids=${magazine.id}" class="volume-badge volume-magazine-badge" title="Журнал">
                                         ${ICON.book}
                                         ${escapeHtmlAttribute(magazine.name)}
                                     </a>
@@ -433,14 +563,90 @@ export async function renderVolumeDetail(main, params = {}) {
                             </div>
 
                             <div class="volume-hero-actions">
+                                <div class="source-links">
+                                    ${volume.cv_id ? `
+                                        <a href="https://comicvine.gamespot.com/${volume.cv_slug}/4050-${volume.cv_id}/" class="source-link-cv" target="_blank" rel="noreferrer">
+                                            CV
+                                            ${ICON.externalLink}
+                                        </a>
+                                    ` : ''}
+                                    ${volume.hikka_slug ? `
+                                        <a href="https://hikka.io/manga/${volume.hikka_slug}" class="source-link-hikka" target="_blank" rel="noreferrer">
+                                            Hikka
+                                            ${ICON.externalLink}
+                                        </a>
+                                    ` : ''}
+                                    ${volume.mal_id ? `
+                                        <a href="https://myanimelist.net/manga/${volume.mal_id}" class="source-link-mal" target="_blank" rel="noreferrer">
+                                            MAL
+                                            ${ICON.externalLink}
+                                        </a>
+                                    ` : ''}
+                                    ${volume.site_link ? `
+                                        <a href="${escapeHtmlAttribute(volume.site_link)}" class="source-link-site" target="_blank" rel="noreferrer">
+                                            SITE
+                                            ${ICON.externalLink}
+                                        </a>
+                                    ` : ''}
+                                </div>
                                 <button class="volume-action-btn volume-details-trigger" title="Деталі">
                                     ${ICON.info}
                                     Деталі
                                 </button>
                             </div>
 
-                            ${volume.description ? `<p class="volume-description">${escapeHtmlAttribute(volume.description)}</p>` : ''}
+                            ${isModerator ? `
+                                <div class="volume-hero-admin-actions">
+                                    <button class="btn-admin btn-admin--secondary" id="volume-edit-btn" title="Редагувати">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <button class="btn-admin btn-admin--danger" id="volume-delete-btn" title="Видалити том">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                    ${!isMagazine && !isCollection ? `
+                                        <button class="btn-admin btn-admin--secondary" id="volume-add-magazine-btn" title="Додати до журналу">
+                                            <i class="bi bi-book"></i>
+                                        </button>
+                                    ` : ''}
+                                    ${!isMagazine && isCollection ? `
+                                        <button class="btn-admin btn-admin--secondary" id="volume-add-original-btn" title="Додати до оригіналу">
+                                            <i class="bi bi-bookmark-star"></i>
+                                        </button>
+                                    ` : ''}
+                                    ${!isMagazine && !isCollection && data.issues.length > 0 ? `
+                                        <button class="btn-admin btn-admin--warning" id="volume-convert-btn" title="Конвертувати всі випуски у збірники">
+                                            ${ICON.layers}
+                                            У збірники (${data.issues.length})
+                                        </button>
+                                    ` : ''}
+                                    ${isCollection && data.collections.length > 0 ? `
+                                        <button class="btn-admin btn-admin--danger" id="volume-revert-btn" title="Конвертувати всі збірники у випуски">
+                                            ${ICON.hash}
+                                            У випуски (${data.collections.length})
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            ` : ''}
+
                             ${heroRelations}
+                            
+                            <div class="volume-synopsis">
+                                <div class="synopsis-header">
+                                    <h2 class="synopsis-title">Синопсис</h2>
+                                    <div class="synopsis-tabs">
+                                        <button class="synopsis-tab ${activeTab === 'ua' ? 'is-active' : ''}" data-tab="ua">UA</button>
+                                        <button class="synopsis-tab ${activeTab === 'en' ? 'is-active' : ''}" data-tab="en">EN</button>
+                                    </div>
+                                </div>
+                                <div class="synopsis-content">
+                                    <div class="synopsis-pane ${activeTab === 'ua' ? 'is-active' : ''}" id="synopsis-ua">
+                                        ${volume.synopsis_ua || volume.description || 'Немає опису українською.'}
+                                    </div>
+                                    <div class="synopsis-pane ${activeTab === 'en' ? 'is-active' : ''}" id="synopsis-en">
+                                        ${volume.synopsis || 'No description available in English.'}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -479,7 +685,7 @@ export async function renderVolumeDetail(main, params = {}) {
                         `;
                     })()}
 
-                    ${translationsSectionHTML(translations)}
+                    ${translationsSectionHTML(translations, { isTranslated, isModerator, currentVolumeId: volumeId })}
 
                     <section class="volume-issues-section">
                         <div class="volume-issues-toolbar block">
@@ -524,10 +730,228 @@ export async function renderVolumeDetail(main, params = {}) {
         `;
 
         // ── Bind events ──────────────────────────────
+        const readlistSelect = main.querySelector('#readlist-select');
+        const favoriteBtn = main.querySelector('#readlist-favorite-btn');
+
+        const syncReadlistButton = () => {
+            if (!readlistSelect) return;
+            const opt = readlistOptionLabel(readlistSelect.value);
+            const iconEl = readlistSelect.querySelector('.readlist-select-chosen .readlist-icon');
+            const labelEl = readlistSelect.querySelector('.readlist-select-chosen .select-label');
+            if (iconEl) { iconEl.innerHTML = opt.icon; iconEl.style.color = opt.color; }
+            if (labelEl) labelEl.textContent = opt.label;
+
+            if (opt.bg) {
+                readlistSelect.style.setProperty('background-color', opt.bg, 'important');
+            } else {
+                readlistSelect.style.removeProperty('background-color');
+            }
+            if (opt.borderColor) {
+                readlistSelect.style.setProperty('border-color', opt.borderColor, 'important');
+            } else {
+                readlistSelect.style.removeProperty('border-color');
+            }
+
+            // Show "Delete" option only if the volume is currently added to some list
+            const removeOption = readlistSelect.querySelector('option.readlist-remove-option');
+            if (removeOption) {
+                if (readlistSelect.value === '') {
+                    removeOption.style.setProperty('display', 'none', 'important');
+                } else {
+                    removeOption.style.setProperty('display', 'flex', 'important');
+                }
+            }
+        };
+
+        if (readlistSelect) {
+            readlistSelect.value = readlistStatus.list_name || '';
+            syncReadlistButton();
+        }
+        
+        if (favoriteBtn) {
+            const isFavorite = currentUser ? readlistStatus.is_favorite : Bookmarks.has(volumeId, 'volume');
+            favoriteBtn.classList.toggle('is-active', isFavorite);
+        }
+
+        if (readlistSelect) {
+            readlistSelect.addEventListener('change', async (e) => {
+                const listName = e.target.value;
+                syncReadlistButton();
+                try {
+                    await API.post('/user/readlist/update', {
+                        volume_id: volumeId,
+                        list_name: listName || null
+                    });
+                } catch (err) {
+                    console.error('Readlist update error:', err);
+                    // Revert UI on error
+                    e.target.value = readlistStatus.list_name || '';
+                    syncReadlistButton();
+                }
+            });
+        }
+
+        if (favoriteBtn) {
+            favoriteBtn.addEventListener('click', async () => {
+                if (!currentUser) {
+                    const active = Bookmarks.toggle(volumeId, 'volume');
+                    favoriteBtn.classList.toggle('is-active', active);
+                    return;
+                }
+                try {
+                    const res = await API.post('/user/readlist/toggle-favorite', { volume_id: volumeId });
+                    favoriteBtn.classList.toggle('is-active', res.is_favorite);
+                } catch (err) {
+                    console.error('Favorite toggle error:', err);
+                }
+            });
+        }
+
+        const deleteBtn = main.querySelector('#volume-delete-btn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', async () => {
+                if (!confirm('Ви впевнені, що хочете видалити цей том? Всі пов\'язані дані (теми, зв\'язки) будуть видалені.')) return;
+                
+                try {
+                    const res = await API.delete(`/volumes/${volumeId}`);
+                    alert(res.message);
+                    window.location.hash = '#/catalog';
+                } catch (err) {
+                    alert('Помилка видалення: ' + err.message);
+                }
+            });
+        }
+
+        const editBtn = main.querySelector('#volume-edit-btn');
+        if (editBtn) {
+            editBtn.addEventListener('click', async () => {
+                const editor = new VolumeEditor(volume, () => {
+                    // Reload the view on save
+                    renderVolumeDetail(main, params);
+                });
+                await editor.render();
+            });
+        }
+
+        const addSourceBtn = main.querySelector('#volume-add-original-btn');
+        if (addSourceBtn) {
+            addSourceBtn.addEventListener('click', () => {
+                const picker = new VolumePicker({
+                    title: 'Вибрати першоджерело',
+                    excludeId: volumeId,
+                    onSelect: async (selectedVol) => {
+                        try {
+                            await API.post(`/volumes/${selectedVol.id}/translations`, {
+                                child_id: volume.id,
+                                rel_type: 'original'
+                            });
+                            renderVolumeDetail(main, params);
+                        } catch (err) {
+                            alert('Помилка: ' + err.message);
+                        }
+                    }
+                });
+                picker.render();
+            });
+        }
+
+        const addTranslationBtn = main.querySelector('#volume-add-translation-btn');
+        if (addTranslationBtn) {
+            addTranslationBtn.addEventListener('click', () => {
+                const picker = new VolumePicker({
+                    title: 'Додати переклад',
+                    excludeId: volumeId,
+                    onSelect: async (selectedVol) => {
+                        try {
+                            await API.post(`/volumes/${volumeId}/translations`, {
+                                child_id: selectedVol.id,
+                                rel_type: 'translation'
+                            });
+                            renderVolumeDetail(main, params);
+                        } catch (err) {
+                            alert('Помилка: ' + err.message);
+                        }
+                    }
+                });
+                picker.render();
+            });
+        }
+
+        const addMagazineBtn = main.querySelector('#volume-add-magazine-btn');
+        if (addMagazineBtn) {
+            addMagazineBtn.addEventListener('click', () => {
+                const picker = new VolumePicker({
+                    title: 'Вибрати журнал',
+                    themeId: 35,
+                    onSelect: async (selectedVol) => {
+                        try {
+                            await API.post(`/volumes/${selectedVol.id}/magazine-children`, {
+                                child_id: volume.id
+                            });
+                            renderVolumeDetail(main, params);
+                        } catch (err) {
+                            alert('Помилка: ' + err.message);
+                        }
+                    }
+                });
+                picker.render();
+            });
+        }
+
+        const convertBtn = main.querySelector('#volume-convert-btn');
+        if (convertBtn) {
+            convertBtn.addEventListener('click', async () => {
+                if (!confirm(`Конвертувати всі випуски (${data.issues.length}) у збірники? Це видалить випуски та створить замість них збірники.`)) return;
+                
+                try {
+                    const res = await API.post(`/volumes/${volumeId}/convert-all-to-collections`);
+                    alert(res.message);
+                    renderVolumeDetail(main, params);
+                } catch (err) {
+                    alert('Помилка конвертації: ' + err.message);
+                }
+            });
+        }
+
+        const revertBtn = main.querySelector('#volume-revert-btn');
+        if (revertBtn) {
+            revertBtn.addEventListener('click', async () => {
+                if (!confirm(`Конвертувати всі збірники (${data.collections.length}) у випуски? Це видалить збірники та створить замість них випуски.`)) return;
+                
+                try {
+                    const res = await API.post(`/volumes/${volumeId}/convert-all-collections-to-issues`);
+                    alert(res.message);
+                    renderVolumeDetail(main, params);
+                } catch (err) {
+                    alert('Помилка конвертації: ' + err.message);
+                }
+            });
+        }
+
         const detailsBtn = main.querySelector('.volume-details-trigger');
         if (detailsBtn) {
-            detailsBtn.addEventListener('click', () => openFactsModal(volume, stats));
+            detailsBtn.addEventListener('click', () => {
+                openFactsModal(volume, stats);
+            });
         }
+
+        const synonymsBtn = main.querySelector('#btn-show-synonyms');
+        if (synonymsBtn) {
+            synonymsBtn.addEventListener('click', () => {
+                openSynonymsModal(volume);
+            });
+        }
+
+        const synopsisTabs = main.querySelectorAll('.synopsis-tab');
+        synopsisTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const lang = tab.dataset.tab;
+                synopsisTabs.forEach(t => t.classList.toggle('is-active', t === tab));
+                main.querySelectorAll('.synopsis-pane').forEach(p => {
+                    p.classList.toggle('is-active', p.id === `synopsis-${lang}`);
+                });
+            });
+        });
 
         const itemsView = document.getElementById('volume-items-view-container');
         const tabs = main.querySelectorAll('.volume-tab-btn');
@@ -538,7 +962,7 @@ export async function renderVolumeDetail(main, params = {}) {
         const sortGroup = main.querySelector('.volume-sort-group');
 
         let currentTab = 'issues';
-        let currentCollections = [];
+        let currentCollections = isMagazine ? magazineChildren : [];
         const paginator = createPaginator({ pageSize: 12 });
 
         const refreshItems = () => {
@@ -567,10 +991,14 @@ export async function renderVolumeDetail(main, params = {}) {
                 renderItems(itemsView, sliced);
             } else {
                 const sliced = currentCollections.slice(start, end);
-                renderCollectionsFromIssues(itemsView, sliced, {
-                    emptyMessage: isMangaWithMagazine ? 'Для цього тому немає томів' : 'Цей том не входить у жоден відомий збірник',
-                    typeLabel: isMangaWithMagazine ? 'Том' : 'Збірник',
-                });
+                if (isMagazine) {
+                    renderItems(itemsView, sliced);
+                } else {
+                    renderCollectionsFromIssues(itemsView, sliced, {
+                        emptyMessage: isManga ? 'Для цього тому немає томів' : 'Цей том не входить у жоден відомий збірник',
+                        typeLabel: isManga ? 'Том' : 'Збірник',
+                    });
+                }
             }
         };
 
@@ -580,17 +1008,17 @@ export async function renderVolumeDetail(main, params = {}) {
             tabs.forEach(t => t.classList.toggle('is-active', t.dataset.tab === tabName));
 
             if (sortGroup) {
-                sortGroup.style.display = tabName === 'issues' ? 'block' : 'none';
+                sortGroup.style.display = (tabName === 'issues' && !isMagazine) ? 'block' : 'none';
             }
 
             itemsView.classList.remove('is-visible');
 
             setTimeout(async () => {
-                if (tabName === 'issues') {
+                if (tabName === 'issues' || isMagazine) {
                     refreshItems();
                 } else {
                     if (currentCollections.length === 0) {
-                        itemsView.innerHTML = `<div class="loading-state">Завантаження ${isMangaWithMagazine ? 'томів' : 'збірників'}...</div>`;
+                        itemsView.innerHTML = `<div class="loading-state">Завантаження ${isManga ? 'томів' : 'збірників'}...</div>`;
                         try {
                             const response = await API.get(`/volumes/${volumeId}/collections-from-issues`);
                             currentCollections = response.data || [];
@@ -651,6 +1079,35 @@ export async function renderVolumeDetail(main, params = {}) {
     }
 }
 
+// ── Relations Management ───────────────────────────
+window.removeTranslation = async (parentId, childId) => {
+    if (!confirm('Від\'єднати цей переклад від оригіналу?')) return;
+    try {
+        await API.delete(`/volumes/${parentId}/translations/${childId}`);
+        const volumeId = Number(new URL(window.location).hash.split('/').pop());
+        if (volumeId) {
+            const main = document.querySelector('main');
+            renderVolumeDetail(main, { id: volumeId });
+        }
+    } catch (err) {
+        alert('Помилка: ' + err.message);
+    }
+};
+
+window.removeMagazineChild = async (magazineId, childId) => {
+    if (!confirm('Від\'єднати цей том від журналу?')) return;
+    try {
+        await API.delete(`/volumes/${magazineId}/magazine-children/${childId}`);
+        const volumeId = Number(new URL(window.location).hash.split('/').pop());
+        if (volumeId) {
+            const main = document.querySelector('main');
+            renderVolumeDetail(main, { id: volumeId });
+        }
+    } catch (err) {
+        alert('Помилка: ' + err.message);
+    }
+};
+
 function openFactsModal(volume, stats) {
     if (document.querySelector('.ds-modal-overlay')) return;
     const modal = document.createElement('div');
@@ -684,9 +1141,72 @@ function openFactsModal(volume, stats) {
     document.body.style.overflow = 'hidden';
 
     const close = () => {
+        document.removeEventListener('keydown', handleEsc);
         modal.remove();
         document.body.style.overflow = '';
     };
+
+    const handleEsc = (e) => {
+        if (e.key === 'Escape') close();
+    };
+    document.addEventListener('keydown', handleEsc);
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+    });
+    modal.querySelector('#modal-close').addEventListener('click', close);
+}
+
+function openSynonymsModal(volume) {
+    if (document.querySelector('.ds-modal-overlay')) return;
+    const modal = document.createElement('div');
+    modal.className = 'ds-modal-overlay';
+    
+    const synonyms = Array.isArray(volume.synonyms) ? volume.synonyms : [];
+    const allNames = [
+        { label: 'Українська', value: volume.name_uk },
+        { label: 'Англійська', value: volume.name_en },
+        { label: 'Оригінальна', value: volume.name },
+        { label: 'Рідна', value: volume.name_native },
+        ...synonyms.map(s => ({ label: 'Синонім', value: s }))
+    ].filter(n => n.value);
+
+    modal.innerHTML = `
+        <div class="ds-modal ds-modal--small">
+            <div class="ds-modal-header">
+                <div class="ds-modal-title">
+                    ${ICON.languages}
+                    Всі назви та синоніми
+                </div>
+                <button class="ds-modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="ds-modal-body">
+                <div class="synonyms-list">
+                    ${allNames.map(n => `
+                        <div class="synonym-item">
+                            <span class="synonym-label">${n.label}</span>
+                            <span class="synonym-value">${escapeHtmlAttribute(n.value)}</span>
+                        </div>
+                    `).join('')}
+                    ${allNames.length === 0 ? '<p class="text-muted">Назв не знайдено</p>' : ''}
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+
+    const close = () => {
+        document.removeEventListener('keydown', handleEsc);
+        modal.remove();
+        document.body.style.overflow = '';
+    };
+
+    const handleEsc = (e) => {
+        if (e.key === 'Escape') close();
+    };
+    document.addEventListener('keydown', handleEsc);
 
     modal.addEventListener('click', (e) => {
         if (e.target === modal) close();
@@ -718,9 +1238,15 @@ async function openIssueMembershipModal(issueId) {
     document.body.style.overflow = 'hidden';
 
     const close = () => {
+        document.removeEventListener('keydown', handleEsc);
         modal.remove();
         document.body.style.overflow = '';
     };
+
+    const handleEsc = (e) => {
+        if (e.key === 'Escape') close();
+    };
+    document.addEventListener('keydown', handleEsc);
 
     modal.addEventListener('click', (e) => {
         if (e.target === modal) close();

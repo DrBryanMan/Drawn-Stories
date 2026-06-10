@@ -7,6 +7,7 @@ const ICONS = {
   type: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"/><path d="M3 12h18"/><path d="M3 17h18"/></svg>',
   genre: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M3 12h18"/><path d="m5 5 14 14"/><path d="m19 5-14 14"/></svg>',
   check: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  magazine: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18h-5"/><path d="M18 14h-8"/><path d="M4 22h16a2 2 0 0 0 2-2V4H8v16a2 2 0 0 1-4 0V6H2v14a2 2 0 0 0 2 2Z"/><path d="M10 6h8v4h-8V6Z"/></svg>',
 };
 
 export const THEME_GROUP_LABELS = {
@@ -32,8 +33,10 @@ export function mountCatalogFilters({
   selectedPublishers,
   selectedThemes,
   excludedThemes,
+  selectedMagazines = [],
   onPublishersChange,
   onThemesChange,
+  onMagazinesChange,
 }) {
   if (!container) return;
 
@@ -42,6 +45,7 @@ export function mountCatalogFilters({
     ...selectedThemes.map((theme) => ({ ...theme, exclude: false })),
     ...excludedThemes.map((theme) => ({ ...theme, exclude: true })),
   ];
+  let magazines = [...selectedMagazines];
 
   container.innerHTML = `
     <div class="catalog-inline-filter-controls">
@@ -59,6 +63,13 @@ export function mountCatalogFilters({
           <div class="catalog-filter-dropdown catalog-filter-dropdown--themes" data-theme-dropdown></div>
         </div>
       </div>
+      <div class="catalog-inline-filter" id="catalog-inline-magazine-filter">
+        <span class="catalog-inline-filter__label">${ICONS.magazine}</span>
+        <div class="catalog-inline-filter__input-wrap">
+          <input class="catalog-inline-filter__input" type="text" data-magazine-input placeholder="Вибрати журнал...">
+          <div class="catalog-filter-dropdown" data-magazine-dropdown></div>
+        </div>
+      </div>
     </div>
     <div class="catalog-selected-filters" data-selected-filters hidden>
       <div class="catalog-selected-filter-group" data-publisher-filter-group hidden>
@@ -68,6 +79,10 @@ export function mountCatalogFilters({
       <div class="catalog-selected-filter-group" data-theme-filter-group hidden>
         <span class="catalog-selected-filter-group__label">${ICONS.theme}</span>
         <div class="catalog-inline-filter__chips" data-theme-chips></div>
+      </div>
+      <div class="catalog-selected-filter-group" data-magazine-filter-group hidden>
+        <span class="catalog-selected-filter-group__label">${ICONS.magazine}</span>
+        <div class="catalog-inline-filter__chips" data-magazine-chips></div>
       </div>
     </div>
   `;
@@ -81,9 +96,14 @@ export function mountCatalogFilters({
   const themeDropdown = container.querySelector('[data-theme-dropdown]');
   const themeChips = container.querySelector('[data-theme-chips]');
   const themeGroup = container.querySelector('[data-theme-filter-group]');
+  const magazineInput = container.querySelector('[data-magazine-input]');
+  const magazineDropdown = container.querySelector('[data-magazine-dropdown]');
+  const magazineChips = container.querySelector('[data-magazine-chips]');
+  const magazineGroup = container.querySelector('[data-magazine-filter-group]');
 
   let publisherTimer = null;
   let themeTimer = null;
+  let magazineTimer = null;
 
   const isInsideAny = (target, elements) => elements.some((element) => element.contains(target));
 
@@ -94,6 +114,10 @@ export function mountCatalogFilters({
     );
   };
 
+  const updateSelectedFiltersVisibility = () => {
+    selectedFilters.hidden = publishers.length === 0 && themes.length === 0 && magazines.length === 0;
+  };
+
   const renderPublisherChips = () => {
     publisherChips.innerHTML = publishers.map((publisher) => `
       <span class="catalog-selected-filter catalog-selected-filter--publisher">
@@ -102,7 +126,7 @@ export function mountCatalogFilters({
       </span>
     `).join('');
     publisherGroup.hidden = publishers.length === 0;
-    selectedFilters.hidden = publishers.length === 0 && themes.length === 0;
+    updateSelectedFiltersVisibility();
   };
 
   const renderThemeChips = () => {
@@ -115,7 +139,19 @@ export function mountCatalogFilters({
       </span>
     `).join('');
     themeGroup.hidden = themes.length === 0;
-    selectedFilters.hidden = publishers.length === 0 && themes.length === 0;
+    updateSelectedFiltersVisibility();
+  };
+
+  const renderMagazineChips = () => {
+    if (!magazineChips) return;
+    magazineChips.innerHTML = magazines.map((magazine) => `
+      <span class="catalog-selected-filter catalog-selected-filter--magazine">
+        <span>${escapeHtmlAttribute(magazine.name)}</span>
+        <button type="button" data-remove-magazine="${magazine.id}" title="Прибрати журнал">×</button>
+      </span>
+    `).join('');
+    if (magazineGroup) magazineGroup.hidden = magazines.length === 0;
+    updateSelectedFiltersVisibility();
   };
 
   const showPublisherDropdown = async (query = '') => {
@@ -141,6 +177,32 @@ export function mountCatalogFilters({
     } catch {
       publisherDropdown.innerHTML = '<div class="catalog-filter-dropdown__empty">Не вдалося завантажити</div>';
       publisherDropdown.hidden = false;
+    }
+  };
+
+  const showMagazineDropdown = async (query = '') => {
+    try {
+      const data = await API.get('/catalog', {
+        theme_ids: 35,
+        search: query || undefined,
+        limit: 20,
+      });
+      const items = data.items || [];
+      magazineDropdown.innerHTML = items.length
+        ? items.map((magazine) => {
+            const selected = magazines.some((item) => item.id === magazine.id);
+            return `
+              <button class="catalog-filter-dropdown__item${selected ? ' is-selected' : ''}" type="button" data-magazine-id="${magazine.id}" data-magazine-name="${escapeHtmlAttribute(magazine.name)}">
+                <span class="catalog-filter-dropdown__name">${escapeHtmlAttribute(magazine.name)}</span>
+                ${selected ? `<span class="catalog-filter-state catalog-filter-state--include">${ICONS.check}</span>` : ''}
+              </button>
+            `;
+          }).join('')
+        : '<div class="catalog-filter-dropdown__empty">Нічого не знайдено</div>';
+      magazineDropdown.hidden = false;
+    } catch {
+      magazineDropdown.innerHTML = '<div class="catalog-filter-dropdown__empty">Не вдалося завантажити</div>';
+      magazineDropdown.hidden = false;
     }
   };
 
@@ -241,6 +303,26 @@ export function mountCatalogFilters({
     if (!publisherDropdown.hidden) showPublisherDropdown(publisherInput.value.trim());
   });
 
+  magazineInput.addEventListener('focus', () => showMagazineDropdown(magazineInput.value.trim()));
+  magazineInput.addEventListener('input', () => {
+    clearTimeout(magazineTimer);
+    magazineTimer = setTimeout(() => showMagazineDropdown(magazineInput.value.trim()), 250);
+  });
+
+  magazineDropdown.addEventListener('click', (event) => {
+    const row = event.target.closest('[data-magazine-id]');
+    if (!row || row.classList.contains('is-selected')) return;
+
+    magazines = [...magazines, {
+      id: Number(row.dataset.magazineId),
+      name: row.dataset.magazineName,
+    }];
+    magazineInput.value = '';
+    magazineDropdown.hidden = true;
+    if (onMagazinesChange) onMagazinesChange(magazines);
+    renderMagazineChips();
+  });
+
   themeInput.addEventListener('focus', () => showThemeDropdown(themeInput.value.trim()));
   themeInput.addEventListener('input', () => {
     clearTimeout(themeTimer);
@@ -287,26 +369,48 @@ export function mountCatalogFilters({
     if (!isInsideAny(event.target, [themeInput, themeDropdown])) {
       themeDropdown.hidden = true;
     }
+
+    if (!isInsideAny(event.target, [magazineInput, magazineDropdown])) {
+      magazineDropdown.hidden = true;
+    }
   });
 
   publisherDropdown.hidden = true;
   themeDropdown.hidden = true;
+  magazineDropdown.hidden = true;
   renderPublisherChips();
   renderThemeChips();
+  renderMagazineChips();
+
+  if (magazineChips) {
+    magazineChips.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-remove-magazine]');
+      if (!button) return;
+
+      magazines = magazines.filter((m) => m.id !== Number(button.dataset.removeMagazine));
+      if (onMagazinesChange) onMagazinesChange(magazines);
+      renderMagazineChips();
+      if (!magazineDropdown.hidden) showMagazineDropdown(magazineInput.value.trim());
+    });
+  }
 
   return {
-    setFilters(nextPublishers = [], nextThemes = [], nextExcludedThemes = []) {
+    setFilters(nextPublishers = [], nextThemes = [], nextExcludedThemes = [], nextMagazines = []) {
       publishers = [...nextPublishers];
       themes = [
         ...nextThemes.map((theme) => ({ ...theme, exclude: false })),
         ...nextExcludedThemes.map((theme) => ({ ...theme, exclude: true })),
       ];
+      magazines = [...nextMagazines];
       publisherInput.value = '';
       themeInput.value = '';
+      magazineInput.value = '';
       publisherDropdown.hidden = true;
       themeDropdown.hidden = true;
+      magazineDropdown.hidden = true;
       renderPublisherChips();
       renderThemeChips();
+      renderMagazineChips();
     },
   };
 }

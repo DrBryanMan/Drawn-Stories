@@ -8,7 +8,7 @@ router = APIRouter(prefix="/api/themes", tags=["themes"])
 async def get_themes(
     search: Optional[str] = None,
     ids: Optional[str] = None,
-    limit: int = Query(60, ge=1, le=100),
+    limit: int = Query(1000, ge=1),
 ):
     db = get_db()
     where_parts = []

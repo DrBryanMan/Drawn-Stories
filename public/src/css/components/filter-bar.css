@@ -3,14 +3,14 @@
 ══════════════════════════════════════════════════════ */
 
 .filter-bar {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+  display: flex;
   align-items: stretch;
   background: var(--bg-card);
   border: 1px solid var(--border-s);
   border-radius: var(--r-lg);
   overflow: hidden;
   margin-bottom: 1em;
+  width: 100%;
 }
 
 /* ── Sections ──────────────────────────────────────── */
@@ -18,6 +18,7 @@
   display: flex;
   align-items: center;
   padding: .5em 1em;
+  flex-shrink: 0;
 }
 
 .filter-section + .filter-section {
@@ -29,6 +30,7 @@
   display: grid;
   align-content: center;
   gap: .3em;
+  min-width: 120px;
 }
 
 .results-label {
@@ -51,11 +53,13 @@
 /* ── Search ────────────────────────────────────────── */
 .search-section {
   flex: 1;
+  display: flex;
+  min-width: 0;
 }
 
 .search-inner {
   position: relative;
-  width: 100%;
+  flex: 1;
 }
 
 .search-icon {
@@ -128,12 +132,13 @@
 }
 
 .filter-group .filter-btn-icon {
-  height: 100%;
+  /* height: 100%; */
   border: 0;
 }
 
-.sort-order-btn {
+.filter-group .filter-btn-icon.sort-order-btn {
   color: #64748b;
+  border-left: 1px solid var(--border-s);
 }
 
 .sort-order-btn:hover {
@@ -174,7 +179,6 @@ select.filter-select {
   min-width: 180px;
   height: 100%;
   border: 0;
-  border-right: 1px solid var(--border-s);
   background: var(--filter-select-arrow) right 17px center / 14px no-repeat, #ffffff;
   color: #64748b;
   font: inherit;
@@ -278,12 +282,11 @@ select.filter-select option {
   select.filter-select option {
     display: flex;
     align-items: center;
-    /* gap: 12px; */
-    min-height: 40px;
-    padding: 0 10px;
+    gap: 4px;
+    padding: .4em;
     border-radius: 6px;
     background: transparent;
-    font-size: 14px;
+    font-size: 13px;
     transition: background var(--t), color var(--t);
   }
 

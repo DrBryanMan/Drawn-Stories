@@ -1,0 +1,217 @@
+.publishers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .publishers-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.publisher-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  transition: transform var(--t), box-shadow var(--t), border-color var(--t);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, .02);
+}
+
+.publisher-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, .06);
+  border-color: var(--border-s);
+}
+
+.pub-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pub-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--r);
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.pub-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pub-meta {
+  flex-grow: 1;
+}
+
+.pub-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.pub-name {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.pub-status {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.pub-status.active {
+  color: var(--green);
+}
+
+.pub-badges {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pub-badge {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border-s);
+  color: var(--text-2);
+  background: var(--bg);
+}
+
+.pub-body {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.pub-section-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-2);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pub-releases {
+  display: flex;
+  gap: 0.75rem;
+  flex-grow: 1;
+}
+
+.pub-release-card {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-card);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border-s);
+  overflow: hidden;
+  text-decoration: none;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  transition: border-color var(--t), background var(--t);
+}
+
+.pub-release-card:hover {
+  border-color: var(--accent);
+  background: var(--bg-card-h);
+}
+
+.pub-release-cover {
+  aspect-ratio: 2 / 3;
+  width: 100%;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pub-release-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.no-cover {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 0.5rem;
+}
+
+.pub-release-info {
+  padding: 0.5rem;
+  text-align: center;
+}
+
+.pub-release-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.25rem;
+}
+
+.pub-release-episodes {
+  font-size: 0.7rem;
+  color: var(--text-2);
+}
+
+.pub-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-s);
+}
+
+.pub-total {
+  font-size: 0.875rem;
+  color: var(--text-2);
+}
+
+.pub-total strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.pub-btn {
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.4rem 1rem;
+  border-radius: var(--r);
+  background: var(--bg);
+  border: 1px solid var(--border-s);
+  color: var(--text);
+  text-decoration: none;
+  transition: all var(--t);
+}
+
+.pub-btn:hover {
+  background: var(--bg-card-h);
+  border-color: var(--border);
+  color: var(--accent);
+}
