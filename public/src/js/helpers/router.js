@@ -31,10 +31,10 @@ export class Router {
 
     const query = {};
     if (search) {
-      search.split('&').forEach(pair => {
-        const [k, v] = pair.split('=');
-        if (k) query[k] = decodeURIComponent(v || '');
-      });
+      const searchParams = new URLSearchParams(search);
+      for (const [key, value] of searchParams.entries()) {
+        query[key] = value;
+      }
     }
 
     let handler = this.#routes.get(path);

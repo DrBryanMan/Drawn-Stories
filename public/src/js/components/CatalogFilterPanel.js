@@ -1,5 +1,6 @@
 import { API } from '../helpers/api.js';
 import { escapeHtmlAttribute } from '../helpers/image.js';
+import Fuse from 'https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.mjs';
 
 const ICONS = {
   publisher: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9h1"/><path d="M9 13h1"/><path d="M9 17h1"/></svg>',
@@ -8,12 +9,110 @@ const ICONS = {
   genre: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M3 12h18"/><path d="m5 5 14 14"/><path d="m19 5-14 14"/></svg>',
   check: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
   magazine: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18h-5"/><path d="M18 14h-8"/><path d="M4 22h16a2 2 0 0 0 2-2V4H8v16a2 2 0 0 1-4 0V6H2v14a2 2 0 0 0 2 2Z"/><path d="M10 6h8v4h-8V6Z"/></svg>',
+  language: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+  source: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>',
+  trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
 };
 
 export const THEME_GROUP_LABELS = {
   type: 'Тип',
   genre: 'Жанр',
   theme: 'Тема',
+};
+
+const LANG_LABELS = {
+  'uk': 'Українська',
+  'en': 'Англійська',
+  'ja': 'Японська',
+  'fr': 'Французька',
+  'pl': 'Польська',
+  'de': 'Німецька',
+  'ko': 'Корейська',
+  'zh': 'Китайська',
+  'it': 'Італійська',
+  'es': 'Іспанська',
+  'pt': 'Португальська',
+  'ru': 'Російська',
+};
+
+let allThemes = [];
+let themesFuse = null;
+let themesPromise = null;
+let allPublishers = [];
+let publishersFuse = null;
+let publishersPromise = null;
+let allMagazines = [];
+let magazinesFuse = null;
+let magazinesPromise = null;
+
+export const loadAllThemes = async () => {
+  if (allThemes.length > 0) return allThemes;
+  if (themesPromise) return themesPromise;
+
+  themesPromise = (async () => {
+    try {
+      const data = await API.get('/themes', { limit: 1000 }); // backend allows 1000
+      allThemes = data.items || [];
+      themesFuse = new Fuse(allThemes, {
+        keys: ['name', 'ua_name'],
+        threshold: 0.35,
+        ignoreLocation: true
+      });
+      return allThemes;
+    } catch (e) { 
+      console.error('Failed to load themes for Fuse', e); 
+      themesPromise = null;
+      return []; 
+    }
+  })();
+  return themesPromise;
+};
+
+export const loadAllPublishers = async () => {
+  if (allPublishers.length > 0) return allPublishers;
+  if (publishersPromise) return publishersPromise;
+
+  publishersPromise = (async () => {
+    try {
+      const data = await API.get('/publishers', { sort: 'volumes', order_dir: 'desc', limit: 500 }); 
+      allPublishers = data.items || [];
+      publishersFuse = new Fuse(allPublishers, {
+        keys: ['name'],
+        threshold: 0.35,
+        ignoreLocation: true
+      });
+      return allPublishers;
+    } catch (e) { 
+      console.error('Failed to load publishers for Fuse', e); 
+      publishersPromise = null;
+      return []; 
+    }
+  })();
+  return publishersPromise;
+};
+
+export const loadAllMagazines = async () => {
+  if (allMagazines.length > 0) return allMagazines;
+  if (magazinesPromise) return magazinesPromise;
+
+  magazinesPromise = (async () => {
+    try {
+      const data = await API.get('/catalog', { theme_ids: 35, limit: 500 }); 
+      allMagazines = data.items || [];
+      allMagazines.sort((a, b) => (b.issue_count || 0) - (a.issue_count || 0));
+      magazinesFuse = new Fuse(allMagazines, {
+        keys: ['name', 'name_uk', 'name_en'],
+        threshold: 0.35,
+        ignoreLocation: true
+      });
+      return allMagazines;
+    } catch (e) { 
+      console.error('Failed to load magazines for Fuse', e); 
+      magazinesPromise = null;
+      return []; 
+    }
+  })();
+  return magazinesPromise;
 };
 
 export function themeLabel(theme) {
@@ -34,9 +133,15 @@ export function mountCatalogFilters({
   selectedThemes,
   excludedThemes,
   selectedMagazines = [],
+  selectedLanguages = [],
+  selectedSources = [],
+  excludedSources = [],
   onPublishersChange,
   onThemesChange,
   onMagazinesChange,
+  onLanguagesChange,
+  onSourcesChange,
+  onClearAll,
 }) {
   if (!container) return;
 
@@ -46,28 +151,47 @@ export function mountCatalogFilters({
     ...excludedThemes.map((theme) => ({ ...theme, exclude: true })),
   ];
   let magazines = [...selectedMagazines];
+  let languages = [...selectedLanguages];
+  let sources = [
+    ...selectedSources.map(s => ({ id: s, name: s === 'hikka' ? 'Hikka' : s === 'mal' ? 'MAL' : 'ComicVine', exclude: false })),
+    ...excludedSources.map(s => ({ id: s, name: s === 'hikka' ? 'Hikka' : s === 'mal' ? 'MAL' : 'ComicVine', exclude: true })),
+  ];
 
   container.innerHTML = `
     <div class="catalog-inline-filter-controls">
       <div class="catalog-inline-filter" id="catalog-inline-publisher-filter">
-        <span class="catalog-inline-filter__label">${ICONS.publisher}</span>
+        <span class="catalog-inline-filter__label" title="Видавництво">${ICONS.publisher}</span>
         <div class="catalog-inline-filter__input-wrap">
-          <input class="catalog-inline-filter__input" type="text" data-publisher-input placeholder="Вибрати видавництво...">
-          <div class="catalog-filter-dropdown" data-publisher-dropdown></div>
+          <input class="catalog-inline-filter__input" type="text" data-publisher-input placeholder="Видавництво...">
+          <div class="catalog-filter-dropdown" data-publisher-dropdown hidden></div>
         </div>
       </div>
       <div class="catalog-inline-filter" id="catalog-inline-theme-filter">
-        <span class="catalog-inline-filter__label">${ICONS.theme}</span>
+        <span class="catalog-inline-filter__label" title="Тема">${ICONS.theme}</span>
         <div class="catalog-inline-filter__input-wrap">
-          <input class="catalog-inline-filter__input" type="text" data-theme-input placeholder="Вибрати тему...">
-          <div class="catalog-filter-dropdown catalog-filter-dropdown--themes" data-theme-dropdown></div>
+          <input class="catalog-inline-filter__input" type="text" data-theme-input placeholder="Тема...">
+          <div class="catalog-filter-dropdown catalog-filter-dropdown--themes" data-theme-dropdown hidden></div>
+        </div>
+      </div>
+      <div class="catalog-inline-filter" id="catalog-inline-language-filter">
+        <span class="catalog-inline-filter__label" title="Мова">${ICONS.language}</span>
+        <div class="catalog-inline-filter__input-wrap">
+          <input class="catalog-inline-filter__input" type="text" data-language-input placeholder="Мова...">
+          <div class="catalog-filter-dropdown" data-language-dropdown hidden></div>
+        </div>
+      </div>
+      <div class="catalog-inline-filter" id="catalog-inline-source-filter">
+        <span class="catalog-inline-filter__label" title="Джерело">${ICONS.source}</span>
+        <div class="catalog-inline-filter__input-wrap">
+          <input class="catalog-inline-filter__input" type="text" data-source-input placeholder="Джерело...">
+          <div class="catalog-filter-dropdown" data-source-dropdown hidden></div>
         </div>
       </div>
       <div class="catalog-inline-filter" id="catalog-inline-magazine-filter">
-        <span class="catalog-inline-filter__label">${ICONS.magazine}</span>
+        <span class="catalog-inline-filter__label" title="Журнал">${ICONS.magazine}</span>
         <div class="catalog-inline-filter__input-wrap">
-          <input class="catalog-inline-filter__input" type="text" data-magazine-input placeholder="Вибрати журнал...">
-          <div class="catalog-filter-dropdown" data-magazine-dropdown></div>
+          <input class="catalog-inline-filter__input" type="text" data-magazine-input placeholder="Журнал...">
+          <div class="catalog-filter-dropdown" data-magazine-dropdown hidden></div>
         </div>
       </div>
     </div>
@@ -80,10 +204,22 @@ export function mountCatalogFilters({
         <span class="catalog-selected-filter-group__label">${ICONS.theme}</span>
         <div class="catalog-inline-filter__chips" data-theme-chips></div>
       </div>
+      <div class="catalog-selected-filter-group" data-language-filter-group hidden>
+        <span class="catalog-selected-filter-group__label">${ICONS.language}</span>
+        <div class="catalog-inline-filter__chips" data-language-chips></div>
+      </div>
+      <div class="catalog-selected-filter-group" data-source-filter-group hidden>
+        <span class="catalog-selected-filter-group__label">${ICONS.source}</span>
+        <div class="catalog-inline-filter__chips" data-source-chips></div>
+      </div>
       <div class="catalog-selected-filter-group" data-magazine-filter-group hidden>
         <span class="catalog-selected-filter-group__label">${ICONS.magazine}</span>
         <div class="catalog-inline-filter__chips" data-magazine-chips></div>
       </div>
+      <button type="button" class="catalog-clear-all-filters-btn" data-clear-all-filters title="Скинути всі фільтри">
+        ${ICONS.trash}
+        <span>Скинути все</span>
+      </button>
     </div>
   `;
 
@@ -91,11 +227,20 @@ export function mountCatalogFilters({
   const publisherDropdown = container.querySelector('[data-publisher-dropdown]');
   const publisherChips = container.querySelector('[data-publisher-chips]');
   const selectedFilters = container.querySelector('[data-selected-filters]');
+  const clearAllButton = container.querySelector('[data-clear-all-filters]');
   const publisherGroup = container.querySelector('[data-publisher-filter-group]');
   const themeInput = container.querySelector('[data-theme-input]');
   const themeDropdown = container.querySelector('[data-theme-dropdown]');
   const themeChips = container.querySelector('[data-theme-chips]');
   const themeGroup = container.querySelector('[data-theme-filter-group]');
+  const languageInput = container.querySelector('[data-language-input]');
+  const languageDropdown = container.querySelector('[data-language-dropdown]');
+  const languageChips = container.querySelector('[data-language-chips]');
+  const languageGroup = container.querySelector('[data-language-filter-group]');
+  const sourceInput = container.querySelector('[data-source-input]');
+  const sourceDropdown = container.querySelector('[data-source-dropdown]');
+  const sourceChips = container.querySelector('[data-source-chips]');
+  const sourceGroup = container.querySelector('[data-source-filter-group]');
   const magazineInput = container.querySelector('[data-magazine-input]');
   const magazineDropdown = container.querySelector('[data-magazine-dropdown]');
   const magazineChips = container.querySelector('[data-magazine-chips]');
@@ -105,7 +250,7 @@ export function mountCatalogFilters({
   let themeTimer = null;
   let magazineTimer = null;
 
-  const isInsideAny = (target, elements) => elements.some((element) => element.contains(target));
+  const isInsideAny = (target, elements) => elements.some((element) => element && element.contains(target));
 
   const fireThemeChange = () => {
     onThemesChange(
@@ -114,8 +259,29 @@ export function mountCatalogFilters({
     );
   };
 
+  const fireSourceChange = () => {
+    onSourcesChange(
+      sources.filter(s => !s.exclude).map(s => s.id),
+      sources.filter(s => s.exclude).map(s => s.id)
+    );
+  };
+
   const updateSelectedFiltersVisibility = () => {
-    selectedFilters.hidden = publishers.length === 0 && themes.length === 0 && magazines.length === 0;
+    const hasActiveFilters = publishers.length > 0 || themes.length > 0 || magazines.length > 0 || languages.length > 0 || sources.length > 0;
+    selectedFilters.hidden = !hasActiveFilters;
+
+    const groups = [publisherGroup, themeGroup, languageGroup, sourceGroup, magazineGroup];
+    let isFirst = true;
+    groups.forEach((group) => {
+      if (group) {
+        if (!group.hidden && isFirst) {
+          group.classList.add('is-first-visible');
+          isFirst = false;
+        } else {
+          group.classList.remove('is-first-visible');
+        }
+      }
+    });
   };
 
   const renderPublisherChips = () => {
@@ -142,6 +308,30 @@ export function mountCatalogFilters({
     updateSelectedFiltersVisibility();
   };
 
+  const renderLanguageChips = () => {
+    languageChips.innerHTML = languages.map((lang) => `
+      <span class="catalog-selected-filter catalog-selected-filter--language">
+        <span>${LANG_LABELS[lang] || lang}</span>
+        <button type="button" data-remove-language="${lang}" title="Прибрати мову">×</button>
+      </span>
+    `).join('');
+    languageGroup.hidden = languages.length === 0;
+    updateSelectedFiltersVisibility();
+  };
+
+  const renderSourceChips = () => {
+    sourceChips.innerHTML = sources.map((s) => `
+      <span class="catalog-selected-filter catalog-selected-filter--source${s.exclude ? ' is-excluded' : ''}" data-source-id="${s.id}">
+        ${ICONS.source}
+        <span>${escapeHtmlAttribute(s.name)}</span>
+        <button type="button" data-toggle-source="${s.id}" title="Перемкнути включення/виключення">⇄</button>
+        <button type="button" data-remove-source="${s.id}" title="Прибрати">×</button>
+      </span>
+    `).join('');
+    sourceGroup.hidden = sources.length === 0;
+    updateSelectedFiltersVisibility();
+  };
+
   const renderMagazineChips = () => {
     if (!magazineChips) return;
     magazineChips.innerHTML = magazines.map((magazine) => `
@@ -155,98 +345,161 @@ export function mountCatalogFilters({
   };
 
   const showPublisherDropdown = async (query = '') => {
-    try {
-      const data = await API.get('/publishers', {
-        search: query || undefined,
-        limit: 20,
-      });
-      const items = data.items || [];
-      publisherDropdown.innerHTML = items.length
-        ? items.map((publisher) => {
-            const selected = publishers.some((item) => item.id === publisher.id);
-            return `
-              <button class="catalog-filter-dropdown__item${selected ? ' is-selected' : ''}" type="button" data-publisher-id="${publisher.id}" data-publisher-name="${escapeHtmlAttribute(publisher.name)}">
-                <span class="catalog-filter-dropdown__name">${escapeHtmlAttribute(publisher.name)}</span>
-                <span class="catalog-filter-dropdown__meta">${publisher.volume_count?.toLocaleString('uk-UA') ?? 0}</span>
-                ${selected ? `<span class="catalog-filter-state catalog-filter-state--include">${ICONS.check}</span>` : ''}
-              </button>
-            `;
-          }).join('')
-        : '<div class="catalog-filter-dropdown__empty">Нічого не знайдено</div>';
-      publisherDropdown.hidden = false;
-    } catch {
-      publisherDropdown.innerHTML = '<div class="catalog-filter-dropdown__empty">Не вдалося завантажити</div>';
+    if (allPublishers.length === 0) {
+      publisherDropdown.innerHTML = '<div class="catalog-filter-dropdown__empty">Завантаження...</div>';
       publisherDropdown.hidden = false;
     }
-  };
-
-  const showMagazineDropdown = async (query = '') => {
-    try {
-      const data = await API.get('/catalog', {
-        theme_ids: 35,
-        search: query || undefined,
-        limit: 20,
-      });
-      const items = data.items || [];
-      magazineDropdown.innerHTML = items.length
-        ? items.map((magazine) => {
-            const selected = magazines.some((item) => item.id === magazine.id);
-            return `
-              <button class="catalog-filter-dropdown__item${selected ? ' is-selected' : ''}" type="button" data-magazine-id="${magazine.id}" data-magazine-name="${escapeHtmlAttribute(magazine.name)}">
-                <span class="catalog-filter-dropdown__name">${escapeHtmlAttribute(magazine.name)}</span>
-                ${selected ? `<span class="catalog-filter-state catalog-filter-state--include">${ICONS.check}</span>` : ''}
-              </button>
-            `;
-          }).join('')
-        : '<div class="catalog-filter-dropdown__empty">Нічого не знайдено</div>';
-      magazineDropdown.hidden = false;
-    } catch {
-      magazineDropdown.innerHTML = '<div class="catalog-filter-dropdown__empty">Не вдалося завантажити</div>';
-      magazineDropdown.hidden = false;
+    
+    await loadAllPublishers();
+    let items = [];
+    if (!query) {
+      items = allPublishers.slice(0, 20);
+    } else if (publishersFuse) {
+      items = publishersFuse.search(query).map(r => r.item).slice(0, 20);
     }
-  };
 
-  const showThemeDropdown = async (query = '') => {
-    try {
-      const data = await API.get('/themes', {
-        search: query || undefined,
-        limit: query ? 50 : 60,
-      });
-      const groups = { type: [], genre: [], theme: [] };
-      (data.items || []).forEach((theme) => {
-        const group = groups[theme.type] ? theme.type : 'theme';
-        groups[group].push(theme);
-      });
-
-      let html = '';
-      Object.entries(groups).forEach(([group, items]) => {
-        if (!items.length) return;
-        html += `<div class="catalog-filter-dropdown__group">${themeIcon(group)}<span>${THEME_GROUP_LABELS[group]}</span></div>`;
-        html += items.map((theme) => {
-          const existing = themes.find((item) => item.id === theme.id);
-          const included = existing && !existing.exclude;
-          const excluded = existing && existing.exclude;
-          const name = themeLabel(theme);
+    publisherDropdown.innerHTML = items.length
+      ? items.map((publisher) => {
+          const selected = publishers.some((item) => item.id === publisher.id);
           return `
-            <div class="catalog-filter-dropdown__item catalog-filter-dropdown__item--theme${included ? ' is-included' : ''}${excluded ? ' is-excluded' : ''}" data-theme-id="${theme.id}" data-theme-name="${escapeHtmlAttribute(name)}" data-theme-type="${theme.type || 'theme'}">
-              <span class="catalog-filter-dropdown__name">${escapeHtmlAttribute(name)}</span>
+            <button class="catalog-filter-dropdown__item${selected ? ' is-selected' : ''}" type="button" data-publisher-id="${publisher.id}" data-publisher-name="${escapeHtmlAttribute(publisher.name)}">
+              <span class="catalog-filter-dropdown__name">${escapeHtmlAttribute(publisher.name)}</span>
+              <span class="catalog-filter-dropdown__meta">${publisher.volume_count?.toLocaleString('uk-UA') ?? 0}</span>
+              ${selected ? `<span class="catalog-filter-state catalog-filter-state--include">${ICONS.check}</span>` : ''}
+            </button>
+          `;
+        }).join('')
+      : '<div class="catalog-filter-dropdown__empty">Нічого не знайдено</div>';
+    publisherDropdown.hidden = false;
+  };
+
+  const showLanguageDropdown = (query = '') => {
+    const commonLangs = ['uk', 'en', 'ja', 'fr', 'pl', 'de', 'ko', 'zh', 'it', 'es', 'pt', 'ru'];
+    const items = commonLangs.map(l => ({ id: l, name: LANG_LABELS[l] || l }));
+    
+    let filtered = items;
+    if (query) {
+      const fuse = new Fuse(items, { keys: ['name', 'id'], threshold: 0.3 });
+      filtered = fuse.search(query).map(r => r.item);
+    }
+
+    languageDropdown.innerHTML = filtered.map(lang => {
+      const selected = languages.includes(lang.id);
+      return `
+        <button class="catalog-filter-dropdown__item${selected ? ' is-selected' : ''}" type="button" data-language-id="${lang.id}">
+          <span class="catalog-filter-dropdown__name">${lang.name}</span>
+          ${selected ? `<span class="catalog-filter-state catalog-filter-state--include">${ICONS.check}</span>` : ''}
+        </button>
+      `;
+    }).join('');
+    languageDropdown.hidden = false;
+  };
+
+  const showSourceDropdown = (query = '') => {
+    const items = [
+        { id: 'hikka', name: 'Hikka' },
+        { id: 'mal', name: 'MAL' },
+        { id: 'cv', name: 'ComicVine' }
+    ];
+
+    let filtered = items;
+    if (query) {
+      const fuse = new Fuse(items, { keys: ['name'], threshold: 0.3 });
+      filtered = fuse.search(query).map(r => r.item);
+    }
+
+    sourceDropdown.innerHTML = filtered.map(s => {
+        const existing = sources.find(item => item.id === s.id);
+        const included = existing && !existing.exclude;
+        const excluded = existing && existing.exclude;
+        return `
+            <div class="catalog-filter-dropdown__item catalog-filter-dropdown__item--source${included ? ' is-included' : ''}${excluded ? ' is-excluded' : ''}" data-source-id="${s.id}" data-source-name="${s.name}">
+              <span class="catalog-filter-dropdown__name">${s.name}</span>
               <span class="catalog-filter-dropdown__actions">
                 ${included ? `<span class="catalog-filter-state catalog-filter-state--include">${ICONS.check}</span>` : ''}
                 ${excluded ? '<span class="catalog-filter-state catalog-filter-state--exclude">−</span>' : ''}
-                <button type="button" data-theme-action="include" title="Включити">＋</button>
-                <button type="button" data-theme-action="exclude" title="Виключити">−</button>
+                <button type="button" data-source-action="include" title="Включити">＋</button>
+                <button type="button" data-source-action="exclude" title="Виключити">−</button>
               </span>
             </div>
-          `;
-        }).join('');
-      });
+        `;
+    }).join('');
+    sourceDropdown.hidden = false;
+  };
 
-      themeDropdown.innerHTML = html || '<div class="catalog-filter-dropdown__empty">Нічого не знайдено</div>';
-      themeDropdown.hidden = false;
-    } catch {
-      themeDropdown.innerHTML = '<div class="catalog-filter-dropdown__empty">Не вдалося завантажити</div>';
+  const showMagazineDropdown = async (query = '') => {
+    if (allMagazines.length === 0) {
+      magazineDropdown.innerHTML = '<div class="catalog-filter-dropdown__empty">Завантаження...</div>';
+      magazineDropdown.hidden = false;
+    }
+
+    await loadAllMagazines();
+    let items = [];
+    if (!query) {
+      items = allMagazines.slice(0, 20);
+    } else if (magazinesFuse) {
+      items = magazinesFuse.search(query).map(r => r.item).slice(0, 20);
+    }
+
+    magazineDropdown.innerHTML = items.length
+      ? items.map((magazine) => {
+          const selected = magazines.some((item) => item.id === magazine.id);
+          return `
+            <button class="catalog-filter-dropdown__item${selected ? ' is-selected' : ''}" type="button" data-magazine-id="${magazine.id}" data-magazine-name="${escapeHtmlAttribute(magazine.name)}">
+              <span class="catalog-filter-dropdown__name">${escapeHtmlAttribute(magazine.name)}</span>
+              ${selected ? `<span class="catalog-filter-state catalog-filter-state--include">${ICONS.check}</span>` : ''}
+            </button>
+          `;
+        }).join('')
+      : '<div class="catalog-filter-dropdown__empty">Нічого не знайдено</div>';
+    magazineDropdown.hidden = false;
+  };
+
+  const showThemeDropdown = async (query = '') => {
+    if (allThemes.length === 0) {
+      themeDropdown.innerHTML = '<div class="catalog-filter-dropdown__empty">Завантаження...</div>';
       themeDropdown.hidden = false;
     }
+
+    await loadAllThemes();
+    let items = [];
+    if (!query) {
+      items = allThemes;
+    } else if (themesFuse) {
+      items = themesFuse.search(query).map(r => r.item);
+    }
+
+    const groups = { type: [], genre: [], theme: [] };
+    items.forEach((theme) => {
+      const group = groups[theme.type] ? theme.type : 'theme';
+      groups[group].push(theme);
+    });
+
+    let html = '';
+    Object.entries(groups).forEach(([group, items]) => {
+      if (!items.length) return;
+      html += `<div class="catalog-filter-dropdown__group">${themeIcon(group)}<span>${THEME_GROUP_LABELS[group]}</span></div>`;
+      html += items.map((theme) => {
+        const existing = themes.find((item) => item.id === theme.id);
+        const included = existing && !existing.exclude;
+        const excluded = existing && existing.exclude;
+        const name = themeLabel(theme);
+        return `
+          <div class="catalog-filter-dropdown__item catalog-filter-dropdown__item--theme${included ? ' is-included' : ''}${excluded ? ' is-excluded' : ''}" data-theme-id="${theme.id}" data-theme-name="${escapeHtmlAttribute(name)}" data-theme-type="${theme.type || 'theme'}">
+            <span class="catalog-filter-dropdown__name">${escapeHtmlAttribute(name)}</span>
+            <span class="catalog-filter-dropdown__actions">
+              ${included ? `<span class="catalog-filter-state catalog-filter-state--include">${ICONS.check}</span>` : ''}
+              ${excluded ? '<span class="catalog-filter-state catalog-filter-state--exclude">−</span>' : ''}
+              <button type="button" data-theme-action="include" title="Включити">＋</button>
+              <button type="button" data-theme-action="exclude" title="Виключити">−</button>
+            </span>
+          </div>
+        `;
+      }).join('');
+    });
+
+    themeDropdown.innerHTML = html || '<div class="catalog-filter-dropdown__empty">Нічого не знайдено</div>';
+    themeDropdown.hidden = false;
   };
 
   const selectTheme = (row, exclude) => {
@@ -271,6 +524,29 @@ export function mountCatalogFilters({
     fireThemeChange();
     renderThemeChips();
     showThemeDropdown(themeInput.value.trim());
+  };
+
+  const selectSource = (row, exclude) => {
+    const id = row.dataset.sourceId;
+    const existing = sources.find((s) => s.id === id);
+
+    if (existing) {
+      if (existing.exclude === exclude) {
+        sources = sources.filter((s) => s.id !== id);
+      } else {
+        existing.exclude = exclude;
+      }
+    } else {
+      sources.push({
+        id,
+        name: row.dataset.sourceName,
+        exclude,
+      });
+    }
+
+    fireSourceChange();
+    renderSourceChips();
+    showSourceDropdown();
   };
 
   publisherInput.addEventListener('focus', () => showPublisherDropdown(publisherInput.value.trim()));
@@ -301,6 +577,72 @@ export function mountCatalogFilters({
     onPublishersChange(publishers);
     renderPublisherChips();
     if (!publisherDropdown.hidden) showPublisherDropdown(publisherInput.value.trim());
+  });
+
+  languageInput.addEventListener('focus', () => showLanguageDropdown(languageInput.value.trim()));
+  languageInput.addEventListener('input', () => showLanguageDropdown(languageInput.value.trim()));
+  languageDropdown.addEventListener('click', (event) => {
+    const row = event.target.closest('[data-language-id]');
+    if (!row) return;
+
+    const id = row.dataset.languageId;
+    if (languages.includes(id)) {
+      languages = languages.filter(l => l !== id);
+    } else {
+      languages.push(id);
+    }
+    languageInput.value = '';
+    languageDropdown.hidden = true;
+    onLanguagesChange(languages);
+    renderLanguageChips();
+  });
+
+  languageChips.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-remove-language]');
+    if (!button) return;
+
+    languages = languages.filter((l) => l !== button.dataset.removeLanguage);
+    onLanguagesChange(languages);
+    renderLanguageChips();
+    if (!languageDropdown.hidden) showLanguageDropdown(languageInput.value.trim());
+  });
+
+  sourceInput.addEventListener('focus', () => showSourceDropdown(sourceInput.value.trim()));
+  sourceInput.addEventListener('input', () => showSourceDropdown(sourceInput.value.trim()));
+  sourceDropdown.addEventListener('click', (event) => {
+    const actionButton = event.target.closest('[data-source-action]');
+    const row = event.target.closest('[data-source-id]');
+    if (!row) return;
+
+    selectSource(row, actionButton?.dataset.sourceAction === 'exclude');
+    if (!actionButton) {
+        sourceInput.value = '';
+        sourceDropdown.hidden = true;
+    }
+  });
+
+  sourceChips.addEventListener('click', (event) => {
+    const removeButton = event.target.closest('[data-remove-source]');
+    const toggleButton = event.target.closest('[data-toggle-source]');
+
+    if (removeButton) {
+      sources = sources.filter((s) => s.id !== removeButton.dataset.removeSource);
+      fireSourceChange();
+      renderSourceChips();
+    }
+
+    if (toggleButton) {
+      const s = sources.find((item) => item.id === toggleButton.dataset.toggleSource);
+      if (s) {
+        s.exclude = !s.exclude;
+        fireSourceChange();
+        renderSourceChips();
+      }
+    }
+
+    if ((removeButton || toggleButton) && !sourceDropdown.hidden) {
+      showSourceDropdown(sourceInput.value.trim());
+    }
   });
 
   magazineInput.addEventListener('focus', () => showMagazineDropdown(magazineInput.value.trim()));
@@ -370,46 +712,84 @@ export function mountCatalogFilters({
       themeDropdown.hidden = true;
     }
 
+    if (!isInsideAny(event.target, [languageInput, languageDropdown])) {
+      languageDropdown.hidden = true;
+    }
+
+    if (!isInsideAny(event.target, [sourceInput, sourceDropdown])) {
+      sourceDropdown.hidden = true;
+    }
+
     if (!isInsideAny(event.target, [magazineInput, magazineDropdown])) {
       magazineDropdown.hidden = true;
     }
   });
 
-  publisherDropdown.hidden = true;
-  themeDropdown.hidden = true;
-  magazineDropdown.hidden = true;
+  clearAllButton.addEventListener('click', () => {
+    publishers = [];
+    themes = [];
+    magazines = [];
+    languages = [];
+    sources = [];
+
+    renderPublisherChips();
+    renderThemeChips();
+    renderLanguageChips();
+    renderSourceChips();
+    renderMagazineChips();
+
+    publisherInput.value = '';
+    themeInput.value = '';
+    magazineInput.value = '';
+
+    publisherDropdown.hidden = true;
+    themeDropdown.hidden = true;
+    languageDropdown.hidden = true;
+    sourceDropdown.hidden = true;
+    magazineDropdown.hidden = true;
+
+    if (onClearAll) {
+      onClearAll();
+    } else {
+      onPublishersChange(publishers);
+      fireThemeChange();
+      if (onMagazinesChange) onMagazinesChange(magazines);
+      if (onLanguagesChange) onLanguagesChange(languages);
+      fireSourceChange();
+    }
+  });
+
   renderPublisherChips();
   renderThemeChips();
+  renderLanguageChips();
+  renderSourceChips();
   renderMagazineChips();
 
-  if (magazineChips) {
-    magazineChips.addEventListener('click', (event) => {
-      const button = event.target.closest('[data-remove-magazine]');
-      if (!button) return;
-
-      magazines = magazines.filter((m) => m.id !== Number(button.dataset.removeMagazine));
-      if (onMagazinesChange) onMagazinesChange(magazines);
-      renderMagazineChips();
-      if (!magazineDropdown.hidden) showMagazineDropdown(magazineInput.value.trim());
-    });
-  }
-
   return {
-    setFilters(nextPublishers = [], nextThemes = [], nextExcludedThemes = [], nextMagazines = []) {
+    setFilters(nextPublishers = [], nextThemes = [], nextExcludedThemes = [], nextMagazines = [], nextLanguages = [], nextSources = [], nextExcludedSources = []) {
       publishers = [...nextPublishers];
       themes = [
         ...nextThemes.map((theme) => ({ ...theme, exclude: false })),
         ...nextExcludedThemes.map((theme) => ({ ...theme, exclude: true })),
       ];
       magazines = [...nextMagazines];
+      languages = [...nextLanguages];
+      sources = [
+        ...nextSources.map(s => ({ id: s, name: s === 'hikka' ? 'Hikka' : s === 'mal' ? 'MAL' : 'ComicVine', exclude: false })),
+        ...nextExcludedSources.map(s => ({ id: s, name: s === 'hikka' ? 'Hikka' : s === 'mal' ? 'MAL' : 'ComicVine', exclude: true })),
+      ];
       publisherInput.value = '';
       themeInput.value = '';
       magazineInput.value = '';
       publisherDropdown.hidden = true;
       themeDropdown.hidden = true;
+      languageDropdown.hidden = true;
+      sourceDropdown.hidden = true;
       magazineDropdown.hidden = true;
       renderPublisherChips();
       renderThemeChips();
+      renderLanguageChips();
+      renderSourceChips();
       renderMagazineChips();
     },
   };

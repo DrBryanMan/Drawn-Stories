@@ -1,6 +1,7 @@
 import { router } from './helpers/router.js';
 import { API } from './helpers/api.js';
 import { Bookmarks } from './helpers/bookmarks.js';
+import { openGlobalAddModal } from './components/GlobalAddModal.js';
 
 // ── Nav config ───────────────────────────────────────
 const NAV = [
@@ -40,9 +41,12 @@ export let currentUser = null;
 
 const DEFAULT_AVATAR_ICON = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
 
-function getAvatarHtml(avatarUrl, className) {
-    // We use a data-uri for the fallback or just swap to a div
-    return `<img src="${avatarUrl}" alt="Avatar" class="${className}" onerror="this.replaceWith(document.createElement('div')); this.classList.add('${className}', 'avatar-fallback'); this.innerHTML='${DEFAULT_AVATAR_ICON.replace(/'/g, "\\'")}';">`;
+function getAvatarHtml(avatarUrl, className, size = 20) {
+    const iconSvg = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+    return `
+        <img src="${avatarUrl}" alt="Avatar" class="${className}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="${className} avatar-fallback" style="display:none; width:${size}px; height:${size}px;">${iconSvg}</div>
+    `;
 }
 
 // ── Shell mount ──────────────────────────────────────
@@ -165,7 +169,15 @@ function updateAuthUI() {
     ? `#/auth?returnUrl=${encodeURIComponent(currentHash)}` 
     : '#/auth';
 
+  const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'moderator');
+  const addBtnHTML = isAdmin ? `
+    <button class="bookmarks-trigger" id="global-add-btn" title="Додати контент">
+      ${icon('<path d="M12 5v14M5 12h14"/>', 20)}
+    </button>
+  ` : '';
+
   const bookmarksHTML = `
+    ${addBtnHTML}
     <a href="#/bookmarks" class="bookmarks-trigger" id="bookmarks-btn" title="Закладки">
       ${icon(ICON_BOOKMARK)}
       <span class="bookmarks-count ${Bookmarks.count() > 0 ? 'is-visible' : ''}" id="bookmarks-count">${Bookmarks.count()}</span>
@@ -173,19 +185,24 @@ function updateAuthUI() {
   `;
 
   if (currentUser) {
+    const avatarUrl = `/api/auth/avatar/${currentUser.username}?t=${new Date().getTime()}`;
     container.innerHTML = `
       ${bookmarksHTML}
       <div class="nav-dropdown">
         <button class="nav-link nav-dropdown-trigger auth-user-btn">
-          ${icon('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>')}
-          <span>${currentUser.username}</span>
-          ${icon('<path d="m6 9 6 6 6-6"/>')}
+          ${getAvatarHtml(avatarUrl, 'header-avatar', 38)}
         </button>
         <div class="nav-dropdown-content dropdown-right">
           <div class="dropdown-info">
-            <div class="user-name">${currentUser.username}</div>
-            <div class="user-role">${currentUser.role === 'admin' ? 'Адміністратор' : currentUser.role === 'moderator' ? 'Модератор' : 'Користувач'}</div>
+            ${getAvatarHtml(avatarUrl, 'header-avatar', 40)}
+            <div class="user-details">
+                <div class="user-name">${currentUser.username}</div>
+                <div class="user-role">${currentUser.role === 'admin' ? 'Адміністратор' : currentUser.role === 'moderator' ? 'Модератор' : 'Користувач'}</div>
+            </div>
           </div>
+          <div class="dropdown-divider"></div>
+          
+          <!-- Основні списки -->
           <a class="nav-dropdown-link" href="#/user/${currentUser.username}/lists" data-route="/user/${currentUser.username}/lists">
             ${icon('<path d="M8 6h10"/><path d="M8 12h10"/><path d="M8 18h7"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>')}
             <span>Мої списки</span>
@@ -194,10 +211,18 @@ function updateAuthUI() {
             ${icon('<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>')}
             <span>Обране</span>
           </a>
+          
+          <div class="dropdown-divider"></div>
+          
+          <!-- Інше -->
           <a class="nav-dropdown-link" href="#/settings">
             ${icon('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>')}
             <span>Налаштування</span>
           </a>
+          
+          <div class="dropdown-divider"></div>
+          
+          <!-- Логаут -->
           <button class="nav-dropdown-link logout-btn" id="logout-btn">
             ${icon('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>')}
             <span>Вийти</span>
@@ -206,6 +231,11 @@ function updateAuthUI() {
       </div>
     `;
 
+
+    const addBtn = container.querySelector('#global-add-btn');
+    if (addBtn) {
+      addBtn.addEventListener('click', () => openGlobalAddModal());
+    }
 
     container.querySelector('#logout-btn').addEventListener('click', async () => {
       await API.post('/auth/logout');

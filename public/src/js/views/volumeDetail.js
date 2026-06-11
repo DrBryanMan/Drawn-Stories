@@ -155,7 +155,7 @@ function relationCardHTML(item, { title, icon, isModerator, onRemove }) {
 
     return `
         <a class="volume-relation-card" href="#/volumes/${item.id}">
-            ${isModerator && onRemove ? `<button class="btn-remove-rel" onclick="${onRemove}" title="Видалити зв'язок">✕</button>` : ''}
+            ${isModerator && onRemove ? `<button class="btn-remove-rel" onclick="event.preventDefault(); event.stopPropagation(); ${onRemove}" title="Видалити зв'язок">✕</button>` : ''}
             <span class="volume-relation-cover">
                 ${cover
                     ? `<img src="${escapeHtmlAttribute(cover)}" alt="${name}" loading="lazy">`
@@ -169,7 +169,7 @@ function relationCardHTML(item, { title, icon, isModerator, onRemove }) {
                 </span>
                 ${originalName ? `<span class="volume-relation-meta">${escapeHtmlAttribute(originalName)}</span>` : ''}
                 ${item.publisher_name ? `<span class="volume-relation-meta">${escapeHtmlAttribute(item.publisher_name)}</span>` : ''}
-                ${item.collections_count ? `<span class="volume-relation-meta">${Number(item.collections_count).toLocaleString('uk-UA')} збірн.</span>` : ''}
+                ${item.collections_count ? `<span class="volume-relation-meta">${Number(item.collections_count).toLocaleString('uk-UA')} збір.</span>` : ''}
             </span>
         </a>
     `;
@@ -181,23 +181,23 @@ function heroRelationsHTML({ translationParents, magazineParents, magazine, isMo
     const original = magazines.length > 0 ? null : translationParents.find(parent => parent.rel_type === 'original');
     
     const cards = [
-        original ? relationCardHTML(original, { 
-            title: 'Оригінал', 
+        original ? relationCardHTML(original, {
+            title: 'Оригінал',
             icon: ICON.bookOpen,
             isModerator,
-            onRemove: `event.stopPropagation(); window.removeTranslation(${original.id}, ${currentVolumeId})`
+            onRemove: `window.removeTranslation(${original.id}, ${currentVolumeId})`
         }) : '',
-        source ? relationCardHTML(source, { 
-            title: 'Джерело', 
+        source ? relationCardHTML(source, {
+            title: 'Джерело',
             icon: ICON.link,
             isModerator,
-            onRemove: `event.stopPropagation(); window.removeTranslation(${source.id}, ${currentVolumeId})`
+            onRemove: `window.removeTranslation(${source.id}, ${currentVolumeId})`
         }) : '',
-        ...magazines.map(item => relationCardHTML(item, { 
-            title: 'Журнал', 
+        ...magazines.map(item => relationCardHTML(item, {
+            title: 'Журнал',
             icon: ICON.newspaper,
             isModerator,
-            onRemove: `event.stopPropagation(); window.removeMagazineChild(${item.id}, ${currentVolumeId})`
+            onRemove: `window.removeMagazineChild(${item.id}, ${currentVolumeId})`
         })),
     ].filter(Boolean);
 
@@ -206,15 +206,20 @@ function heroRelationsHTML({ translationParents, magazineParents, magazine, isMo
 }
 
 function translationCardHTML(item, { isModerator, currentVolumeId }) {
+    const isCurrent = item.id === currentVolumeId;
     const cover = comicVineImageUrl(item.cv_img || item.hikka_img);
     const title = escapeHtmlAttribute(item.name_uk || item.name || 'Без назви');
     const originalTitle = item.name_uk && item.name_uk !== item.name ? item.name : '';
     const collectionsCount = Number(item.collections_count || 0);
     const lang = langDisplay(item.lang);
 
+    const tag = isCurrent ? 'div' : 'a';
+    const hrefAttr = isCurrent ? '' : ` href="#/volumes/${item.id}"`;
+    const currentClass = isCurrent ? ' is-current' : '';
+
     return `
-        <a class="volume-translation-card" href="#/volumes/${item.id}">
-            ${isModerator ? `<button class="btn-remove-rel" onclick="event.stopPropagation(); window.removeTranslation(${currentVolumeId}, ${item.id})" title="Видалити переклад">✕</button>` : ''}
+        <${tag} class="volume-translation-card${currentClass}"${hrefAttr}>
+            ${isModerator && !isCurrent ? `<button class="btn-remove-rel" onclick="event.preventDefault(); event.stopPropagation(); window.removeTranslation(${currentVolumeId}, ${item.id})" title="Видалити переклад">✕</button>` : ''}
             <span class="volume-translation-poster">
                 ${cover
                     ? `<img src="${escapeHtmlAttribute(cover)}" alt="${title}" loading="lazy">`
@@ -223,20 +228,20 @@ function translationCardHTML(item, { isModerator, currentVolumeId }) {
             <span class="volume-translation-body">
                 <span class="volume-translation-title">${lang.code ? `<span class="volume-translation-lang">${escapeHtmlAttribute(lang.code)}</span>` : ''} ${title}</span>
                 ${originalTitle ? `<span class="volume-translation-original">${escapeHtmlAttribute(originalTitle)}</span>` : ''}
-                <span class="volume-translation-count">${collectionsCount.toLocaleString('uk-UA')} збірн.</span>
+                <span class="volume-translation-count">${item.publisher_name + ' / ' || ''}${collectionsCount.toLocaleString('uk-UA')} збір.</span>
             </span>
-        </a>
+        </${tag}>
     `;
 }
 
-function translationsSectionHTML(translations, { isTranslated, isModerator, currentVolumeId }) {
-    if (!isModerator && (!translations.length || isTranslated)) return '';
+function translationsSectionHTML(translations, { isModerator, currentVolumeId }) {
+    if (!isModerator && !translations.length) return '';
 
     return `
         <section class="volume-translations-section block">
             <div class="volume-section-heading">
                 <div style="display: flex; align-items: center; gap: 12px;">
-                    <h2>Збірні видання</h2>
+                    <h2>Збірні видання ${translations.length ? `(${translations.length})` : ''}</h2>
                     ${isModerator ? `<button class="btn-admin btn-admin--secondary" id="volume-add-translation-btn" title="Додати переклад" style="width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center;">${ICON.plus}</button>` : ''}
                 </div>
             </div>
@@ -315,8 +320,8 @@ function renderItems(container, items) {
                 <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                     <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M8 11h6"/>
                 </svg>
-                <h3>Випуски не знайдено</h3>
-                <p>Спробуйте змінити пошук.</p>
+                <h3>Нічого не знайдено</h3>
+                <p>Для цього тому ще не додані випуски.</p>
             </div>
         `;
         return;
@@ -466,12 +471,11 @@ export async function renderVolumeDetail(main, params = {}) {
 
         const isManga = isMangaVolume(volume, themes, translationParents);
         const isCollection = isCollectionVolume(themes);
-        const isTranslated = isTranslatedVolume(themes);
         const isMagazine = themes.some(t => t.id === 35);
         const isMangaWithMagazine = isManga && Boolean(magazine);
 
         const issuesTabLabel = isMagazine ? 'Номери' : (isManga ? 'Розділи' : 'Випуски');
-        const collectionsTabLabel = isMagazine ? 'Томи манґи' : (isManga ? 'Томи' : 'Збірники');
+        const collectionsTabLabel = isMagazine ? 'Серії манґи' : (isManga ? 'Томи' : 'Збірники');
         
         const shouldSeparate = isManga || isCollection;
         currentItems = shouldSeparate ? (data.issues || []) : (data.items || data.issues || []);
@@ -685,7 +689,10 @@ export async function renderVolumeDetail(main, params = {}) {
                         `;
                     })()}
 
-                    ${translationsSectionHTML(translations, { isTranslated, isModerator, currentVolumeId: volumeId })}
+                    ${!isMagazine && (translations.length > 0 || translationParents.length === 0)
+                        ? translationsSectionHTML(translations, { isModerator, currentVolumeId: volumeId })
+                        : ''
+                    }
 
                     <section class="volume-issues-section">
                         <div class="volume-issues-toolbar block">
@@ -833,12 +840,17 @@ export async function renderVolumeDetail(main, params = {}) {
             });
         }
 
-        const addSourceBtn = main.querySelector('#volume-add-original-btn');
-        if (addSourceBtn) {
-            addSourceBtn.addEventListener('click', () => {
+        const setOriginalBtn = main.querySelector('#volume-add-original-btn');
+        if (setOriginalBtn) {
+            setOriginalBtn.addEventListener('click', () => {
+                const disabledIds = [
+                    ...translations.map(t => t.id),
+                    ...translationParents.map(p => p.id)
+                ];
                 const picker = new VolumePicker({
                     title: 'Вибрати першоджерело',
                     excludeId: volumeId,
+                    disabledIds: disabledIds,
                     onSelect: async (selectedVol) => {
                         try {
                             await API.post(`/volumes/${selectedVol.id}/translations`, {
@@ -858,9 +870,14 @@ export async function renderVolumeDetail(main, params = {}) {
         const addTranslationBtn = main.querySelector('#volume-add-translation-btn');
         if (addTranslationBtn) {
             addTranslationBtn.addEventListener('click', () => {
+                const disabledIds = [
+                    ...translations.map(t => t.id),
+                    ...translationParents.map(p => p.id)
+                ];
                 const picker = new VolumePicker({
                     title: 'Додати переклад',
                     excludeId: volumeId,
+                    disabledIds: disabledIds,
                     onSelect: async (selectedVol) => {
                         try {
                             await API.post(`/volumes/${volumeId}/translations`, {
@@ -883,6 +900,7 @@ export async function renderVolumeDetail(main, params = {}) {
                 const picker = new VolumePicker({
                     title: 'Вибрати журнал',
                     themeId: 35,
+                    disabledIds: magazineParents.map(m => m.id),
                     onSelect: async (selectedVol) => {
                         try {
                             await API.post(`/volumes/${selectedVol.id}/magazine-children`, {
@@ -995,7 +1013,7 @@ export async function renderVolumeDetail(main, params = {}) {
                     renderItems(itemsView, sliced);
                 } else {
                     renderCollectionsFromIssues(itemsView, sliced, {
-                        emptyMessage: isManga ? 'Для цього тому немає томів' : 'Цей том не входить у жоден відомий збірник',
+                        emptyMessage: isManga ? 'Для цього тому немає збірників' : 'Цей том не входить у жоден відомий збірник',
                         typeLabel: isManga ? 'Том' : 'Збірник',
                     });
                 }
@@ -1162,13 +1180,12 @@ function openSynonymsModal(volume) {
     const modal = document.createElement('div');
     modal.className = 'ds-modal-overlay';
     
-    const synonyms = Array.isArray(volume.synonyms) ? volume.synonyms : [];
-    const allNames = [
+    const synonyms = (Array.isArray(volume.synonyms) ? volume.synonyms : []).filter(s => s);
+    const mainNames = [
         { label: 'Українська', value: volume.name_uk },
         { label: 'Англійська', value: volume.name_en },
         { label: 'Оригінальна', value: volume.name },
         { label: 'Рідна', value: volume.name_native },
-        ...synonyms.map(s => ({ label: 'Синонім', value: s }))
     ].filter(n => n.value);
 
     modal.innerHTML = `
@@ -1182,13 +1199,23 @@ function openSynonymsModal(volume) {
             </div>
             <div class="ds-modal-body">
                 <div class="synonyms-list">
-                    ${allNames.map(n => `
+                    ${mainNames.map(n => `
                         <div class="synonym-item">
                             <span class="synonym-label">${n.label}</span>
                             <span class="synonym-value">${escapeHtmlAttribute(n.value)}</span>
                         </div>
                     `).join('')}
-                    ${allNames.length === 0 ? '<p class="text-muted">Назв не знайдено</p>' : ''}
+
+                    ${synonyms.length > 0 ? `
+                        <div class="synonym-item">
+                            <span class="synonym-label">Синоніми</span>
+                            ${synonyms.map(s => `
+                                <span class="synonym-value">${escapeHtmlAttribute(s)}</span>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+
+                    ${mainNames.length === 0 && synonyms.length === 0 ? '<p class="text-muted">Назв не знайдено</p>' : ''}
                 </div>
             </div>
         </div>
@@ -1263,13 +1290,18 @@ async function openIssueMembershipModal(issueId) {
         listContainer.style.display = 'flex';
 
         if (collections.length === 0) {
-            listContainer.innerHTML = '<div class="ds-empty-state">Випуск не знайдено в жодному збірнику</div>';
+            listContainer.innerHTML = `
+                <div class="ds-empty-state">
+                    <h3>Нічого не знайдено</h3>
+                    <p>Випуск не входить у жоден відомий збірник</p>
+                </div>
+            `;
         } else {
             listContainer.innerHTML = collections.map(col => {
                 const cover = comicVineImageUrl(col.cv_img);
                 return `
                     <div class="membership-item">
-                        ${cover ? `<img src="${cover}" class="membership-item-cover">` : '<div class="membership-item-cover-empty">📗</div>'}
+                        ${cover ? `<img src="${cover}" class="membership-item-cover">` : `<div class="membership-item-cover-empty"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg></div>`}
                         <div class="membership-item-info">
                             <div class="membership-item-title">${escapeHtmlAttribute(col.volume_name)}</div>
                             <div class="membership-item-num">Випуск #${escapeHtmlAttribute(col.issue_number)}</div>
@@ -1288,7 +1320,12 @@ function renderCollectionsFromIssues(container, collections, options = {}) {
     const typeLabel = options.typeLabel || 'Збірник';
 
     if (!collections.length) {
-        container.innerHTML = `<div class="ds-empty-state">${emptyMessage}</div>`;
+        container.innerHTML = `
+            <div class="ds-empty-state">
+                <h3>Нічого не знайдено</h3>
+                <p>${escapeHtmlAttribute(emptyMessage)}</p>
+            </div>
+        `;
         return;
     }
 

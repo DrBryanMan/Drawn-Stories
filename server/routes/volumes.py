@@ -137,16 +137,10 @@ async def get_volume_detail(volume_id: int):
         FROM volume_translations vt
         JOIN volumes v ON v.id = vt.child_id
         LEFT JOIN publishers p ON p.id = v.publisher
-        WHERE (vt.parent_id = ?
-           OR vt.parent_id IN (
-               SELECT parent_id
-               FROM volume_translations
-               WHERE child_id = ?
-           ))
-          AND v.id != ?
+        WHERE vt.parent_id = ?
         ORDER BY v.lang ASC, v.name ASC
         """,
-        [volume_id, volume_id, volume_id]
+        [volume_id]
     )
 
     magazine_parents = db.get_all(

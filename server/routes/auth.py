@@ -40,6 +40,47 @@ async def get_avatar(username: str):
     # Return 404 if no avatar found, frontend will handle it
     raise HTTPException(status_code=404, detail="Avatar not found")
 
+class ProfileUpdateRequest(BaseModel):
+    new_username: str
+
+@router.put("/update-profile")
+async def update_profile(req: ProfileUpdateRequest, request: Request, response: Response):
+    old_username = request.cookies.get("username")
+    if not old_username:
+        raise HTTPException(status_code=401, detail="Not logged in")
+    
+    new_username = req.new_username.strip()
+    if not new_username:
+        raise HTTPException(status_code=400, detail="Username cannot be empty")
+        
+    if old_username == new_username:
+        return {"status": "ok", "message": "No change needed"}
+        
+    db = get_db()
+    # Check if new username is taken
+    existing = db.get_one("SELECT id FROM users WHERE username = ?", [new_username])
+    if existing:
+        raise HTTPException(status_code=400, detail="Користувач з таким ім'ям вже існує")
+    
+    # Update username in database
+    db.execute("UPDATE users SET username = ? WHERE username = ?", [new_username, old_username])
+    
+    # Rename avatar files if they exist
+    os.makedirs("server/images/users", exist_ok=True)
+    for ext in [".jpg", ".webp"]:
+        old_path = os.path.join("server/images/users", f"{old_username}_avatar{ext}")
+        new_path = os.path.join("server/images/users", f"{new_username}_avatar{ext}")
+        if os.path.exists(old_path):
+            try:
+                os.rename(old_path, new_path)
+            except Exception as e:
+                print(f"Error renaming avatar: {e}")
+    
+    # Update cookie
+    response.set_cookie(key="username", value=new_username, httponly=True)
+    
+    return {"status": "ok", "username": new_username}
+
 class LoginRequest(BaseModel):
     username: str
     password: str

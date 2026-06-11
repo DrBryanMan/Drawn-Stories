@@ -173,10 +173,14 @@
 }
 
 .header-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+  width: 38px;
+  aspect-ratio: 1/1;
+  border-radius: var(--r);
   object-fit: cover;
+}
+.dropdown-info .header-avatar {
+    width: 40px;
+    height: 40px;
 }
 
 /* ══════════════════════════════════════════════════════

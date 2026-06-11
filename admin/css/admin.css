@@ -21,7 +21,7 @@
 }
 
 .ds-modal--large {
-    max-width: 600px;
+    max-width: 800px;
 }
 
 .ds-modal-header {
@@ -120,7 +120,14 @@
 
 .volume-picker-item:last-child { border-bottom: none; }
 .volume-picker-item:hover { background: var(--bg-card-h); }
-
+.volume-picker-item--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(0.5);
+}
+.volume-picker-item--disabled:hover {
+    background: transparent;
+}
 .volume-picker-item img {
     width: 40px;
     height: 60px;

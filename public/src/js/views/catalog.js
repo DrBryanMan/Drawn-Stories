@@ -1,10 +1,11 @@
 import { API } from '../helpers/api.js';
-import { THEME_GROUP_LABELS, mountCatalogFilters, themeIcon, themeLabel } from '../components/CatalogFilterPanel.js';
+import { THEME_GROUP_LABELS, mountCatalogFilters, themeIcon, themeLabel, loadAllThemes, loadAllPublishers } from '../components/CatalogFilterPanel.js';
 import { createComicCard } from '../components/ComicCard.js';
 import { createPaginator } from '../components/Pagination.js';
 import { escapeHtmlAttribute } from '../helpers/image.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { router } from '../helpers/router.js';
+import Fuse from 'https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.mjs';
 
 const paginator = createPaginator({ pageSize: 20 });
 const FILTER_PANEL_OPEN_ICON = `
@@ -61,6 +62,9 @@ let currentPublishers = [];
 let currentThemes = [];
 let currentExcludedThemes = [];
 let currentMagazines = [];
+let currentLanguages = [];
+let currentSources = [];
+let currentExcludedSources = [];
 
 function readStoredFiltersPanelState() {
   try {
@@ -88,6 +92,9 @@ function syncUrl() {
   if (currentThemes.length) params.set('theme_ids', currentThemes.map(t => t.id).join(','));
   if (currentExcludedThemes.length) params.set('exclude_theme_ids', currentExcludedThemes.map(t => t.id).join(','));
   if (currentMagazines.length) params.set('magazine_ids', currentMagazines.map(m => m.id).join(','));
+  if (currentLanguages.length) params.set('langs', currentLanguages.join(','));
+  if (currentSources.length) params.set('sources', currentSources.join(','));
+  if (currentExcludedSources.length) params.set('exclude_sources', currentExcludedSources.join(','));
   
   const page = paginator.getPage();
   if (page > 1) params.set('page', page);
@@ -114,6 +121,10 @@ export async function renderCatalog(main, query = {}) {
   currentContentType = query.content_type || '';
   currentViewType = query.view_type || 'series';
   currentCollectionOnly = query.collection === 'true';
+  currentLanguages = query.langs ? query.langs.split(',') : [];
+  currentSources = query.sources ? query.sources.split(',') : [];
+  currentExcludedSources = query.exclude_sources ? query.exclude_sources.split(',') : [];
+
   let filtersOpen = readStoredFiltersPanelState();
   currentPublishers = [];
   currentThemes = [];
@@ -178,7 +189,7 @@ export async function renderCatalog(main, query = {}) {
             <button class="catalog-segment" type="button" data-view-type="issues">Випуски</button>
           </div>
           <button class="catalog-filter-chip" type="button" id="collection-filter-btn" aria-pressed="false">
-            ${currentContentType === 'manga' ? 'Томи' : 'Збірки'}
+            ${currentContentType === 'manga' ? 'Томи' : 'Збірники'}
           </button>
         </div>
 
@@ -411,7 +422,7 @@ export async function renderCatalog(main, query = {}) {
     
     const baseLabel = currentContentType === 'manga' ? 'Манга' : currentContentType === 'comics' ? 'Комікси' : 'Каталог';
     const viewLabel = currentViewType === 'series' ? 'Серії' : 'Випуски';
-    breadcrumbCurrent.textContent = `${baseLabel} / ${viewLabel}${currentCollectionOnly ? (currentContentType === 'manga' ? ' / Томи' : ' / Збірки') : ''}`;
+    breadcrumbCurrent.textContent = `${baseLabel} / ${viewLabel}${currentCollectionOnly ? (currentContentType === 'manga' ? ' / Томи' : ' / Збірники') : ''}`;
   };
 
   const renderSelectedPublishers = () => {
@@ -476,11 +487,15 @@ export async function renderCatalog(main, query = {}) {
   const loadPublishers = async (query = '') => {
     publisherList.innerHTML = '<div class="publisher-filter-empty">Завантаження...</div>';
     try {
-      const data = await API.get('/publishers', {
-        search: query || undefined,
-        limit: 18,
-      });
-      renderPublishers(data.items || []);
+      const allPubs = await loadAllPublishers();
+      let items = [];
+      if (!query) {
+        items = allPubs.slice(0, 18);
+      } else {
+        const fuse = new Fuse(allPubs, { keys: ['name'], threshold: 0.35, ignoreLocation: true });
+        items = fuse.search(query).map(r => r.item).slice(0, 18);
+      }
+      renderPublishers(items);
       positionSidebarDropdown(publisherFilterDropdownWrap, publisherList);
     } catch {
       publisherList.innerHTML = '<div class="publisher-filter-empty">Не вдалося завантажити</div>';
@@ -524,11 +539,15 @@ export async function renderCatalog(main, query = {}) {
   const loadThemes = async (query = '') => {
     themeList.innerHTML = '<div class="publisher-filter-empty">Завантаження...</div>';
     try {
-      const data = await API.get('/themes', {
-        search: query || undefined,
-        limit: query ? 50 : 60,
-      });
-      renderThemes(data.items || []);
+      const allTh = await loadAllThemes();
+      let items = [];
+      if (!query) {
+        items = allTh;
+      } else {
+        const fuse = new Fuse(allTh, { keys: ['name', 'ua_name'], threshold: 0.35, ignoreLocation: true });
+        items = fuse.search(query).map(r => r.item);
+      }
+      renderThemes(items);
       positionSidebarDropdown(themeFilterDropdownWrap, themeList);
     } catch {
       themeList.innerHTML = '<div class="publisher-filter-empty">Не вдалося завантажити</div>';
@@ -542,6 +561,9 @@ export async function renderCatalog(main, query = {}) {
     selectedThemes: currentThemes,
     excludedThemes: currentExcludedThemes,
     selectedMagazines: currentMagazines,
+    selectedLanguages: currentLanguages,
+    selectedSources: currentSources,
+    excludedSources: currentExcludedSources,
     onPublishersChange: (publishers) => {
       currentPublishers = publishers;
       paginator.reset();
@@ -563,6 +585,34 @@ export async function renderCatalog(main, query = {}) {
       renderSelectedMagazines();
       reloadCatalog();
     },
+    onLanguagesChange: (langs) => {
+      currentLanguages = langs;
+      paginator.reset();
+      reloadCatalog();
+    },
+    onSourcesChange: (sources, excluded) => {
+      currentSources = sources;
+      currentExcludedSources = excluded;
+      paginator.reset();
+      reloadCatalog();
+    },
+    onClearAll: () => {
+      currentPublishers = [];
+      currentThemes = [];
+      currentExcludedThemes = [];
+      currentMagazines = [];
+      currentLanguages = [];
+      currentSources = [];
+      currentExcludedSources = [];
+      publisherSearchInput.value = '';
+      themeSearchInput.value = '';
+      paginator.reset();
+      updateCatalogControls();
+      renderSelectedPublishers();
+      renderSelectedThemes();
+      renderSelectedMagazines();
+      reloadCatalog();
+    }
   });
 
   const selectSidebarTheme = (row, exclude) => {
@@ -588,7 +638,7 @@ export async function renderCatalog(main, query = {}) {
 
     paginator.reset();
     renderSelectedThemes();
-    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines);
+    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines, currentLanguages, currentSources, currentExcludedSources);
     themeList.hidden = false;
     loadThemes(themeSearchInput.value.trim());
     reloadCatalog();
@@ -634,7 +684,7 @@ export async function renderCatalog(main, query = {}) {
 
     paginator.reset();
     renderSelectedPublishers();
-    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines);
+    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines, currentLanguages, currentSources, currentExcludedSources);
     loadPublishers(publisherSearchInput.value.trim());
     reloadCatalog();
   });
@@ -675,7 +725,7 @@ export async function renderCatalog(main, query = {}) {
     currentPublishers = currentPublishers.filter((publisher) => publisher.id !== Number(removeBtn.dataset.removePublisher));
     paginator.reset();
     renderSelectedPublishers();
-    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines);
+    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines, currentLanguages, currentSources, currentExcludedSources);
     loadPublishers(publisherSearchInput.value.trim());
     reloadCatalog();
   });
@@ -685,9 +735,8 @@ export async function renderCatalog(main, query = {}) {
     if (!removeBtn) return;
 
     currentMagazines = currentMagazines.filter((magazine) => magazine.id !== Number(removeBtn.dataset.removeMagazine));
-    paginator.reset();
     renderSelectedMagazines();
-    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines);
+    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines, currentLanguages, currentSources, currentExcludedSources);
     reloadCatalog();
   });
 
@@ -716,7 +765,7 @@ export async function renderCatalog(main, query = {}) {
     if (!removeBtn && !toggleBtn) return;
     paginator.reset();
     renderSelectedThemes();
-    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines);
+    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines, currentLanguages, currentSources, currentExcludedSources);
     if (!themeList.hidden) loadThemes(themeSearchInput.value.trim());
     reloadCatalog();
   });
@@ -727,10 +776,12 @@ export async function renderCatalog(main, query = {}) {
     currentThemes = [];
     currentExcludedThemes = [];
     currentMagazines = [];
+    currentSources = [];
+    currentExcludedSources = [];
     publisherSearchInput.value = '';
     themeSearchInput.value = '';
     paginator.reset();
-    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines);
+    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines, currentLanguages, currentSources, currentExcludedSources);
     updateCatalogControls();
     renderSelectedPublishers();
     renderSelectedThemes();
@@ -748,8 +799,8 @@ export async function renderCatalog(main, query = {}) {
   renderSelectedThemes();
   renderSelectedMagazines();
   
-  if (currentPublishers.length || currentThemes.length || currentExcludedThemes.length || currentMagazines.length) {
-    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines);
+  if (currentPublishers.length || currentThemes.length || currentExcludedThemes.length || currentMagazines.length || currentSources.length || currentExcludedSources.length) {
+    inlineFilters?.setFilters(currentPublishers, currentThemes, currentExcludedThemes, currentMagazines, currentLanguages, currentSources, currentExcludedSources);
   }
   
   reloadCatalog();
@@ -795,7 +846,10 @@ async function fetchAndRender() {
       publisher_ids: currentPublishers.length ? currentPublishers.map((p) => p.id).join(',') : undefined,
       theme_ids: currentThemes.length ? currentThemes.map((t) => t.id).join(',') : undefined,
       exclude_theme_ids: currentExcludedThemes.length ? currentExcludedThemes.map((t) => t.id).join(',') : undefined,
-      magazine_ids: currentMagazines.length ? currentMagazines.map((m) => m.id).join(',') : undefined
+      magazine_ids: currentMagazines.length ? currentMagazines.map((m) => m.id).join(',') : undefined,
+      langs: currentLanguages.length ? currentLanguages.join(',') : undefined,
+      sources: currentSources.length ? currentSources.join(',') : undefined,
+      exclude_sources: currentExcludedSources.length ? currentExcludedSources.join(',') : undefined
     });
 
     if (filterBar) filterBar.updateCount(data.total);

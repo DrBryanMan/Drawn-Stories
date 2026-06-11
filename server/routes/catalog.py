@@ -77,7 +77,7 @@ CATALOG_SORT_COLUMNS = {
 @router.get("")
 async def get_catalog(
     page: int = Query(1, ge=1),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=10000),
     cursor: Optional[str] = None, # Next cursor (e.g. "2023-01-01 12:00:00,456")
     search: Optional[str] = None,
     sort: str = Query(DEFAULT_CATALOG_SORT, pattern="^(name|recent|date)$"),
@@ -89,7 +89,10 @@ async def get_catalog(
     theme_ids: Optional[str] = None,
     exclude_theme_ids: Optional[str] = None,
     magazine_ids: Optional[str] = None,
-):
+    langs: Optional[str] = None,
+    sources: Optional[str] = None,
+    exclude_sources: Optional[str] = None,
+) -> dict:
     db = get_db()
     manga_theme_id = 36
     
@@ -127,8 +130,14 @@ async def get_catalog(
             filter_clauses.append(f"v.id IN ({collected_vol_id_sql})")
 
         if search:
-            filter_clauses.append("v.name LIKE ?")
-            filter_params.append(f"%{search}%")
+            words = [w.strip() for w in search.split() if w.strip()]
+            if words:
+                search_parts = []
+                for word in words:
+                    part = "(v.name LIKE ? OR v.name_en LIKE ? OR v.name_uk LIKE ? OR v.name_native LIKE ?)"
+                    search_parts.append(part)
+                    filter_params.extend([f"%{word}%"] * 4)
+                filter_clauses.append(f"({' AND '.join(search_parts)})")
 
     else:
         if not collection:
@@ -142,8 +151,14 @@ async def get_catalog(
             primary_sort = ISSUE_SORT_MAP.get(sort, "i.created_at")
             unique_key = "i.id"
             if search:
-                filter_clauses.append("(i.name LIKE ? OR v.name LIKE ?)")
-                filter_params.extend([f"%{search}%", f"%{search}%"])
+                words = [w.strip() for w in search.split() if w.strip()]
+                if words:
+                    search_parts = []
+                    for word in words:
+                        part = "(i.name LIKE ? OR v.name LIKE ? OR v.name_en LIKE ? OR v.name_uk LIKE ? OR v.name_native LIKE ?)"
+                        search_parts.append(part)
+                        filter_params.extend([f"%{word}%"] * 5)
+                    filter_clauses.append(f"({' AND '.join(search_parts)})")
         else:
             base = """
                 FROM collections c
@@ -155,15 +170,39 @@ async def get_catalog(
             primary_sort = COLLECTION_SORT_MAP.get(sort, "c.created_at")
             unique_key = "c.id"
             if search:
-                filter_clauses.append("(c.name LIKE ? OR v.name LIKE ?)")
-                filter_params.extend([f"%{search}%", f"%{search}%"])
+                words = [w.strip() for w in search.split() if w.strip()]
+                if words:
+                    search_parts = []
+                    for word in words:
+                        part = "(c.name LIKE ? OR v.name LIKE ? OR v.name_en LIKE ? OR v.name_uk LIKE ? OR v.name_native LIKE ?)"
+                        search_parts.append(part)
+                        filter_params.extend([f"%{word}%"] * 5)
+                    filter_clauses.append(f"({' AND '.join(search_parts)})")
 
         if content_type == "manga":
             filter_clauses.append(f"v.id IN ({manga_id_sql})")
         elif content_type == "comics":
             filter_clauses.append(f"v.id NOT IN ({manga_id_sql})")
 
-    # Common Filters (Publishers, Themes, Magazines)
+    # Common Filters (Publishers, Themes, Magazines, Languages, Sources)
+    source_map = {
+        "hikka": "v.hikka_slug IS NOT NULL",
+        "mal": "v.mal_id IS NOT NULL",
+        "cv": "v.cv_id IS NOT NULL"
+    }
+
+    if sources:
+        # Use OR for multiple inclusion sources (any of the selected)
+        clauses = [source_map[s] for s in sources.split(',') if s in source_map]
+        if clauses:
+            filter_clauses.append(f"({' OR '.join(clauses)})")
+    
+    if exclude_sources:
+        # Use AND for multiple exclusion sources (none of the selected)
+        for s in exclude_sources.split(','):
+            if s in source_map:
+                filter_clauses.append(source_map[s].replace("IS NOT NULL", "IS NULL"))
+
     publisher_filter_ids = parse_id_list(publisher_ids)
     if publisher_filter_ids:
         placeholders = ",".join("?" for _ in publisher_filter_ids)
@@ -175,6 +214,12 @@ async def get_catalog(
         placeholders = ",".join("?" for _ in magazine_filter_ids)
         filter_clauses.append(f"v.id IN (SELECT child_id FROM volume_magazines WHERE magazine_id IN ({placeholders}))")
         filter_params.extend(magazine_filter_ids)
+
+    if langs:
+        lang_list = langs.split(',')
+        placeholders = ",".join("?" for _ in lang_list)
+        filter_clauses.append(f"v.lang IN ({placeholders})")
+        filter_params.extend(lang_list)
 
     for theme_id in parse_id_list(theme_ids):
         filter_clauses.append("EXISTS (SELECT 1 FROM volume_themes vt WHERE vt.theme_id = ? AND vt.volume_id = v.id)")

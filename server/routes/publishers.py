@@ -11,7 +11,7 @@ async def get_publishers(
     sort: Optional[str] = "volumes",
     order_dir: Optional[str] = "desc",
     page: int = Query(1, ge=1),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=10000),
 ):
     db = get_db()
     where_parts = []
@@ -52,28 +52,32 @@ async def get_publishers(
 
     rows = db.get_all(
         f"""
-        SELECT p.id, p.cv_id, p.name, p.cv_slug, p.image, p.founded_at, COUNT(v.id) as volume_count
+        SELECT p.id, p.cv_id, p.name, p.cv_slug, p.image, p.founded_at, 
+               (SELECT COUNT(*) FROM volumes v WHERE v.publisher = p.id) as volume_count
         FROM publishers p
-        LEFT JOIN volumes v ON v.publisher = p.id
         {where_clause}
-        GROUP BY p.id
         ORDER BY {order_clause}
         LIMIT ? OFFSET ?
         """,
         params + [limit, offset],
     )
 
-    for row in rows:
-        row["latest_releases"] = db.get_all(
-            """
-            SELECT v.id, v.name, v.name_uk, v.cover_img, v.cv_img, v.lang,
-                   (SELECT COUNT(*) FROM issues i WHERE i.ds_vol_id = v.id OR (i.ds_vol_id IS NULL AND i.cv_vol_id = v.cv_id)) as issue_count
-            FROM volumes v
-            WHERE v.publisher = ?
-            ORDER BY v.created_at DESC, v.id DESC
-            LIMIT 3
-            """,
-            [row["id"]]
-        )
+    # Skip heavy details for high-limit requests (fuzzy search loading)
+    if limit <= 100:
+        for row in rows:
+            row["latest_releases"] = db.get_all(
+                """
+                SELECT v.id, v.name, v.name_uk, v.cover_img, v.cv_img, v.lang,
+                       (SELECT COUNT(*) FROM issues i WHERE i.ds_vol_id = v.id OR (i.ds_vol_id IS NULL AND i.cv_vol_id = v.cv_id)) as issue_count
+                FROM volumes v
+                WHERE v.publisher = ?
+                ORDER BY v.created_at DESC, v.id DESC
+                LIMIT 3
+                """,
+                [row["id"]]
+            )
+    else:
+        for row in rows:
+            row["latest_releases"] = []
 
     return { "items": rows, "total": total, "page": page, "limit": limit }

@@ -12,6 +12,7 @@ export class VolumePicker {
         this.title = options.title || 'Вибрати том';
         this.onSelect = options.onSelect || (() => {});
         this.excludeId = options.excludeId || null;
+        this.disabledIds = options.disabledIds || [];
         this.themeId = options.themeId || null;
         this.modal = null;
         this.searchTimeout = null;
@@ -21,7 +22,7 @@ export class VolumePicker {
         const modal = document.createElement('div');
         modal.className = 'ds-modal-overlay';
         modal.innerHTML = `
-            <div class="ds-modal">
+            <div class="ds-modal ds-modal--large">
                 <div class="ds-modal-header">
                     <div class="ds-modal-title">
                         ${ICON.search}
@@ -137,22 +138,26 @@ export class VolumePicker {
                 
                 if (volumes.length > 0) {
                     resultsEl.innerHTML = `
-                        ${volumes.map(v => `
-                            <div class="volume-picker-item" data-id="${v.id}">
-                                <img src="${comicVineImageUrl(v.cv_img || v.hikka_img) || '/static/images/no-cover.png'}" alt="">
-                                <div class="volume-picker-item-info">
-                                    <div class="volume-picker-item-title">${v.name_uk || v.name}</div>
-                                    <div class="volume-picker-item-meta">
-                                        ${v.start_year || ''} • ${v.publisher_name || 'Невідоме видавництво'} • ID: ${v.id}
-                                        ${v.children_count !== undefined ? ` • ${v.children_count} томів` : ''}
+                        ${volumes.map(v => {
+                            const isDisabled = this.disabledIds.includes(v.id);
+                            return `
+                                <div class="volume-picker-item ${isDisabled ? 'volume-picker-item--disabled' : ''}" data-id="${v.id}" ${isDisabled ? 'title="Вже додано"' : ''}>
+                                    <img src="${comicVineImageUrl(v.cv_img || v.hikka_img) || '/static/images/no-cover.png'}" alt="">
+                                    <div class="volume-picker-item-info">
+                                        <div class="volume-picker-item-title">${v.name_uk || v.name}</div>
+                                        <div class="volume-picker-item-meta">
+                                            ${v.start_year || ''} • ${v.publisher_name || 'Невідоме видавництво'} • ID: ${v.id}
+                                            ${v.children_count !== undefined ? ` • ${v.children_count} томів` : ''}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        `).join('')}
+                            `;
+                        }).join('')}
                     `;
 
                     resultsEl.querySelectorAll('.volume-picker-item').forEach(el => {
                         el.addEventListener('click', () => {
+                            if (el.classList.contains('volume-picker-item--disabled')) return;
                             const id = parseInt(el.dataset.id);
                             const volume = volumes.find(v => v.id === id);
                             this.onSelect(volume);
@@ -204,20 +209,24 @@ export class VolumePicker {
                 return;
             }
 
-            resultsEl.innerHTML = volumes.map(v => `
-                <div class="volume-picker-item" data-id="${v.id}">
-                    <img src="${comicVineImageUrl(v.cv_img || v.hikka_img) || '/static/images/no-cover.png'}" alt="">
-                    <div class="volume-picker-item-info">
-                        <div class="volume-picker-item-title">${v.name_uk || v.name}</div>
-                        <div class="volume-picker-item-meta">
-                            ${v.start_year || ''} • ${v.publisher_name || 'Невідоме видавництво'} • ID: ${v.id}
+            resultsEl.innerHTML = volumes.map(v => {
+                const isDisabled = this.disabledIds.includes(v.id);
+                return `
+                    <div class="volume-picker-item ${isDisabled ? 'volume-picker-item--disabled' : ''}" data-id="${v.id}" ${isDisabled ? 'title="Вже додано"' : ''}>
+                        <img src="${comicVineImageUrl(v.cv_img || v.hikka_img) || '/static/images/no-cover.png'}" alt="">
+                        <div class="volume-picker-item-info">
+                            <div class="volume-picker-item-title">${v.name_uk || v.name}</div>
+                            <div class="volume-picker-item-meta">
+                                ${v.start_year || ''} • ${v.publisher_name || 'Невідоме видавництво'} • ID: ${v.id}
+                            </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
 
             resultsEl.querySelectorAll('.volume-picker-item').forEach(el => {
                 el.addEventListener('click', () => {
+                    if (el.classList.contains('volume-picker-item--disabled')) return;
                     const id = parseInt(el.dataset.id);
                     const volume = volumes.find(v => v.id === id);
                     this.onSelect(volume);
