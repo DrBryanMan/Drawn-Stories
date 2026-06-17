@@ -1,17 +1,26 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 import json
 from ..db import get_db
 
 router = APIRouter(prefix="/api/volumes", tags=["volumes"])
 
-@router.get("/{volume_id}")
-async def get_volume_detail(volume_id: int):
+def get_current_user_id(request: Request):
+    username = request.cookies.get("username")
+    if not username:
+        return None
     db = get_db()
+    user = db.get_one("SELECT id FROM users WHERE username = ?", [username])
+    return user['id'] if user else None
+
+@router.get("/{volume_id}")
+async def get_volume_detail(volume_id: int, request: Request):
+    db = get_db()
+    user_id = get_current_user_id(request)
 
     volume = db.get_one(
         """
         SELECT v.*, p.name as publisher_name, p.cv_slug as publisher_slug, 'volume' as type,
-               (SELECT COUNT(*) FROM issues i WHERE i.ds_vol_id = v.id OR (i.ds_vol_id IS NULL AND i.cv_vol_id = v.cv_id)) as issue_count
+               (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id) as issue_count
         FROM volumes v
         LEFT JOIN publishers p ON v.publisher = p.id
         WHERE v.id = ?
@@ -31,28 +40,25 @@ async def get_volume_detail(volume_id: int):
     else:
         volume["synonyms"] = []
 
-    cv_id = volume.get("cv_id")
-
     issues = db.get_all(
         """
         SELECT i.*, 'issue' as type, COUNT(ci.collection_id) as collection_count
         FROM issues i
         LEFT JOIN collection_issues ci ON i.id = ci.issue_id
-        WHERE i.ds_vol_id = ?
-           OR (i.ds_vol_id IS NULL AND i.cv_vol_id = ?)
+        WHERE i.volume_id = ?
         GROUP BY i.id
         """,
-        [volume_id, cv_id],
+        [volume_id],
     )
 
     collections = db.get_all(
         """
-        SELECT *, 'collection' as type
-        FROM collections
-        WHERE volume_id = ?
-           OR (volume_id IS NULL AND cv_vol_id = ?)
+        SELECT c.*, 'collection' as type,
+               EXISTS(SELECT 1 FROM user_collections uc WHERE uc.collection_id = c.id AND uc.user_id = ?) as is_owned
+        FROM collections c
+        WHERE c.volume_id = ?
         """,
-        [volume_id, cv_id],
+        [user_id, volume_id],
     )
 
     # Combine and sort
@@ -62,6 +68,8 @@ async def get_volume_detail(volume_id: int):
         x.get('issue_number') or '',
         x.get('cover_date') or x.get('release_date') or ''
     ))
+    
+    owned_count = sum(1 for c in collections if c.get('is_owned'))
 
     themes = db.get_all(
         """
@@ -69,7 +77,6 @@ async def get_volume_detail(volume_id: int):
         FROM volume_themes vt
         JOIN themes t ON t.id = vt.theme_id
         WHERE vt.volume_id = ?
-           OR (? IS NOT NULL AND vt.cv_vol_id = ?)
         ORDER BY
           CASE COALESCE(t.type, 'theme')
             WHEN 'type' THEN 0
@@ -78,7 +85,7 @@ async def get_volume_detail(volume_id: int):
           END,
           COALESCE(t.ua_name, t.name) ASC
         """,
-        [volume_id, cv_id, cv_id],
+        [volume_id],
     )
 
     issue_dates = sorted(
@@ -105,11 +112,8 @@ async def get_volume_detail(volume_id: int):
     translation_parents = db.get_all(
         """
         SELECT v.*, p.name as publisher_name, vt.rel_type, 'volume' as type,
-               (SELECT COUNT(*) FROM issues i WHERE i.ds_vol_id = v.id OR (i.ds_vol_id IS NULL AND i.cv_vol_id = v.cv_id)) as issue_count,
-               (SELECT COUNT(*)
-                FROM collections c
-                WHERE (c.cv_vol_id = v.cv_id AND v.cv_id IS NOT NULL)
-                   OR c.volume_id = v.id) as collections_count
+               (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id) as issue_count,
+               (SELECT COUNT(*) FROM collections c WHERE c.volume_id = v.id) as collections_count
         FROM volume_translations vt
         JOIN volumes v ON v.id = vt.parent_id
         LEFT JOIN publishers p ON p.id = v.publisher
@@ -118,8 +122,7 @@ async def get_volume_detail(volume_id: int):
           CASE vt.rel_type
             WHEN 'source' THEN 0
             WHEN 'translation' THEN 1
-            WHEN 'original' THEN 2
-            ELSE 3
+            ELSE 2
           END,
           v.name ASC
         """,
@@ -129,11 +132,8 @@ async def get_volume_detail(volume_id: int):
     translations = db.get_all(
         """
         SELECT DISTINCT v.*, p.name as publisher_name, vt.rel_type, 'volume' as type,
-               (SELECT COUNT(*) FROM issues i WHERE i.ds_vol_id = v.id OR (i.ds_vol_id IS NULL AND i.cv_vol_id = v.cv_id)) as issue_count,
-               (SELECT COUNT(*)
-                FROM collections c
-                WHERE (c.cv_vol_id = v.cv_id AND v.cv_id IS NOT NULL)
-                   OR c.volume_id = v.id) as collections_count
+               (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id) as issue_count,
+               (SELECT COUNT(*) FROM collections c WHERE c.volume_id = v.id) as collections_count
         FROM volume_translations vt
         JOIN volumes v ON v.id = vt.child_id
         LEFT JOIN publishers p ON p.id = v.publisher
@@ -146,7 +146,7 @@ async def get_volume_detail(volume_id: int):
     magazine_parents = db.get_all(
         """
         SELECT v.*, p.name as publisher_name, 'volume' as type,
-               (SELECT COUNT(*) FROM issues i WHERE i.ds_vol_id = v.id OR (i.ds_vol_id IS NULL AND i.cv_vol_id = v.cv_id)) as issue_count
+               (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id) as issue_count
         FROM volume_magazines vm
         JOIN volumes v ON v.id = vm.magazine_id
         LEFT JOIN publishers p ON p.id = v.publisher
@@ -160,7 +160,7 @@ async def get_volume_detail(volume_id: int):
     magazine_children = db.get_all(
         """
         SELECT v.*, p.name as publisher_name, 'volume' as type,
-               (SELECT COUNT(*) FROM issues i WHERE i.ds_vol_id = v.id OR (i.ds_vol_id IS NULL AND i.cv_vol_id = v.cv_id)) as issue_count
+               (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id) as issue_count
         FROM volume_magazines vm
         JOIN volumes v ON v.id = vm.child_id
         LEFT JOIN publishers p ON p.id = v.publisher
@@ -184,35 +184,70 @@ async def get_volume_detail(volume_id: int):
         "stats": {
             "issues": len(issues),
             "collections": len(collections),
+            "owned_collections": owned_count,
             "total_items": len(items),
             "first_release": issue_dates[0] if issue_dates else None,
             "last_release": issue_dates[-1] if issue_dates else None,
         },
     }
 
-def replace_volume_themes(db, volume_id, theme_ids, cv_vol_id=None):
+def replace_volume_themes(db, volume_id, theme_ids):
     # Delete existing themes
-    if cv_vol_id:
-        db.execute(
-            "DELETE FROM volume_themes WHERE volume_id = ? OR (cv_vol_id = ? AND cv_vol_id IS NOT NULL)",
-            [volume_id, cv_vol_id]
-        )
-    else:
-        db.execute("DELETE FROM volume_themes WHERE volume_id = ?", [volume_id])
+    db.execute("DELETE FROM volume_themes WHERE volume_id = ?", [volume_id])
         
     # Insert new themes
     for theme_id in theme_ids:
         db.execute(
-            "INSERT INTO volume_themes (volume_id, cv_vol_id, theme_id) VALUES (?, ?, ?)",
-            [volume_id, cv_vol_id, theme_id]
+            "INSERT INTO volume_themes (volume_id, theme_id) VALUES (?, ?)",
+            [volume_id, theme_id]
         )
+
+@router.post("")
+async def create_volume(data: dict):
+    db = get_db()
+    
+    # Required fields check
+    if not data.get("name"):
+        raise HTTPException(status_code=400, detail="Назва тому обов'язкова")
+
+    # Insert fields
+    columns = []
+    placeholders = []
+    params = []
+    
+    allowed_fields = [
+        "name", "name_uk", "name_native", "description", "synopsis", "synopsis_ua", "start_year", 
+        "status", "lang", "publisher", "cv_img", "cover_img",
+        "cv_id", "cv_slug", "hikka_slug", "mal_id", "locg_id", "locg_slug", "site_link"
+    ]
+    
+    for key, value in data.items():
+        if key in allowed_fields and value is not None:
+            columns.append(key)
+            placeholders.append("?")
+            params.append(value)
+            
+    if not columns:
+        raise HTTPException(status_code=400, detail="Немає даних для збереження")
+
+    sql = f"INSERT INTO volumes ({', '.join(columns)}) VALUES ({', '.join(placeholders)})"
+    db.execute(sql, params)
+    
+    # Get the last inserted ID
+    new_id = db.get_one("SELECT last_insert_rowid() as id")["id"]
+    
+    # Update themes if provided
+    if "theme_ids" in data and isinstance(data["theme_ids"], list):
+        replace_volume_themes(db, new_id, data["theme_ids"])
+    
+    return {"message": "Том успішно створено", "id": new_id}
 
 @router.put("/{volume_id}")
 async def update_volume(volume_id: int, data: dict):
     db = get_db()
     
     # Check if volume exists
-    volume = db.get_one("SELECT id, cv_id FROM volumes WHERE id = ?", [volume_id])
+    volume = db.get_one("SELECT id FROM volumes WHERE id = ?", [volume_id])
     if not volume:
         raise HTTPException(status_code=404, detail="Том не знайдено")
 
@@ -221,7 +256,7 @@ async def update_volume(volume_id: int, data: dict):
     params = []
     
     allowed_fields = [
-        "name", "name_uk", "name_native", "description", "start_year", 
+        "name", "name_uk", "name_native", "description", "synopsis", "synopsis_ua", "start_year", 
         "status", "lang", "publisher", "cv_img", "cover_img",
         "cv_id", "cv_slug", "hikka_slug", "mal_id", "locg_id", "locg_slug", "site_link"
     ]
@@ -240,7 +275,7 @@ async def update_volume(volume_id: int, data: dict):
     
     # Update themes if provided
     if "theme_ids" in data and isinstance(data["theme_ids"], list):
-        replace_volume_themes(db, volume_id, data["theme_ids"], volume.get("cv_id"))
+        replace_volume_themes(db, volume_id, data["theme_ids"])
     
     return {"message": "Volume updated successfully"}
 
@@ -253,13 +288,8 @@ async def convert_all_to_collections(volume_id: int):
     if not volume:
         raise HTTPException(status_code=404, detail="Том не знайдено")
 
-    cv_id = volume.get("cv_id")
-    
     # Get issues
-    if cv_id:
-        issues = db.get_all("SELECT * FROM issues WHERE cv_vol_id = ?", [cv_id])
-    else:
-        issues = db.get_all("SELECT * FROM issues WHERE ds_vol_id = ?", [volume_id])
+    issues = db.get_all("SELECT * FROM issues WHERE volume_id = ?", [volume_id])
         
     if not issues:
         raise HTTPException(status_code=400, detail="У цього тома немає випусків")
@@ -293,12 +323,12 @@ async def convert_all_to_collections(volume_id: int):
             db.conn.execute(
                 """
                 INSERT INTO collections (
-                    cv_vol_id, volume_id, name, cv_img, site_link, cv_id, cv_slug, 
+                    volume_id, name, cv_img, site_link, cv_id, cv_slug, 
                     publisher, issue_number, cover_date, release_date
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
-                    issue.get("cv_vol_id"), issue.get("ds_vol_id"), issue.get("name") or "Без назви",
+                    volume_id, issue.get("name") or "Без назви",
                     issue.get("cv_img"), issue.get("site_link"), issue.get("cv_id"), issue.get("cv_slug"),
                     volume.get("publisher"), issue.get("issue_number"), 
                     issue.get("cover_date"), issue.get("release_date")
@@ -342,13 +372,8 @@ async def convert_all_collections_to_issues(volume_id: int):
     if not volume:
         raise HTTPException(status_code=404, detail="Том не знайдено")
 
-    cv_id = volume.get("cv_id")
-    
     # Get collections
-    if cv_id:
-        collections = db.get_all("SELECT * FROM collections WHERE cv_vol_id = ?", [cv_id])
-    else:
-        collections = db.get_all("SELECT * FROM collections WHERE volume_id = ?", [volume_id])
+    collections = db.get_all("SELECT * FROM collections WHERE volume_id = ?", [volume_id])
         
     if not collections:
         raise HTTPException(status_code=400, detail="У цього тома немає збірників")
@@ -372,13 +397,13 @@ async def convert_all_collections_to_issues(volume_id: int):
             db.conn.execute(
                 """
                 INSERT INTO issues (
-                    cv_id, cv_slug, name, cv_img, cv_vol_id, ds_vol_id, 
+                    cv_id, cv_slug, name, cv_img, volume_id, 
                     issue_number, cover_date, release_date
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     col.get("cv_id"), col.get("cv_slug"), col.get("name") or "Без назви",
-                    col.get("cv_img"), col.get("cv_vol_id"), col.get("volume_id"),
+                    col.get("cv_img"), volume_id,
                     col.get("issue_number"), col.get("cover_date"), col.get("release_date")
                 ]
             )
@@ -413,15 +438,11 @@ async def delete_volume(volume_id: int):
     if not volume:
         raise HTTPException(status_code=404, detail="Том не знайдено")
         
-    cv_id = volume.get("cv_id")
-        
     try:
         db.conn.execute("BEGIN")
         
         # 1. Themes
         db.conn.execute("DELETE FROM volume_themes WHERE volume_id = ?", [volume_id])
-        if cv_id:
-            db.conn.execute("DELETE FROM volume_themes WHERE cv_vol_id = ?", [cv_id])
             
         # 2. Series links
         db.conn.execute("DELETE FROM series_volumes WHERE volume_id = ?", [volume_id])
@@ -431,11 +452,7 @@ async def delete_volume(volume_id: int):
         db.conn.execute("DELETE FROM volume_magazines WHERE magazine_id = ? OR child_id = ?", [volume_id, volume_id])
         
         # 4. Issues and their links
-        # Find all issues of this volume
-        if cv_id:
-            issues = db.get_all("SELECT id FROM issues WHERE cv_vol_id = ? OR ds_vol_id = ?", [cv_id, volume_id])
-        else:
-            issues = db.get_all("SELECT id FROM issues WHERE ds_vol_id = ?", [volume_id])
+        issues = db.get_all("SELECT id FROM issues WHERE volume_id = ?", [volume_id])
             
         issue_ids = [i["id"] for i in issues]
         if issue_ids:
@@ -445,10 +462,7 @@ async def delete_volume(volume_id: int):
             db.conn.execute(f"DELETE FROM issues WHERE id IN ({placeholders})", issue_ids)
 
         # 5. Collections and their links
-        if cv_id:
-            collections = db.get_all("SELECT id FROM collections WHERE cv_vol_id = ? OR volume_id = ?", [cv_id, volume_id])
-        else:
-            collections = db.get_all("SELECT id FROM collections WHERE volume_id = ?", [volume_id])
+        collections = db.get_all("SELECT id FROM collections WHERE volume_id = ?", [volume_id])
             
         col_ids = [c["id"] for c in collections]
         if col_ids:
@@ -476,7 +490,7 @@ async def get_issue_collections_membership(issue_id: int):
         SELECT c.*, v.name as volume_name, v.id as volume_id
         FROM collection_issues ci
         JOIN collections c ON c.id = ci.collection_id
-        LEFT JOIN volumes v ON (c.cv_vol_id = v.cv_id AND c.cv_vol_id IS NOT NULL) OR (c.volume_id = v.id AND c.volume_id IS NOT NULL)
+        LEFT JOIN volumes v ON c.volume_id = v.id
         WHERE ci.issue_id = ?
         ORDER BY CAST(c.issue_number AS REAL) ASC, COALESCE(c.release_date, c.cover_date) ASC
         """,
@@ -556,13 +570,13 @@ async def remove_volume_from_magazine(volume_id: int, child_id: int):
     return {"message": "Том видалено з журналу"}
 
 @router.get("/{volume_id}/collections-from-issues")
-async def get_volume_collections_from_issues(volume_id: int):
+async def get_volume_collections_from_issues(volume_id: int, request: Request):
     db = get_db()
+    user_id = get_current_user_id(request)
     volume = db.get_one("SELECT * FROM volumes WHERE id = ?", [volume_id])
     if not volume:
         return {"data": []}
 
-    cv_id = volume.get("cv_id")
     vol_lang = volume.get("lang")
 
     # Find related volumes in the same language (including current volume)
@@ -586,29 +600,23 @@ async def get_volume_collections_from_issues(volume_id: int):
     vol_ids = [volume_id] + [r["id"] for r in related]
     placeholders = ",".join("?" * len(vol_ids))
     
-    cv_clause_collections = "OR (i.cv_vol_id = ? AND i.cv_vol_id IS NOT NULL) OR (c.cv_vol_id = ? AND c.cv_vol_id IS NOT NULL)" if cv_id else ""
-    cv_params_collections = [cv_id, cv_id] if cv_id else []
-    
-    cv_clause_issues = "OR (i.cv_vol_id = ? AND i.cv_vol_id IS NOT NULL)" if cv_id else ""
-    cv_params_issues = [cv_id] if cv_id else []
-
     # Get collections linked directly or via issues
     collections = db.get_all(
         f"""
-        SELECT DISTINCT c.*, pv.id as parent_vol_id, pv.name as parent_vol_name, pv.lang as parent_vol_lang
+        SELECT DISTINCT c.*, pv.id as parent_vol_id, pv.name as parent_vol_name, pv.lang as parent_vol_lang,
+               EXISTS(SELECT 1 FROM user_collections uc WHERE uc.collection_id = c.id AND uc.user_id = ?) as is_owned
         FROM collections c
         LEFT JOIN collection_issues ci ON c.id = ci.collection_id
         LEFT JOIN issues i ON ci.issue_id = i.id
-        LEFT JOIN volumes pv ON (c.volume_id = pv.id) OR (c.cv_vol_id = pv.cv_id AND c.cv_vol_id IS NOT NULL)
+        LEFT JOIN volumes pv ON c.volume_id = pv.id
         WHERE (
             c.volume_id IN ({placeholders})
-            OR i.ds_vol_id IN ({placeholders})
-            {cv_clause_collections}
+            OR i.volume_id IN ({placeholders})
         )
         { "AND (pv.lang = ? OR pv.lang IS NULL)" if vol_lang else "" }
         ORDER BY pv.name ASC, CAST(c.issue_number AS REAL) ASC, c.name ASC
         """,
-        vol_ids + vol_ids + cv_params_collections + ([vol_lang] if vol_lang else [])
+        [user_id] + vol_ids + vol_ids + ([vol_lang] if vol_lang else [])
     )
 
     # For each collection, find the issue numbers from THIS volume context
@@ -619,12 +627,13 @@ async def get_volume_collections_from_issues(volume_id: int):
             SELECT i.issue_number FROM collection_issues ci
             JOIN issues i ON ci.issue_id = i.id
             WHERE ci.collection_id = ? 
-              AND (i.ds_vol_id IN ({placeholders}) {cv_clause_issues})
+              AND i.volume_id IN ({placeholders})
               AND i.issue_number IS NOT NULL
             ORDER BY CAST(i.issue_number AS REAL) ASC
             """,
-            [col["id"]] + vol_ids + cv_params_issues
+            [col["id"]] + vol_ids
         )
+        col["is_owned"] = bool(col["is_owned"])
         col["volume_issue_numbers"] = [r["issue_number"] for r in nums]
         result.append(col)
 

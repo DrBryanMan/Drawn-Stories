@@ -24,7 +24,7 @@ export function createComicCard(item) {
         a.href = `#/volumes/${item.id}`;
     } else {
         // For issues and collections, link to the volume they belong to
-        const volId = item.ds_vol_id || item.volume_id;
+        const volId = item.volume_id || item.volume_id;
         a.href = volId ? `#/volumes/${volId}` : '#';
         if (isIssue) a.dataset.issueId = item.id;
         if (isCollection) a.dataset.collectionId = item.id;

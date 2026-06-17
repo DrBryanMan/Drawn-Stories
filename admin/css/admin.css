@@ -1,3 +1,5 @@
+@import url('buttons.css');
+
 /* Existing ds-modal styles ... */
 .ds-modal-overlay {
     position: fixed;
@@ -71,16 +73,6 @@
     gap: 12px;
     margin-top: 16px;
     flex-wrap: wrap;
-}
-
-.volume-hero-admin-actions .btn-admin {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    height: 36px;
-    padding: 0 16px;
-    font-size: 0.85rem;
-    font-weight: 600;
 }
 
 /* Volume Picker Modal */
@@ -228,55 +220,6 @@
 .admin-textarea {
     resize: vertical;
     min-height: 100px;
-}
-
-.btn-admin {
-    padding: .4rem .9rem;
-    border-radius: var(--r);
-    border: 1px solid color-mix(in srgb, var(--color) 50%, transparent);
-    background: color-mix(in srgb, var(--color) 20%, transparent);
-    transition: all .3s;
-
-    & svg {
-        transition: all .3s;
-    }
-}
-
-.btn-admin--primary {
-    background: var(--accent);
-    color: white;
-    &:hover {
-        background: var(--accent-h);
-    }
-}
-
-.btn-admin--secondary {
-    background: var(--bg);
-    border: 1px solid var(--border-s);
-    color: var(--text);
-
-    &:hover {
-        background: var(--bg-card-h);
-        border: 1px solid var(--border);
-    }
-}
-
-.btn-admin--warning {
-    --color: #d97706;
-}
-
-.btn-admin--danger {
-    --color: #e53e3e;
-}
-
-.btn-admin--warning:hover, .btn-admin--danger:hover {
-    background: color-mix(in srgb, var(--color) 70%, transparent);
-    color: white;
-}
-
-.btn-admin:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
 }
 
 /* Chips and Badges */

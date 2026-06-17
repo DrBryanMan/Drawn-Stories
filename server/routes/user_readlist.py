@@ -111,7 +111,7 @@ async def get_user_readlist(username: str):
             p.name as publisher_name, 
             ur.list_name,
             'volume' as type,
-            (SELECT COUNT(*) FROM issues i WHERE i.ds_vol_id = v.id OR (i.ds_vol_id IS NULL AND i.cv_vol_id = v.cv_id)) as issue_count
+            (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id) as issue_count
         FROM user_readlists ur
         JOIN volumes v ON ur.volume_id = v.id
         LEFT JOIN publishers p ON v.publisher = p.id

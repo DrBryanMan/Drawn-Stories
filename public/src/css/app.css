@@ -18,3 +18,5 @@
 @import url('views/auth.css');
 @import url('views/bookmarks.css');
 @import url('views/settings.css');
+@import url('views/collections.css');
+@import url('views/collection-detail.css');

@@ -4,11 +4,7 @@ from typing import List, Optional, Any
 
 # Resolve path relative to this file
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB_PATH = os.path.join(BASE_DIR, "../Drawn Stories Parser/comicsdb.db")
-
-# Fallback to local comics.db if the remote one doesn't exist
-if not os.path.exists(DB_PATH):
-    DB_PATH = os.path.join(BASE_DIR, "comics.db")
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "comicsdb.db")
 
 class Database:
     def __init__(self, path: str):

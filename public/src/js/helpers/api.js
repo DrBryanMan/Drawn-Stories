@@ -76,5 +76,23 @@ export const API = {
             throw new Error(message);
         }
         return await response.json();
+    },
+
+    async upload(endpoint, formData) {
+        const response = await fetch(this.baseUrl + endpoint, {
+            method: 'POST',
+            body: formData
+        });
+        if (!response.ok) {
+            let message = response.statusText || `HTTP ${response.status}`;
+            try {
+                const payload = await response.clone().json();
+                message = payload.detail || payload.error || message;
+            } catch {
+                message = await response.text() || message;
+            }
+            throw new Error(message);
+        }
+        return await response.json();
     }
 };

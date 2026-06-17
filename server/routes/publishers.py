@@ -18,8 +18,8 @@ async def get_publishers(
     params = []
 
     if search:
-        where_parts.append("p.name LIKE ?")
-        params.append(f"%{search}%")
+        where_parts.append("ULOWER(p.name) LIKE ?")
+        params.append(f"%{search.lower()}%")
     
     if ids:
         id_list = [id.strip() for id in ids.split(",") if id.strip().isdigit()]
@@ -68,7 +68,7 @@ async def get_publishers(
             row["latest_releases"] = db.get_all(
                 """
                 SELECT v.id, v.name, v.name_uk, v.cover_img, v.cv_img, v.lang,
-                       (SELECT COUNT(*) FROM issues i WHERE i.ds_vol_id = v.id OR (i.ds_vol_id IS NULL AND i.cv_vol_id = v.cv_id)) as issue_count
+                       (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id) as issue_count
                 FROM volumes v
                 WHERE v.publisher = ?
                 ORDER BY v.created_at DESC, v.id DESC

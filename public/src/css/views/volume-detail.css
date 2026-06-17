@@ -224,10 +224,10 @@
 }
 
 .readlist-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
+  display: inline-flex;     
+  align-items: center;      
+  justify-content: center;  
+  min-width: 38px;
   height: 38px;
   border: 1px solid var(--border-s);
   border-radius: var(--r);
@@ -235,8 +235,13 @@
   color: var(--text-muted);
   cursor: pointer;
   transition: all var(--t);
+  padding: 0 12px;
+  gap: 8px;
 }
 
+.readlist-btn svg {
+  flex-shrink: 0;
+}
 .readlist-btn:hover {
   border-color: var(--border);
   background-color: var(--bg-card-h);
@@ -1102,7 +1107,6 @@
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;
-  z-index: 2;
 }
 
 .issue-grid-type-badge {
@@ -1139,12 +1143,56 @@
   color: #fff;
   cursor: pointer;
   transition: all var(--t);
-  z-index: 5;
 }
 
 .issue-grid-membership-btn:hover {
   background: var(--purple);
   transform: translateY(-1px);
+}
+
+.issue-grid-actions {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 10;
+}
+
+.issue-grid-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid transparent;
+  border-radius: var(--r-s, 4px);
+  background: #dcfce7;
+  color: #16a34a;
+  border-color: #bbf7d0;
+  opacity: 0.6;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  pointer-events: auto;
+}
+
+.issue-grid-toggle-btn:hover {
+  background: #16a34a;
+  color: #fff;
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.issue-grid-toggle-btn.is-owned {
+  background: #fee2e2;
+  color: #ef4444;
+  border-color: #fecaca;
+}
+
+.issue-grid-toggle-btn.is-owned:hover {
+  background: #ef4444;
+  color: #fff;
 }
 
 .membership-count {
@@ -1603,61 +1651,6 @@
   width: max-content;
   max-width: calc(100vw - 32px);
   box-sizing: border-box;
-}
-
-.btn-admin {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 12px;
-  border-radius: var(--r);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--t);
-  border: 1px solid transparent;
-}
-
-.btn-admin i {
-  font-size: 14px;
-}
-
-.btn-admin--secondary {
-  background: var(--bg);
-  border-color: var(--border-s);
-  color: var(--text-2);
-}
-
-.btn-admin--secondary:hover {
-  background: var(--bg-card-h);
-  border-color: var(--border);
-  color: var(--text);
-}
-
-.btn-admin--danger {
-  background: color-mix(in srgb, var(--red) 8%, transparent);
-  border-color: color-mix(in srgb, var(--red) 20%, transparent);
-  color: var(--red);
-}
-
-.btn-admin--danger:hover {
-  background: var(--red);
-  border-color: var(--red);
-  color: #fff;
-}
-
-.btn-admin--warning {
-  background: color-mix(in srgb, var(--orange) 8%, transparent);
-  border-color: color-mix(in srgb, var(--orange) 20%, transparent);
-  color: var(--orange);
-}
-
-.btn-admin--warning:hover {
-  background: var(--orange);
-  border-color: var(--orange);
-  color: #fff;
 }
 
 /* ── Responsive ───────────────────────────────────── */

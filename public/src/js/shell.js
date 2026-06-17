@@ -207,6 +207,10 @@ function updateAuthUI() {
             ${icon('<path d="M8 6h10"/><path d="M8 12h10"/><path d="M8 18h7"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>')}
             <span>Мої списки</span>
           </a>
+          <a class="nav-dropdown-link" href="#/user/${currentUser.username}/collection" data-route="/user/${currentUser.username}/collection">
+            ${icon('<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>')}
+            <span>Моя колекція</span>
+          </a>
           <a class="nav-dropdown-link" href="#/user/${currentUser.username}/favorites" data-route="/user/${currentUser.username}/favorites">
             ${icon('<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>')}
             <span>Обране</span>

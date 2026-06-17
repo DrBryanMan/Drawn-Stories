@@ -238,6 +238,8 @@ export class VolumePicker {
             let errorMsg = err.message;
             if (errorMsg === 'Not Found') {
                 errorMsg = 'Помилка: Ендпоінт пошуку не знайдено на сервері';
+            } else if (errorMsg === 'Method Not Allowed') {
+                errorMsg = 'Помилка: цей метод запиту не дозволений сервером';
             }
             resultsEl.innerHTML = `<div class="volume-picker-empty">
                 ${ICON.alert}

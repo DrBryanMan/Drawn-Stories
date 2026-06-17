@@ -45,7 +45,7 @@ async def get_user_favorites(username: str):
         if ctype == "volume":
             data = db.get_all(f"""
                 SELECT v.*, p.name as publisher_name, 'volume' as type,
-                (SELECT COUNT(*) FROM issues i WHERE i.ds_vol_id = v.id OR (i.ds_vol_id IS NULL AND i.cv_vol_id = v.cv_id)) as issue_count
+                (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id) as issue_count
                 FROM volumes v
                 LEFT JOIN publishers p ON v.publisher = p.id
                 WHERE v.id IN ({placeholders})
@@ -55,7 +55,7 @@ async def get_user_favorites(username: str):
             data = db.get_all(f"""
                 SELECT i.*, v.name as volume_name, v.id as volume_id, 'issue' as type
                 FROM issues i
-                LEFT JOIN volumes v ON (i.ds_vol_id = v.id) OR (i.ds_vol_id IS NULL AND i.cv_vol_id = v.cv_id)
+                LEFT JOIN volumes v ON i.volume_id = v.id
                 WHERE i.id IN ({placeholders})
             """, ids)
             results["issue"] = data

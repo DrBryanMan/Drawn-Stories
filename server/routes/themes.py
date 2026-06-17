@@ -15,8 +15,8 @@ async def get_themes(
     params = []
 
     if search:
-        where_parts.append("(t.name LIKE ? OR t.ua_name LIKE ?)")
-        params.extend([f"%{search}%", f"%{search}%"])
+        where_parts.append("(ULOWER(t.name) LIKE ? OR ULOWER(t.ua_name) LIKE ?)")
+        params.extend([f"%{search.lower()}%", f"%{search.lower()}%"])
 
     if ids:
         id_list = [id.strip() for id in ids.split(",") if id.strip().isdigit()]

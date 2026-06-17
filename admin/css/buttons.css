@@ -1,0 +1,126 @@
+/* 
+
+.btn-admin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--r);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--t);
+  border: 1px solid transparent;
+}
+
+.btn-admin i {
+  font-size: 14px;
+}
+
+.btn-admin--secondary {
+  background: var(--bg);
+  border-color: var(--border-s);
+  color: var(--text-2);
+}
+
+.btn-admin--secondary:hover {
+  background: var(--bg-card-h);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.btn-admin--danger {
+  background: color-mix(in srgb, var(--red) 8%, transparent);
+  border-color: color-mix(in srgb, var(--red) 20%, transparent);
+  color: var(--red);
+}
+
+.btn-admin--danger:hover {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+
+.btn-admin--warning {
+  background: color-mix(in srgb, var(--orange) 8%, transparent);
+  border-color: color-mix(in srgb, var(--orange) 20%, transparent);
+  color: var(--orange);
+}
+
+.btn-admin--warning:hover {
+  background: var(--orange);
+  border-color: var(--orange);
+  color: #fff;
+} */
+
+
+
+/* == Volume details == */
+.volume-hero-admin-actions .btn-admin {
+  height: 36px;
+  padding: 0 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.btn-admin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: var(--r);
+  border: 1px solid color-mix(in srgb, var(--color) 50%, transparent);
+  background: color-mix(in srgb, var(--color) 20%, transparent);
+  transition: all .3s;
+
+  & svg {
+      transition: all .3s;
+  }
+}
+
+.btn-admin--primary {
+  background: var(--accent);
+  color: white;
+  &:hover {
+      background: var(--accent-h);
+  }
+}
+
+.btn-admin--secondary {
+  background: var(--bg);
+  border: 1px solid var(--border-s);
+  color: var(--text);
+
+  &:hover {
+      background: var(--bg-card-h);
+      border: 1px solid var(--border);
+  }
+}
+
+.btn-admin--warning {
+  --color: #d97706;
+}
+
+.btn-admin--danger {
+  --color: #e53e3e;
+}
+
+.btn-admin--warning:hover, .btn-admin--danger:hover {
+  background: color-mix(in srgb, var(--color) 70%, transparent);
+  color: white;
+}
+
+.btn-admin:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* modal */
+
+.ds-modal .btn-admin {
+  height: 32px;
+  padding: 0 12px;
+}

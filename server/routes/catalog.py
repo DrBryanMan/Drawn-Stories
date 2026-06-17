@@ -39,7 +39,7 @@ async def get_bookmarks_data(items: List[BookmarkItem]):
         if item_type == "volume":
             data = db.get_all(f"""
                 SELECT v.*, p.name as publisher_name, 'volume' as type,
-                       (SELECT COUNT(*) FROM issues i WHERE i.ds_vol_id = v.id OR (i.ds_vol_id IS NULL AND i.cv_vol_id = v.cv_id)) as issue_count
+                       (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id) as issue_count
                 FROM volumes v
                 LEFT JOIN publishers p ON v.publisher = p.id
                 WHERE v.id IN ({placeholders})
@@ -49,7 +49,7 @@ async def get_bookmarks_data(items: List[BookmarkItem]):
             data = db.get_all(f"""
                 SELECT i.*, v.name as volume_name, v.id as volume_id, 'issue' as type
                 FROM issues i
-                LEFT JOIN volumes v ON (i.ds_vol_id = v.id) OR (i.ds_vol_id IS NULL AND i.cv_vol_id = v.cv_id)
+                LEFT JOIN volumes v ON i.volume_id = v.id
                 WHERE i.id IN ({placeholders})
             """, ids)
             results["issue"] = data
@@ -101,23 +101,13 @@ async def get_catalog(
     filter_params = []
 
     # Subqueries for high-performance ID set filtering
-    manga_id_sql = f"""
-        SELECT volume_id FROM volume_themes WHERE theme_id = {manga_theme_id} AND volume_id IS NOT NULL
-        UNION
-        SELECT v2.id FROM volumes v2 JOIN volume_themes vt2 ON vt2.cv_vol_id = v2.cv_id 
-        WHERE vt2.theme_id = {manga_theme_id} AND v2.cv_id IS NOT NULL
-    """
+    manga_id_sql = f"SELECT volume_id FROM volume_themes WHERE theme_id = {manga_theme_id} AND volume_id IS NOT NULL"
     
-    collected_vol_id_sql = """
-        SELECT volume_id FROM collections WHERE volume_id IS NOT NULL
-        UNION
-        SELECT v3.id FROM volumes v3 JOIN collections c3 ON c3.cv_vol_id = v3.cv_id 
-        WHERE v3.cv_id IS NOT NULL
-    """
+    collected_vol_id_sql = "SELECT volume_id FROM collections WHERE volume_id IS NOT NULL"
 
     if view_type == "series":
         base = "FROM volumes v LEFT JOIN publishers p ON v.publisher = p.id"
-        select_fields = "v.*, p.name as publisher_name, 'volume' as type, (SELECT COUNT(*) FROM issues i WHERE i.ds_vol_id = v.id OR (i.ds_vol_id IS NULL AND i.cv_vol_id = v.cv_id)) as issue_count"
+        select_fields = "v.*, p.name as publisher_name, 'volume' as type, (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id) as issue_count"
         primary_sort = CATALOG_SORT_COLUMNS.get(sort, "v.created_at")
         unique_key = "v.id"
         
@@ -134,16 +124,16 @@ async def get_catalog(
             if words:
                 search_parts = []
                 for word in words:
-                    part = "(v.name LIKE ? OR v.name_en LIKE ? OR v.name_uk LIKE ? OR v.name_native LIKE ?)"
+                    part = "(ULOWER(v.name) LIKE ? OR ULOWER(v.name_en) LIKE ? OR ULOWER(v.name_uk) LIKE ? OR ULOWER(v.name_native) LIKE ?)"
                     search_parts.append(part)
-                    filter_params.extend([f"%{word}%"] * 4)
+                    filter_params.extend([f"%{word.lower()}%"] * 4)
                 filter_clauses.append(f"({' AND '.join(search_parts)})")
 
     else:
         if not collection:
             base = """
                 FROM issues i
-                JOIN volumes v ON (i.ds_vol_id = v.id) OR (i.ds_vol_id IS NULL AND i.cv_vol_id = v.cv_id)
+                JOIN volumes v ON i.volume_id = v.id
                 LEFT JOIN publishers p ON v.publisher = p.id
             """
             select_fields = "i.*, v.name as volume_name, v.id as volume_id, p.name as publisher_name, v.lang, 'issue' as type"
@@ -155,14 +145,14 @@ async def get_catalog(
                 if words:
                     search_parts = []
                     for word in words:
-                        part = "(i.name LIKE ? OR v.name LIKE ? OR v.name_en LIKE ? OR v.name_uk LIKE ? OR v.name_native LIKE ?)"
+                        part = "(ULOWER(i.name) LIKE ? OR ULOWER(v.name) LIKE ? OR ULOWER(v.name_en) LIKE ? OR ULOWER(v.name_uk) LIKE ? OR ULOWER(v.name_native) LIKE ?)"
                         search_parts.append(part)
-                        filter_params.extend([f"%{word}%"] * 5)
+                        filter_params.extend([f"%{word.lower()}%"] * 5)
                     filter_clauses.append(f"({' AND '.join(search_parts)})")
         else:
             base = """
                 FROM collections c
-                LEFT JOIN volumes v ON (c.volume_id = v.id) OR (c.volume_id IS NULL AND c.cv_vol_id = v.cv_id)
+                LEFT JOIN volumes v ON c.volume_id = v.id
                 LEFT JOIN publishers p ON v.publisher = p.id
             """
             select_fields = "c.*, v.name as volume_name, v.id as volume_id, p.name as publisher_name, v.lang, 'collection' as type"
@@ -174,9 +164,9 @@ async def get_catalog(
                 if words:
                     search_parts = []
                     for word in words:
-                        part = "(c.name LIKE ? OR v.name LIKE ? OR v.name_en LIKE ? OR v.name_uk LIKE ? OR v.name_native LIKE ?)"
+                        part = "(ULOWER(c.name) LIKE ? OR ULOWER(v.name) LIKE ? OR ULOWER(v.name_en) LIKE ? OR ULOWER(v.name_uk) LIKE ? OR ULOWER(v.name_native) LIKE ?)"
                         search_parts.append(part)
-                        filter_params.extend([f"%{word}%"] * 5)
+                        filter_params.extend([f"%{word.lower()}%"] * 5)
                     filter_clauses.append(f"({' AND '.join(search_parts)})")
 
         if content_type == "manga":
@@ -319,14 +309,14 @@ async def search_volumes_for_picker(
         clauses.append("v.mal_id = ?")
         params.append(mal_id)
     if hikka_slug:
-        clauses.append("v.hikka_slug LIKE ?")
-        params.append(f"%{hikka_slug}%")
+        clauses.append("ULOWER(v.hikka_slug) LIKE ?")
+        params.append(f"%{hikka_slug.lower()}%")
     if theme_id:
         clauses.append("EXISTS (SELECT 1 FROM volume_themes vt WHERE vt.theme_id = ? AND vt.volume_id = v.id)")
         params.append(theme_id)
     if search:
-        clauses.append("(v.name LIKE ? OR v.name_uk LIKE ?)")
-        params.extend([f"%{search}%", f"%{search}%"])
+        clauses.append("(ULOWER(v.name) LIKE ? OR ULOWER(v.name_uk) LIKE ?)")
+        params.extend([f"%{search.lower()}%", f"%{search.lower()}%"])
 
     if not clauses:
         return {"items": [], "total": 0}

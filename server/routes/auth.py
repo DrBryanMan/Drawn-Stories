@@ -9,6 +9,10 @@ from fastapi.responses import FileResponse
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
+# Resolve target directory relative to this file
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+USERS_IMAGES_DIR = os.path.join(BASE_DIR, "images", "users")
+
 @router.post("/upload-avatar")
 async def upload_avatar(request: Request, avatar: UploadFile = File(...)):
     username = request.cookies.get("username")
@@ -22,9 +26,9 @@ async def upload_avatar(request: Request, avatar: UploadFile = File(...)):
     filename = f"{username}_avatar{ext}"
     
     # Ensure directory exists
-    os.makedirs("server/images/users", exist_ok=True)
+    os.makedirs(USERS_IMAGES_DIR, exist_ok=True)
     
-    with open(os.path.join("server/images/users", filename), "wb") as buffer:
+    with open(os.path.join(USERS_IMAGES_DIR, filename), "wb") as buffer:
         shutil.copyfileobj(avatar.file, buffer)
     
     return {"url": f"/api/auth/avatar/{username}?t={os.urandom(4).hex()}"}
@@ -33,7 +37,7 @@ async def upload_avatar(request: Request, avatar: UploadFile = File(...)):
 async def get_avatar(username: str):
     # Check for jpg or webp
     for ext in [".jpg", ".webp"]:
-        path = os.path.join("server/images/users", f"{username}_avatar{ext}")
+        path = os.path.join(USERS_IMAGES_DIR, f"{username}_avatar{ext}")
         if os.path.exists(path):
             return FileResponse(path)
     
@@ -66,10 +70,10 @@ async def update_profile(req: ProfileUpdateRequest, request: Request, response: 
     db.execute("UPDATE users SET username = ? WHERE username = ?", [new_username, old_username])
     
     # Rename avatar files if they exist
-    os.makedirs("server/images/users", exist_ok=True)
+    os.makedirs(USERS_IMAGES_DIR, exist_ok=True)
     for ext in [".jpg", ".webp"]:
-        old_path = os.path.join("server/images/users", f"{old_username}_avatar{ext}")
-        new_path = os.path.join("server/images/users", f"{new_username}_avatar{ext}")
+        old_path = os.path.join(USERS_IMAGES_DIR, f"{old_username}_avatar{ext}")
+        new_path = os.path.join(USERS_IMAGES_DIR, f"{new_username}_avatar{ext}")
         if os.path.exists(old_path):
             try:
                 os.rename(old_path, new_path)

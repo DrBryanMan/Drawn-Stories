@@ -26,7 +26,7 @@ function themeType(theme) {
 
 function isMangaVolume(volume, themes = [], translationParents = []) {
     if (volume.hikka_slug) return true;
-    if (translationParents.some(parent => parent.hikka_slug || parent.rel_type === 'original')) return true;
+    if (translationParents.some(parent => parent.hikka_slug || parent.rel_type === 'translation')) return true;
 
     return themes.some(theme => {
         const name = `${theme.name || ''} ${theme.ua_name || ''}`.toLowerCase();
@@ -176,9 +176,9 @@ function relationCardHTML(item, { title, icon, isModerator, onRemove }) {
 }
 
 function heroRelationsHTML({ translationParents, magazineParents, magazine, isModerator, currentVolumeId }) {
-    const source = translationParents.find(parent => parent.rel_type === 'source' || parent.rel_type === 'translation');
+    const source = translationParents.find(parent => parent.rel_type === 'source');
     const magazines = magazineParents.length ? magazineParents : (magazine ? [magazine] : []);
-    const original = magazines.length > 0 ? null : translationParents.find(parent => parent.rel_type === 'original');
+    const original = magazines.length > 0 ? null : translationParents.find(parent => parent.rel_type === 'translation');
     
     const cards = [
         original ? relationCardHTML(original, {
@@ -252,7 +252,36 @@ function translationsSectionHTML(translations, { isModerator, currentVolumeId })
     `;
 }
 
-function readlistUIHTML() {
+function readlistUIHTML(isCollection = false, stats = {}) {
+    if (isCollection) {
+        const total = stats.collections || 0;
+        const owned = stats.owned_collections || 0;
+        const allOwned = total > 0 && owned === total;
+        const someOwned = owned > 0 && owned < total;
+
+        let btnClass = 'btn-add-all-collection';
+        let btnText = 'Додати все до колекції';
+        let btnIcon = ICON.plus;
+
+        if (allOwned) {
+            btnClass += ' btn-all-owned';
+            btnText = `В колекції (${owned}/${total})`;
+            btnIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+        } else if (someOwned) {
+            btnClass += ' btn-some-owned';
+            btnText = `Додати решту (${total - owned})`;
+        }
+
+        return `
+            <div class="volume-readlist-controls">
+                <button class="${btnClass} ${!currentUser ? 'btn-disabled' : ''}" id="btn-add-all-collection" ${!currentUser || allOwned ? 'disabled' : ''}>
+                    ${btnIcon}
+                    <span>${btnText}</span>
+                </button>
+            </div>
+        `;
+    }
+
     const defaultOpt = READLIST_OPTIONS[0];
     const activeOpts = READLIST_OPTIONS.filter(opt => opt.value !== '');
     return `
@@ -334,7 +363,7 @@ function renderItems(container, items) {
                    const cover = comicVineImageUrl(item.cv_img || item.hikka_img);
                    const isCollection = item.type === 'collection' || item.is_collection;
                    const isVolume = item.type === 'volume';
-                   const link = isVolume ? `#/volumes/${item.id}` : null;
+                   const link = isVolume ? `#/volumes/${item.id}` : (isCollection ? `#/collections/${item.id}` : null);
 
                    return `
                        <div class="issue-grid-card" ${link ? `onclick="location.hash='${link}'" style="cursor: pointer;"` : ''}>
@@ -344,11 +373,18 @@ function renderItems(container, items) {
                                    : `<div class="issue-grid-cover-empty" style="display: inline-block;"><svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>`}
                                ${item.issue_number ? `<div class="issue-grid-number">#${escapeHtmlAttribute(item.issue_number)}</div>` : ''}
                                ${isVolume ? '<div class="issue-grid-type-badge">Манґа</div>' : (isCollection ? '<div class="issue-grid-type-badge">Збірник</div>' : '')}
-                               ${(!isCollection && !isVolume) ? `
-                                   <button class="issue-grid-membership-btn" data-issue-id="${item.id}" title="У збірниках">
-                                       ${ICON.layers}
-                                       ${item.collection_count > 0 ? `<span class="membership-count">${item.collection_count}</span>` : ''}
-                                   </button>` : ''}
+                               <div class="issue-grid-actions">
+                                   ${isCollection ? `
+                                       <button class="issue-grid-toggle-btn ${item.is_owned ? 'is-owned' : ''}" data-id="${item.id}" title="${item.is_owned ? 'Видалити з колекції' : 'Додати в колекцію'}">
+                                           ${item.is_owned ? ICON.trash : ICON.plus}
+                                       </button>
+                                   ` : ''}
+                                   ${(!isCollection && !isVolume) ? `
+                                       <button class="issue-grid-membership-btn" data-issue-id="${item.id}" title="У збірниках">
+                                           ${ICON.layers}
+                                           ${item.collection_count > 0 ? `<span class="membership-count">${item.collection_count}</span>` : ''}
+                                       </button>` : ''}
+                               </div>
                            </div>
                            <div class="issue-grid-body">
                                <div class="issue-grid-title">${escapeHtmlAttribute(item.name_uk || item.name || 'Без назви')}</div>
@@ -376,7 +412,7 @@ function renderItems(container, items) {
                             const cover = comicVineImageUrl(item.cv_img || item.hikka_img);
                             const isCollection = item.type === 'collection' || item.is_collection;
                             const isVolume = item.type === 'volume';
-                            const link = isVolume ? `#/volumes/${item.id}` : null;
+                            const link = isVolume ? `#/volumes/${item.id}` : (isCollection ? `#/collections/${item.id}` : null);
                             const title = escapeHtmlAttribute(item.name_uk || item.name || 'Без назви');
 
                             return `
@@ -391,6 +427,11 @@ function renderItems(container, items) {
                                     </td>
                                     <td class="table-issue-date">${isVolume ? (item.start_year || '') : formatDate(item.cover_date || item.release_date)}</td>
                                     <td>
+                                        ${isCollection ? `
+                                            <button class="issue-grid-toggle-btn ${item.is_owned ? 'is-owned' : ''}" data-id="${item.id}" title="${item.is_owned ? 'Видалити з колекції' : 'Додати в колекцію'}" style="position: static; width: 28px; height: 28px;">
+                                                ${item.is_owned ? ICON.trash : ICON.plus}
+                                            </button>
+                                        ` : ''}
                                         ${(!isCollection && !isVolume) ? `
                                             <button class="table-membership-btn" data-issue-id="${item.id}">
                                                 ${ICON.layers}
@@ -507,7 +548,7 @@ export async function renderVolumeDetail(main, params = {}) {
                                         <rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h5"/>
                                     </svg>
                                   </div>`}
-                            ${readlistUIHTML()}
+                            ${readlistUIHTML(isCollection, stats)}
                         </div>
 
                         <div class="volume-hero-info">
@@ -617,7 +658,7 @@ export async function renderVolumeDetail(main, params = {}) {
                                             <i class="bi bi-bookmark-star"></i>
                                         </button>
                                     ` : ''}
-                                    ${!isMagazine && !isCollection && data.issues.length > 0 ? `
+                                    ${!isMagazine && data.issues.length > 0 ? `
                                         <button class="btn-admin btn-admin--warning" id="volume-convert-btn" title="Конвертувати всі випуски у збірники">
                                             ${ICON.layers}
                                             У збірники (${data.issues.length})
@@ -644,12 +685,20 @@ export async function renderVolumeDetail(main, params = {}) {
                                 </div>
                                 <div class="synopsis-content">
                                     <div class="synopsis-pane ${activeTab === 'ua' ? 'is-active' : ''}" id="synopsis-ua">
-                                        ${volume.synopsis_ua || volume.description || 'Немає опису українською.'}
+                                        ${volume.synopsis_ua || 'Немає синопсису українською.'}
                                     </div>
                                     <div class="synopsis-pane ${activeTab === 'en' ? 'is-active' : ''}" id="synopsis-en">
                                         ${volume.synopsis || 'No description available in English.'}
                                     </div>
                                 </div>
+                                ${volume.description ? `
+                                    <div class="volume-description-extra">
+                                        <h2 class="synopsis-title" style="margin-top: 1.5rem;">Опис</h2>
+                                        <div class="synopsis-pane is-active" style="padding: 0;">
+                                            ${volume.description}
+                                        </div>
+                                    </div>
+                                ` : ''}
                             </div>
                         </div>
                     </div>
@@ -814,6 +863,21 @@ export async function renderVolumeDetail(main, params = {}) {
             });
         }
 
+        const addAllBtn = main.querySelector('#btn-add-all-collection');
+        if (addAllBtn) {
+            addAllBtn.addEventListener('click', async () => {
+                if (!currentUser) return;
+                try {
+                    const res = await API.post('/collections/add-all-from-volume', { volume_id: volumeId });
+                    // Refresh the view to show updated button state and owned items
+                    renderVolumeDetail(main, params);
+                } catch (err) {
+                    console.error('Add all to collection error:', err);
+                    alert('Помилка при додаванні до колекції.');
+                }
+            });
+        }
+
         const deleteBtn = main.querySelector('#volume-delete-btn');
         if (deleteBtn) {
             deleteBtn.addEventListener('click', async () => {
@@ -848,14 +912,14 @@ export async function renderVolumeDetail(main, params = {}) {
                     ...translationParents.map(p => p.id)
                 ];
                 const picker = new VolumePicker({
-                    title: 'Вибрати першоджерело',
+                    title: 'Вибрати оригінал',
                     excludeId: volumeId,
                     disabledIds: disabledIds,
                     onSelect: async (selectedVol) => {
                         try {
                             await API.post(`/volumes/${selectedVol.id}/translations`, {
                                 child_id: volume.id,
-                                rel_type: 'original'
+                                rel_type: 'translation'
                             });
                             renderVolumeDetail(main, params);
                         } catch (err) {
@@ -965,7 +1029,7 @@ export async function renderVolumeDetail(main, params = {}) {
             tab.addEventListener('click', () => {
                 const lang = tab.dataset.tab;
                 synopsisTabs.forEach(t => t.classList.toggle('is-active', t === tab));
-                main.querySelectorAll('.synopsis-pane').forEach(p => {
+                main.querySelectorAll('.synopsis-content .synopsis-pane').forEach(p => {
                     p.classList.toggle('is-active', p.id === `synopsis-${lang}`);
                 });
             });
@@ -1078,11 +1142,40 @@ export async function renderVolumeDetail(main, params = {}) {
             refreshItems();
         });
 
-        main.addEventListener('click', (e) => {
-            const btn = e.target.closest('.issue-grid-membership-btn, .table-membership-btn');
-            if (btn) {
+        main.addEventListener('click', async (e) => {
+            const membershipBtn = e.target.closest('.issue-grid-membership-btn, .table-membership-btn');
+            if (membershipBtn) {
                 e.stopPropagation();
-                openIssueMembershipModal(btn.dataset.issueId);
+                openIssueMembershipModal(membershipBtn.dataset.issueId);
+                return;
+            }
+
+            const toggleBtn = e.target.closest('.issue-grid-toggle-btn');
+            if (toggleBtn) {
+                e.stopPropagation();
+                if (!currentUser) {
+                    alert('Будь ласка, увійдіть, щоб керувати колекцією');
+                    return;
+                }
+                const id = parseInt(toggleBtn.dataset.id);
+                try {
+                    const res = await API.post('/collections/toggle', { collection_id: id });
+                    const isOwned = res.status === 'added';
+                    
+                    toggleBtn.classList.toggle('is-owned', isOwned);
+                    toggleBtn.innerHTML = isOwned ? ICON.trash : ICON.plus;
+                    toggleBtn.title = isOwned ? 'Видалити з колекції' : 'Додати в колекцію';
+
+                    // Update local items if they are in the current view
+                    currentItems.forEach(item => {
+                        if ((item.type === 'collection' || item.is_collection) && item.id === id) {
+                            item.is_owned = isOwned;
+                        }
+                    });
+                } catch (err) {
+                    console.error(err);
+                    alert('Помилка: ' + err.message);
+                }
             }
         });
 
@@ -1357,13 +1450,18 @@ function renderCollectionsFromIssues(container, collections, options = {}) {
                     const cover = comicVineImageUrl(col.cv_img);
                     const range = formatIssueRanges(col.volume_issue_numbers);
                     return `
-                        <div class="issue-grid-card">
-                            <div class="issue-grid-cover">
+                        <div class="issue-grid-card" onclick="location.hash='#/collections/${col.id}'" style="cursor: pointer;">
+                            <div class="issue-grid-cover-wrap">
                                 ${cover 
-                                    ? `<img src="${escapeHtmlAttribute(cover)}" loading="lazy">` 
+                                    ? `<img class="issue-grid-cover" src="${escapeHtmlAttribute(cover)}" loading="lazy">` 
                                     : `<div class="issue-grid-cover-empty"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>`}
                                 ${col.issue_number ? `<div class="issue-grid-number">#${escapeHtmlAttribute(col.issue_number)}</div>` : ''}
                                 <div class="issue-grid-type-badge">${typeLabel}</div>
+                                <div class="issue-grid-actions">
+                                    <button class="issue-grid-toggle-btn ${col.is_owned ? 'is-owned' : ''}" data-id="${col.id}" title="${col.is_owned ? 'Видалити з колекції' : 'Додати в колекцію'}">
+                                        ${col.is_owned ? ICON.trash : ICON.plus}
+                                    </button>
+                                </div>
                             </div>
                             <div class="issue-grid-body">
                                 <div class="issue-grid-title">${escapeHtmlAttribute(col.name || 'Без назви')}</div>
