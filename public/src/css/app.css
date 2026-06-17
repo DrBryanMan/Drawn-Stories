@@ -9,6 +9,7 @@
 @import url('components/filter-bar.css');
 @import url('components/skeleton.css');
 @import url('components/auth-dropdown.css');
+@import url('components/add-issue-modal.css');
 
 /* Сторінки */
 @import url('views/home.css');

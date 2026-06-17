@@ -40,16 +40,58 @@ async def get_volume_detail(volume_id: int, request: Request):
     else:
         volume["synonyms"] = []
 
-    issues = db.get_all(
+    themes = db.get_all(
         """
-        SELECT i.*, 'issue' as type, COUNT(ci.collection_id) as collection_count
-        FROM issues i
-        LEFT JOIN collection_issues ci ON i.id = ci.issue_id
-        WHERE i.volume_id = ?
-        GROUP BY i.id
+        SELECT DISTINCT t.id, t.cv_id, t.name, t.ua_name, COALESCE(t.type, 'theme') as type
+        FROM volume_themes vt
+        JOIN themes t ON t.id = vt.theme_id
+        WHERE vt.volume_id = ?
+        ORDER BY
+          CASE COALESCE(t.type, 'theme')
+            WHEN 'type' THEN 0
+            WHEN 'genre' THEN 1
+            ELSE 2
+          END,
+          COALESCE(t.ua_name, t.name) ASC
         """,
         [volume_id],
     )
+
+    is_collection_volume = any(
+        ('collection' in (t.get('name') or '').lower() or
+         'збірник' in (t.get('ua_name') or '').lower() or
+         'збірка' in (t.get('ua_name') or '').lower())
+        for t in themes
+    )
+
+    if is_collection_volume:
+        issues = db.get_all(
+            """
+            SELECT i.*, 'issue' as type, 
+                   v.name as volume_name, v.name_uk as volume_name_uk,
+                   v.cv_img as volume_cv_img, v.cover_img as volume_cover_img,
+                   v.id as volume_db_id, v.cv_id as volume_cv_id,
+                   (SELECT COUNT(DISTINCT ci2.collection_id) FROM collection_issues ci2 WHERE ci2.issue_id = i.id) as collection_count
+            FROM issues i
+            JOIN collection_issues ci ON i.id = ci.issue_id
+            JOIN collections c ON ci.collection_id = c.id
+            LEFT JOIN volumes v ON i.volume_id = v.id
+            WHERE c.volume_id = ?
+            GROUP BY i.id
+            """,
+            [volume_id],
+        )
+    else:
+        issues = db.get_all(
+            """
+            SELECT i.*, 'issue' as type, COUNT(ci.collection_id) as collection_count
+            FROM issues i
+            LEFT JOIN collection_issues ci ON i.id = ci.issue_id
+            WHERE i.volume_id = ?
+            GROUP BY i.id
+            """,
+            [volume_id],
+        )
 
     collections = db.get_all(
         """
@@ -70,23 +112,6 @@ async def get_volume_detail(volume_id: int, request: Request):
     ))
     
     owned_count = sum(1 for c in collections if c.get('is_owned'))
-
-    themes = db.get_all(
-        """
-        SELECT DISTINCT t.id, t.cv_id, t.name, t.ua_name, COALESCE(t.type, 'theme') as type
-        FROM volume_themes vt
-        JOIN themes t ON t.id = vt.theme_id
-        WHERE vt.volume_id = ?
-        ORDER BY
-          CASE COALESCE(t.type, 'theme')
-            WHEN 'type' THEN 0
-            WHEN 'genre' THEN 1
-            ELSE 2
-          END,
-          COALESCE(t.ua_name, t.name) ASC
-        """,
-        [volume_id],
-    )
 
     issue_dates = sorted(
         item.get("cover_date") or item.get("release_date")

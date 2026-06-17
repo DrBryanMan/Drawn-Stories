@@ -1107,6 +1107,54 @@
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;
+  z-index: 2;
+}
+
+.issue-grid-order-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  padding: 2px 6px;
+  border-radius: var(--r-s);
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-oswald);
+  font-size: 11px;
+  font-weight: 800;
+  z-index: 2;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.issue-grid-drag-handle {
+  position: absolute;
+  top: 38px;
+  left: 8px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-s);
+  background: rgba(15, 23, 42, .6);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  cursor: grab;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity .2s;
+}
+
+.issue-grid-card:hover .issue-grid-drag-handle {
+  opacity: 1;
+}
+
+.issue-grid-drag-handle:active {
+  cursor: grabbing;
+}
+
+.issue-grid-card.is-dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
 }
 
 .issue-grid-type-badge {
@@ -1664,4 +1712,113 @@
   .volume-translation-poster { width: 60px; }
   .volume-issues-toolbar { flex-direction: column; align-items: stretch; }
   .volume-toolbar-right { justify-content: space-between; }
+}
+
+/* ── Parent Volumes Summary (vol-summary) ────────────────── */
+.vol-summary {
+  background: var(--bg-2);
+  border: 1px solid var(--border-s);
+  border-radius: var(--r);
+  padding: 16px;
+  margin-top: 16px;
+  margin-bottom: 24px;
+}
+
+.vol-summary__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+.vol-summary__list {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.vol-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border-s);
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+.vol-summary-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px var(--accent-glow);
+  transform: translateY(-1px);
+}
+
+.vol-summary-card__cover-wrap {
+  width: 32px;
+  height: 48px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border-s);
+  flex-shrink: 0;
+  background: var(--bg-2);
+}
+
+.vol-summary-card__cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vol-summary-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.vol-summary-card__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vol-summary-card__range {
+  font-size: 11px;
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+/* ── Volume name labels in issue cards ───────────── */
+.issue-grid-volume-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.85;
+}
+
+.table-issue-volume-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 900px) {
+  .vol-summary__list {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }

@@ -4,6 +4,7 @@ import { Bookmarks } from '../helpers/bookmarks.js';
 import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { langDisplay, langName } from '../helpers/lang.js';
 import { createPaginator } from '../components/Pagination.js';
+import { renderIssueGridCard } from '../components/IssueGridCard.js';
 import { VolumeEditor } from '/admin/js/VolumeEditor.js';
 import { VolumePicker } from '/admin/js/VolumePicker.js';
 
@@ -359,40 +360,7 @@ function renderItems(container, items) {
     if (currentView === 'grid') {
         container.innerHTML = `
             <div class="issues-view-grid">
-                ${items.map(item => {
-                   const cover = comicVineImageUrl(item.cv_img || item.hikka_img);
-                   const isCollection = item.type === 'collection' || item.is_collection;
-                   const isVolume = item.type === 'volume';
-                   const link = isVolume ? `#/volumes/${item.id}` : (isCollection ? `#/collections/${item.id}` : null);
-
-                   return `
-                       <div class="issue-grid-card" ${link ? `onclick="location.hash='${link}'" style="cursor: pointer;"` : ''}>
-                           <div class="issue-grid-cover-wrap">
-                               ${cover
-                                   ? `<img class="issue-grid-cover" src="${escapeHtmlAttribute(cover)}" loading="lazy">`
-                                   : `<div class="issue-grid-cover-empty" style="display: inline-block;"><svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>`}
-                               ${item.issue_number ? `<div class="issue-grid-number">#${escapeHtmlAttribute(item.issue_number)}</div>` : ''}
-                               ${isVolume ? '<div class="issue-grid-type-badge">Манґа</div>' : (isCollection ? '<div class="issue-grid-type-badge">Збірник</div>' : '')}
-                               <div class="issue-grid-actions">
-                                   ${isCollection ? `
-                                       <button class="issue-grid-toggle-btn ${item.is_owned ? 'is-owned' : ''}" data-id="${item.id}" title="${item.is_owned ? 'Видалити з колекції' : 'Додати в колекцію'}">
-                                           ${item.is_owned ? ICON.trash : ICON.plus}
-                                       </button>
-                                   ` : ''}
-                                   ${(!isCollection && !isVolume) ? `
-                                       <button class="issue-grid-membership-btn" data-issue-id="${item.id}" title="У збірниках">
-                                           ${ICON.layers}
-                                           ${item.collection_count > 0 ? `<span class="membership-count">${item.collection_count}</span>` : ''}
-                                       </button>` : ''}
-                               </div>
-                           </div>
-                           <div class="issue-grid-body">
-                               <div class="issue-grid-title">${escapeHtmlAttribute(item.name_uk || item.name || 'Без назви')}</div>
-                               <div class="issue-grid-date">${isVolume ? (item.start_year || '') : formatDate(item.cover_date || item.release_date)}</div>
-                           </div>
-                       </div>
-                   `;
-                }).join('')}
+                ${items.map(item => renderIssueGridCard(item, { showVolumeName: !!item.volume_name })).join('')}
             </div>
         `;
     } else {
@@ -421,7 +389,16 @@ function renderItems(container, items) {
                                     <td>
                                         <div class="table-issue-info">
                                             ${cover ? `<img class="table-issue-thumb" src="${escapeHtmlAttribute(cover)}" loading="lazy">` : ''}
-                                            <span class="table-issue-name">${title}</span>
+                                            <div style="display:flex; flex-direction:column; gap:1px; min-width:0;">
+                                                <span class="table-issue-name">${title}</span>
+                                                ${(() => {
+                                                    const volLabel = item.volume_name_uk || item.volume_name || '';
+                                                    const isDup = !volLabel || volLabel === (item.name_uk || item.name || '');
+                                                    return (!isCollection && !isVolume && !isDup)
+                                                        ? `<span class="table-issue-volume-label">${escapeHtmlAttribute(volLabel)}</span>`
+                                                        : '';
+                                                })()}
+                                            </div>
                                             ${isVolume ? '<span class="issue-grid-type-badge" style="position:static; margin-left:8px; padding:2px 6px;">Манґа</span>' : (isCollection ? '<span class="issue-grid-type-badge" style="position:static; margin-left:8px; padding:2px 6px;">Збірник</span>' : '')}
                                         </div>
                                     </td>
@@ -451,6 +428,16 @@ function renderItems(container, items) {
 // ── Sort ─────────────────────────────────────────────
 function sortItems(items, order) {
     return [...items].sort((a, b) => {
+        if (order === 'series_asc') {
+            const volA = (a.volume_name_uk || a.volume_name || '').toLowerCase();
+            const volB = (b.volume_name_uk || b.volume_name || '').toLowerCase();
+            const volCmp = volA.localeCompare(volB, 'uk');
+            if (volCmp !== 0) return volCmp;
+            const nA = Number.parseFloat(a.issue_number);
+            const nB = Number.parseFloat(b.issue_number);
+            if (Number.isFinite(nA) && Number.isFinite(nB) && nA !== nB) return nA - nB;
+            return String(a.issue_number || '').localeCompare(String(b.issue_number || ''), 'uk', { numeric: true });
+        }
         if (order === 'date_desc' || order === 'date_asc') {
             const dateA = a.cover_date || a.release_date || '';
             const dateB = b.cover_date || b.release_date || '';
@@ -761,12 +748,13 @@ export async function renderVolumeDetail(main, params = {}) {
                                 <div class="filter-group volume-sort-group">
                                     <select class="filter-select" id="volume-issue-sort">
                                         <button>
-                                            <span class="select-label">За номером (1-9)</span>
+                                            <span class="select-label">${isCollection ? 'За серією' : 'За номером (1-9)'}</span>
                                             <span class="select-chevron-v">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg>
                                             </span>
                                         </button>
-                                        <option value="number_asc" selected>За номером (1-9)</option>
+                                        ${isCollection ? '<option value="series_asc" selected>За серією</option>' : ''}
+                                        <option value="number_asc" ${isCollection ? '' : 'selected'}>За номером (1-9)</option>
                                         <option value="number_desc">За номером (9-1)</option>
                                         <option value="date_desc">Спочатку нові</option>
                                         <option value="date_asc">Спочатку старі</option>
@@ -778,6 +766,8 @@ export async function renderVolumeDetail(main, params = {}) {
                                 </div>
                             </div>
                         </div>
+
+                        <div id="volume-parent-volumes-summary" style="display: none;"></div>
 
                         <div id="volume-items-view-container" class="volume-items-content-fade"></div>
                     </section>
@@ -1051,6 +1041,70 @@ export async function renderVolumeDetail(main, params = {}) {
             const isIssues = currentTab === 'issues';
             const source = isIssues ? currentItems : currentCollections;
             const total = source.length;
+
+            // Оновлення блоку батьківських томів (vol-summary)
+            const parentVolumesContainer = document.getElementById('volume-parent-volumes-summary');
+            if (parentVolumesContainer) {
+                if (isIssues && isCollection && currentItems.length > 0) {
+                    const volumesMap = new Map();
+                    for (const item of currentItems) {
+                        const volId = item.volume_db_id || item.volume_id;
+                        if (!volId) continue;
+                        
+                        if (!volumesMap.has(volId)) {
+                            volumesMap.set(volId, {
+                                id: volId,
+                                name: item.volume_name_uk || item.volume_name || 'Без назви',
+                                cover: comicVineImageUrl(item.volume_cover_img || item.volume_cv_img),
+                                numbers: []
+                            });
+                        }
+                        
+                        if (item.issue_number != null) {
+                            volumesMap.get(volId).numbers.push(String(item.issue_number));
+                        }
+                    }
+
+                    if (volumesMap.size > 0) {
+                        const sortedVolumes = Array.from(volumesMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+                        
+                        const listHtml = sortedVolumes.map(vol => {
+                            const range = formatIssueRanges(vol.numbers) || '—';
+                            const coverHtml = vol.cover
+                                ? `<img class="vol-summary-card__cover" src="${escapeHtmlAttribute(vol.cover)}" alt="${escapeHtmlAttribute(vol.name)}">`
+                                : `<div class="volume-cover--empty" style="width:100%; height:100%; display:grid; place-items:center; font-size:12px;">📚</div>`;
+                                
+                            return `
+                                <a href="#/volumes/${vol.id}" class="vol-summary-card">
+                                    <div class="vol-summary-card__cover-wrap">
+                                        ${coverHtml}
+                                    </div>
+                                    <div class="vol-summary-card__info">
+                                        <span class="vol-summary-card__name" title="${escapeHtmlAttribute(vol.name)}">${escapeHtmlAttribute(vol.name)}</span>
+                                        <span class="vol-summary-card__range" title="Номери випусків">№ ${escapeHtmlAttribute(range)}</span>
+                                    </div>
+                                </a>
+                            `;
+                        }).join('');
+
+                        parentVolumesContainer.innerHTML = `
+                            <div class="vol-summary">
+                                <div class="vol-summary__label">Серії випусків у збірниках</div>
+                                <div class="vol-summary__list">
+                                    ${listHtml}
+                                </div>
+                            </div>
+                        `;
+                        parentVolumesContainer.style.display = 'block';
+                    } else {
+                        parentVolumesContainer.innerHTML = '';
+                        parentVolumesContainer.style.display = 'none';
+                    }
+                } else {
+                    parentVolumesContainer.innerHTML = '';
+                    parentVolumesContainer.style.display = 'none';
+                }
+            }
 
             // Update pagination UI
             paginationContainer.innerHTML = '';

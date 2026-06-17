@@ -93,7 +93,7 @@ async def create_collection(data: dict):
     
     allowed_fields = [
         "name", "issue_number", "volume_id", "cv_id", "cv_slug", 
-        "cv_img", "cover_date", "release_date", "description"
+        "cv_img", "cover_date", "release_date", "description", "contents"
     ]
     
     for key, value in data.items():
@@ -178,6 +178,44 @@ async def add_all_from_volume(req: AddVolumeAllRequest, user_id: int = Depends(g
             
     return {"status": "ok", "added": added_count}
 
+@router.post("/{collection_id}/issues")
+async def add_issue_to_collection(collection_id: int, data: dict):
+    db = get_db()
+    issue_id = data.get("issue_id")
+    if not issue_id:
+        raise HTTPException(status_code=400, detail="issue_id is required")
+    
+    # Check if already exists
+    existing = db.get_one("SELECT 1 FROM collection_issues WHERE collection_id = ? AND issue_id = ?", [collection_id, issue_id])
+    if existing:
+        return {"message": "Випуск вже є у збірнику"}
+    
+    # Get next order_num
+    last_order = db.get_one("SELECT MAX(order_num) as max_order FROM collection_issues WHERE collection_id = ?", [collection_id])
+    next_order = (last_order['max_order'] or 0) + 1
+    
+    db.execute(
+        "INSERT INTO collection_issues (collection_id, issue_id, order_num) VALUES (?, ?, ?)",
+        [collection_id, issue_id, next_order]
+    )
+    
+    return {"message": "Випуск додано", "order_num": next_order}
+
+@router.put("/{collection_id}/reorder-issues")
+async def reorder_collection_issues(collection_id: int, data: dict):
+    db = get_db()
+    issue_ids = data.get("issue_ids")
+    if not isinstance(issue_ids, list):
+        raise HTTPException(status_code=400, detail="issue_ids list is required")
+    
+    # Update order_num for each issue in the list
+    for index, issue_id in enumerate(issue_ids):
+        db.execute(
+            "UPDATE collection_issues SET order_num = ? WHERE collection_id = ? AND issue_id = ?",
+            [index + 1, collection_id, issue_id]
+        )
+    
+    return {"message": "Порядок оновлено"}
 
 @router.get("/{collection_id}")
 async def get_collection_detail(collection_id: int, request: Request):
@@ -218,9 +256,11 @@ async def get_collection_detail(collection_id: int, request: Request):
     # 2. Отримуємо випуски, що входять до збірника
     issues = db.get_all(
         """
-        SELECT i.*, ci.order_num, ci.chapter_title
+        SELECT i.*, ci.order_num, ci.chapter_title, 
+               v.name as volume_name, v.name_uk as volume_name_uk
         FROM collection_issues ci
         JOIN issues i ON ci.issue_id = i.id
+        LEFT JOIN volumes v ON i.volume_id = v.id
         WHERE ci.collection_id = ?
         ORDER BY ci.order_num
         """,
@@ -244,10 +284,24 @@ async def get_collection_detail(collection_id: int, request: Request):
         """,
         [collection_id]
     )
+
+    # 4. Отримуємо усі збірники цього ж тому
+    related_collections = []
+    if collection.get('volume_id'):
+        related_collections = db.get_all(
+            """
+            SELECT id, name, issue_number, cv_img
+            FROM collections
+            WHERE volume_id = ?
+            ORDER BY CAST(issue_number AS FLOAT) ASC, issue_number ASC
+            """,
+            [collection['volume_id']]
+        )
     
     return {
         "collection": collection,
         "issues": [dict(issue) for issue in issues],
-        "themes": [dict(theme) for theme in themes]
+        "themes": [dict(theme) for theme in themes],
+        "related_collections": [dict(rc) for rc in related_collections]
     }
 
