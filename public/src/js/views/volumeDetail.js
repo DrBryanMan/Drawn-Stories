@@ -645,10 +645,10 @@ export async function renderVolumeDetail(main, params = {}) {
                                             <i class="bi bi-bookmark-star"></i>
                                         </button>
                                     ` : ''}
-                                    ${!isMagazine && data.issues.length > 0 ? `
+                                    ${!isMagazine && data.convertable_count > 0 ? `
                                         <button class="btn-admin btn-admin--warning" id="volume-convert-btn" title="Конвертувати всі випуски у збірники">
                                             ${ICON.layers}
-                                            У збірники (${data.issues.length})
+                                            У збірники (${data.convertable_count})
                                         </button>
                                     ` : ''}
                                     ${isCollection && data.collections.length > 0 ? `
@@ -771,6 +771,16 @@ export async function renderVolumeDetail(main, params = {}) {
 
                         <div id="volume-items-view-container" class="volume-items-content-fade"></div>
                     </section>
+
+                    ${isModerator && isCollection && data.direct_issues && data.direct_issues.length > 0 ? `
+                        <section class="volume-direct-issues-section block" style="margin-top: 2rem; border-top: 1px solid var(--border-s); padding-top: 2rem;">
+                            <div class="volume-section-heading">
+                                <h2>Прямі випуски тома (модерація)</h2>
+                                <p class="text-muted" style="font-size: 0.9rem; margin-top: 4px;">Ці випуски належать безпосередньо цьому тому. Використовуйте кнопку конвертації, щоб перетворити їх у збірники.</p>
+                            </div>
+                            <div id="volume-direct-issues-container"></div>
+                        </section>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -973,7 +983,7 @@ export async function renderVolumeDetail(main, params = {}) {
         const convertBtn = main.querySelector('#volume-convert-btn');
         if (convertBtn) {
             convertBtn.addEventListener('click', async () => {
-                if (!confirm(`Конвертувати всі випуски (${data.issues.length}) у збірники? Це видалить випуски та створить замість них збірники.`)) return;
+                if (!confirm(`Конвертувати всі випуски (${data.convertable_count}) у збірники? Це видалить випуски та створить замість них збірники.`)) return;
                 
                 try {
                     const res = await API.post(`/volumes/${volumeId}/convert-all-to-collections`);
@@ -1070,18 +1080,11 @@ export async function renderVolumeDetail(main, params = {}) {
                         
                         const listHtml = sortedVolumes.map(vol => {
                             const range = formatIssueRanges(vol.numbers) || '—';
-                            const coverHtml = vol.cover
-                                ? `<img class="vol-summary-card__cover" src="${escapeHtmlAttribute(vol.cover)}" alt="${escapeHtmlAttribute(vol.name)}">`
-                                : `<div class="volume-cover--empty" style="width:100%; height:100%; display:grid; place-items:center; font-size:12px;">📚</div>`;
-                                
                             return `
                                 <a href="#/volumes/${vol.id}" class="vol-summary-card">
-                                    <div class="vol-summary-card__cover-wrap">
-                                        ${coverHtml}
-                                    </div>
                                     <div class="vol-summary-card__info">
                                         <span class="vol-summary-card__name" title="${escapeHtmlAttribute(vol.name)}">${escapeHtmlAttribute(vol.name)}</span>
-                                        <span class="vol-summary-card__range" title="Номери випусків">№ ${escapeHtmlAttribute(range)}</span>
+                                        <span class="vol-summary-card__range" title="Номери випусків"># ${escapeHtmlAttribute(range)}</span>
                                     </div>
                                 </a>
                             `;
@@ -1186,6 +1189,17 @@ export async function renderVolumeDetail(main, params = {}) {
                     refreshItems();
                 });
             });
+        }
+
+        const directIssuesContainer = document.getElementById('volume-direct-issues-container');
+        if (directIssuesContainer && data.direct_issues) {
+            const uncollected = data.direct_issues.filter(i => (i.collection_count || 0) === 0);
+            if (uncollected.length > 0) {
+                renderItems(directIssuesContainer, uncollected);
+            } else {
+                const section = directIssuesContainer.closest('.volume-direct-issues-section');
+                if (section) section.style.display = 'none';
+            }
         }
 
         sortSelect.addEventListener('change', (e) => {

@@ -1734,8 +1734,9 @@
 }
 
 .vol-summary__list {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  display: flex;
+  flex-wrap: wrap;
+  /* grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); */
   gap: 10px;
 }
 
@@ -1776,9 +1777,9 @@
 
 .vol-summary-card__info {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  gap: 5px;
   min-width: 0;
+  align-items: center;
 }
 
 .vol-summary-card__name {
@@ -1815,10 +1816,4 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-@media (max-width: 900px) {
-  .vol-summary__list {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
