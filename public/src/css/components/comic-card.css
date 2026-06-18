@@ -28,6 +28,24 @@
 .comic-type-badge--collection {
   background: color-mix(in srgb, var(--purple) 85%, transparent);
 }
+
+.comic-list-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-s);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  transition: all var(--t);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .comic-card:hover { background: var(--bg-card-h); border-color: var(--border); transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,.1); }
 .comic-cover {
   width: 100%; aspect-ratio: 2/3; object-fit: cover;

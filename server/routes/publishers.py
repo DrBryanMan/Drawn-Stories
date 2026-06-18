@@ -34,7 +34,7 @@ async def get_publishers(
     if sort == "name":
         order_clause = f"p.name {order_dir.upper()}"
     elif sort == "founded":
-        order_clause = f"p.founded_at {order_dir.upper()}, p.name ASC"
+        order_clause = f"p.founded_date {order_dir.upper()}, p.name ASC"
     else:
         # Default to volume_count
         order_clause = f"volume_count {order_dir.upper()}, p.name ASC"
@@ -52,7 +52,7 @@ async def get_publishers(
 
     rows = db.get_all(
         f"""
-        SELECT p.id, p.cv_id, p.name, p.cv_slug, p.image, p.founded_at, 
+        SELECT p.id, p.cv_id, p.name, p.cv_slug, p.image, p.founded_date, p.status, p.work_type,
                (SELECT COUNT(*) FROM volumes v WHERE v.publisher = p.id) as volume_count
         FROM publishers p
         {where_clause}
@@ -81,3 +81,38 @@ async def get_publishers(
             row["latest_releases"] = []
 
     return { "items": rows, "total": total, "page": page, "limit": limit }
+
+@router.post("")
+async def create_publisher(data: dict):
+    db = get_db()
+    
+    if not data.get("name"):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Назва видавництва обов'язкова")
+
+    columns = []
+    placeholders = []
+    params = []
+    
+    allowed_fields = [
+        "name", "cv_id", "cv_slug", "image", "founded_date", 
+        "website", "aliases", "address", "place", "country",
+        "status", "work_type"
+    ]
+    
+    for key, value in data.items():
+        if key in allowed_fields and value is not None:
+            columns.append(key)
+            placeholders.append("?")
+            params.append(value)
+            
+    if not columns:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Немає даних для збереження")
+
+    sql = f"INSERT INTO publishers ({', '.join(columns)}) VALUES ({', '.join(placeholders)})"
+    db.execute(sql, params)
+    
+    new_id = db.get_one("SELECT last_insert_rowid() as id")["id"]
+    
+    return {"message": "Видавництво успішно створено", "id": new_id}

@@ -30,7 +30,7 @@ export class VolumePicker {
                     </div>
                     <button class="ds-modal-close">&times;</button>
                 </div>
-                <div class="ds-modal-body">
+                <div class="ds-modal-body ds-modal-body--horizontal">
                     <div class="volume-picker-grid">
                         <div class="admin-form-group admin-form-group--full">
                             <label class="admin-label">Назва</label>

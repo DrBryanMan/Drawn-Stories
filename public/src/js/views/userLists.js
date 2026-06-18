@@ -123,18 +123,25 @@ function renderLayout(main, username) {
 function applyFilters() {
     let items = [];
     if (currentListType === 'all') {
-        Object.values(allListItems).forEach(list => {
+        Object.entries(allListItems).forEach(([listType, list]) => {
+            list.forEach(item => {
+                // Ensure list_name is present (it should be from API, but we make sure)
+                if (!item.list_name) item.list_name = listType;
+            });
             items = items.concat(list);
         });
-        // Remove duplicates if a volume is in multiple lists (e.g. Planned and Favorites)
+        // Remove duplicates if a volume is in multiple lists
         const seen = new Set();
         items = items.filter(item => {
-            const duplicate = seen.has(item.id);
+            if (seen.has(item.id)) return false;
             seen.add(item.id);
-            return !duplicate;
+            return true;
         });
     } else {
         items = allListItems[currentListType] || [];
+        items.forEach(item => {
+            if (!item.list_name) item.list_name = currentListType;
+        });
     }
 
     if (searchQuery) {

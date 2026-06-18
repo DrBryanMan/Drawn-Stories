@@ -8,6 +8,7 @@ const ICON = {
     collection: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>',
     readingOrder: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>',
     event: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>',
+    publisher: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V4c0-1.1.9-2 2-2h12a2 2 0 0 1 2 2v18"></path><path d="M10 22V15a2 2 0 1 1 4 0v7"></path><path d="M4 18h16"></path></svg>',
     mangaChapter: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>',
     plus: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
     back: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>',
@@ -22,6 +23,7 @@ const CONTENT_TYPES = [
   { id: 'collection',    icon: ICON.collection, label: 'Збірник'           },
   { id: 'reading-order', icon: ICON.readingOrder, label: 'Порядок читання'   },
   { id: 'event',         icon: ICON.event, label: 'Подія'             },
+  { id: 'publisher',     icon: ICON.publisher, label: 'Видавництво'       },
   { id: 'manga-chapter', icon: ICON.mangaChapter, label: 'Розділ манґи'      },
 ];
 
@@ -232,6 +234,23 @@ const FORMS = {
         ${imgField()}
     </div>
   `,
+  'publisher': () => `
+    <div class="admin-form-grid">
+        ${fld('Назва видавництва *', inp('name'), '', true)}
+        ${fld('Тип робіт', inp('work_type', 'text', 'Комікси, Манґа'), 'Через кому')}
+        ${fld('Статус', `
+            <select name="status" class="admin-input">
+                <option value="Active">Активне</option>
+                <option value="Inactive">Неактивне</option>
+            </select>
+        `)}
+        ${fld('ComicVine ID', inp('cv_id', 'number'))}
+        ${fld('ComicVine Slug', inp('cv_slug'))}
+        ${fld('Синоніми (через ",")', inp('aliases'), 'Наприклад: DC, DC Comics')}
+        ${fld('Вевсайт', inp('website', 'url'))}
+        ${imgField('image', 'Логотип видавництва')}
+    </div>
+  `,
 };
 
 function renderForm(typeId) {
@@ -360,7 +379,7 @@ function collectFormData(area) {
   return data;
 }
 
-const NUMERIC_FIELDS = ['cv_id', 'cv_vol_id', 'start_year', 'end_year', 'mal_id', 'volume_id', 'volume_id'];
+const NUMERIC_FIELDS = ['cv_id', 'cv_vol_id', 'start_year', 'end_year', 'mal_id', 'volume_id'];
 
 async function submitData(typeId, data) {
   const typedData = { ...data };
@@ -369,7 +388,8 @@ async function submitData(typeId, data) {
   let endpoint;
   const MAP = {
     volume: '/volumes', issue: '/issues', collection: '/collections',
-    'reading-order': '/reading-orders', event: '/events', 'manga-chapter': '/issues'
+    'reading-order': '/reading-orders', event: '/events', publisher: '/publishers',
+    'manga-chapter': '/issues'
   };
   endpoint = MAP[typeId];
 

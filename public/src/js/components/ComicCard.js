@@ -1,5 +1,29 @@
 import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 
+const LIST_ICONS = {
+    'Planned': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    'Reading': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+    'Completed': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    'On Hold': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="10" y1="15" x2="10" y2="9"/><line x1="14" y1="15" x2="14" y2="9"/></svg>',
+    'Dropped': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+};
+
+const LIST_COLORS = {
+    'Planned': '#2563eb',
+    'Reading': '#16a34a',
+    'Completed': '#059669',
+    'On Hold': '#d97706',
+    'Dropped': '#dc2626',
+};
+
+const LIST_LABELS = {
+    'Planned': 'Заплановано',
+    'Reading': 'Читаю',
+    'Completed': 'Прочитано',
+    'On Hold': 'Відкладено',
+    'Dropped': 'Закинуто'
+};
+
 /**
  * Creates a comic card element.
  * @param {object} item - Volume, Issue or Collection data from API
@@ -70,9 +94,22 @@ export function createComicCard(item) {
         badge = `<div class="comic-type-badge comic-type-badge--collection">${isManga ? 'Том' : 'Збірник'}</div>`;
     }
 
+    let listBadge = '';
+    if (item.list_name && LIST_ICONS[item.list_name]) {
+        const color = LIST_COLORS[item.list_name];
+        const label = LIST_LABELS[item.list_name];
+        const bg = `color-mix(in srgb, ${color} 15%, rgba(255, 255, 255, 0.75))`;
+        listBadge = `
+            <div class="comic-list-badge" title="${label}" style="color: ${color}; background: ${bg}; border-color: color-mix(in srgb, ${color} 30%, transparent)">
+                ${LIST_ICONS[item.list_name]}
+            </div>
+        `;
+    }
+
     a.innerHTML = `
         ${coverHTML}
         ${badge}
+        ${listBadge}
         <div class="comic-body">
             <div class="comic-title">${title}</div>
             <div class="comic-meta-pill">

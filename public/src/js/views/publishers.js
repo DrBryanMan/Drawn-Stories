@@ -123,12 +123,27 @@ async function fetchAndRenderPublishers(filterBar) {
     }
 
     grid.innerHTML = publishers.map(pub => {
-      const isActive = true; // Placeholder
-      const badges = ['Комікси']; // Placeholder
+      const statusValue = (pub.status || '').toLowerCase();
+      const isActive = statusValue === 'active' || statusValue === 'активне' || statusValue === 'активна';
+      const statusLabel = isActive ? 'Активне' : (statusValue === 'inactive' || statusValue === 'неактивне' ? 'Неактивне' : '—');
+      
+      const workTypeMap = {
+        'manga': 'Манґа',
+        'comics': 'Комікси',
+        'mixed': 'Різне'
+      };
+
+      const badges = pub.work_type 
+        ? pub.work_type.split(',').map(s => {
+            const trimmed = s.trim().toLowerCase();
+            return workTypeMap[trimmed] || s.trim();
+          }) 
+        : ['—'];
       
       const logoInitial = pub.name ? pub.name.charAt(0).toUpperCase() : '?';
-      const logoHtml = pub.image 
-        ? `<img src="${escapeHtmlAttribute(pub.image)}" alt="${escapeHtmlAttribute(pub.name)} logo" loading="lazy">` 
+      const imageUrl = comicVineImageUrl(pub.image);
+      const logoHtml = imageUrl 
+        ? `<img src="${escapeHtmlAttribute(imageUrl)}" alt="${escapeHtmlAttribute(pub.name)} logo" loading="lazy">` 
         : logoInitial;
 
       const releases = pub.latest_releases || [];
@@ -163,7 +178,7 @@ async function fetchAndRenderPublishers(filterBar) {
             <div class="pub-meta">
               <div class="pub-title-row">
                 <h3 class="pub-name">${escapeHtmlAttribute(pub.name)}</h3>
-                <span class="pub-status ${isActive ? 'active' : ''}">${isActive ? 'Активна' : 'Неактивна'}</span>
+                <span class="pub-status ${isActive ? 'active' : ''}">${isActive ? 'Активне' : 'Неактивне'}</span>
               </div>
               <div class="pub-badges">
                 ${badges.map(b => `<span class="pub-badge">${b}</span>`).join('')}

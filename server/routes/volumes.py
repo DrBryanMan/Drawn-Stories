@@ -84,14 +84,27 @@ async def get_volume_detail(volume_id: int, request: Request):
     else:
         issues = db.get_all(
             """
-            SELECT i.*, 'issue' as type, COUNT(ci.collection_id) as collection_count
+            SELECT i.*, 'issue' as type, (SELECT COUNT(*) FROM collection_issues ci WHERE ci.issue_id = i.id) as collection_count
             FROM issues i
-            LEFT JOIN collection_issues ci ON i.id = ci.issue_id
             WHERE i.volume_id = ?
             GROUP BY i.id
             """,
             [volume_id],
         )
+
+    # Get "direct" issues (those that belong to this volume directly)
+    direct_issues = db.get_all(
+        """
+        SELECT i.*, 'issue' as type,
+               (SELECT COUNT(*) FROM collection_issues ci WHERE ci.issue_id = i.id) as collection_count
+        FROM issues i
+        WHERE i.volume_id = ?
+        ORDER BY CAST(i.issue_number AS REAL) ASC, i.issue_number ASC
+        """,
+        [volume_id]
+    )
+    
+    convertable_count = sum(1 for i in direct_issues if i["collection_count"] == 0)
 
     collections = db.get_all(
         """
@@ -199,6 +212,8 @@ async def get_volume_detail(volume_id: int, request: Request):
         "volume": volume_with_end,
         "items": items,
         "issues": issues,
+        "direct_issues": direct_issues,
+        "convertable_count": convertable_count,
         "collections": collections,
         "themes": themes,
         "magazine": magazine,
