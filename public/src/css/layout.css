@@ -2,7 +2,7 @@
    PAGE HEADER
 ══════════════════════════════════════════════════════ */
 .page-title {
-  font-family: var(--font-head); font-size: 28px; font-weight: 800;
+  font-family: var(--font-oswald); font-size: 28px; font-weight: 800;
   color: var(--text); letter-spacing: -1px; margin-bottom: 6px;
 }
 
@@ -32,7 +32,7 @@
   justify-content: space-between; gap: 12px; margin-bottom: 1em;
 }
 .section-title {
-  font-family: var(--font-head); font-size: 18px; font-weight: 700;
+  font-family: var(--font-oswald); font-size: 18px; font-weight: 700;
   color: var(--text); display: flex; align-items: center; gap: 8px;
 }
 .section-title svg { color: var(--accent); }

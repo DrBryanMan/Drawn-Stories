@@ -92,6 +92,8 @@ async def get_catalog(
     langs: Optional[str] = None,
     sources: Optional[str] = None,
     exclude_sources: Optional[str] = None,
+    date_min: Optional[str] = None,
+    date_max: Optional[str] = None,
 ) -> dict:
     db = get_db()
     manga_theme_id = 36
@@ -218,6 +220,13 @@ async def get_catalog(
     for theme_id in parse_id_list(exclude_theme_ids):
         filter_clauses.append("NOT EXISTS (SELECT 1 FROM volume_themes vt WHERE vt.theme_id = ? AND vt.volume_id = v.id)")
         filter_params.append(theme_id)
+
+    if date_min:
+        filter_clauses.append(f"({primary_sort}) >= ?")
+        filter_params.append(date_min)
+    if date_max:
+        filter_clauses.append(f"({primary_sort}) <= ?")
+        filter_params.append(date_max)
 
     # 1. Total count uses ONLY filters
     total_where = f" WHERE {' AND '.join(filter_clauses)}" if filter_clauses else ""

@@ -242,6 +242,29 @@ def replace_volume_themes(db, volume_id, theme_ids):
             [volume_id, theme_id]
         )
 
+def replace_issue_with_collection(db, issue_id, collection_id):
+    reading_order_links = db.conn.execute(
+        """
+        SELECT reading_order_id, order_num
+        FROM reading_order_issues
+        WHERE issue_id = ?
+        """,
+        [issue_id]
+    ).fetchall()
+
+    for link in reading_order_links:
+        db.conn.execute(
+            """
+            INSERT OR IGNORE INTO reading_order_collections (reading_order_id, collection_id, order_num)
+            VALUES (?, ?, ?)
+            """,
+            [link["reading_order_id"], collection_id, link["order_num"]]
+        )
+
+    db.conn.execute("DELETE FROM reading_order_issues WHERE issue_id = ?", [issue_id])
+    db.conn.execute("UPDATE characters SET first_appearance = NULL WHERE first_appearance = ?", [issue_id])
+    db.conn.execute("DELETE FROM issues WHERE id = ?", [issue_id])
+
 @router.post("")
 async def create_volume(data: dict):
     db = get_db()
@@ -355,28 +378,27 @@ async def convert_all_to_collections(volume_id: int):
             if issue_cv_id:
                 existing = db.get_one("SELECT id FROM collections WHERE cv_id = ?", [issue_cv_id])
                 if existing:
-                    db.conn.execute("DELETE FROM issues WHERE id = ?", [issue_id])
+                    replace_issue_with_collection(db, issue_id, existing["id"])
                     skipped += 1
                     continue
             
             # Insert into collections
-            db.conn.execute(
+            cursor = db.conn.execute(
                 """
                 INSERT INTO collections (
-                    volume_id, name, cv_img, site_link, cv_id, cv_slug, 
-                    publisher, issue_number, cover_date, release_date
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    cv_vol_id, volume_id, name, cv_img, site_link, cv_id, cv_slug, 
+                    publisher, issue_number, cover_date, release_date, description, pages
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
-                    volume_id, issue.get("name") or "Без назви",
+                    issue.get("cv_vol_id"), issue.get("volume_id") or volume_id, issue.get("name") or "Без назви",
                     issue.get("cv_img"), issue.get("site_link"), issue.get("cv_id"), issue.get("cv_slug"),
                     volume.get("publisher"), issue.get("issue_number"), 
-                    issue.get("cover_date"), issue.get("release_date")
+                    issue.get("cover_date"), issue.get("release_date"), issue.get("description"), issue.get("pages")
                 ]
             )
             
-            # Delete from issues
-            db.conn.execute("DELETE FROM issues WHERE id = ?", [issue_id])
+            replace_issue_with_collection(db, issue_id, cursor.lastrowid)
             converted += 1
             
         if converted > 0 or skipped > 0:
@@ -438,13 +460,14 @@ async def convert_all_collections_to_issues(volume_id: int):
                 """
                 INSERT INTO issues (
                     cv_id, cv_slug, name, cv_img, volume_id, 
-                    issue_number, cover_date, release_date
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    issue_number, cover_date, release_date, site_link, description, pages
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     col.get("cv_id"), col.get("cv_slug"), col.get("name") or "Без назви",
                     col.get("cv_img"), volume_id,
-                    col.get("issue_number"), col.get("cover_date"), col.get("release_date")
+                    col.get("issue_number"), col.get("cover_date"), col.get("release_date"),
+                    col.get("site_link"), col.get("description"), col.get("pages")
                 ]
             )
             

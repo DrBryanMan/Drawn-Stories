@@ -3,6 +3,7 @@ import { currentUser } from '../shell.js';
 import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { openAddIssueModal } from '../components/addIssueModal.js';
 import { renderIssueGridCard } from '../components/IssueGridCard.js';
+import { CollectionEditor } from '/admin/js/CollectionEditor.js';
 
 // ── Lucide SVG icons ──────────────────────────────
 const ICON = {
@@ -20,7 +21,14 @@ const ICON = {
     bookmark: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>',
     refreshCw: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>',
     sortAsc: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m11 12-4-4-4 4"/><path d="M7 16V8"/><path d="M14 9h8"/><path d="M14 15h5"/><path d="M14 21h2"/></svg>',
-    sortDesc: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m11 12-4 4-4-4"/><path d="M7 8v8"/><path d="M14 9h8"/><path d="M14 15h5"/><path d="M14 21h2"/></svg>'
+    sortDesc: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m11 12-4 4-4-4"/><path d="M7 8v8"/><path d="M14 9h8"/><path d="M14 15h5"/><path d="M14 21h2"/></svg>',
+    edit: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'
+};
+
+const THEME_ICON = {
+    type: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>',
+    genre: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+    theme: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>',
 };
 
 let issuesSortDir = 'asc'; // 'asc' or 'desc'
@@ -69,6 +77,20 @@ function formatDate(dateStr) {
     return dateStr;
 }
 
+function themeName(theme) {
+    return theme.ua_name || theme.name || 'Тема';
+}
+
+function themeType(theme) {
+    return theme.type || 'theme';
+}
+
+function themeChipHTML(theme) {
+    const name = escapeHtmlAttribute(themeName(theme));
+    const url = `#/catalog?theme_ids=${theme.id}`;
+    return `<a href="${url}" class="volume-theme-chip volume-theme-chip--${themeType(theme)}">${name}</a>`;
+}
+
 export async function renderCollectionDetail(main, params = {}) {
     const collectionId = Number(params.id);
     if (!Number.isFinite(collectionId)) {
@@ -80,7 +102,7 @@ export async function renderCollectionDetail(main, params = {}) {
 
     try {
         const data = await API.get(`/collections/${collectionId}`);
-        const { collection, issues, themes, related_collections } = data;
+        const { collection, issues, themes = [], related_collections } = data;
 
         const title = escapeHtmlAttribute(collection.name || 'Збірник');
         const coverUrl = comicVineImageUrl(collection.cv_img);
@@ -173,6 +195,24 @@ export async function renderCollectionDetail(main, params = {}) {
                                 ` : ''}
                             </div>
 
+                            <div class="volume-hero-actions">
+                                <button class="volume-action-btn volume-details-trigger" id="btn-col-details" title="Деталі">
+                                    ${ICON.info}
+                                    Деталі
+                                </button>
+                            </div>
+
+                            ${isModerator ? `
+                                <div class="volume-hero-admin-actions">
+                                    <button class="btn-admin btn-admin--secondary" id="col-edit-btn" title="Редагувати">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <button class="btn-admin btn-admin--danger" id="col-delete-btn" title="Видалити збірник">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            ` : ''}
+
                             <div class="volume-synopsis" style="margin-top: 24px;">
                                 <div class="synopsis-header">
                                     <h2 class="synopsis-title">Синопсис</h2>
@@ -223,7 +263,40 @@ export async function renderCollectionDetail(main, params = {}) {
                     </div>
                 </section>
 
-                <div class="container" style="margin-top: 32px;">
+                <div class="container volume-body" style="margin-top: 32px;">
+                    ${(() => {
+                        const hasThemes = themes && themes.length > 0;
+                        if (!hasThemes) return '';
+                        const groups = {
+                            type: themes.filter(t => t.type === 'type'),
+                            genre: themes.filter(t => t.type === 'genre'),
+                            theme: themes.filter(t => (t.type === 'theme' || !t.type))
+                        };
+
+                        const groupLabels = {
+                            type: 'Тип',
+                            genre: 'Жанри',
+                            theme: 'Теми'
+                        };
+
+                        return `
+                            <div class="volume-themes-row block" style="margin-bottom: 32px;">
+                                ${Object.entries(groups).map(([type, items]) => {
+                                    if (!items.length) return '';
+                                    return `
+                                        <div class="volume-theme-group">
+                                            <span style="color: var(--text-muted); line-height: 0;">${THEME_ICON[type] || ''}</span>
+                                            <span class="volume-theme-group-label">${groupLabels[type]}</span>
+                                            <div class="volume-theme-chips-wrap">
+                                                ${items.map(theme => themeChipHTML(theme)).join('')}
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        `;
+                    })()}
+
                     <!-- Related Collections Block (Horizontal) -->
                     ${related_collections.length > 0 ? `
                         <div class="related-collections-section" style="margin-bottom: 40px;">
@@ -274,6 +347,41 @@ export async function renderCollectionDetail(main, params = {}) {
                 </div>
             </div>
         `;
+
+        // --- Event Listeners ---
+
+        // Edit Button
+        const editBtn = main.querySelector('#col-edit-btn');
+        if (editBtn) {
+            editBtn.addEventListener('click', async () => {
+                const editor = new CollectionEditor(collection, () => {
+                    renderCollectionDetail(main, params);
+                });
+                await editor.render();
+            });
+        }
+
+        // Delete Button
+        const deleteBtn = main.querySelector('#col-delete-btn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', async () => {
+                if (!confirm('Ви впевнені, що хочете видалити цей збірник?')) return;
+                try {
+                    await API.delete(`/collections/${collectionId}`);
+                    window.location.hash = collection.volume_id ? `#/volumes/${collection.volume_id}` : '#/catalog';
+                } catch (err) {
+                    alert('Помилка видалення: ' + err.message);
+                }
+            });
+        }
+
+        // Details trigger (Facts modal)
+        const detailsBtn = main.querySelector('#btn-col-details');
+        if (detailsBtn) {
+            detailsBtn.addEventListener('click', () => {
+                openFactsModal(collection);
+            });
+        }
 
         // --- Helper: Drag & Drop Reordering ---
         const initReordering = () => {
@@ -402,8 +510,6 @@ export async function renderCollectionDetail(main, params = {}) {
 
         renderRelated();
 
-        // --- Event Listeners ---
-
         // Sort related collections
         main.querySelector('#btn-sort-related')?.addEventListener('click', () => {
             issuesSortDir = issuesSortDir === 'asc' ? 'desc' : 'asc';
@@ -418,6 +524,7 @@ export async function renderCollectionDetail(main, params = {}) {
         main.querySelectorAll('.synopsis-tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 const lang = tab.getAttribute('data-tab');
+                const synopsisTabs = main.querySelectorAll('.synopsis-tab');
                 synopsisTabs.forEach(t => t.classList.toggle('is-active', t === tab));
                 main.querySelectorAll('.synopsis-content .synopsis-pane').forEach(p => {
                     p.classList.toggle('is-active', p.id === `synopsis-${lang}`);
@@ -535,7 +642,7 @@ export async function renderCollectionDetail(main, params = {}) {
                                     </ul>
                                 ` : `
                                     <div style="text-align: center; padding: 60px 20px; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;">
-                                        <div style="opacity: 0.5;">${icon(ICON.layers, 48)}</div>
+                                        <div style="opacity: 0.5;">${ICON.layers}</div>
                                         <p style="font-size: 16px; font-weight: 500; margin: 0;">Зміст наразі відсутній.</p>
                                     </div>
                                 `}
@@ -560,6 +667,59 @@ export async function renderCollectionDetail(main, params = {}) {
         }
 
     } catch (err) {
+        console.error(err);
         main.innerHTML = `<div class="container"><div class="error-state">Помилка завантаження: ${err.message}</div></div>`;
     }
+}
+
+function openFactsModal(collection) {
+    if (document.querySelector('.ds-modal-overlay')) return;
+    const modal = document.createElement('div');
+    modal.className = 'ds-modal-overlay';
+    
+    const fact = (label, value) => value ? `<div class="volume-fact"><dt>${label}</dt><dd>${escapeHtmlAttribute(String(value))}</dd></div>` : '';
+
+    modal.innerHTML = `
+        <div class="ds-modal ds-modal--small">
+            <div class="ds-modal-header">
+                <div class="ds-modal-title">
+                    ${ICON.info}
+                    Детальна інформація
+                </div>
+                <button class="ds-modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="ds-modal-body">
+                <dl class="volume-facts">
+                    ${fact('ComicVine ID', collection.cv_id)}
+                    ${fact('CV Slug', collection.cv_slug)}
+                    ${fact('Номер', collection.issue_number)}
+                    ${fact('Дата обкладинки', collection.cover_date)}
+                    ${fact('Дата виходу', collection.release_date)}
+                    ${fact('ISBN', collection.isbn)}
+                    ${fact('Сторінок', collection.pages)}
+                    ${fact('Створено', collection.created_at)}
+                    ${fact('Оновлено', collection.updated_at)}
+                </dl>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+
+    const close = () => {
+        document.removeEventListener('keydown', handleEsc);
+        modal.remove();
+        document.body.style.overflow = '';
+    };
+
+    const handleEsc = (e) => {
+        if (e.key === 'Escape') close();
+    };
+    document.addEventListener('keydown', handleEsc);
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+    });
+    modal.querySelector('#modal-close').addEventListener('click', close);
 }

@@ -59,6 +59,11 @@
     overflow-y: auto;
 }
 
+.ds-modal-body > form {
+    width: 100%;
+    min-width: 0;
+}
+
 .ds-modal-footer {
     padding: 16px 20px;
     border-top: 1px solid var(--border-s);

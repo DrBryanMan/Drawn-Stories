@@ -217,6 +217,110 @@ async def reorder_collection_issues(collection_id: int, data: dict):
     
     return {"message": "Порядок оновлено"}
 
+def replace_collection_themes(db, collection_id, theme_ids):
+    # Delete existing themes
+    db.execute("DELETE FROM collection_themes WHERE collection_id = ?", [collection_id])
+        
+    # Insert new themes
+    for theme_id in theme_ids:
+        db.execute(
+            "INSERT INTO collection_themes (collection_id, theme_id) VALUES (?, ?)",
+            [collection_id, theme_id]
+        )
+
+@router.put("/{collection_id}")
+async def update_collection(collection_id: int, data: dict):
+    db = get_db()
+    
+    # Check if collection exists
+    collection = db.get_one("SELECT id FROM collections WHERE id = ?", [collection_id])
+    if not collection:
+        raise HTTPException(status_code=404, detail="Збірник не знайдено")
+
+    # Update fields
+    fields = []
+    params = []
+    
+    allowed_fields = [
+        "name", "issue_number", "volume_id", "cv_id", "cv_slug", 
+        "cv_img", "cover_date", "release_date", "description", "synopsis_ua",
+        "synopsis", "contents", "publisher", "isbn", "pages", "site_link"
+    ]
+    
+    for key, value in data.items():
+        if key in allowed_fields:
+            fields.append(f"{key} = ?")
+            params.append(value)
+            
+    if fields:
+        params.append(collection_id)
+        db.execute(
+            f"UPDATE collections SET {', '.join(fields)} WHERE id = ?",
+            params
+        )
+    
+    # Update themes if provided
+    if "theme_ids" in data and isinstance(data["theme_ids"], list):
+        replace_collection_themes(db, collection_id, data["theme_ids"])
+    
+    return {"message": "Collection updated successfully"}
+
+@router.delete("/{collection_id}")
+async def delete_collection(collection_id: int):
+    db = get_db()
+    
+    # Check if collection exists
+    collection = db.get_one("SELECT * FROM collections WHERE id = ?", [collection_id])
+    if not collection:
+        raise HTTPException(status_code=404, detail="Збірник не знайдено")
+        
+    try:
+        db.conn.execute("BEGIN")
+        
+        # 1. Themes
+        db.conn.execute("DELETE FROM collection_themes WHERE collection_id = ?", [collection_id])
+            
+        # 2. Issue links
+        db.conn.execute("DELETE FROM collection_issues WHERE collection_id = ?", [collection_id])
+        
+        # 3. Series links
+        db.conn.execute("DELETE FROM series_collections WHERE collection_id = ?", [collection_id])
+        
+        # 4. User collections
+        db.conn.execute("DELETE FROM user_collections WHERE collection_id = ?", [collection_id])
+
+        # 5. Finally delete the collection itself
+        db.conn.execute("DELETE FROM collections WHERE id = ?", [collection_id])
+        
+        db.conn.commit()
+    except Exception as e:
+        db.conn.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+        
+    return {"message": "Збірник та всі пов'язані дані успішно видалено"}
+
+@router.put("/{collection_id}/reorder-issues")
+async def reorder_collection_issues(collection_id: int, data: dict):
+    db = get_db()
+    issue_ids = data.get("issue_ids", [])
+    
+    if not issue_ids:
+        return {"message": "No issues to reorder"}
+        
+    try:
+        db.conn.execute("BEGIN")
+        for index, issue_id in enumerate(issue_ids):
+            db.execute(
+                "UPDATE collection_issues SET order_num = ? WHERE collection_id = ? AND issue_id = ?",
+                [index + 1, collection_id, issue_id]
+            )
+        db.conn.commit()
+    except Exception as e:
+        db.conn.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+        
+    return {"message": "Порядок випусків оновлено"}
+
 @router.get("/{collection_id}")
 async def get_collection_detail(collection_id: int, request: Request):
     db = get_db()
