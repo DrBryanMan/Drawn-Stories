@@ -21,3 +21,5 @@
 @import url('views/settings.css');
 @import url('views/collections.css');
 @import url('views/collection-detail.css');
+@import url('views/issue-detail.css');
+@import url('views/event-detail.css');

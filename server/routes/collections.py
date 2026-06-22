@@ -92,7 +92,7 @@ async def create_collection(data: dict):
     params = []
     
     allowed_fields = [
-        "name", "issue_number", "volume_id", "cv_id", "cv_slug", 
+        "name", "issue_number", "volume_id", "cv_vol_id", "cv_id", "cv_slug", 
         "cv_img", "cover_date", "release_date", "description", "contents"
     ]
     
@@ -242,7 +242,7 @@ async def update_collection(collection_id: int, data: dict):
     params = []
     
     allowed_fields = [
-        "name", "issue_number", "volume_id", "cv_id", "cv_slug", 
+        "name", "issue_number", "volume_id", "cv_vol_id", "cv_id", "cv_slug", 
         "cv_img", "cover_date", "release_date", "description", "synopsis_ua",
         "synopsis", "contents", "publisher", "isbn", "pages", "site_link"
     ]

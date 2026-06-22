@@ -61,6 +61,25 @@ export const API = {
         return await response.json();
     },
 
+    async patch(endpoint, body = {}) {
+        const response = await fetch(this.baseUrl + endpoint, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        if (!response.ok) {
+            let message = response.statusText || `HTTP ${response.status}`;
+            try {
+                const payload = await response.clone().json();
+                message = payload.detail || payload.error || message;
+            } catch {
+                message = await response.text() || message;
+            }
+            throw new Error(message);
+        }
+        return await response.json();
+    },
+
     async delete(endpoint) {
         const response = await fetch(this.baseUrl + endpoint, {
             method: 'DELETE'

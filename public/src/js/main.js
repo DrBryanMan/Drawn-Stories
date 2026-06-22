@@ -11,6 +11,8 @@ import { renderUserLists } from './views/userLists.js';
 import { renderCollections } from './views/collections.js';
 import { renderSettings } from './views/settings.js';
 import { renderCollectionDetail } from './views/collectionDetail.js';
+import { renderIssueDetail } from './views/issueDetail.js';
+import { renderEventDetail } from './views/eventDetail.js';
 
 async function start() {
   const main = await initShell();
@@ -20,6 +22,8 @@ async function start() {
     .on('/catalog',       (_path, _params, query) => renderCatalog(main, query))
     .on('/volumes/:id',   (_path, params, _query) => renderVolumeDetail(main, params))
     .on('/collections/:id', (_path, params) => renderCollectionDetail(main, params))
+    .on('/issues/:id',    (_path, params) => renderIssueDetail(main, params))
+    .on('/events/:id',    (_path, params) => renderEventDetail(main, params))
     .on('/publishers',    (_path, _params, query) => renderPublishers(main, query))
     .on('/auth',          () => renderAuth(main))
     .on('/bookmarks',     () => renderBookmarks(main))

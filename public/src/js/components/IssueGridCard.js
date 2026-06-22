@@ -59,7 +59,7 @@ export function renderIssueGridCard(item, options = {}) {
     }
 
     const subTitle = isVolume ? (item.start_year || '') : formatDate(item.cover_date || item.release_date);
-    const link = isVolume ? `#/volumes/${item.id}` : (isCollection ? `#/collections/${item.id}` : (item.volume_id ? `#/volumes/${item.volume_id}` : null));
+    const link = isVolume ? `#/volumes/${item.id}` : (isCollection ? `#/collections/${item.id}` : `#/issues/${item.id}`);
 
     // Order number badge for moderators
     const orderBadge = options.showOrder && options.orderNum 

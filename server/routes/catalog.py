@@ -222,10 +222,10 @@ async def get_catalog(
         filter_params.append(theme_id)
 
     if date_min:
-        filter_clauses.append(f"({primary_sort}) >= ?")
+        filter_clauses.append(f"date({primary_sort}) >= date(?)")
         filter_params.append(date_min)
     if date_max:
-        filter_clauses.append(f"({primary_sort}) <= ?")
+        filter_clauses.append(f"date({primary_sort}) <= date(?)")
         filter_params.append(date_max)
 
     # 1. Total count uses ONLY filters

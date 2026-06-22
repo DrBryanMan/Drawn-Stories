@@ -2,6 +2,8 @@ import sqlite3
 import os
 from typing import List, Optional, Any
 
+from server.schema.migrations import apply_migrations
+
 # Resolve path relative to this file
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "comicsdb.db")
@@ -44,6 +46,7 @@ db_instance = Database(DB_PATH)
 
 def init_db():
     db_instance.connect()
+    apply_migrations(db_instance.conn)
 
 def close_db():
     db_instance.close()

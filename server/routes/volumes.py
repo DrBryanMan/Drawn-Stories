@@ -366,6 +366,7 @@ async def convert_all_to_collections(volume_id: int):
         db.conn.execute("BEGIN")
         for issue in issues:
             issue_id = issue["id"]
+            issue_cv_vol_id = issue.get("cv_vol_id") or volume.get("cv_id")
             
             # Check if used in collections
             membership = db.get_one("SELECT COUNT(*) as count FROM collection_issues WHERE issue_id = ?", [issue_id])
@@ -391,7 +392,7 @@ async def convert_all_to_collections(volume_id: int):
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
-                    issue.get("cv_vol_id"), issue.get("volume_id") or volume_id, issue.get("name") or "Без назви",
+                    issue_cv_vol_id, issue.get("volume_id") or volume_id, issue.get("name") or "Без назви",
                     issue.get("cv_img"), issue.get("site_link"), issue.get("cv_id"), issue.get("cv_slug"),
                     volume.get("publisher"), issue.get("issue_number"), 
                     issue.get("cover_date"), issue.get("release_date"), issue.get("description"), issue.get("pages")
@@ -459,13 +460,13 @@ async def convert_all_collections_to_issues(volume_id: int):
             db.conn.execute(
                 """
                 INSERT INTO issues (
-                    cv_id, cv_slug, name, cv_img, volume_id, 
+                    cv_id, cv_slug, name, cv_img, cv_vol_id, volume_id, 
                     issue_number, cover_date, release_date, site_link, description, pages
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     col.get("cv_id"), col.get("cv_slug"), col.get("name") or "Без назви",
-                    col.get("cv_img"), volume_id,
+                    col.get("cv_img"), col.get("cv_vol_id") or volume.get("cv_id"), volume_id,
                     col.get("issue_number"), col.get("cover_date"), col.get("release_date"),
                     col.get("site_link"), col.get("description"), col.get("pages")
                 ]

@@ -4,6 +4,187 @@ from typing import Optional
 
 router = APIRouter(prefix="/api/issues", tags=["issues"])
 
+
+def get_context_issue(db, issue_id):
+    if not issue_id:
+        return None
+    return db.get_one(
+        """
+        SELECT id, issue_number, name, cv_img
+        FROM issues
+        WHERE id = ?
+        """,
+        [issue_id],
+    )
+
+
+def hydrate_context_issue_nav(db, contexts):
+    hydrated = []
+    for context in contexts:
+        item = dict(context)
+        item["prev_issue"] = get_context_issue(db, item.get("prev_issue_id"))
+        item["next_issue"] = get_context_issue(db, item.get("next_issue_id"))
+        hydrated.append(item)
+    return hydrated
+
+
+@router.get("/{issue_id}")
+async def get_issue_detail(issue_id: int):
+    db = get_db()
+
+    issue = db.get_one(
+        """
+        SELECT i.*,
+               v.id          AS volume_id,
+               v.name        AS volume_name,
+               v.name_uk     AS volume_name_uk,
+               v.cv_img      AS volume_cv_img,
+               v.cv_slug     AS volume_cv_slug,
+               v.hikka_slug  AS volume_hikka_slug,
+               p.id          AS publisher_id,
+               p.name        AS publisher_name,
+               p.cv_slug     AS publisher_cv_slug
+        FROM issues i
+        LEFT JOIN volumes v ON i.volume_id = v.id
+        LEFT JOIN publishers p ON v.publisher = p.id
+        WHERE i.id = ?
+        """,
+        [issue_id],
+    )
+
+    if not issue:
+        raise HTTPException(status_code=404, detail="Випуск не знайдено")
+
+    issue = dict(issue)
+
+    # Збірники які містять цей випуск
+    collections = db.get_all(
+        """
+        SELECT c.id, c.name, c.cv_img, c.cv_id, c.cv_slug,
+               c.volume_id, c.release_date, c.cover_date,
+               v.name AS volume_name, v.name_uk AS volume_name_uk
+        FROM collection_issues ci
+        JOIN collections c ON ci.collection_id = c.id
+        LEFT JOIN volumes v ON c.volume_id = v.id
+        WHERE ci.issue_id = ?
+        ORDER BY c.name ASC
+        """,
+        [issue_id],
+    )
+
+    # Навігація: попередній та наступний випуски в межах тому
+    prev_issue = None
+    next_issue = None
+
+    if issue.get("volume_id"):
+        volume_id = issue["volume_id"]
+        issue_num = issue.get("issue_number")
+
+        # Усі випуски тому, відсортовані
+        siblings = db.get_all(
+            """
+            SELECT id, issue_number, name, cv_img
+            FROM issues
+            WHERE volume_id = ?
+            ORDER BY CAST(issue_number AS REAL) ASC, issue_number ASC
+            """,
+            [volume_id],
+        )
+
+        current_idx = next(
+            (i for i, s in enumerate(siblings) if s["id"] == issue_id), None
+        )
+
+        if current_idx is not None:
+            if current_idx > 0:
+                prev_issue = dict(siblings[current_idx - 1])
+            if current_idx < len(siblings) - 1:
+                next_issue = dict(siblings[current_idx + 1])
+
+    event_contexts = db.get_all(
+        """
+        SELECT e.id, e.name, e.cv_img, e.start_year, e.end_year,
+               ei.importance, ei.order_num,
+               (
+                   SELECT COUNT(*)
+                   FROM event_items ei_count
+                   WHERE ei_count.event_id = e.id
+                     AND ei_count.item_type = 'issue'
+               ) AS issue_count,
+               (
+                   SELECT i_prev.id
+                   FROM event_items ei_prev
+                   JOIN issues i_prev ON i_prev.id = ei_prev.item_id
+                   WHERE ei_prev.event_id = e.id
+                     AND ei_prev.item_type = 'issue'
+                     AND ei_prev.order_num < ei.order_num
+                   ORDER BY ei_prev.order_num DESC
+                   LIMIT 1
+               ) AS prev_issue_id,
+               (
+                   SELECT i_next.id
+                   FROM event_items ei_next
+                   JOIN issues i_next ON i_next.id = ei_next.item_id
+                   WHERE ei_next.event_id = e.id
+                     AND ei_next.item_type = 'issue'
+                     AND ei_next.order_num > ei.order_num
+                   ORDER BY ei_next.order_num ASC
+                   LIMIT 1
+               ) AS next_issue_id
+        FROM event_items ei
+        JOIN events e ON e.id = ei.event_id
+        WHERE ei.item_id = ?
+          AND ei.item_type = 'issue'
+        ORDER BY ei.order_num ASC, e.name ASC
+        """,
+        [issue_id],
+    )
+
+    arc_contexts = db.get_all(
+        """
+        SELECT ro.id, ro.name, ro.cv_img, roi.order_num,
+               (
+                   SELECT COUNT(*)
+                   FROM reading_order_issues roi_count
+                   WHERE roi_count.reading_order_id = ro.id
+               ) AS issue_count,
+               (
+                   SELECT i_prev.id
+                   FROM reading_order_issues roi_prev
+                   JOIN issues i_prev ON i_prev.id = roi_prev.issue_id
+                   WHERE roi_prev.reading_order_id = ro.id
+                     AND roi_prev.order_num < roi.order_num
+                   ORDER BY roi_prev.order_num DESC
+                   LIMIT 1
+               ) AS prev_issue_id,
+               (
+                   SELECT i_next.id
+                   FROM reading_order_issues roi_next
+                   JOIN issues i_next ON i_next.id = roi_next.issue_id
+                   WHERE roi_next.reading_order_id = ro.id
+                     AND roi_next.order_num > roi.order_num
+                   ORDER BY roi_next.order_num ASC
+                   LIMIT 1
+               ) AS next_issue_id
+        FROM reading_order_issues roi
+        JOIN reading_orders ro ON ro.id = roi.reading_order_id
+        WHERE roi.issue_id = ?
+        ORDER BY roi.order_num ASC, ro.name ASC
+        """,
+        [issue_id],
+    )
+    event_contexts = hydrate_context_issue_nav(db, event_contexts)
+    arc_contexts = hydrate_context_issue_nav(db, arc_contexts)
+
+    return {
+        "issue": issue,
+        "collections": collections,
+        "prev_issue": prev_issue,
+        "next_issue": next_issue,
+        "event_contexts": event_contexts,
+        "arc_contexts": arc_contexts,
+    }
+
 @router.get("")
 async def get_issues(
     name: Optional[str] = None,
