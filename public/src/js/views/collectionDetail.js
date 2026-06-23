@@ -4,6 +4,8 @@ import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { openAddIssueModal } from '../components/addIssueModal.js';
 import { renderIssueGridCard } from '../components/IssueGridCard.js';
 import { CollectionEditor } from '/admin/js/CollectionEditor.js';
+import { createBreadcrumbs } from '../components/Breadcrumbs.js';
+
 
 // ── Lucide SVG icons ──────────────────────────────
 const ICON = {
@@ -77,6 +79,29 @@ function formatDate(dateStr) {
     return dateStr;
 }
 
+function formatIssueRanges(nums) {
+    if (!nums || !nums.length) return '';
+    const sorted = [...nums].map(n => parseFloat(n)).filter(n => !isNaN(n)).sort((a, b) => a - b);
+    if (!sorted.length) return '';
+    
+    const parts = [];
+    let start = sorted[0];
+    let prev = sorted[0];
+
+    for (let i = 1; i <= sorted.length; i++) {
+        const curr = sorted[i];
+        if (curr === prev + 1) {
+            prev = curr;
+        } else {
+            if (start === prev) parts.push(start);
+            else parts.push(`${start}-${prev}`);
+            start = curr;
+            prev = curr;
+        }
+    }
+    return parts.join(', ');
+}
+
 function themeName(theme) {
     return theme.ua_name || theme.name || 'Тема';
 }
@@ -123,20 +148,57 @@ export async function renderCollectionDetail(main, params = {}) {
 
         const isModerator = currentUser?.role === 'admin' || currentUser?.role === 'moderator';
 
+        const volumesMap = new Map();
+        for (const item of sortedIssues) {
+            const volId = item.volume_id;
+            if (!volId) continue;
+            
+            if (!volumesMap.has(volId)) {
+                volumesMap.set(volId, {
+                    id: volId,
+                    name: item.volume_name_uk || item.volume_name || 'Без назви',
+                    numbers: []
+                });
+            }
+            
+            if (item.issue_number != null) {
+                volumesMap.get(volId).numbers.push(String(item.issue_number));
+            }
+        }
+        
+        const sortedVolumes = Array.from(volumesMap.values());
+        let seriesBlockHtml = '';
+        if (sortedVolumes.length > 0) {
+            const listHtml = sortedVolumes.map(vol => {
+                const range = formatIssueRanges(vol.numbers) || '—';
+                return `
+                    <a href="#/volumes/${vol.id}" class="vol-summary-card">
+                        <div class="vol-summary-card__info">
+                            <span class="vol-summary-card__name" title="${escapeHtmlAttribute(vol.name)}">${escapeHtmlAttribute(vol.name)}</span>
+                            <span class="vol-summary-card__range" title="Номери випусків"># ${escapeHtmlAttribute(range)}</span>
+                        </div>
+                    </a>
+                `;
+            }).join('');
+            
+            seriesBlockHtml = `
+                <div class="vol-summary" style="margin-bottom: 24px;">
+                    <div class="vol-summary__label">Серії випусків у збірниках</div>
+                    <div class="vol-summary__list">
+                        ${listHtml}
+                    </div>
+                </div>
+            `;
+        }
+
         main.innerHTML = `
             <div class="collection-detail">
                 <div class="container" style="padding-top: 20px;">
-                    <nav class="breadcrumbs" aria-label="Навігація">
-                        <a href="#/">Drawn Stories</a>
-                        <span class="breadcrumb-separator">${ICON.chevronRight}</span>
-                        <a href="#/catalog">Каталог</a>
-                        <span class="breadcrumb-separator">${ICON.chevronRight}</span>
-                        ${collection.volume_id ? `
-                            <a href="#/volumes/${collection.volume_id}">${escapeHtmlAttribute(collection.volume_name_uk || collection.volume_name)}</a>
-                            <span class="breadcrumb-separator">${ICON.chevronRight}</span>
-                        ` : ''}
-                        <span>${title}</span>
-                    </nav>
+                    ${createBreadcrumbs([
+                        { label: 'Каталог', href: '#/catalog' },
+                        ...(collection.volume_id ? [{ label: collection.volume_name_uk || collection.volume_name, href: `#/volumes/${collection.volume_id}` }] : []),
+                        { label: title }
+                    ])}
                 </div>
 
                 <section class="volume-hero-band collection-hero-band">
@@ -153,7 +215,7 @@ export async function renderCollectionDetail(main, params = {}) {
                             <div class="volume-readlist-controls" style="display: flex; gap: 8px; margin-top: 16px;">
                                 <button class="readlist-btn ${isOwned ? 'is-active' : ''} ${!currentUser ? 'readlist-btn--anon' : ''}" id="btn-toggle-collection" style="flex: 1; height: 42px; padding: 0 16px; gap: 8px; justify-content: center;">
                                     ${isOwned ? ICON.trash : ICON.plus}
-                                    <span style="font-size: 14px; font-weight: 600;">${isOwned ? 'Видалити' : 'Додати'}</span>
+                                    <span style="font-weight: 600;">${isOwned ? 'Видалити з колекції' : 'Додати в колекцію'}</span>
                                 </button>
 
                                 ${isOwned ? `
@@ -316,6 +378,7 @@ export async function renderCollectionDetail(main, params = {}) {
                     ` : ''}
 
                     <div class="collection-issues-section">
+                        ${seriesBlockHtml}
                         <div class="collection-issues-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                             <div style="display: flex; align-items: baseline; gap: 12px;">
                                 <h2 class="collection-issues-title" style="margin: 0;">Вміст збірника</h2>

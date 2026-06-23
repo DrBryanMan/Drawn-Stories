@@ -2,8 +2,10 @@ import { API } from '../helpers/api.js';
 import { createComicCard } from '../components/ComicCard.js';
 import { escapeHtmlAttribute } from '../helpers/image.js';
 import { mountFilterBar } from '../components/FilterBar.js';
+import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 
-const LIST_LABELS = {
+
+const VOLUME_LIST_LABELS = {
     'Planned': 'Заплановано',
     'Reading': 'Читаю',
     'Completed': 'Прочитано',
@@ -11,10 +13,10 @@ const LIST_LABELS = {
     'Dropped': 'Закинуто'
 };
 
-const LIST_OPTIONS = [
-    { value: 'all', label: 'Усі списки' },
-    ...Object.entries(LIST_LABELS).map(([value, label]) => ({ value, label }))
-];
+const ISSUE_LIST_LABELS = {
+    'Planned': 'Заплановано',
+    'Completed': 'Прочитано'
+};
 
 const SORT_OPTIONS = [
     { value: 'name', label: 'За назвою' },
@@ -24,6 +26,7 @@ const SORT_OPTIONS = [
 let allListItems = {};
 let filteredItems = [];
 let currentListType = 'all';
+let currentTab = 'volume';
 let searchQuery = '';
 let sortField = 'recent';
 let sortOrder = 'desc';
@@ -31,6 +34,7 @@ let filterBar = null;
 
 export async function renderUserLists(main, params, query = {}) {
     const username = params.username;
+    currentTab = query.tab || 'volume';
     document.title = `Списки ${username} — Drawn Stories`;
 
     currentListType = query.list || 'all';
@@ -39,7 +43,7 @@ export async function renderUserLists(main, params, query = {}) {
     renderLayout(main, username);
 
     try {
-        const data = await API.get(`/user/readlist/user/${username}`);
+        const data = await API.get(`/user/readlist/user/${username}?content_type=${currentTab}`);
         allListItems = data.lists || {};
         applyFilters();
         renderResults();
@@ -49,25 +53,34 @@ export async function renderUserLists(main, params, query = {}) {
 }
 
 function renderLayout(main, username) {
+    const currentLabels = currentTab === 'issue' ? ISSUE_LIST_LABELS : VOLUME_LIST_LABELS;
+    const listOptions = [
+        { value: 'all', label: 'Усі списки' },
+        ...Object.entries(currentLabels).map(([value, label]) => ({ value, label }))
+    ];
+
+    if (currentTab === 'issue' && !['all', 'Planned', 'Completed'].includes(currentListType)) {
+        currentListType = 'all';
+    }
+
     main.innerHTML = `
         <div class="container">
             <div class="page-header">
-                <nav class="breadcrumbs" aria-label="Навігація">
-                    <a href="#/">Drawn Stories</a>
-                    <span class="breadcrumb-separator">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                    </span>
-                    <span>Користувач</span>
-                    <span class="breadcrumb-separator">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                    </span>
-                    <span>${escapeHtmlAttribute(username)}</span>
-                </nav>
+                ${createBreadcrumbs([
+                    { label: 'Списки користувача' },
+                    { label: escapeHtmlAttribute(username) }
+                ])}
+                <h1 class="page-title">Списки ${escapeHtmlAttribute(username)}</h1>
             </div>
-
-            <div class="catalog-top-row">
-                <div id="catalog-filter-bar-container">
+            <div class="catalog-top-row" style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                <div id="catalog-filter-bar-container" style="flex: 1; min-width: 280px;">
                     <div id="user-lists-filter-bar-container"></div>
+                </div>
+                <div class="catalog-primary-actions" aria-label="Тип контенту" style="margin-left: auto;">
+                    <div class="catalog-segmented" role="group" aria-label="Тип контенту">
+                        <button class="catalog-segment ${currentTab === 'volume' ? 'is-active' : ''}" type="button" data-tab-type="volume">Серії</button>
+                        <button class="catalog-segment ${currentTab === 'issue' ? 'is-active' : ''}" type="button" data-tab-type="issue">Випуски</button>
+                    </div>
                 </div>
             </div>
 
@@ -88,7 +101,7 @@ function renderLayout(main, username) {
         showExtraSelect: true,
         extraSelectId: 'user-list-type-select',
         extraSelectValue: currentListType,
-        extraSelectOptions: LIST_OPTIONS,
+        extraSelectOptions: listOptions,
         onExtraSelectChange: (val) => {
             currentListType = val;
             applyFilters();
@@ -117,6 +130,15 @@ function renderLayout(main, username) {
             applyFilters();
             renderResults();
         }
+    });
+
+    const tabButtons = main.querySelectorAll('[data-tab-type]');
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.tabType;
+            if (tab === currentTab) return;
+            location.hash = `#/user/${username}/lists?tab=${tab}`;
+        });
     });
 }
 
@@ -148,7 +170,9 @@ function applyFilters() {
         items = items.filter(item => 
             (item.name && item.name.toLowerCase().includes(searchQuery)) || 
             (item.name_uk && item.name_uk.toLowerCase().includes(searchQuery)) ||
-            (item.publisher_name && item.publisher_name.toLowerCase().includes(searchQuery))
+            (item.publisher_name && item.publisher_name.toLowerCase().includes(searchQuery)) ||
+            (item.volume_name && item.volume_name.toLowerCase().includes(searchQuery)) ||
+            (item.volume_name_uk && item.volume_name_uk.toLowerCase().includes(searchQuery))
         );
     }
 

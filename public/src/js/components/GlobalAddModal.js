@@ -2,6 +2,134 @@ import { API } from '../helpers/api.js';
 import { LANG_MAP } from '../helpers/lang.js';
 import { comicVineImageUrl } from '../helpers/image.js';
 
+// Local helper functions for rendering themes (identical to VolumeEditor / editorUtils)
+function buildThemeChipsHTML(selectedThemes) {
+  const chipClassByType = (type) => {
+      if (type === 'genre') return ' chip-genre';
+      if (type === 'type')  return ' chip-type';
+      return ' chip-theme';
+  };
+  const makeChips = (arr) => arr.map(t => {
+    const label = t.ua_name || t.name;
+    return `
+      <span class="chip ${chipClassByType(t.type)}" data-id="${t.id}">
+        ${label}
+        <button type="button" onclick="window._emRemoveThemeGlobal(${t.id})" title="Видалити">×</button>
+      </span>
+  `}).join('');
+  return makeChips(selectedThemes);
+}
+
+function buildThemeCheckboxListHTML(allThemes, selectedIds) {
+  const renderItem = (t) => {
+    const label = t.ua_name || t.name;
+    const checked = selectedIds.has(t.id);
+    return `
+      <label class="theme-checkbox-item${checked ? ' theme-checkbox-item--checked' : ''}">
+        <span class="theme-cb-box${checked ? ' theme-cb-box--checked' : ''}">
+          <svg class="theme-cb-check" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M1 4l3 3 5-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <input type="checkbox" value="${t.id}"
+              data-type="${t.type || 'theme'}"
+              data-name="${(t.name || '').toLowerCase()}"
+              data-ua-name="${label.toLowerCase()}"
+              ${checked ? 'checked' : ''}
+              onchange="window._emThemeChangeGlobal(); this.closest('.theme-checkbox-item').classList.toggle('theme-checkbox-item--checked', this.checked); this.previousElementSibling.classList.toggle('theme-cb-box--checked', this.checked);">
+        <span class="theme-cb-label">${label}</span>
+      </label>
+    `;
+  };
+
+  const types   = allThemes.filter(t => t.type === 'type');
+  const genres  = allThemes.filter(t => t.type === 'genre');
+  const themes  = allThemes.filter(t => t.type === 'theme' || !t.type);
+
+  const parts = [];
+  if (types.length) {
+    parts.push(`<div class="theme-group-header">📂 Типи</div>`);
+    parts.push(types.map(renderItem).join(''));
+  }
+  if (genres.length) {
+    parts.push(`<div class="theme-group-header">🎭 Жанри</div>`);
+    parts.push(genres.map(renderItem).join(''));
+  }
+  if (themes.length) {
+    parts.push(`<div class="theme-group-header">🏷️ Теми</div>`);
+    parts.push(themes.map(renderItem).join(''));
+  }
+  return parts.join('');
+}
+
+// Register global handlers
+window._emRemoveThemeGlobal = (themeId) => {
+    const listEl = document.getElementById('themes-list');
+    if (listEl) {
+        const cb = listEl.querySelector(`input[value="${themeId}"]`);
+        if (cb) {
+            cb.checked = false;
+            cb.dispatchEvent(new Event('change'));
+        }
+    }
+};
+
+window._emThemeChangeGlobal = () => {
+    const listEl = document.getElementById('themes-list');
+    const chipsEl = document.getElementById('vol-theme-chips');
+    const formArea = document.getElementById('gam-form-area');
+    if (listEl && chipsEl) {
+        const checked = listEl.querySelectorAll('input[type="checkbox"]:checked');
+        const selectedIds = new Set(Array.from(checked).map(cb => parseInt(cb.value)));
+        
+        const selectedThemes = Array.from(checked).map(cb => ({
+            id: parseInt(cb.value),
+            name: cb.closest('.theme-checkbox-item')?.querySelector('.theme-cb-label')?.textContent?.trim() || '',
+            type: cb.dataset.type || 'theme'
+        }));
+        
+        chipsEl.innerHTML = buildThemeChipsHTML(selectedThemes);
+
+        if (formArea) {
+            formArea.querySelectorAll('.btn-theme-suggest').forEach(btn => {
+                const themeId = parseInt(btn.dataset.id);
+                if (selectedIds.has(themeId)) {
+                    btn.classList.add('active');
+                    btn.style.background = 'rgba(59, 130, 246, 0.15)';
+                    btn.style.color = '#3b82f6';
+                    btn.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+                } else {
+                    btn.classList.remove('active');
+                    btn.style.background = 'var(--bg-card)';
+                    btn.style.color = 'var(--text-muted)';
+                    btn.style.borderColor = 'var(--border)';
+                }
+            });
+        }
+    }
+};
+
+window._emFilterThemesGlobal = (q) => {
+    const list = document.getElementById('themes-list');
+    if (!list) return;
+    const query = q.toLowerCase();
+    list.querySelectorAll('.theme-checkbox-item').forEach(item => {
+        const uaText = item.querySelector('.theme-cb-label')?.textContent?.toLowerCase() || '';
+        const enText = item.querySelector('input')?.dataset?.name || '';
+        item.style.display = (uaText.includes(query) || enText.includes(query)) ? '' : 'none';
+    });
+    list.querySelectorAll('.theme-group-header').forEach(header => {
+        let next = header.nextElementSibling;
+        let hasVisible = false;
+        while (next && !next.classList.contains('theme-group-header')) {
+            if (next.style.display !== 'none') { hasVisible = true; break; }
+            next = next.nextElementSibling;
+        }
+        header.style.display = hasVisible ? '' : 'none';
+    });
+};
+
+
 const ICON = {
     volume: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></svg>',
     issue: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path><path d="M8 7h8"></path><path d="M8 11h8"></path></svg>',
@@ -14,7 +142,8 @@ const ICON = {
     back: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>',
     save: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>',
     check: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>',
-    alert: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>'
+    alert: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>',
+    trash: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>'
 };
 
 const CONTENT_TYPES = [
@@ -29,6 +158,8 @@ const CONTENT_TYPES = [
 
 let _modal = null;
 let _currentType = null;
+let _allThemes = [];
+let _selectedSuggestedThemeIds = new Set();
 
 function ensureModal() {
   if (document.getElementById('global-add-modal')) return;
@@ -114,7 +245,7 @@ function showTypeSelection() {
   }
 }
 
-function selectType(typeId) {
+async function selectType(typeId) {
   _currentType = typeId;
   const type = CONTENT_TYPES.find(t => t.id === typeId);
 
@@ -125,12 +256,30 @@ function selectType(typeId) {
   document.getElementById('gam-status').style.display = 'none';
 
   renderForm(typeId);
+
+  if (typeId === 'volume') {
+      _selectedSuggestedThemeIds.clear();
+      if (_allThemes.length === 0) {
+          try {
+              const res = await API.get('/themes', { limit: 1000 });
+              _allThemes = res.items || res.data || [];
+          } catch (err) {
+              console.error('Failed to load themes', err);
+          }
+      }
+      const listEl = document.getElementById('themes-list');
+      if (listEl) {
+          listEl.innerHTML = buildThemeCheckboxListHTML(_allThemes, _selectedSuggestedThemeIds);
+          window._emThemeChangeGlobal();
+      }
+  }
 }
 
 function fld(label, html, hint = '', full = false) {
+  const labelWithRedAsterisk = label.replace('*', '<span style="color: #db5a5a; margin-left: 2px;">*</span>');
   return `
     <div class="admin-form-group${full ? ' admin-form-group--full' : ''}">
-      <label class="admin-label">${label}</label>
+      <label class="admin-label">${labelWithRedAsterisk}</label>
       ${html}
       ${hint ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; font-style: italic;">${hint}</div>` : ''}
     </div>
@@ -151,10 +300,11 @@ function imgField(name = 'cv_img', label = 'Обкладинка') {
             <div style="display: flex; align-items: center; gap: 8px;">
                 <label class="btn-admin btn-admin--secondary" style="margin: 0; cursor: pointer; flex: 1; text-align: center;">
                     ${ICON.plus} Завантажити локально
-                    <input type="file" name="${name}_file" class="gam-img-file-input" style="display: none;" accept="image/*">
+                    <input type="file" name="${name}_file" class="gam-img-file-input" style="display: none;" accept="image/webp">
                 </label>
-                <button type="button" class="btn-admin btn-admin--danger gam-img-clear" style="display: none; padding: 8px 12px;">&times;</button>
+                <button type="button" class="btn-admin btn-admin--danger gam-img-clear" style="display: none; padding: 8px 12px; align-items: center; justify-content: center; height: 38px;">${ICON.trash}</button>
             </div>
+             <div style="font-size: 0.75rem; color: #db5a5a; margin-top: 2px;">Дозволено лише формат <strong>.webp</strong></div>
             <div class="gam-img-filename" style="font-size: 0.75rem; color: var(--text-muted); display: none; word-break: break-all;"></div>
         </div>
         <div class="gam-image-preview" style="
@@ -186,6 +336,31 @@ const FORMS = {
                 ${Object.entries(LANG_MAP).map(([code, { flag, label }]) => `<option value="${code}">${flag} ${label}</option>`).join('')}
             </select>
         `)}
+        ${fld('Теми', `
+            <div class="volume-theme-suggestions" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                <button type="button" class="btn-theme-suggest" data-id="44" style="
+                    padding: 6px 12px; border: 1px solid var(--border); border-radius: 20px;
+                    background: var(--bg-card); color: var(--text-muted); cursor: pointer;
+                    font-size: 0.85rem; transition: all 0.2s;
+                ">Збірник</button>
+                <button type="button" class="btn-theme-suggest" data-id="36" style="
+                    padding: 6px 12px; border: 1px solid var(--border); border-radius: 20px;
+                    background: var(--bg-card); color: var(--text-muted); cursor: pointer;
+                    font-size: 0.85rem; transition: all 0.2s;
+                ">Манґа</button>
+                <button type="button" class="btn-theme-suggest" data-id="51" style="
+                    padding: 6px 12px; border: 1px solid var(--border); border-radius: 20px;
+                    background: var(--bg-card); color: var(--text-muted); cursor: pointer;
+                    font-size: 0.85rem; transition: all 0.2s;
+                ">Перекладене</button>
+            </div>
+            <input type="text" id="theme-search" class="admin-input" placeholder="Пошук тем..." style="margin-bottom:0.5rem; width:100%;"
+                oninput="window._emFilterThemesGlobal(this.value)">
+            <div id="themes-list" class="themes-checkbox-list">
+                <div style="padding: 8px; color: var(--text-muted); font-size: 0.85rem; text-align: center;">Завантаження тем...</div>
+            </div>
+            <div id="vol-theme-chips" style="display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.5rem; min-height:0; align-items:center;"></div>
+        `, 'Оберіть теми, жанри та типи для серії.', true)}
         ${imgField()}
     </div>
   `,
@@ -237,15 +412,19 @@ const FORMS = {
   'publisher': () => `
     <div class="admin-form-grid">
         ${fld('Назва видавництва *', inp('name'), '', true)}
-        ${fld('Тип робіт', inp('work_type', 'text', 'Комікси, Манґа'), 'Через кому')}
+        ${fld('Тип робіт', `
+            <select name="work_type" class="admin-input">
+                <option value="comics">Комікси</option>
+                <option value="manga">Манґа</option>
+                <option value="mixed">Змішаний (Комікси, Манґа)</option>
+            </select>
+        `)}
         ${fld('Статус', `
             <select name="status" class="admin-input">
                 <option value="Active">Активне</option>
                 <option value="Inactive">Неактивне</option>
             </select>
         `)}
-        ${fld('ComicVine ID', inp('cv_id', 'number'))}
-        ${fld('ComicVine Slug', inp('cv_slug'))}
         ${fld('Синоніми (через ",")', inp('aliases'), 'Наприклад: DC, DC Comics')}
         ${fld('Вевсайт', inp('website', 'url'))}
         ${imgField('image', 'Логотип видавництва')}
@@ -257,7 +436,38 @@ function renderForm(typeId) {
   const area = document.getElementById('gam-form-area');
   const builder = FORMS[typeId];
   area.innerHTML = builder ? builder() : '';
-  initImageHandlers(area);
+  initFormHandlers(area);
+}
+
+function initFormHandlers(area) {
+    initImageHandlers(area);
+    
+    area.querySelectorAll('.btn-theme-suggest').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const themeId = parseInt(btn.dataset.id);
+            const listEl = document.getElementById('themes-list');
+            const cb = listEl ? listEl.querySelector(`input[value="${themeId}"]`) : null;
+            
+            if (cb) {
+                cb.checked = !cb.checked;
+                cb.dispatchEvent(new Event('change'));
+            } else {
+                if (_selectedSuggestedThemeIds.has(themeId)) {
+                    _selectedSuggestedThemeIds.delete(themeId);
+                    btn.classList.remove('active');
+                    btn.style.background = 'var(--bg-card)';
+                    btn.style.color = 'var(--text-muted)';
+                    btn.style.borderColor = 'var(--border)';
+                } else {
+                    _selectedSuggestedThemeIds.add(themeId);
+                    btn.classList.add('active');
+                    btn.style.background = 'rgba(59, 130, 246, 0.15)';
+                    btn.style.color = '#3b82f6';
+                    btn.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+                }
+            }
+        });
+    });
 }
 
 function initImageHandlers(area) {
@@ -339,7 +549,7 @@ async function handleSubmit() {
         data[imgFieldName] = uploadRes.url;
     }
 
-    await submitData(_currentType, data);
+    const result = await submitData(_currentType, data);
 
     status.style.display = 'flex';
     status.style.alignItems = 'center';
@@ -349,7 +559,29 @@ async function handleSubmit() {
     status.style.color = '#10b981';
     status.innerHTML = `${ICON.check} Збережено успішно`;
 
-    setTimeout(closeGlobalAddModal, 1000);
+    setTimeout(() => {
+      let path = null;
+      if (result && result.id) {
+        if (_currentType === 'volume') path = `#/volumes/${result.id}`;
+        else if (_currentType === 'issue' || _currentType === 'manga-chapter') path = `#/issues/${result.id}`;
+        else if (_currentType === 'collection') path = `#/collections/${result.id}`;
+        else if (_currentType === 'event') path = `#/events/${result.id}`;
+      }
+      
+      const typeForRedirect = _currentType;
+      closeGlobalAddModal();
+
+      if (result && result.id) {
+        const supportedTypes = ['volume', 'issue', 'collection', 'event', 'manga-chapter'];
+        if (supportedTypes.includes(typeForRedirect) && path) {
+          window.location.hash = path;
+        } else {
+          window.location.reload();
+        }
+      } else {
+        window.location.reload();
+      }
+    }, 1000);
   } catch (err) {
     status.style.display = 'flex';
     status.style.alignItems = 'center';
@@ -376,6 +608,15 @@ function collectFormData(area) {
     const val = el.value.trim();
     data[el.name] = val === '' ? null : val;
   });
+
+  const listEl = area.querySelector('#themes-list');
+  if (listEl) {
+      const checked = listEl.querySelectorAll('input[type="checkbox"]:checked');
+      data.theme_ids = Array.from(checked).map(cb => parseInt(cb.value));
+  } else {
+      data.theme_ids = [];
+  }
+
   return data;
 }
 
@@ -402,6 +643,7 @@ async function submitData(typeId, data) {
 
 export function openGlobalAddModal() {
   ensureModal();
+  if (_modal.style.display === 'flex') return;
   _modal.style.display = 'flex';
   showTypeSelection();
 }

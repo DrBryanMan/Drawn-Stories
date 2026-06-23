@@ -11,6 +11,8 @@ async def get_stats():
     issues      = db.get_one("SELECT COUNT(*) as count FROM issues")["count"]
     publishers  = db.get_one("SELECT COUNT(*) as count FROM publishers")["count"]
     themes      = db.get_one("SELECT COUNT(*) as count FROM themes")["count"]
+    characters  = db.get_one("SELECT COUNT(*) as count FROM characters")["count"]
+    authors     = db.get_one("SELECT COUNT(*) as count FROM persons")["count"]
     
     return { 
         "volumes": volumes, 
@@ -18,6 +20,6 @@ async def get_stats():
         "issues": issues, 
         "publishers": publishers,
         "themes": themes,
-        "characters": 0,
-        "authors": 0
+        "characters": characters,
+        "authors": authors
     }

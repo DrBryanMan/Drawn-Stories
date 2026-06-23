@@ -7,28 +7,59 @@ import { openGlobalAddModal } from './components/GlobalAddModal.js';
 const NAV = [
   {
     label: 'Каталог',
-    icon: `<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-           <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>`,
-    children: [
-      { 
-        label: 'Комікси', 
-        desc: 'Західні графічні історії',
-        icon: '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>',
-        href: '#/catalog?content_type=comics', route: '/catalog', contentType: 'comics' 
+    icon: `<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>`,
+    sections: [
+      {
+        title: 'Серії',
+        links: [
+          { 
+            label: 'Комікси', 
+            desc: 'Західні графічні історії',
+            icon: '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>',
+            href: '#/catalog?content_type=comics', route: '/catalog', contentType: 'comics' 
+          },
+          { 
+            label: 'Манґа', 
+            desc: 'Східна класика жанру',
+            icon: '<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',
+            href: '#/catalog?content_type=manga', route: '/catalog', contentType: 'manga' 
+          }
+        ]
       },
-      { 
-        label: 'Манґа', 
-        desc: 'Східна класика жанру',
-        icon: '<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',
-        href: '#/catalog?content_type=manga', route: '/catalog', contentType: 'manga' 
+      {
+        title: 'Інший контент',
+        links: [
+          {
+            label: 'Видавництва',
+            desc: 'Каталог видавців та команд',
+            icon: '<rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/>',
+            href: '#/publishers',
+            route: '/publishers'
+          },
+          {
+            label: 'Події',
+            desc: 'Комікс-івенти та кросовери',
+            icon: '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/>',
+            href: '#/events',
+            route: '/events'
+          },
+          {
+            label: 'Персонажі',
+            desc: 'Герої та лиходії всесвітів',
+            icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+            href: '#/characters',
+            route: '/characters'
+          },
+          {
+            label: 'Персонал',
+            desc: 'Сценаристи, художники та автори',
+            icon: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+            href: '#/personnel',
+            route: '/personnel'
+          }
+        ]
       }
     ]
-  },
-  {
-    label: 'Видавництва',
-    icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
-    href: '#/publishers',
-    route: '/publishers'
   }
 ];
 
@@ -69,20 +100,27 @@ export async function initShell() {
         <nav class="header-nav" id="main-nav">
           ${NAV.map(item => `
             <div class="nav-dropdown">
-              <a class="nav-link ${item.children ? 'nav-dropdown-trigger' : ''}" href="${item.href || '#/catalog'}" ${!item.children ? `data-route="${item.route}"` : ''}>
+              <a class="nav-link ${item.sections ? 'nav-dropdown-trigger' : ''}" href="${item.sections ? 'javascript:void(0)' : (item.href || '#/catalog')}" ${!item.sections ? `data-route="${item.route}"` : ''}>
                 ${icon(item.icon)}<span>${item.label}</span>
-                ${item.children ? icon('<path d="m6 9 6 6 6-6"/>') : ''}
+                ${item.sections ? icon('<path d="m6 9 6 6 6-6"/>') : ''}
               </a>
-              ${item.children ? `
-              <div class="nav-dropdown-content ${item.children ? 'mega-menu' : ''}">
-                ${item.children.map(child => `
-                  <a class="nav-dropdown-link" href="${child.href}" data-route="${child.route}" data-content-type="${child.contentType}">
-                    ${child.icon ? icon(child.icon, 20) : ''}
-                    <div class="nav-dropdown-text">
-                      <div class="nav-dropdown-label">${child.label}</div>
-                      ${child.desc ? `<div class="nav-dropdown-desc">${child.desc}</div>` : ''}
+              ${item.sections ? `
+              <div class="nav-dropdown-content mega-menu">
+                ${item.sections.map(section => `
+                  <div class="mega-menu-section">
+                    <div class="nav-dropdown-header">${section.title}</div>
+                    <div class="mega-menu-grid">
+                      ${section.links.map(link => `
+                        <a class="nav-dropdown-link" href="${link.href}" data-route="${link.route}" ${link.contentType ? `data-content-type="${link.contentType}"` : ''}>
+                          ${link.icon ? icon(link.icon, 20) : ''}
+                          <div class="nav-dropdown-text">
+                            <div class="nav-dropdown-label">${link.label}</div>
+                            ${link.desc ? `<div class="nav-dropdown-desc">${link.desc}</div>` : ''}
+                          </div>
+                        </a>
+                      `).join('')}
                     </div>
-                  </a>
+                  </div>
                 `).join('')}
               </div>
               ` : ''}

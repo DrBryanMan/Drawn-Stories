@@ -12,7 +12,8 @@ TYPE_MAP = {
     "collection": "collections",
     "reading-order": "reading-orders",
     "event": "events",
-    "manga-chapter": "issues"
+    "manga-chapter": "issues",
+    "publisher": "publishers"
 }
 
 # Resolve target directory relative to this file
@@ -25,7 +26,7 @@ async def upload_image(type_id: str, file: UploadFile = File(...)):
     
     # Check extension
     ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
+    if ext not in [".webp"]:
         raise HTTPException(status_code=400, detail="Unsupported file format")
     
     # Target directory

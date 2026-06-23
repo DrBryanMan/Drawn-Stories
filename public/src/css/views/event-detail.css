@@ -154,6 +154,13 @@
   border-color: rgba(255, 255, 255, .2);
 }
 
+.event-btn--sm {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+  gap: 5px;
+}
+
 .event-body {
   margin-top: 42px;
 }
@@ -161,10 +168,17 @@
 .event-section-heading {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
   margin-bottom: 18px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border-s);
+}
+
+.event-section-heading__left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .event-section-heading h2 {

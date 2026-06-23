@@ -71,8 +71,7 @@ export function renderIssueGridCard(item, options = {}) {
         : '';
 
     return `
-        <div class="issue-grid-card ${options.draggable ? 'is-draggable' : ''}" 
-             ${link ? `onclick="location.hash='${link}'" style="cursor: pointer;"` : ''}
+        <a href="${link || '#'}" class="issue-grid-card ${options.draggable ? 'is-draggable' : ''}" 
              ${options.draggable ? `data-id="${item.id}"` : ''}>
             <div class="issue-grid-cover-wrap">
                 ${cover
@@ -114,6 +113,6 @@ export function renderIssueGridCard(item, options = {}) {
                     </div>
                 ` : ''}
             </div>
-        </div>
+        </a>
     `;
 }

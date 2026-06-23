@@ -1,0 +1,82 @@
+.personnel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1.5rem;
+}
+.personnel-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border-s);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  transition: transform var(--t), box-shadow var(--t), border-color var(--t);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, .01);
+}
+.personnel-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: 0 10px 24px rgba(108, 92, 231, .06);
+}
+.person-cover-wrap {
+  position: relative;
+  aspect-ratio: 2/3;
+  background: var(--bg-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.person-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--t-slow);
+}
+.personnel-card:hover .person-cover {
+  transform: scale(1.03);
+}
+.person-cover-empty {
+  color: var(--text-muted);
+}
+.person-info {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+.person-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.person-meta {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.person-stats {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-s);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+.person-stat-label {
+  color: var(--text-muted);
+}
+.person-stat-value {
+  color: var(--accent);
+  font-weight: 700;
+}

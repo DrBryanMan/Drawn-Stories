@@ -109,7 +109,7 @@ async def get_volume_detail(volume_id: int, request: Request):
     collections = db.get_all(
         """
         SELECT c.*, 'collection' as type,
-               EXISTS(SELECT 1 FROM user_collections uc WHERE uc.collection_id = c.id AND uc.user_id = ?) as is_owned
+               EXISTS(SELECT 1 FROM user_volumes_collection uc WHERE uc.collection_id = c.id AND uc.user_id = ?) as is_owned
         FROM collections c
         WHERE c.volume_id = ?
         """,
@@ -668,7 +668,7 @@ async def get_volume_collections_from_issues(volume_id: int, request: Request):
     collections = db.get_all(
         f"""
         SELECT DISTINCT c.*, pv.id as parent_vol_id, pv.name as parent_vol_name, pv.lang as parent_vol_lang,
-               EXISTS(SELECT 1 FROM user_collections uc WHERE uc.collection_id = c.id AND uc.user_id = ?) as is_owned
+               EXISTS(SELECT 1 FROM user_volumes_collection uc WHERE uc.collection_id = c.id AND uc.user_id = ?) as is_owned
         FROM collections c
         LEFT JOIN collection_issues ci ON c.id = ci.collection_id
         LEFT JOIN issues i ON ci.issue_id = i.id

@@ -1,0 +1,88 @@
+/* public/src/css/components/scrape-progress-modal.css */
+
+.scrape-progress-modal {
+  width: 100%;
+  max-width: 600px;
+}
+
+.spm-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.spm-status-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+}
+
+.spm-status-icon svg.spin-icon {
+  animation: spm-spin 1.8s linear infinite;
+}
+
+.spm-status-success {
+  color: var(--green, #10b981);
+}
+
+.spm-status-error {
+  color: var(--red, #ef4444);
+}
+
+.scrape-terminal {
+  background-color: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: var(--r, 8px);
+  padding: 16px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  max-height: 320px;
+  min-height: 150px;
+  overflow-y: auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.terminal-line {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.terminal-system {
+  color: #38bdf8; /* light blue */
+}
+
+.terminal-error {
+  color: #f87171; /* light red */
+  font-weight: 600;
+}
+
+.terminal-warning {
+  color: #fbbf24; /* light yellow */
+}
+
+.terminal-success {
+  color: #34d399; /* light green */
+  font-weight: 600;
+}
+
+.terminal-info {
+  color: #cbd5e1; /* cool gray */
+}
+
+@keyframes spm-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

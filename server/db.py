@@ -16,8 +16,9 @@ class Database:
     def connect(self):
         self.conn = sqlite3.connect(self.path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
-        # Enable WAL mode for better concurrency
+        # Enable WAL mode and set busy timeout for better concurrency
         self.conn.execute("PRAGMA journal_mode = WAL")
+        self.conn.execute("PRAGMA busy_timeout = 30000")
         self.conn.execute("PRAGMA foreign_keys = ON")
         
         # Add custom functions if needed (like ULOWER in Admin project)

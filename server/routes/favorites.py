@@ -61,7 +61,7 @@ async def get_user_favorites(username: str):
             results["issue"] = data
         elif ctype == "personnel":
              data = db.get_all(f"""
-                SELECT *, 'personnel' as type FROM personnel WHERE id IN ({placeholders})
+                SELECT *, 'personnel' as type FROM persons WHERE id IN ({placeholders})
             """, ids)
              results["personnel"] = data
         elif ctype == "character":

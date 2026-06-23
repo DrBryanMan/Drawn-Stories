@@ -97,6 +97,7 @@ function renderModalLayout(layout = 'vertical') {
                 <label class="aim-label">Назва тому</label>
                 <input type="text" id="aim-volume" class="aim-input" placeholder="Том...">
             </div>
+            ${_config?.extraFiltersHTML || ''}
         </div>
     `;
 
@@ -170,6 +171,7 @@ function updateCheckboxesState() {
 
 export function openAddIssueModal(config) {
     ensureModal();
+    if (_modal.style.display === 'flex') return;
     _config = config;
     _selectedIssueIds.clear();
     _currentSearchResults = [];

@@ -13,6 +13,9 @@ import { renderSettings } from './views/settings.js';
 import { renderCollectionDetail } from './views/collectionDetail.js';
 import { renderIssueDetail } from './views/issueDetail.js';
 import { renderEventDetail } from './views/eventDetail.js';
+import { renderEvents } from './views/events.js';
+import { renderCharacters } from './views/characters.js';
+import { renderPersonnel } from './views/personnel.js';
 
 async function start() {
   const main = await initShell();
@@ -23,8 +26,11 @@ async function start() {
     .on('/volumes/:id',   (_path, params, _query) => renderVolumeDetail(main, params))
     .on('/collections/:id', (_path, params) => renderCollectionDetail(main, params))
     .on('/issues/:id',    (_path, params) => renderIssueDetail(main, params))
+    .on('/events',        (_path, _params, query) => renderEvents(main, query))
     .on('/events/:id',    (_path, params) => renderEventDetail(main, params))
     .on('/publishers',    (_path, _params, query) => renderPublishers(main, query))
+    .on('/characters',    (_path, _params, query) => renderCharacters(main, query))
+    .on('/personnel',     (_path, _params, query) => renderPersonnel(main, query))
     .on('/auth',          () => renderAuth(main))
     .on('/bookmarks',     () => renderBookmarks(main))
     .on('/settings',      () => {

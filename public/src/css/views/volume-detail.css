@@ -1062,6 +1062,8 @@
   background: var(--bg-card);
   overflow: hidden;
   transition: all var(--t);
+  text-decoration: none;
+  color: inherit;
 }
 
 .issue-grid-card:hover {

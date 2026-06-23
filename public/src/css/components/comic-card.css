@@ -75,7 +75,11 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.comic-card:hover { background: var(--bg-card-h); border-color: var(--border); transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,.1); }
+.comic-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, .1);
+}
 .comic-cover {
   width: 100%; aspect-ratio: 2/3; object-fit: cover;
   background: var(--bg-2); display: block;
@@ -92,7 +96,7 @@
   width: 32px; height: 32px; opacity: .4;
 }
 .comic-body   { padding: .5em; text-align: center; }
-.comic-title  { font-size: clamp(0.75rem, 8cqw, 1rem); font-weight: 700; color: var(--text); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 6px; }
+.comic-title  { font-size: clamp(0.75rem, 8cqw, 1rem); color: var(--text); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 6px; }
 
 .comic-meta-pill {
   display: inline-flex;

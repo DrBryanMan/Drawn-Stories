@@ -1,6 +1,9 @@
 import { API } from '../helpers/api.js';
 import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { currentUser } from '../shell.js';
+import { openAddIssueModal } from '../components/addIssueModal.js';
+import { createBreadcrumbs } from '../components/Breadcrumbs.js';
+
 
 const ICON = {
     chevronRight: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
@@ -9,6 +12,11 @@ const ICON = {
     plus: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>',
     trash: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>',
     image: '<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>',
+    type: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>',
+    alignLeft: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="17" y1="18" x2="3" y2="18"></line></svg>',
+    x: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+    layers: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>',
+    book: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>',
 };
 
 const IMPORTANCE_LABELS = {
@@ -107,72 +115,63 @@ function issueRowHTML(issue, index, total, canModerate) {
 
 function modalShell(id, title, body) {
     return `
-        <div class="event-modal" id="${id}" hidden>
-            <div class="event-modal__backdrop" data-close-modal="${id}"></div>
-            <div class="event-modal__panel" role="dialog" aria-modal="true" aria-label="${escapeHtmlAttribute(title)}">
-                <div class="event-modal__header">
-                    <h2>${escapeHtmlAttribute(title)}</h2>
-                    <button class="event-modal__close" type="button" data-close-modal="${id}">x</button>
+        <div class="ds-modal-overlay" id="${id}" style="display: none;">
+            <div class="ds-modal ds-modal--large">
+                <div class="ds-modal-header">
+                    <div class="ds-modal-title">${escapeHtmlAttribute(title)}</div>
+                    <button class="ds-modal-close" type="button" data-close-modal="${id}">&times;</button>
                 </div>
-                ${body}
+                <div class="ds-modal-body" style="display: block;">
+                    ${body}
+                </div>
             </div>
         </div>
     `;
 }
 
 function editModalHTML(event) {
-    return modalShell('event-edit-modal', 'Редагувати подію', `
-        <form class="event-form" id="event-edit-form">
-            <label>Назва<input name="name" value="${escapeHtmlAttribute(event.name || '')}" required></label>
-            <label>Зображення<input name="cv_img" value="${escapeHtmlAttribute(event.cv_img || '')}"></label>
-            <div class="event-form-grid">
-                <label>Початок<input name="start_year" type="number" value="${event.start_year || ''}"></label>
-                <label>Кінець<input name="end_year" type="number" value="${event.end_year || ''}"></label>
-            </div>
-            <label>Опис<textarea name="description" rows="5">${escapeHtmlAttribute(event.description || '')}</textarea></label>
-            <div class="event-form-actions">
-                <button class="event-btn event-btn--ghost" type="button" data-close-modal="event-edit-modal">Скасувати</button>
-                <button class="event-btn event-btn--primary" type="submit">Зберегти</button>
-            </div>
-        </form>
-    `);
-}
-
-function addIssueModalHTML() {
-    return modalShell('event-add-issue-modal', 'Додати випуск до події', `
-        <div class="event-add-issue">
-            <div class="event-search-row">
-                <input id="event-issue-search" placeholder="Пошук випуску або тому">
-                <select id="event-issue-importance">${importanceOptions('main')}</select>
-            </div>
-            <div class="event-issue-results" id="event-issue-results">
-                <div class="event-empty-inline">Введіть назву випуску або тому.</div>
-            </div>
-        </div>
-    `);
-}
-
-function searchResultHTML(issue, existingIds) {
-    const cover = comicVineImageUrl(issue.cv_img);
-    const title = escapeHtmlAttribute(issue.name || 'Без назви');
-    const volume = issue.volume_name_uk || issue.volume_name || '';
-    const isExisting = existingIds.has(issue.id);
-
     return `
-        <div class="event-search-result">
-            <a class="event-search-cover" href="#/issues/${issue.id}">
-                ${cover ? `<img src="${escapeHtmlAttribute(cover)}" alt="" loading="lazy">` : `<span>${ICON.image}</span>`}
-            </a>
-            <div class="event-search-info">
-                <strong>${issue.issue_number ? `#${escapeHtmlAttribute(issue.issue_number)} ` : ''}${title}</strong>
-                ${volume ? `<span>${escapeHtmlAttribute(volume)}</span>` : ''}
+        <div class="ds-modal-overlay" id="event-edit-modal" style="display: none;">
+            <div class="ds-modal ds-modal--large">
+                <div class="ds-modal-header">
+                    <div class="ds-modal-title">${ICON.edit} Редагування події</div>
+                    <button class="ds-modal-close" type="button" data-close-modal="event-edit-modal">&times;</button>
+                </div>
+                <form id="event-edit-form">
+                    <div class="ds-modal-body" style="display: block;">
+                        <div class="admin-form-grid">
+                            <div class="admin-form-group admin-form-group--full">
+                                <label class="admin-label">${ICON.type} Назва</label>
+                                <input type="text" name="name" class="admin-input" value="${escapeHtmlAttribute(event.name || '')}" required>
+                            </div>
+                            <div class="admin-form-group admin-form-group--full">
+                                <label class="admin-label">${ICON.image} Зображення (URL)</label>
+                                <input type="url" name="cv_img" class="admin-input" value="${escapeHtmlAttribute(event.cv_img || '')}">
+                            </div>
+                            <div class="admin-form-group">
+                                <label class="admin-label">${ICON.calendar} Рік початку</label>
+                                <input type="number" name="start_year" class="admin-input" value="${event.start_year || ''}">
+                            </div>
+                            <div class="admin-form-group">
+                                <label class="admin-label">${ICON.calendar} Рік завершення</label>
+                                <input type="number" name="end_year" class="admin-input" value="${event.end_year || ''}">
+                            </div>
+                            <div class="admin-form-group admin-form-group--full">
+                                <label class="admin-label">${ICON.alignLeft} Короткий опис</label>
+                                <textarea name="description" class="admin-textarea" rows="5">${escapeHtmlAttribute(event.description || '')}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ds-modal-footer">
+                        <button class="btn-admin btn-admin--secondary" type="button" data-close-modal="event-edit-modal">Скасувати</button>
+                        <button class="btn-admin btn-admin--primary" type="submit">Зберегти зміни</button>
+                    </div>
+                </form>
             </div>
-            <button class="event-btn event-btn--primary event-add-result-btn" type="button" data-issue-id="${issue.id}" ${isExisting ? 'disabled' : ''}>
-                ${isExisting ? 'Додано' : 'Додати'}
-            </button>
         </div>
     `;
 }
+
 
 async function loadEvent(eventId) {
     const [event, issuesRes] = await Promise.all([
@@ -213,12 +212,8 @@ export async function renderEventDetail(container, params = {}) {
 
     container.innerHTML = `
         <div class="event-detail">
-            <div class="container" style="padding-top:20px;">
-                <nav class="breadcrumbs" aria-label="Навігація">
-                    <a href="#/">Drawn Stories</a>
-                    <span class="breadcrumb-separator">${ICON.chevronRight}</span>
-                    <span>${escapeHtmlAttribute(event.name || 'Подія')}</span>
-                </nav>
+            <div class="container">
+                ${createBreadcrumbs([{ label: event.name || 'Подія' }])}
             </div>
 
             <section class="event-hero-band" ${cover ? `style="--event-bg:url('${escapeHtmlAttribute(cover)}')"` : ''}>
@@ -234,21 +229,27 @@ export async function renderEventDetail(container, params = {}) {
                             <span>${issues.length} випусків</span>
                         </div>
                         ${event.description ? `<div class="event-description">${event.description}</div>` : ''}
-                        ${canModerate ? `
-                            <div class="event-actions">
-                                <button class="event-btn event-btn--primary" id="event-add-issue-btn" type="button">${ICON.plus} Додати випуск</button>
-                                <button class="event-btn event-btn--ghost" id="event-edit-btn" type="button">${ICON.edit} Редагувати</button>
-                            </div>
-                        ` : ''}
+
                     </div>
                 </div>
             </section>
 
+            ${canModerate ? `
+                <div class="volume-hero-admin-actions">
+                    <button class="btn-admin btn-admin--secondary" id="event-edit-btn" title="Редагувати">${ICON.edit}</button>
+                </div>
+            ` : ''}
+
             <div class="container event-body">
                 <section class="event-issues-section">
                     <div class="event-section-heading">
-                        <h2>Випуски події</h2>
-                        <span>${issues.length}</span>
+                        <div class="event-section-heading__left">
+                            <h2>Випуски події</h2>
+                            <span>${issues.length}</span>
+                        </div>
+                        ${canModerate ? `
+                            <button class="readlist-btn" id="btn-add-issue" style="height: 34px; padding: 0 12px; font-size: 13px; gap: 6px; background: var(--bg-card); border: 1px solid var(--border);">${ICON.plus} Додати випуск</button>
+                        ` : ''}
                     </div>
                     ${issues.length ? `
                         <div class="event-table-wrap">
@@ -272,7 +273,7 @@ export async function renderEventDetail(container, params = {}) {
                 </section>
             </div>
 
-            ${canModerate ? `${editModalHTML(event)}${addIssueModalHTML()}` : ''}
+            ${canModerate ? `${editModalHTML(event)}` : ''}
         </div>
     `;
 
@@ -280,11 +281,14 @@ export async function renderEventDetail(container, params = {}) {
 }
 
 function openModal(id) {
-    document.getElementById(id)?.removeAttribute('hidden');
+    const el = document.getElementById(id);
+    if (!el || el.style.display === 'flex') return;
+    el.style.display = 'flex';
 }
 
 function closeModal(id) {
-    document.getElementById(id)?.setAttribute('hidden', '');
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
 }
 
 function bindEventDetail(container, eventId, existingIds, canModerate) {
@@ -295,7 +299,35 @@ function bindEventDetail(container, eventId, existingIds, canModerate) {
     });
 
     container.querySelector('#event-edit-btn')?.addEventListener('click', () => openModal('event-edit-modal'));
-    container.querySelector('#event-add-issue-btn')?.addEventListener('click', () => openModal('event-add-issue-modal'));
+    container.querySelector('#btn-add-issue')?.addEventListener('click', () => {
+        openAddIssueModal({
+            title: 'Додати випуск до події',
+            layout: 'vertical',
+            alreadyIds: existingIds,
+            extraFiltersHTML: `
+                <div class="aim-filter-group" style="flex: 1;">
+                    <label class="aim-label">Важливість</label>
+                    <select id="event-issue-importance" class="aim-input">${importanceOptions('main')}</select>
+                </div>
+            `,
+            onAdd: async (issueIds) => {
+                const importance = document.getElementById('event-issue-importance')?.value || 'main';
+                for (const issueId of issueIds) {
+                    await API.post(`/events/${eventId}/issues`, {
+                        issue_id: issueId,
+                        importance: importance,
+                    });
+                }
+                await renderEventDetail(container, { id: eventId });
+            }
+        });
+    });
+
+    container.querySelectorAll('.ds-modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', e => {
+            if (e.target === overlay) closeModal(overlay.id);
+        });
+    });
 
     container.querySelector('#event-edit-form')?.addEventListener('submit', async event => {
         event.preventDefault();
@@ -330,40 +362,8 @@ function bindEventDetail(container, eventId, existingIds, canModerate) {
         });
     });
 
-    const searchInput = container.querySelector('#event-issue-search');
-    let searchTimer = null;
-    searchInput?.addEventListener('input', () => {
-        clearTimeout(searchTimer);
-        searchTimer = setTimeout(() => searchIssues(container, eventId, existingIds), 250);
-    });
 }
 
 async function patchEventItem(eventId, linkId, body) {
     return API.patch(`/events/${eventId}/items/${linkId}`, body);
-}
-
-async function searchIssues(container, eventId, existingIds) {
-    const query = container.querySelector('#event-issue-search')?.value.trim();
-    const results = container.querySelector('#event-issue-results');
-    if (!query || query.length < 2) {
-        results.innerHTML = `<div class="event-empty-inline">Введіть щонайменше 2 символи.</div>`;
-        return;
-    }
-
-    const data = await API.get('/issues', { name: query, limit: 12 });
-    const items = data.data || data.items || data || [];
-    results.innerHTML = items.length
-        ? items.map(issue => searchResultHTML(issue, existingIds)).join('')
-        : `<div class="event-empty-inline">Нічого не знайдено.</div>`;
-
-    results.querySelectorAll('.event-add-result-btn').forEach(button => {
-        button.addEventListener('click', async () => {
-            const importance = container.querySelector('#event-issue-importance')?.value || 'main';
-            await API.post(`/events/${eventId}/issues`, {
-                issue_id: Number(button.dataset.issueId),
-                importance,
-            });
-            await renderEventDetail(container, { id: eventId });
-        });
-    });
 }

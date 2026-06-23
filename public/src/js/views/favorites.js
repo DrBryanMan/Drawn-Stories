@@ -2,6 +2,7 @@ import { API } from '../helpers/api.js';
 import { currentUser } from '../shell.js';
 import { createComicCard } from '../components/ComicCard.js';
 import { escapeHtmlAttribute, comicVineImageUrl } from '../helpers/image.js';
+import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 
 export async function renderFavorites(main, params) {
     const username = params.username;
@@ -11,17 +12,10 @@ export async function renderFavorites(main, params) {
         <div class="bookmarks-page">
             <div class="container">
                 <div class="page-header">
-                    <nav class="breadcrumbs" aria-label="Навігація">
-                        <a href="#/">Drawn Stories</a>
-                        <span class="breadcrumb-separator">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                        </span>
-                        <a href="#/user/${escapeHtmlAttribute(username)}/lists">Користувач</a>
-                        <span class="breadcrumb-separator">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                        </span>
-                        <span>Обране</span>
-                    </nav>
+                    ${createBreadcrumbs([
+                        { label: 'Користувач', href: `#/user/${escapeHtmlAttribute(username)}/lists` },
+                        { label: 'Обране' }
+                    ])}
                     <h1 class="page-title">Обране ${escapeHtmlAttribute(username)}</h1>
                     <p class="bookmarks-subtitle" style="margin-top: 4px; color: var(--text-muted); font-size: 14px;">Колекція найкращого контенту за версією ${escapeHtmlAttribute(username)}</p>
                 </div>

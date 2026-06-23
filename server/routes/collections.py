@@ -16,7 +16,7 @@ def get_current_user_id(request: Request):
     return user['id']
 
 @router.get("")
-async def get_collections(username: Optional[str] = None, user_id: Optional[int] = Depends(get_current_user_id)):
+async def get_collections(username: Optional[str] = None, content_type: str = "collection", user_id: Optional[int] = Depends(get_current_user_id)):
     db = get_db()
     
     target_user_id = user_id
@@ -29,33 +29,64 @@ async def get_collections(username: Optional[str] = None, user_id: Optional[int]
     if not target_user_id:
         raise HTTPException(status_code=401, detail="Not logged in")
     
-    query = """
-    SELECT
-        v.id as volume_id,
-        v.name as volume_name,
-        v.name_uk as volume_name_uk,
-        p.name as publisher_name,
-        c.id as collection_id,
-        c.name as collection_name,
-        c.issue_number,
-        c.cv_img,
-        uc.status as user_status,
-        uc.barter as user_barter
-    FROM volumes v
-    JOIN collections c ON c.volume_id = v.id
-    LEFT JOIN publishers p ON v.publisher = p.id
-    LEFT JOIN user_collections uc ON uc.collection_id = c.id AND uc.user_id = ?
-    WHERE v.id IN (
-        SELECT DISTINCT v2.id
-        FROM volumes v2
-        JOIN collections c2 ON c2.volume_id = v2.id
-        JOIN user_collections uc2 ON uc2.collection_id = c2.id
-        WHERE uc2.user_id = ?
-    )
-    ORDER BY v.name_uk, v.name, c.issue_number
-    """
-
-    rows = db.get_all(query, [target_user_id, target_user_id])
+    if content_type == "collection":
+        query = """
+        SELECT
+            v.id as volume_id,
+            v.name as volume_name,
+            v.name_uk as volume_name_uk,
+            p.name as publisher_name,
+            c.id as collection_id,
+            c.name as collection_name,
+            c.issue_number,
+            c.cv_img,
+            uc.status as user_status,
+            uc.barter as user_barter,
+            uc.created_at as added_at
+        FROM volumes v
+        JOIN collections c ON c.volume_id = v.id
+        LEFT JOIN publishers p ON v.publisher = p.id
+        LEFT JOIN user_volumes_collection uc ON uc.collection_id = c.id AND uc.user_id = ?
+        WHERE v.id IN (
+            SELECT DISTINCT v2.id
+            FROM volumes v2
+            JOIN collections c2 ON c2.volume_id = v2.id
+            JOIN user_volumes_collection uc2 ON uc2.collection_id = c2.id
+            WHERE uc2.user_id = ?
+        )
+        ORDER BY uc.created_at DESC, c.issue_number DESC
+        """
+        rows = db.get_all(query, [target_user_id, target_user_id])
+    elif content_type == "issue":
+        query = """
+        SELECT
+            v.id as volume_id,
+            v.name as volume_name,
+            v.name_uk as volume_name_uk,
+            p.name as publisher_name,
+            i.id as issue_id,
+            i.name as issue_name,
+            i.issue_number,
+            i.cv_img,
+            uc.status as user_status,
+            uc.barter as user_barter,
+            uc.created_at as added_at
+        FROM volumes v
+        JOIN issues i ON i.volume_id = v.id
+        LEFT JOIN publishers p ON v.publisher = p.id
+        LEFT JOIN user_issues_collection uc ON uc.issue_id = i.id AND uc.user_id = ?
+        WHERE v.id IN (
+            SELECT DISTINCT v2.id
+            FROM volumes v2
+            JOIN issues i2 ON i2.volume_id = v2.id
+            JOIN user_issues_collection uc2 ON uc2.issue_id = i2.id
+            WHERE uc2.user_id = ?
+        )
+        ORDER BY uc.created_at DESC, CAST(i.issue_number AS REAL) DESC, i.issue_number DESC
+        """
+        rows = db.get_all(query, [target_user_id, target_user_id])
+    else:
+        raise HTTPException(status_code=400, detail="Invalid content type")
     
     # Group by volume
     volumes = {}
@@ -70,12 +101,13 @@ async def get_collections(username: Optional[str] = None, user_id: Optional[int]
                 "items": []
             }
         volumes[vid]["items"].append({
-            "id": row['collection_id'],
-            "name": row['collection_name'],
+            "id": row['issue_id'] if content_type == 'issue' else row['collection_id'],
+            "name": row['issue_name'] if content_type == 'issue' else row['collection_name'],
             "issue_number": row['issue_number'],
             "cv_img": row['cv_img'],
             "status": row['user_status'],
-            "barter": bool(row['user_barter'])
+            "barter": bool(row['user_barter']),
+            "added_at": row['added_at']
         })
         
     return list(volumes.values())
@@ -116,36 +148,65 @@ class ToggleCollectionRequest(BaseModel):
     status: Optional[str] = "get"
     barter: Optional[bool] = None
 
+class ToggleIssueCollectionRequest(BaseModel):
+    issue_id: int
+    status: Optional[str] = "get"
+    barter: Optional[bool] = None
+
 @router.post("/toggle")
 async def toggle_collection(req: ToggleCollectionRequest, user_id: int = Depends(get_current_user_id)):
     db = get_db()
 
-    existing = db.get_one("SELECT status, barter FROM user_collections WHERE user_id = ? AND collection_id = ?", [user_id, req.collection_id])
+    existing = db.get_one("SELECT status, barter FROM user_volumes_collection WHERE user_id = ? AND collection_id = ?", [user_id, req.collection_id])
 
     if existing:
         if req.barter is not None:
             # Update barter status
-            db.execute("UPDATE user_collections SET barter = ? WHERE user_id = ? AND collection_id = ?", [int(req.barter), user_id, req.collection_id])
+            db.execute("UPDATE user_volumes_collection SET barter = ? WHERE user_id = ? AND collection_id = ?", [int(req.barter), user_id, req.collection_id])
             return {"status": "updated", "barter": req.barter}
 
         if existing['status'] == req.status:
             # Remove if same status
-            db.execute("DELETE FROM user_collections WHERE user_id = ? AND collection_id = ?", [user_id, req.collection_id])
+            db.execute("DELETE FROM user_volumes_collection WHERE user_id = ? AND collection_id = ?", [user_id, req.collection_id])
             return {"status": "removed"}
         else:
             # Update status
-            db.execute("UPDATE user_collections SET status = ? WHERE user_id = ? AND collection_id = ?", [req.status, user_id, req.collection_id])
+            db.execute("UPDATE user_volumes_collection SET status = ? WHERE user_id = ? AND collection_id = ?", [req.status, user_id, req.collection_id])
             return {"status": "updated", "new_status": req.status}
     else:
         # Add new
-        db.execute("INSERT INTO user_collections (user_id, collection_id, status, barter) VALUES (?, ?, ?, ?)", 
+        db.execute("INSERT INTO user_volumes_collection (user_id, collection_id, status, barter) VALUES (?, ?, ?, ?)", 
                    [user_id, req.collection_id, req.status, int(req.barter or False)])
         return {"status": "added", "new_status": req.status}
+
+@router.post("/issue/toggle")
+async def toggle_issue_collection(req: ToggleIssueCollectionRequest, user_id: int = Depends(get_current_user_id)):
+    db = get_db()
+
+    existing = db.get_one("SELECT status, barter FROM user_issues_collection WHERE user_id = ? AND issue_id = ?", [user_id, req.issue_id])
+
+    if existing:
+        if req.barter is not None:
+            # Update barter status
+            db.execute("UPDATE user_issues_collection SET barter = ? WHERE user_id = ? AND issue_id = ?", [int(req.barter), user_id, req.issue_id])
+            return {"status": "updated", "barter": req.barter}
+
+        if existing['status'] == req.status:
+            # Remove if same status
+            db.execute("DELETE FROM user_issues_collection WHERE user_id = ? AND issue_id = ?", [user_id, req.issue_id])
+            return {"status": "removed"}
+        else:
+            # Update status
+            db.execute("UPDATE user_issues_collection SET status = ? WHERE user_id = ? AND issue_id = ?", [req.status, user_id, req.issue_id])
+            return {"status": "updated", "new_status": req.status}
+    else:
+        # Add new
+        db.execute("INSERT INTO user_issues_collection (user_id, issue_id, status, barter) VALUES (?, ?, ?, ?)", 
+                   [user_id, req.issue_id, req.status, int(req.barter or False)])
+        return {"status": "added", "new_status": req.status}
+
 @router.post("/add-volume-all")
 async def add_volume_all(req: ToggleCollectionRequest, user_id: int = Depends(get_current_user_id)):
-    # Wait, the request has collection_id but we need volume_id. 
-    # Let's use a different model or repurpose. 
-    # To avoid breaking things, let's just use volume_id in a new model.
     pass
 
 class AddVolumeAllRequest(BaseModel):
@@ -171,12 +232,40 @@ async def add_all_from_volume(req: AddVolumeAllRequest, user_id: int = Depends(g
         try:
             # We use INSERT OR IGNORE to skip collections already in the user's collection
             # because of the UNIQUE constraint on (user_id, collection_id)
-            db.execute("INSERT OR IGNORE INTO user_collections (user_id, collection_id) VALUES (?, ?)", [user_id, col['id']])
+            db.execute("INSERT OR IGNORE INTO user_volumes_collection (user_id, collection_id) VALUES (?, ?)", [user_id, col['id']])
             added_count += 1
         except Exception as e:
             print(f"Error adding collection {col['id']}: {e}")
             
     return {"status": "ok", "added": added_count}
+
+@router.post("/issue/add-all-from-volume")
+async def add_all_issues_from_volume(req: AddVolumeAllRequest, user_id: int = Depends(get_current_user_id)):
+    db = get_db()
+    
+    # Check if volume exists
+    volume = db.get_one("SELECT id FROM volumes WHERE id = ?", [req.volume_id])
+    if not volume:
+        raise HTTPException(status_code=404, detail="Volume not found")
+
+    # Find all issues for this volume
+    issues = db.get_all("SELECT id FROM issues WHERE volume_id = ?", [req.volume_id])
+    
+    if not issues:
+        return {"status": "ok", "added": 0}
+        
+    added_count = 0
+    for issue in issues:
+        try:
+            # We use INSERT OR IGNORE to skip issues already in the user's collection
+            # because of the UNIQUE constraint on (user_id, issue_id)
+            db.execute("INSERT OR IGNORE INTO user_issues_collection (user_id, issue_id, status) VALUES (?, ?, 'get')", [user_id, issue['id']])
+            added_count += 1
+        except Exception as e:
+            print(f"Error adding issue {issue['id']}: {e}")
+            
+    return {"status": "ok", "added": added_count}
+
 
 @router.post("/{collection_id}/issues")
 async def add_issue_to_collection(collection_id: int, data: dict):
@@ -287,7 +376,7 @@ async def delete_collection(collection_id: int):
         db.conn.execute("DELETE FROM series_collections WHERE collection_id = ?", [collection_id])
         
         # 4. User collections
-        db.conn.execute("DELETE FROM user_collections WHERE collection_id = ?", [collection_id])
+        db.conn.execute("DELETE FROM user_volumes_collection WHERE collection_id = ?", [collection_id])
 
         # 5. Finally delete the collection itself
         db.conn.execute("DELETE FROM collections WHERE id = ?", [collection_id])
@@ -342,11 +431,11 @@ async def get_collection_detail(collection_id: int, request: Request):
                p.name as publisher_name,
                uc.status as user_status,
                uc.barter as user_barter,
-               EXISTS(SELECT 1 FROM user_collections uc2 WHERE uc2.collection_id = c.id AND uc2.user_id = ? AND uc2.status = 'get') as is_owned
+               EXISTS(SELECT 1 FROM user_volumes_collection uc2 WHERE uc2.collection_id = c.id AND uc2.user_id = ? AND uc2.status = 'get') as is_owned
         FROM collections c
         LEFT JOIN volumes v ON c.volume_id = v.id
         LEFT JOIN publishers p ON c.publisher = p.id
-        LEFT JOIN user_collections uc ON uc.collection_id = c.id AND uc.user_id = ?
+        LEFT JOIN user_volumes_collection uc ON uc.collection_id = c.id AND uc.user_id = ?
         WHERE c.id = ?
         """,
         [user_id, user_id, collection_id]

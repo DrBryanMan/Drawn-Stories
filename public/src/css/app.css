@@ -10,6 +10,7 @@
 @import url('components/skeleton.css');
 @import url('components/auth-dropdown.css');
 @import url('components/add-issue-modal.css');
+@import url('components/scrape-progress-modal.css');
 
 /* Сторінки */
 @import url('views/home.css');
@@ -23,3 +24,5 @@
 @import url('views/collection-detail.css');
 @import url('views/issue-detail.css');
 @import url('views/event-detail.css');
+@import url('views/characters.css');
+@import url('views/personnel.css');

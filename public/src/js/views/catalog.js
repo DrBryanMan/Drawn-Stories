@@ -6,6 +6,8 @@ import { escapeHtmlAttribute } from '../helpers/image.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { router } from '../helpers/router.js';
 import Fuse from 'https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.mjs';
+import { createBreadcrumbs } from '../components/Breadcrumbs.js';
+
 
 const paginator = createPaginator({ pageSize: 20 });
 const FILTER_PANEL_OPEN_ICON = `
@@ -171,13 +173,7 @@ export async function renderCatalog(main, query = {}) {
   main.innerHTML = `
     <div class="container">
       <div class="page-header">
-        <nav class="breadcrumbs" aria-label="Навігація">
-          <a href="#/">Drawn Stories</a>
-          <span class="breadcrumb-separator">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-          </span>
-          <span id="catalog-breadcrumb-current">Комікси</span>
-        </nav>
+        ${createBreadcrumbs([{ label: 'Комікси', id: 'catalog-breadcrumb-current' }])}
       </div>
 
       <div class="catalog-top-row">

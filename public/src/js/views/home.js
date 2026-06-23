@@ -94,13 +94,20 @@ export async function renderHome(main) {
         </div>
       </section>
 
+      <div class="home-tabs-container" style="display: flex; justify-content: center; margin: 24px 0 32px 0;">
+        <div class="catalog-segmented" role="group" aria-label="Тип контенту">
+          <button class="catalog-segment is-active" type="button" data-home-tab="comics">Комікси</button>
+          <button class="catalog-segment" type="button" data-home-tab="manga">Манґа</button>
+        </div>
+      </div>
+
       <div class="section">
         <div class="section-header">
           <div class="section-title">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
             Новинки тижня <span class="section-subtitle" style="font-size: 0.75em; color: var(--text-muted); margin-left: 8px;">(${dateRangeStr})</span>
           </div>
-          <a class="section-link" href="#/catalog?view_type=issues&sort=date">Дивитись все →</a>
+          <a class="section-link" id="weekly-releases-more" href="#/catalog?view_type=issues&sort=date">Дивитись все →</a>
         </div>
         <div class="comic-grid" id="weekly-releases-grid">
           <div class="loader-container"><div class="loader"></div></div>
@@ -111,22 +118,74 @@ export async function renderHome(main) {
         <div class="section-header">
           <div class="section-title">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-            Нещодавно додані
+            Нещодавно додані серії
           </div>
-          <a class="section-link" href="#/catalog">Дивитись все →</a>
+          <a class="section-link" id="recent-volumes-more" href="#/catalog">Дивитись все →</a>
         </div>
-        <div class="comic-grid" id="recent-grid">
+        <div class="comic-grid" id="recent-volumes-grid">
+          <div class="loader-container"><div class="loader"></div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Нещодавно додані випуски
+          </div>
+          <a class="section-link" id="recent-issues-more" href="#/catalog?view_type=issues&sort=recent">Дивитись все →</a>
+        </div>
+        <div class="comic-grid" id="recent-issues-grid">
           <div class="loader-container"><div class="loader"></div></div>
         </div>
       </div>
     </div>
   `;
 
-  loadWeeklyReleases(start, end);
-  loadRecentVolumes();
+  let activeTab = 'comics';
+
+  const updateTab = (tab) => {
+    activeTab = tab;
+    
+    // Update button active states
+    main.querySelectorAll('[data-home-tab]').forEach(btn => {
+      btn.classList.toggle('is-active', btn.dataset.homeTab === tab);
+    });
+
+    // Update "Дивитись все" links
+    const weeklyMore = main.querySelector('#weekly-releases-more');
+    if (weeklyMore) weeklyMore.href = `#/catalog?view_type=issues&sort=date&content_type=${tab}`;
+    
+    const volumesMore = main.querySelector('#recent-volumes-more');
+    if (volumesMore) volumesMore.href = `#/catalog?content_type=${tab}`;
+
+    const issuesMore = main.querySelector('#recent-issues-more');
+    if (issuesMore) issuesMore.href = `#/catalog?view_type=issues&sort=recent&content_type=${tab}`;
+
+    // Reload content with filters
+    loadWeeklyReleases(start, end, tab);
+    loadRecentVolumes(tab);
+    loadRecentIssues(tab);
+  };
+
+  const tabContainer = main.querySelector('.home-tabs-container');
+  if (tabContainer) {
+    tabContainer.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-home-tab]');
+      if (btn) {
+        const tab = btn.dataset.homeTab;
+        if (tab !== activeTab) {
+          updateTab(tab);
+        }
+      }
+    });
+  }
+
+  // Initial load
+  updateTab('comics');
 }
 
-async function loadWeeklyReleases(start, end) {
+async function loadWeeklyReleases(start, end, contentType) {
   const grid = document.getElementById('weekly-releases-grid');
   renderSkeletons(grid, 10);
 
@@ -141,7 +200,8 @@ async function loadWeeklyReleases(start, end) {
       sort: 'date', 
       order_dir: 'desc',
       date_min: formatDateYMD(start),
-      date_max: formatDateYMD(end)
+      date_max: formatDateYMD(end),
+      content_type: contentType
     });
 
     grid.innerHTML = '';
@@ -156,8 +216,8 @@ async function loadWeeklyReleases(start, end) {
   }
 }
 
-async function loadRecentVolumes() {
-  const grid = document.getElementById('recent-grid');
+async function loadRecentVolumes(contentType) {
+  const grid = document.getElementById('recent-volumes-grid');
   renderSkeletons(grid, 8);
 
   const today = new Date().toISOString().split('T')[0];
@@ -169,7 +229,8 @@ async function loadRecentVolumes() {
         limit: 8, 
         sort: 'recent', 
         order_dir: 'desc',
-        date_max: today 
+        date_max: today,
+        content_type: contentType
     });
 
     grid.innerHTML = '';
@@ -180,6 +241,36 @@ async function loadRecentVolumes() {
     data.items.forEach(item => grid.appendChild(createComicCard(item)));
   } catch (err) {
     console.error('Error loading recent volumes:', err);
+    grid.innerHTML = '<div class="empty-state"><h3>Не вдалося завантажити</h3></div>';
+  }
+}
+
+async function loadRecentIssues(contentType) {
+  const grid = document.getElementById('recent-issues-grid');
+  renderSkeletons(grid, 8);
+
+  const today = new Date().toISOString().split('T')[0];
+
+  try {
+    const { createComicCard } = await import('../components/ComicCard.js');
+    const data = await API.get('/catalog', { 
+        page: 1, 
+        limit: 8, 
+        view_type: 'issues',
+        sort: 'recent', 
+        order_dir: 'desc',
+        date_max: today,
+        content_type: contentType
+    });
+
+    grid.innerHTML = '';
+    if (!data.items || data.items.length === 0) {
+      grid.innerHTML = '<div class="empty-state"><h3>Поки що нічого</h3></div>';
+      return;
+    }
+    data.items.forEach(item => grid.appendChild(createComicCard(item)));
+  } catch (err) {
+    console.error('Error loading recent issues:', err);
     grid.innerHTML = '<div class="empty-state"><h3>Не вдалося завантажити</h3></div>';
   }
 }

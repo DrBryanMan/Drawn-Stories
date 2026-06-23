@@ -176,6 +176,17 @@ async def get_issue_detail(issue_id: int):
     event_contexts = hydrate_context_issue_nav(db, event_contexts)
     arc_contexts = hydrate_context_issue_nav(db, arc_contexts)
 
+    # Отримуємо історії, наявні у випуску
+    stories = db.get_all(
+        """
+        SELECT id, name_original, name_ua, plot, order_num
+        FROM issue_stories
+        WHERE issue_id = ?
+        ORDER BY order_num ASC, id ASC
+        """,
+        [issue_id],
+    )
+
     return {
         "issue": issue,
         "collections": collections,
@@ -183,6 +194,7 @@ async def get_issue_detail(issue_id: int):
         "next_issue": next_issue,
         "event_contexts": event_contexts,
         "arc_contexts": arc_contexts,
+        "stories": stories
     }
 
 @router.get("")
@@ -289,3 +301,58 @@ async def create_issue(data: dict):
     
     new_id = db.get_one("SELECT last_insert_rowid() as id")["id"]
     return {"message": "Випуск успішно створено", "id": new_id}
+
+
+def require_moderator(request: Request):
+    role = request.cookies.get("role")
+    if role not in {"moderator", "admin"}:
+        raise HTTPException(status_code=403, detail="Потрібні права модератора")
+
+
+@router.put("/{issue_id}")
+async def update_issue(issue_id: int, data: dict, request: Request):
+    require_moderator(request)
+    db = get_db()
+    
+    # Check if issue exists
+    issue = db.get_one("SELECT id FROM issues WHERE id = ?", [issue_id])
+    if not issue:
+        raise HTTPException(status_code=404, detail="Випуск не знайдено")
+
+    fields = []
+    params = []
+    
+    allowed_fields = [
+        "name", "issue_number", "volume_id", "cv_id", "cv_slug", 
+        "cv_img", "cover_date", "release_date", "description"
+    ]
+    
+    for key, value in data.items():
+        if key in allowed_fields:
+            fields.append(f"{key} = ?")
+            params.append(value)
+            
+    if fields:
+        params.append(issue_id)
+        db.execute(
+            f"UPDATE issues SET {', '.join(fields)} WHERE id = ?",
+            params
+        )
+        
+    return {"message": "Випуск успішно оновлено"}
+
+
+@router.delete("/{issue_id}")
+async def delete_issue(issue_id: int, request: Request):
+    require_moderator(request)
+    db = get_db()
+    
+    # Check if issue exists
+    issue = db.get_one("SELECT id FROM issues WHERE id = ?", [issue_id])
+    if not issue:
+        raise HTTPException(status_code=404, detail="Випуск не знайдено")
+        
+    # Delete issue
+    db.execute("DELETE FROM issues WHERE id = ?", [issue_id])
+    
+    return {"message": "Випуск успішно видалено"}

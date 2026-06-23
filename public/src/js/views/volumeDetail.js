@@ -7,6 +7,9 @@ import { createPaginator } from '../components/Pagination.js';
 import { renderIssueGridCard } from '../components/IssueGridCard.js';
 import { VolumeEditor } from '/admin/js/VolumeEditor.js';
 import { VolumePicker } from '/admin/js/VolumePicker.js';
+import { createBreadcrumbs } from '../components/Breadcrumbs.js';
+import { openScrapeProgressModal } from '../components/ScrapeProgressModal.js';
+
 
 let currentItems = [];
 let currentView = localStorage.getItem('ds-volume-view') || 'grid';
@@ -107,6 +110,7 @@ const ICON = {
     star: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
     trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
     plus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+    refreshCw: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M16 3h5v5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 21H3v-5"/></svg>',
 };
 
 // ── Readlist options config ──────────────────────────
@@ -514,13 +518,10 @@ export async function renderVolumeDetail(main, params = {}) {
         main.innerHTML = `
             <div class="volume-detail">
                 <div class="container">
-                    <nav class="breadcrumbs volume-breadcrumbs" aria-label="Навігація">
-                        <a href="#/">Drawn Stories</a>
-                        <span class="breadcrumb-separator">${ICON.chevronRight}</span>
-                        <a href="#/catalog">Каталог</a>
-                        <span class="breadcrumb-separator">${ICON.chevronRight}</span>
-                        <span>${title}</span>
-                    </nav>
+                    ${createBreadcrumbs([
+                        { label: 'Каталог', href: '#/catalog' },
+                        { label: title }
+                    ], 'breadcrumbs volume-breadcrumbs')}
                 </div>
 
                 <section class="volume-hero-band${heroBannerClass}"${heroBannerStyle}>
@@ -657,6 +658,10 @@ export async function renderVolumeDetail(main, params = {}) {
                                             У випуски (${data.collections.length})
                                         </button>
                                     ` : ''}
+                                    <button class="btn-admin btn-admin--warning" id="volume-scrape-appearances-btn" title="Скрапити появи для всіх випусків тому">
+                                        ${ICON.refreshCw}
+                                        <span>Скрапити появи</span>
+                                    </button>
                                 </div>
                             ` : ''}
 
@@ -904,6 +909,13 @@ export async function renderVolumeDetail(main, params = {}) {
             });
         }
 
+        const scrapeBtn = main.querySelector('#volume-scrape-appearances-btn');
+        if (scrapeBtn) {
+            scrapeBtn.addEventListener('click', () => {
+                openScrapeProgressModal('volume', volumeId);
+            });
+        }
+
         const setOriginalBtn = main.querySelector('#volume-add-original-btn');
         if (setOriginalBtn) {
             setOriginalBtn.addEventListener('click', () => {
@@ -1057,7 +1069,8 @@ export async function renderVolumeDetail(main, params = {}) {
             if (parentVolumesContainer) {
                 if (isIssues && isCollection && currentItems.length > 0) {
                     const volumesMap = new Map();
-                    for (const item of currentItems) {
+                    const sortedItems = sortItems([...currentItems], sortSelect ? sortSelect.value : 'series_asc');
+                    for (const item of sortedItems) {
                         const volId = item.volume_db_id || item.volume_id;
                         if (!volId) continue;
                         
@@ -1076,7 +1089,10 @@ export async function renderVolumeDetail(main, params = {}) {
                     }
 
                     if (volumesMap.size > 0) {
-                        const sortedVolumes = Array.from(volumesMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+                        const sortedVolumes = Array.from(volumesMap.values());
+                        if (sortSelect && sortSelect.value === 'series_asc') {
+                            sortedVolumes.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+                        }
                         
                         const listHtml = sortedVolumes.map(vol => {
                             const range = formatIssueRanges(vol.numbers) || '—';
@@ -1518,7 +1534,7 @@ function renderCollectionsFromIssues(container, collections, options = {}) {
                     const cover = comicVineImageUrl(col.cv_img);
                     const range = formatIssueRanges(col.volume_issue_numbers);
                     return `
-                        <div class="issue-grid-card" onclick="location.hash='#/collections/${col.id}'" style="cursor: pointer;">
+                        <a class="issue-grid-card" href="#/collections/${col.id}">
                             <div class="issue-grid-cover-wrap">
                                 ${cover 
                                     ? `<img class="issue-grid-cover" src="${escapeHtmlAttribute(cover)}" loading="lazy">` 
@@ -1538,7 +1554,7 @@ function renderCollectionsFromIssues(container, collections, options = {}) {
                                     <span class="issue-grid-date">${formatDate(col.cover_date || col.release_date)}</span>
                                 </div>
                             </div>
-                        </div>
+                        </a>
                     `;
                 }).join('')}
             </div>

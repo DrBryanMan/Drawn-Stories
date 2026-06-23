@@ -55,7 +55,7 @@ async def get_bookmarks_data(items: List[BookmarkItem]):
             results["issue"] = data
         elif item_type == "personnel":
              data = db.get_all(f"""
-                SELECT *, 'personnel' as type FROM personnel WHERE id IN ({placeholders})
+                SELECT *, 'personnel' as type FROM persons WHERE id IN ({placeholders})
             """, ids)
              results["personnel"] = data
         elif item_type == "character":

@@ -43,7 +43,7 @@
 }
 
 .results-value {
-  font-family: var(--font-mono);
+  font-family: var(--font-monos);
   font-size: 16px;
   font-weight: 500;
   color: var(--accent);

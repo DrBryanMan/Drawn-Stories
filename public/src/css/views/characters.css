@@ -1,0 +1,110 @@
+.characters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1.5rem;
+}
+.character-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border-s);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  transition: transform var(--t), box-shadow var(--t), border-color var(--t);
+}
+.character-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, .1);
+}
+.char-cover-wrap {
+  position: relative;
+  aspect-ratio: 2/3;
+  background: var(--bg-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.char-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.char-cover-empty {
+  color: var(--text-muted);
+}
+.char-gender-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: white;
+  border: 1px solid var(--border-s);
+  backdrop-filter: blur(4px);
+}
+.char-gender-badge svg {
+  width: 16px;
+  height: 16px;
+}
+.char-gender-badge.male {
+  background: rgba(52, 152, 219, .5);
+  color: #fff;
+  border-color: rgba(255,255,255,.3);
+}
+.char-gender-badge.female {
+  background: rgba(233, 30, 99, .5);
+  color: #fff;
+  border-color: rgba(255,255,255,.3);
+}
+.char-gender-badge.unknown {
+  background: rgba(158, 158, 158, .5);
+  color: #fff;
+  border-color: rgba(255,255,255,.3);
+}
+.char-info {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+.char-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.char-real-name {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.char-stats {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-s);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+.char-stat-label {
+  color: var(--text-muted);
+}
+.char-stat-value {
+  color: var(--accent);
+  font-weight: 700;
+}

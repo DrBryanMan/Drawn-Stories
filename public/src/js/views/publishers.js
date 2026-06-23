@@ -2,6 +2,7 @@ import { API } from '../helpers/api.js';
 import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { createPaginator } from '../components/Pagination.js';
 import { mountFilterBar } from '../components/FilterBar.js';
+import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 
 const paginator = createPaginator({ pageSize: 20 });
 const SORT_OPTIONS = [
@@ -22,13 +23,7 @@ export async function renderPublishers(container, query) {
   container.innerHTML = `
     <div class="container">
       <div class="page-header">
-        <nav class="breadcrumbs" aria-label="Навігація">
-          <a href="#/">Drawn Stories</a>
-          <span class="breadcrumb-separator">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-          </span>
-          <span id="catalog-breadcrumb-current">Видавництва та Команди</span>
-        </nav>
+        ${createBreadcrumbs([{ label: 'Видавництва та Команди' }])}
       </div>
 
       <div class="catalog-top-row">

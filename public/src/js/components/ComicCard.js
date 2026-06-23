@@ -47,10 +47,12 @@ export function createComicCard(item) {
     
     if (isVolume) {
         a.href = `#/volumes/${item.id}`;
+    } else if (isIssue) {
+        a.href = `#/issues/${item.id}`;
+        a.dataset.issueId = item.id;
     } else {
         const volId = item.volume_id;
         a.href = volId ? `#/volumes/${volId}` : '#';
-        if (isIssue) a.dataset.issueId = item.id;
         if (isCollection) a.dataset.collectionId = item.id;
     }
 
