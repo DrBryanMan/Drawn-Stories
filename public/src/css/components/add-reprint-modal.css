@@ -1,0 +1,181 @@
+/* public/src/css/components/add-reprint-modal.css */
+
+#add-reprint-modal-overlay {
+    z-index: 1100;
+}
+
+.arm-filters {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.arm-filters-row2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 12px;
+    align-items: flex-end;
+}
+
+.arm-settings-pane {
+    padding: 16px;
+    background: var(--bg-card-h);
+    border: 1px solid var(--border-s);
+    border-radius: var(--r-lg);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.arm-fields-group {
+    display: none;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+}
+
+.arm-field {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.arm-field--wide {
+    flex: 2;
+    min-width: 250px;
+}
+
+.arm-results-container {
+    /* max-height: 350px; */
+    /* margin-top: 16px; */
+}
+
+.arm-results-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+}
+
+.arm-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-s);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.arm-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.15);
+    border-color: var(--accent);
+}
+
+.arm-card.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-glow);
+}
+
+.arm-card-img-wrap {
+    aspect-ratio: 2/3;
+    background: var(--bg-card-h);
+    overflow: hidden;
+    position: relative;
+}
+
+.arm-card-check {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.2s ease;
+}
+
+.arm-card.selected .arm-card-check {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.arm-card-details {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.arm-card-title {
+    font-size: 12px;
+    font-weight: 750;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.arm-card-vol {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.arm-card-num {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.arm-empty {
+    padding: 40px 0;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.arm-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-family: var(--font-oswald);
+}
+
+.arm-input {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 10px 14px;
+    font-size: 13px;
+    font-family: var(--font);
+    color: var(--text);
+    transition: var(--t);
+    width: 100%;
+}
+
+.arm-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}

@@ -187,6 +187,54 @@ async def get_issue_detail(issue_id: int):
         [issue_id],
     )
 
+    # Отримуємо творців випуску
+    persons = db.get_all(
+        """
+        SELECT ip.id, ip.person_id, ip.role, ip.story_id,
+               p.name, p.image, p.cv_slug
+        FROM issue_persons ip
+        JOIN persons p ON ip.person_id = p.id
+        WHERE ip.issue_id = ?
+        ORDER BY p.name ASC
+        """,
+        [issue_id],
+    )
+
+    # Отримуємо репринти
+    reprints = db.get_all(
+        """
+        SELECT 
+            ir.id,
+            ir.original_id,
+            ir.reprint_id,
+            ir.story_id,
+            ir.story_foreign_name,
+            
+            o.name AS original_name,
+            o.issue_number AS original_number,
+            vo.name AS original_volume_name,
+            vo.name_uk AS original_volume_name_uk,
+            vo.lang AS original_volume_lang,
+            
+            r.name AS reprint_name,
+            r.issue_number AS reprint_number,
+            vr.name AS reprint_volume_name,
+            vr.name_uk AS reprint_volume_name_uk,
+            vr.lang AS reprint_volume_lang,
+            
+            s.name_original AS story_name_original,
+            s.name_ua AS story_name_ua
+        FROM issue_reprints ir
+        JOIN issues o ON ir.original_id = o.id
+        JOIN volumes vo ON o.volume_id = vo.id
+        JOIN issues r ON ir.reprint_id = r.id
+        JOIN volumes vr ON r.volume_id = vr.id
+        LEFT JOIN issue_stories s ON ir.story_id = s.id
+        WHERE ir.original_id = ? OR ir.reprint_id = ?
+        """,
+        [issue_id, issue_id]
+    )
+
     return {
         "issue": issue,
         "collections": collections,
@@ -194,7 +242,9 @@ async def get_issue_detail(issue_id: int):
         "next_issue": next_issue,
         "event_contexts": event_contexts,
         "arc_contexts": arc_contexts,
-        "stories": stories
+        "stories": stories,
+        "persons": persons,
+        "reprints": reprints
     }
 
 @router.get("")
@@ -207,7 +257,7 @@ async def get_issues(
     hikka_slug: Optional[str] = None,
     cv_vol_id: Optional[int] = None,
     exact: bool = False,
-    limit: int = Query(50, ge=1, le=100)
+    limit: int = Query(100, ge=1, le=500)
 ):
     db = get_db()
     clauses = []
@@ -324,7 +374,7 @@ async def update_issue(issue_id: int, data: dict, request: Request):
     
     allowed_fields = [
         "name", "issue_number", "volume_id", "cv_id", "cv_slug", 
-        "cv_img", "cover_date", "release_date", "description"
+        "cv_img", "cover_date", "release_date", "description", "pages"
     ]
     
     for key, value in data.items():
@@ -338,6 +388,79 @@ async def update_issue(issue_id: int, data: dict, request: Request):
             f"UPDATE issues SET {', '.join(fields)} WHERE id = ?",
             params
         )
+        
+    # Sync stories and staff if present in the payload
+    if "stories" in data:
+        incoming_stories = data["stories"]
+        current_stories = db.get_all("SELECT id FROM issue_stories WHERE issue_id = ?", [issue_id])
+        current_story_ids = {row["id"] for row in current_stories}
+        
+        incoming_story_ids = set()
+        story_ids_by_index = {}
+        
+        for idx, story in enumerate(incoming_stories):
+            s_id = story.get("id")
+            name_orig = story.get("name_original")
+            name_ua = story.get("name_ua")
+            order_num = story.get("order_num", 0)
+            
+            try:
+                order_num = int(order_num) if order_num is not None else 0
+            except (ValueError, TypeError):
+                order_num = 0
+                
+            if s_id and int(s_id) in current_story_ids:
+                s_id_int = int(s_id)
+                db.execute(
+                    """
+                    UPDATE issue_stories
+                    SET name_original = ?, name_ua = ?, order_num = ?
+                    WHERE id = ? AND issue_id = ?
+                    """,
+                    [name_orig, name_ua, order_num, s_id_int, issue_id]
+                )
+                incoming_story_ids.add(s_id_int)
+                story_ids_by_index[idx] = s_id_int
+            else:
+                db.execute(
+                    """
+                    INSERT INTO issue_stories (issue_id, name_original, name_ua, order_num)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    [issue_id, name_orig, name_ua, order_num]
+                )
+                new_id = db.get_one("SELECT last_insert_rowid() as id")["id"]
+                story_ids_by_index[idx] = new_id
+                
+        to_delete = current_story_ids - incoming_story_ids
+        if to_delete:
+            placeholders = ",".join("?" for _ in to_delete)
+            db.execute(
+                f"DELETE FROM issue_stories WHERE issue_id = ? AND id IN ({placeholders})",
+                [issue_id, *to_delete]
+            )
+
+        # Sync staff if present in the payload
+        if "staff" in data:
+            incoming_staff = data["staff"]
+            db.execute("DELETE FROM issue_persons WHERE issue_id = ?", [issue_id])
+            for s in incoming_staff:
+                person_id = s.get("person_id")
+                role = s.get("role")
+                story_idx = s.get("story_index", -1)
+                
+                real_story_id = None
+                if story_idx is not None and story_idx != -1:
+                    real_story_id = story_ids_by_index.get(story_idx)
+                
+                if person_id and role:
+                    db.execute(
+                        """
+                        INSERT OR IGNORE INTO issue_persons (issue_id, person_id, role, story_id)
+                        VALUES (?, ?, ?, ?)
+                        """,
+                        [issue_id, person_id, role, real_story_id]
+                    )
         
     return {"message": "Випуск успішно оновлено"}
 
@@ -356,3 +479,60 @@ async def delete_issue(issue_id: int, request: Request):
     db.execute("DELETE FROM issues WHERE id = ?", [issue_id])
     
     return {"message": "Випуск успішно видалено"}
+
+
+@router.post("/{issue_id}/reprints")
+async def add_issue_reprint(issue_id: int, data: dict, request: Request):
+    require_moderator(request)
+    db = get_db()
+    
+    original_id = data.get("original_id")
+    reprint_id = data.get("reprint_id")
+    story_id = data.get("story_id")
+    story_foreign_name = data.get("story_foreign_name")
+    
+    if not original_id or not reprint_id:
+        raise HTTPException(status_code=400, detail="original_id та reprint_id обов'язкові")
+        
+    if issue_id not in (original_id, reprint_id):
+        raise HTTPException(status_code=400, detail="Один з випусків має відповідати поточному випуску")
+        
+    # Перевіримо чи випуски існують
+    orig_issue = db.get_one("SELECT id FROM issues WHERE id = ?", [original_id])
+    repr_issue = db.get_one("SELECT id FROM issues WHERE id = ?", [reprint_id])
+    if not orig_issue or not repr_issue:
+        raise HTTPException(status_code=404, detail="Випуск не знайдено")
+        
+    # Перевіримо чи вже є такий зв'язок
+    existing = db.get_one(
+        """
+        SELECT id FROM issue_reprints 
+        WHERE original_id = ? AND reprint_id = ? AND (story_id = ? OR (story_id IS NULL AND ? IS NULL))
+        """,
+        [original_id, reprint_id, story_id, story_id]
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail="Цей зв'язок репринту вже додано")
+        
+    db.execute(
+        """
+        INSERT INTO issue_reprints (original_id, reprint_id, story_id, story_foreign_name)
+        VALUES (?, ?, ?, ?)
+        """,
+        [original_id, reprint_id, story_id, story_foreign_name]
+    )
+    return {"message": "Репринт успішно додано"}
+
+
+@router.delete("/reprints/{reprint_link_id}")
+async def delete_issue_reprint(reprint_link_id: int, request: Request):
+    require_moderator(request)
+    db = get_db()
+    
+    # Перевіримо чи зв'язок існує
+    link = db.get_one("SELECT id FROM issue_reprints WHERE id = ?", [reprint_link_id])
+    if not link:
+        raise HTTPException(status_code=404, detail="Зв'язок репринту не знайдено")
+        
+    db.execute("DELETE FROM issue_reprints WHERE id = ?", [reprint_link_id])
+    return {"message": "Репринт успішно видалено"}

@@ -5,6 +5,8 @@ import { Bookmarks } from '../helpers/bookmarks.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { openScrapeProgressModal } from '../components/ScrapeProgressModal.js';
 import { IssueEditor } from '/admin/js/IssueEditor.js';
+import { formatDate } from '../helpers/lang.js';
+import { translateStaffRole, getRoleSortIndex } from '../helpers/staff.js';
 
 
 // ── Lucide SVG icons ──────────────────────────────
@@ -105,27 +107,25 @@ function collectionUIHTML(status, barter) {
     `;
 }
 
-// ── Date formatter ────────────────────────────────
-function formatDate(dateStr) {
-    if (!dateStr) return null;
-    if (dateStr.includes('-')) {
-        const parts = dateStr.split('-');
-        if (parts.length === 3 && parts[2] === '00') {
-            const months = [
-                'січень', 'лютий', 'березень', 'квітень', 'травень', 'червень',
-                'липень', 'серпень', 'вересень', 'жовтень', 'листопад', 'грудень',
-            ];
-            const mIdx = parseInt(parts[1], 10) - 1;
-            return `${months[mIdx] || parts[1]} ${parts[0]}`;
-        }
-        try {
-            const d = new Date(dateStr);
-            return d.toLocaleDateString('uk-UA', { year: 'numeric', month: 'long', day: 'numeric' });
-        } catch {
-            return dateStr;
+// ── Staff grouping helper ─────────────────────────
+function groupStaffRoles(staffArray) {
+    const map = new Map();
+    for (const p of staffArray) {
+        const key = p.person_id || p.name;
+        if (!map.has(key)) {
+            map.set(key, { ...p, roles: [p.role] });
+        } else {
+            const existing = map.get(key);
+            if (!existing.roles.includes(p.role)) {
+                existing.roles.push(p.role);
+            }
         }
     }
-    return dateStr;
+    return Array.from(map.values()).sort((a, b) => {
+        const minA = Math.min(...a.roles.map(r => getRoleSortIndex(r)));
+        const minB = Math.min(...b.roles.map(r => getRoleSortIndex(r)));
+        return minA - minB;
+    });
 }
 
 // ── Skeleton ──────────────────────────────────────
@@ -319,6 +319,8 @@ export async function renderIssueDetail(container, params = {}) {
         event_contexts = [],
         arc_contexts = [],
         stories = [],
+        persons = [],
+        reprints = [],
     } = data;
 
     // Metadata
@@ -359,34 +361,26 @@ export async function renderIssueDetail(container, params = {}) {
            </a>`
         : '';
 
-    const publisherBadge = issue.publisher_name
-        ? `<a href="#/catalog?publisher_ids=${issue.publisher_id}" class="volume-badge volume-publisher-badge" title="Видавництво">
-               ${ICON.building}
-               ${escapeHtmlAttribute(issue.publisher_name)}
-           </a>`
-        : '';
-
-    const dateBadge = (coverDate || releaseDate)
-        ? `<span class="volume-badge volume-year-badge" title="Дата виходу">
+    const coverDateBadge = coverDate
+        ? `<span class="volume-badge volume-cover-date-badge" title="Дата обкладинки">
                ${ICON.calendar}
-               ${escapeHtmlAttribute(coverDate || releaseDate)}
+               Обкладинка: ${escapeHtmlAttribute(coverDate)}
            </span>`
         : '';
 
-    // ── Facts grid ────────────────────────────────
-    const volumeLinkHTML = issue.volume_id
-        ? `<a href="#/volumes/${issue.volume_id}">${escapeHtmlAttribute(volumeName)}</a>`
-        : (volumeName ? escapeHtmlAttribute(volumeName) : null);
+    const releaseDateBadge = releaseDate
+        ? `<span class="volume-badge volume-release-date-badge" title="Дата виходу">
+               ${ICON.calendar}
+               Реліз: ${escapeHtmlAttribute(releaseDate)}
+           </span>`
+        : '';
 
-    const factsHTML = `
-        <dl class="issue-meta-facts">
-            ${factHTML('Том', volumeLinkHTML)}
-            ${factHTML('Видавець', issue.publisher_name ? escapeHtmlAttribute(issue.publisher_name) : null)}
-            ${factHTML('Номер випуску', issueNum || null)}
-            ${factHTML('Дата обкладинки', coverDate)}
-            ${factHTML('Дата виходу', releaseDate)}
-        </dl>
-    `;
+    const pagesBadge = issue.pages
+        ? `<span class="volume-badge volume-pages-badge" title="Кількість сторінок">
+               ${ICON.book}
+               Сторінок: ${escapeHtmlAttribute(issue.pages)}
+           </span>`
+        : '';
 
     // ── Description ───────────────────────────────
     const descriptionHTML = issue.description
@@ -407,6 +401,57 @@ export async function renderIssueDetail(container, params = {}) {
            </div>`
         : '';
 
+
+    // ── Stories HTML ──────────────────────────────
+    const hasMultipleStories = stories.length > 1;
+    const storiesCountText = hasMultipleStories 
+        ? `та ще ${stories.length} інші` 
+        : '';
+    const chevronIconHTML = hasMultipleStories ? ICON.chevronRight : '';
+
+    const storiesHTML = stories.length
+        ? `<div class="issue-stories-list ${hasMultipleStories ? '' : 'is-expanded'}">
+               ${stories.map((story, index) => {
+                    const mainTitle = story.name_ua || story.name_original || 'Без назви';
+                    const subTitle = story.name_ua ? story.name_original : '';
+                    
+                    const storyStaff = groupStaffRoles(persons.filter(p => p.story_id === story.id));
+                    const storyStaffHTML = storyStaff.length
+                        ? `<div class="issue-story-staff">
+                               <div class="issue-story-staff-grid">
+                                   ${storyStaff.map(person => {
+                                       const personImg = person.image ? comicVineImageUrl(person.image) : '';
+                                       const imgHTML = personImg
+                                           ? `<img class="issue-story-staff-avatar" src="${escapeHtmlAttribute(personImg)}" alt="${escapeHtmlAttribute(person.name)}">`
+                                           : `<div class="issue-story-staff-avatar--empty">${ICON.smallImage}</div>`;
+                                       const rolesJoined = person.roles.map(r => translateStaffRole(r)).join(', ');
+                                       return `
+                                           <a class="issue-story-staff-card">
+                                               ${imgHTML}
+                                               <div class="issue-story-staff-info">
+                                                   <span class="issue-story-staff-name">${escapeHtmlAttribute(person.name)}</span>
+                                                   <span class="issue-story-staff-role">${escapeHtmlAttribute(rolesJoined)}</span>
+                                               </div>
+                                           </a>
+                                       `;
+                                   }).join('')}
+                               </div>
+                           </div>`
+                        : '';
+
+                    return `
+                        <div class="issue-story-item">
+                            <div class="issue-story-num-badge">Історія ${index + 1}</div>
+                            <div class="issue-story-content">
+                                <div class="issue-story-main-title">${escapeHtmlAttribute(mainTitle)}</div>
+                                ${subTitle ? `<div class="issue-story-sub-title">${escapeHtmlAttribute(subTitle)}</div>` : ''}
+                                ${storyStaffHTML}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+           </div>`
+        : '';
 
     // ── Event / arc context ───────────────────────
     const contextCards = [
@@ -442,29 +487,83 @@ export async function renderIssueDetail(container, params = {}) {
         </section>
     `;
 
-    // ── Stories HTML ──────────────────────────────
-    const storiesHTML = stories.length
-        ? `<div class="issue-stories-list">
-               ${stories.map((story, index) => {
-                   const mainTitle = story.name_ua || story.name_original || 'Без назви';
-                   const subTitle = story.name_ua ? story.name_original : '';
-                   return `
-                       <div class="issue-story-item">
-                           <div class="issue-story-num-badge">Історія ${index + 1}</div>
-                           <div class="issue-story-content">
-                               <div class="issue-story-main-title">${escapeHtmlAttribute(mainTitle)}</div>
-                               ${subTitle ? `<div class="issue-story-sub-title">${escapeHtmlAttribute(subTitle)}</div>` : ''}
-                           </div>
-                       </div>
-                   `;
-               }).join('')}
-          </div>`
+    // ── Reprints ──────────────────────────────────
+    const reprintsHTML = reprints.length
+        ? `<section class="issue-reprints-section">
+               <div class="issue-section-heading">
+                   <h2>Репринти</h2>
+                   <span class="issue-section-count">${reprints.length}</span>
+               </div>
+               <div class="issue-reprints-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+                   ${reprints.map(r => {
+                       const isOriginal = r.original_id === issueId;
+                       const targetIssueId = isOriginal ? r.reprint_id : r.original_id;
+                       const volName = isOriginal
+                           ? (r.reprint_volume_name_uk || r.reprint_volume_name || '')
+                           : (r.original_volume_name_uk || r.original_volume_name || '');
+                       const issueNum = isOriginal ? r.reprint_number : r.original_number;
+                       
+                       let displayTitle = 'Основна історія';
+                       if (r.story_id) {
+                           displayTitle = r.story_name_ua || r.story_name_original || 'Історія';
+                       } else {
+                           const issueName = isOriginal ? r.reprint_name : r.original_name;
+                           if (issueName) displayTitle = issueName;
+                       }
+                       
+                       const reprintLang = r.reprint_volume_lang || '';
+                       const langPrefix = reprintLang ? `${reprintLang.toLowerCase()}: ` : '';
+                       const foreignNameHtml = r.story_foreign_name
+                           ? `<div class="issue-reprint-foreign">${langPrefix}${escapeHtmlAttribute(r.story_foreign_name)}</div>`
+                           : '';
+                           
+                       const roleLabel = isOriginal ? 'Перевидання' : 'Оригінал';
+                       
+                       return `
+                           <a class="issue-reprint-card" href="#/issues/${targetIssueId}">
+                               <span class="issue-reprint-role ${isOriginal ? 'reprint' : 'original'}">${roleLabel}</span>
+                               <div class="issue-reprint-volume">${escapeHtmlAttribute(volName)} #${escapeHtmlAttribute(issueNum || '—')}</div>
+                               <div class="issue-reprint-title">${escapeHtmlAttribute(displayTitle)}</div>
+                               ${foreignNameHtml}
+                           </a>
+                       `;
+                   }).join('')}
+               </div>
+           </section>`
+        : '';
+
+    // ── Issue Staff HTML ──────────────────────────
+    const issueStaff = groupStaffRoles(persons.filter(p => !p.story_id));
+    const staffSectionHTML = issueStaff.length
+        ? `<section class="issue-staff-section">
+               <div class="issue-section-heading">
+                   <h3>Творці випуску</h3>
+               </div>
+               <div class="issue-staff-grid">
+                   ${issueStaff.map(person => {
+                       const personImg = person.image ? comicVineImageUrl(person.image) : '';
+                       const imgHTML = personImg
+                           ? `<img class="issue-staff-avatar" src="${escapeHtmlAttribute(personImg)}" alt="${escapeHtmlAttribute(person.name)}">`
+                           : `<div class="issue-staff-avatar--empty">${ICON.smallImage}</div>`;
+                       const rolesJoined = person.roles.map(r => translateStaffRole(r)).join(', ');
+                       return `
+                           <a class="issue-staff-card">
+                               ${imgHTML}
+                               <div class="issue-staff-info">
+                                   <span class="issue-staff-name">${escapeHtmlAttribute(person.name)}</span>
+                                   <span class="issue-staff-role">${escapeHtmlAttribute(rolesJoined)}</span>
+                               </div>
+                           </a>
+                       `;
+                   }).join('')}
+               </div>
+           </section>`
         : '';
 
     // ── Assemble ──────────────────────────────────
     container.innerHTML = `
         <div class="issue-detail">
-            <div class="container" style="padding-top: 20px;">
+            <div class="container">
                 ${breadcrumb}
             </div>
 
@@ -483,21 +582,29 @@ export async function renderIssueDetail(container, params = {}) {
                             <div class="issue-header-center">
                                 <h1>${escapeHtmlAttribute(issueTitle || displayTitle)}</h1>
                                 <div class="issue-main-story-label">
-                                    Основна історія
+                                    <span>Основна історія</span>
+                                    ${hasMultipleStories ? `
+                                        <span class="issue-additional-stories-trigger" id="issue-toggle-stories-btn">
+                                            ${storiesCountText}
+                                            ${chevronIconHTML}
+                                        </span>
+                                    ` : ''}
                                 </div>
                             </div>
                             ${navCardHTML(next_issue, 'next')}
                         </div>
 
-                        ${storiesHTML}
-
                         <div class="issue-hero-badges">
                             ${volumeBadge}
-                            ${publisherBadge}
-                            ${dateBadge}
+                            ${coverDateBadge}
+                            ${releaseDateBadge}
+                            ${pagesBadge}
                         </div>
 
-                        ${factsHTML}
+                        ${staffSectionHTML}
+
+                        ${storiesHTML}
+
                         ${descriptionHTML}
                         ${externalLinksHTML}
                     </div>
@@ -507,6 +614,7 @@ export async function renderIssueDetail(container, params = {}) {
             <div class="container issue-body">
                 ${contextHTML}
                 ${collectionsHTML}
+                ${reprintsHTML}
             </div>
 
             ${isModerator ? `
@@ -525,6 +633,18 @@ export async function renderIssueDetail(container, params = {}) {
             ` : ''}
         </div>
     `;
+
+    // ── Toggle Stories Accordion ──────────────────────
+    if (hasMultipleStories) {
+        const toggleBtn = container.querySelector('#issue-toggle-stories-btn');
+        const storiesList = container.querySelector('.issue-stories-list');
+        if (toggleBtn && storiesList) {
+            toggleBtn.addEventListener('click', () => {
+                const isExpanded = storiesList.classList.toggle('is-expanded');
+                toggleBtn.classList.toggle('is-expanded', isExpanded);
+            });
+        }
+    }
 
     // ── Readlist & Favorites Handlers ──────────────────
     const readlistSelect = container.querySelector('#readlist-select');
@@ -666,7 +786,7 @@ export async function renderIssueDetail(container, params = {}) {
         const editBtn = container.querySelector('#issue-edit-btn');
         if (editBtn) {
             editBtn.addEventListener('click', () => {
-                const editor = new IssueEditor(issue, () => {
+                const editor = new IssueEditor(issue, stories, persons, reprints, () => {
                     renderIssueDetail(container, params);
                 });
                 editor.render();

@@ -2,7 +2,7 @@ import { API } from '../helpers/api.js';
 import { currentUser } from '../shell.js';
 import { Bookmarks } from '../helpers/bookmarks.js';
 import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
-import { langDisplay, langName } from '../helpers/lang.js';
+import { langDisplay, langName, formatDate } from '../helpers/lang.js';
 import { createPaginator } from '../components/Pagination.js';
 import { renderIssueGridCard } from '../components/IssueGridCard.js';
 import { VolumeEditor } from '/admin/js/VolumeEditor.js';
@@ -15,10 +15,7 @@ let currentItems = [];
 let currentView = localStorage.getItem('ds-volume-view') || 'grid';
 
 // ── Helpers ─────────────────────────────────────────
-function formatDate(value) {
-    if (!value) return '—';
-    return String(value).replace(/-00/g, '');
-}
+
 
 function themeName(theme) {
     return theme.ua_name || theme.name || 'Тема';
@@ -406,7 +403,7 @@ function renderItems(container, items) {
                                             ${isVolume ? '<span class="issue-grid-type-badge" style="position:static; margin-left:8px; padding:2px 6px;">Манґа</span>' : (isCollection ? '<span class="issue-grid-type-badge" style="position:static; margin-left:8px; padding:2px 6px;">Збірник</span>' : '')}
                                         </div>
                                     </td>
-                                    <td class="table-issue-date">${isVolume ? (item.start_year || '') : formatDate(item.cover_date || item.release_date)}</td>
+                                    <td class="table-issue-date">${isVolume ? (item.start_year || '') : formatDate(item.cover_date || item.release_date, '—')}</td>
                                     <td>
                                         ${isCollection ? `
                                             <button class="issue-grid-toggle-btn ${item.is_owned ? 'is-owned' : ''}" data-id="${item.id}" title="${item.is_owned ? 'Видалити з колекції' : 'Додати в колекцію'}" style="position: static; width: 28px; height: 28px;">
@@ -1325,8 +1322,8 @@ function openFactsModal(volume, stats) {
                     ${volumeFact('Мова', volume.lang)}
                     ${volumeFact('Випусків', stats.issues)}
                     ${volumeFact('Збірників', stats.collections)}
-                    ${volumeFact('Створено', formatDate(volume.created_at))}
-                    ${volumeFact('Оновлено', formatDate(volume.updated_at))}
+                    ${volumeFact('Створено', formatDate(volume.created_at, '—'))}
+                    ${volumeFact('Оновлено', formatDate(volume.updated_at, '—'))}
                 </dl>
             </div>
         </div>
@@ -1551,7 +1548,7 @@ function renderCollectionsFromIssues(container, collections, options = {}) {
                                 <div class="issue-grid-title">${escapeHtmlAttribute(col.name || 'Без назви')}</div>
                                 <div class="issue-grid-meta">
                                     ${range ? `<span class="issue-grid-range">${ICON.hash} ${range}</span>` : ''}
-                                    <span class="issue-grid-date">${formatDate(col.cover_date || col.release_date)}</span>
+                                    <span class="issue-grid-date">${formatDate(col.cover_date || col.release_date, '—')}</span>
                                 </div>
                             </div>
                         </a>

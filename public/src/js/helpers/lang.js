@@ -45,3 +45,31 @@ export function langDisplay(code) {
 export function langName(code) {
     return langDisplay(code).name;
 }
+
+export function formatDate(dateStr, fallback = null) {
+    if (!dateStr) return fallback;
+    let formatted = dateStr;
+    if (dateStr.includes('-')) {
+        const parts = dateStr.split('-');
+        if (parts.length === 3 && parts[2] === '00') {
+            const months = [
+                'січень', 'лютий', 'березень', 'квітень', 'травень', 'червень',
+                'липень', 'серпень', 'вересень', 'жовтень', 'листопад', 'грудень',
+            ];
+            const mIdx = parseInt(parts[1], 10) - 1;
+            formatted = `${months[mIdx] || parts[1]} ${parts[0]}`;
+        } else {
+            try {
+                const d = new Date(dateStr);
+                formatted = d.toLocaleDateString('uk-UA', { year: 'numeric', month: 'long', day: 'numeric' });
+            } catch {
+                formatted = dateStr;
+            }
+        }
+    }
+    if (formatted && typeof formatted === 'string') {
+        return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+    }
+    return formatted;
+}
+

@@ -5,6 +5,7 @@ import { openAddIssueModal } from '../components/addIssueModal.js';
 import { renderIssueGridCard } from '../components/IssueGridCard.js';
 import { CollectionEditor } from '/admin/js/CollectionEditor.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
+import { formatDate } from '../helpers/lang.js';
 
 
 // ── Lucide SVG icons ──────────────────────────────
@@ -57,27 +58,6 @@ function renderSkeleton(container) {
     `;
 }
 
-function formatDate(dateStr) {
-    if (!dateStr) return '—';
-    if (dateStr.includes('-')) {
-        const parts = dateStr.split('-');
-        if (parts.length === 3 && parts[2] === '00') {
-            const months = [
-                'січень', 'лютий', 'березень', 'квітень', 'травень', 'червень',
-                'липень', 'серпень', 'вересень', 'жовтень', 'листопад', 'грудень'
-            ];
-            const mIdx = parseInt(parts[1]) - 1;
-            return `${months[mIdx] || parts[1]} ${parts[0]}`;
-        }
-        try {
-            const d = new Date(dateStr);
-            return d.toLocaleDateString('uk-UA', { year: 'numeric', month: 'long', day: 'numeric' });
-        } catch {
-            return dateStr;
-        }
-    }
-    return dateStr;
-}
 
 function formatIssueRanges(nums) {
     if (!nums || !nums.length) return '';
@@ -252,7 +232,7 @@ export async function renderCollectionDetail(main, params = {}) {
                                 ${collection.cover_date || collection.release_date ? `
                                     <span class="volume-badge volume-year-badge" title="Дата виходу">
                                         ${ICON.calendar}
-                                        ${formatDate(collection.release_date || collection.cover_date)}
+                                        ${formatDate(collection.release_date || collection.cover_date, '—')}
                                     </span>
                                 ` : ''}
                             </div>

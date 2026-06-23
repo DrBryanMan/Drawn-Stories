@@ -3,6 +3,7 @@ import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { currentUser } from '../shell.js';
 import { openAddIssueModal } from '../components/addIssueModal.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
+import { formatDate } from '../helpers/lang.js';
 
 
 const ICON = {
@@ -26,14 +27,7 @@ const IMPORTANCE_LABELS = {
     epilogue: 'Епілог',
 };
 
-function formatDate(dateStr) {
-    if (!dateStr) return null;
-    try {
-        return new Date(dateStr).toLocaleDateString('uk-UA', { year: 'numeric', month: 'long', day: 'numeric' });
-    } catch {
-        return dateStr;
-    }
-}
+
 
 function eventYears(event) {
     if (event.start_year && event.end_year && event.start_year !== event.end_year) {
