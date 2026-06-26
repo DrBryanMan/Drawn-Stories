@@ -474,28 +474,3 @@
   text-align: center;
 }
 
-@media (max-width: 760px) {
-  .event-hero {
-    grid-template-columns: 180px minmax(0, 1fr);
-    gap: 22px;
-  }
-
-  .event-hero-info h1 {
-    font-size: 30px;
-  }
-
-  .event-form-grid,
-  .event-search-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 520px) {
-  .event-hero {
-    grid-template-columns: 1fr;
-  }
-
-  .event-cover {
-    max-width: 240px;
-  }
-}

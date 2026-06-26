@@ -98,6 +98,7 @@
   transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
 }
 .nav-dropdown-content.mega-menu {
+  left: calc(-260px + 50%);
   min-width: 520px;
   display: flex;
   flex-direction: column;
@@ -213,6 +214,3 @@
 /* ══════════════════════════════════════════════════════
    RESPONSIVE
 ══════════════════════════════════════════════════════ */
-@media (max-width: 768px) {
-  .nav-link span { display: none; }
-}

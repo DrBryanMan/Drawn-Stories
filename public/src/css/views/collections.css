@@ -211,22 +211,7 @@
     transition: width 0.3s ease;
 }
 
-@media (max-width: 640px) {
-    .volume-info {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-    }
-    .volume-info-right {
-        align-items: flex-start;
-        width: 100%;
-    }
-    .volume-progress-bar-track {
-        flex-grow: 1;
-        width: auto;
-        min-width: 100px;
-    }
-}
+
 /* ... */
 .toggle-collection-btn.btn-remove {
     background: var(--danger-color, #dc2626);
@@ -254,20 +239,7 @@
     color: var(--text-muted, #6b7280);
 }
 
-@media (max-width: 768px) {
-    .collection-controls {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .collection-search-wrap {
-        max-width: none;
-    }
-    
-    .collection-stats {
-        justify-content: space-around;
-    }
-}
+
 
 .volume-title {
     font-size: 1.5rem;
@@ -409,15 +381,7 @@
     overflow: hidden;
 }
 
-@media (max-width: 640px) {
-    .collection-item-wrapper {
-        width: 100px;
-    }
-    
-    .collection-volume-card {
-        padding: 16px;
-    }
-}
+
 
 /* Button for volume detail page */
 .btn-add-all-collection {

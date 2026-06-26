@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, HTTPException, Request
 from typing import Optional
 from ..db import get_db
 
@@ -54,3 +54,40 @@ async def get_characters(
     )
 
     return { "items": rows, "total": total, "page": page, "limit": limit }
+
+
+@router.put("/{character_id}")
+async def update_character(character_id: int, data: dict, request: Request):
+    role = request.cookies.get("role")
+    if role not in {"moderator", "admin"}:
+        raise HTTPException(status_code=403, detail="Потрібні права модератора")
+    
+    db = get_db()
+    char = db.get_one("SELECT id FROM characters WHERE id = ?", [character_id])
+    if not char:
+        raise HTTPException(status_code=404, detail="Персонажа не знайдено")
+        
+    name = data.get("name")
+    name_uk = data.get("name_uk")
+    real_name = data.get("real_name")
+    real_name_uk = data.get("real_name_uk")
+    creators = data.get("creators")
+    image = data.get("image")
+    portret_img = data.get("portret_img")
+    costume_img = data.get("costume_img")
+    portret_costume_img = data.get("portret_costume_img")
+    
+    if not name:
+        raise HTTPException(status_code=400, detail="Оригінальне ім'я обов'язкове")
+        
+    db.execute(
+        """
+        UPDATE characters
+        SET name = ?, name_uk = ?, real_name = ?, real_name_uk = ?, creators = ?, 
+            image = ?, portret_img = ?, costume_img = ?, portret_costume_img = ?, 
+            date_last_updated = datetime('now', 'localtime')
+        WHERE id = ?
+        """,
+        [name, name_uk, real_name, real_name_uk, creators, image, portret_img, costume_img, portret_costume_img, character_id]
+    )
+    return {"message": "Персонаж успішно оновлений"}

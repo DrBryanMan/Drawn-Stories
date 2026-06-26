@@ -30,6 +30,7 @@ function isMangaVolume(volume, themes = [], translationParents = []) {
     if (translationParents.some(parent => parent.hikka_slug || parent.rel_type === 'translation')) return true;
 
     return themes.some(theme => {
+        if ([36, 140, 141].includes(Number(theme.id))) return true;
         const name = `${theme.name || ''} ${theme.ua_name || ''}`.toLowerCase();
         return name.includes('manga') || name.includes('манга') || name.includes('манґа');
     });
@@ -655,10 +656,12 @@ export async function renderVolumeDetail(main, params = {}) {
                                             У випуски (${data.collections.length})
                                         </button>
                                     ` : ''}
-                                    <button class="btn-admin btn-admin--warning" id="volume-scrape-appearances-btn" title="Скрапити появи для всіх випусків тому">
-                                        ${ICON.refreshCw}
-                                        <span>Скрапити появи</span>
-                                    </button>
+                                    ${!isManga ? `
+                                        <button class="btn-admin btn-admin--warning" id="volume-scrape-appearances-btn" title="Скрапити стаф та появи для всіх випусків тому">
+                                            ${ICON.refreshCw}
+                                            <span>Скрапити стаф та появи</span>
+                                        </button>
+                                    ` : ''}
                                 </div>
                             ` : ''}
 

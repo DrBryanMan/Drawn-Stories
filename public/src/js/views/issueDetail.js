@@ -28,6 +28,10 @@ const ICON = {
     trash:        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
     refreshCw:    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M16 3h5v5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 21H3v-5"/></svg>',
     edit:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+    users:        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    mapPin:       '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
+    box:          '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+    helpCircle:   '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
 };
 
 const EVENT_IMPORTANCE_LABELS = {
@@ -43,6 +47,90 @@ const READLIST_OPTIONS = [
     { value: 'Planned',   label: 'Заплановано',     icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', color: '#2563eb', bg: 'color-mix(in srgb, #2563eb 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, #2563eb 20%, var(--border-s))' },
     { value: 'Completed', label: 'Прочитано',        icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>', color: '#059669', bg: 'color-mix(in srgb, #059669 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, #059669 20%, var(--border-s))' },
 ];
+
+function translateCharacterRole(role) {
+    const roles = {
+        'main': 'Основний персонаж',
+        'supporting': 'Другорядний персонаж',
+        'minor': 'Інші',
+        'cameo': 'Камео'
+    };
+    return roles[role] || role || '';
+}
+
+function translateAppearanceStatus(status) {
+    const statuses = {
+        'flashback': 'Спогад',
+        'first appear': 'Перша поява',
+        'death': 'Смерть',
+        'cameo': 'Камео'
+    };
+    return statuses[status] || status || '';
+}
+
+function renderStaffGroups(personsList) {
+    if (!personsList || personsList.length === 0) return '';
+
+    const coverPersons = [];
+    const productionPersons = [];
+    const featuredPersons = [];
+
+    personsList.forEach(p => {
+        const role = (p.role || '').trim().toLowerCase();
+        if (role === 'cover') {
+            coverPersons.push(p);
+        } else if (role === 'editor-in-chief' || role === 'editor') {
+            productionPersons.push(p);
+        } else {
+            featuredPersons.push(p);
+        }
+    });
+
+    const coverGroup      = groupStaffRoles(coverPersons);
+    const productionGroup = groupStaffRoles(productionPersons);
+    const featuredGroup   = groupStaffRoles(featuredPersons);
+
+    const renderCard = (person) => {
+        const personImg = person.image ? comicVineImageUrl(person.image) : '';
+        const imgHTML = personImg
+            ? `<img class="issue-staff-avatar" src="${escapeHtmlAttribute(personImg)}" alt="${escapeHtmlAttribute(person.name)}">`
+            : `<div class="issue-staff-avatar--empty">${ICON.smallImage}</div>`;
+        const rolesJoined = person.roles.map(r => translateStaffRole(r)).join(', ');
+        return `
+            <a class="issue-staff-card" href="#/persons/${person.id || person.person_id}">
+                ${imgHTML}
+                <div class="issue-staff-info">
+                    <span class="issue-staff-role-label">${escapeHtmlAttribute(rolesJoined)}</span>
+                    <span class="issue-staff-name">${escapeHtmlAttribute(person.name)}</span>
+                </div>
+            </a>
+        `;
+    };
+
+    const renderGroup = (title, groupItems, extraClass = '') => {
+        if (groupItems.length === 0) return '';
+        return `
+            <div class="issue-staff-group-section ${extraClass}">
+                <h4 class="issue-staff-group-title">${title}</h4>
+                <div class="issue-staff-grid">
+                    ${groupItems.map(renderCard).join('')}
+                </div>
+            </div>
+        `;
+    };
+
+    const sideRow = (coverGroup.length > 0 || productionGroup.length > 0)
+        ? `<div class="issue-staff-side-row">
+               ${renderGroup('Автори обкладинки', coverGroup)}
+               ${renderGroup('Редакція та виробництво', productionGroup)}
+           </div>`
+        : '';
+
+    return `
+        ${renderGroup('Інші автори', featuredGroup)}
+        ${sideRow}
+    `;
+}
 
 function readlistOptionLabel(value) {
     return READLIST_OPTIONS.find(o => o.value === value) || READLIST_OPTIONS[0];
@@ -321,6 +409,7 @@ export async function renderIssueDetail(container, params = {}) {
         stories = [],
         persons = [],
         reprints = [],
+        appearances = { characters: [], teams: [], locations: [], concepts: [], objects: [] }
     } = data;
 
     // Metadata
@@ -401,57 +490,361 @@ export async function renderIssueDetail(container, params = {}) {
            </div>`
         : '';
 
-
     // ── Stories HTML ──────────────────────────────
     const hasMultipleStories = stories.length > 1;
-    const storiesCountText = hasMultipleStories 
-        ? `та ще ${stories.length} інші` 
-        : '';
-    const chevronIconHTML = hasMultipleStories ? ICON.chevronRight : '';
 
-    const storiesHTML = stories.length
-        ? `<div class="issue-stories-list ${hasMultipleStories ? '' : 'is-expanded'}">
-               ${stories.map((story, index) => {
-                    const mainTitle = story.name_ua || story.name_original || 'Без назви';
-                    const subTitle = story.name_ua ? story.name_original : '';
+    let storiesHTML = '';
+    if (stories.length) {
+        if (hasMultipleStories) {
+            const hasImported = stories.some(s => s.is_imported);
+            const hasMain = !hasImported && stories[0] && stories[0].order_num === 0;
+            const tabsHTML = `
+                <div class="issue-stories-tabs">
+                    ${stories.map((story, index) => {
+                        const tabLabel = (index === 0 && hasMain)
+                            ? 'Основна'
+                            : `Історія ${hasMain ? index : index + 1}`;
+                        return `
+                            <button class="issue-story-tab-btn ${index === 0 ? 'is-active' : ''}" data-story-index="${index}">
+                                ${tabLabel}
+                            </button>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+
+            // Тіло історій
+            const storiesListHTML = `
+                <div class="issue-stories-tab-contents">
+                    ${stories.map((story, index) => {
+                        const mainTitle = story.name_ua || story.name_original || 'Без назви';
+                        const subTitle = (story.name_ua && story.name_original && story.name_ua.trim() !== story.name_original.trim()) 
+                            ? story.name_original 
+                            : '';
+                        
+                        const rawStoryPersons = persons.filter(p => p.story_id === story.id || p.story_id === story.client_story_id);
+                        
+                        let storyImportBadgeHTML = '';
+                        if (story.is_imported) {
+                            storyImportBadgeHTML = `
+                                <div class="issue-story-imported-banner">
+                                    Творці історії з <a href="#/issues/${story.original_issue_id}">
+                                        ${escapeHtmlAttribute(story.original_volume_name)} #${escapeHtmlAttribute(story.original_issue_number)}
+                                    </a>
+                                </div>
+                            `;
+                        }
+
+                        const storyStaffHTML = rawStoryPersons.length
+                            ? `<div class="issue-story-staff">
+                                   ${storyImportBadgeHTML}
+                                   ${renderStaffGroups(rawStoryPersons)}
+                               </div>`
+                            : '';
+
+                        return `
+                            <div class="issue-story-tab-content ${index === 0 ? 'is-active' : ''}" data-story-index="${index}">
+                                <div class="issue-story-content">
+                                    <div class="issue-story-main-title">${escapeHtmlAttribute(mainTitle)}</div>
+                                    ${subTitle ? `<div class="issue-story-sub-title">${escapeHtmlAttribute(subTitle)}</div>` : ''}
+                                    ${storyStaffHTML}
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+
+            storiesHTML = `
+                <div class="issue-stories-list-wrapper">
+                    ${tabsHTML}
+                    ${storiesListHTML}
+                </div>
+            `;
+        } else {
+            // Всього 1 історія (простий вивід без вкладок)
+            const story = stories[0];
+            const mainTitle = story.name_ua || story.name_original || 'Без назви';
+            const subTitle = (story.name_ua && story.name_original && story.name_ua.trim() !== story.name_original.trim()) 
+                ? story.name_original 
+                : '';
+            
+            const rawStoryPersons = persons.filter(p => p.story_id === story.id || p.story_id === story.client_story_id);
+            let storyImportBadgeHTML = '';
+            if (story.is_imported) {
+                storyImportBadgeHTML = `
+                    <div class="issue-story-imported-banner">
+                        Творці історії з <a href="#/issues/${story.original_issue_id}">
+                            ${escapeHtmlAttribute(story.original_volume_name)} #${escapeHtmlAttribute(story.original_issue_number)}
+                        </a>
+                    </div>
+                `;
+            }
+
+            const storyStaffHTML = rawStoryPersons.length
+                ? `<div class="issue-story-staff">
+                       ${storyImportBadgeHTML}
+                       ${renderStaffGroups(rawStoryPersons)}
+                   </div>`
+                : '';
+
+            storiesHTML = `
+                <div class="issue-stories-list-wrapper">
+                    <div class="issue-story-content">
+                        <div class="issue-story-main-title">${escapeHtmlAttribute(mainTitle)}</div>
+                        ${subTitle ? `<div class="issue-story-sub-title">${escapeHtmlAttribute(subTitle)}</div>` : ''}
+                        ${storyStaffHTML}
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    // ── Stories Plots & Appearances HTML ──────────
+    let storiesDetailsHTML = '';
+    if (stories.length) {
+        const blocks = stories.map((story) => {
+            const storyStaff = persons.filter(p => p.story_id === story.id || p.story_id === story.client_story_id);
+            const hasAppearances = story.appearances && (
+                (story.appearances.characters && story.appearances.characters.length > 0) ||
+                (story.appearances.teams && story.appearances.teams.length > 0) ||
+                (story.appearances.locations && story.appearances.locations.length > 0) ||
+                (story.appearances.concepts && story.appearances.concepts.length > 0) ||
+                (story.appearances.objects && story.appearances.objects.length > 0)
+            );
+            const hasPlot = !!(story.plot && story.plot.trim());
+            const hasStaff = storyStaff.length > 0;
+            const hasContent = hasAppearances || hasPlot || hasStaff;
+
+            // Блок основної історії не відображаємо, якщо немає появ/сюжету/стафу
+            const isLocalMain = !story.is_imported && story.order_num === 0;
+            if (isLocalMain && !hasContent) {
+                return '';
+            }
+
+            // Назва та бейдж джерела (якщо імпортовано)
+            let badgeHTML = '';
+            if (story.is_imported) {
+                const storyLabel = (story.order_num === 0 || !story.order_num) 
+                    ? 'основної історії' 
+                    : `${story.order_num}-ї історії`;
+                badgeHTML = `
+                    <a class="issue-story-detail-badge" href="#/issues/${story.original_issue_id}">
+                        <span class="reprint-icon">${ICON.book}</span>
+                        <span>Репринт ${storyLabel} з ${escapeHtmlAttribute(story.original_volume_name)} #${escapeHtmlAttribute(story.original_issue_number)}</span>
+                    </a>
+                `;
+            }
+
+            const mainTitle = story.name_ua || story.name_original || (isLocalMain ? displayTitle : 'Без назви');
+
+            // Появи
+            let appearancesHTML = '<div class="issue-story-empty">— поки порожньо —</div>';
+            if (hasAppearances) {
+                const groups = [];
+                const apps = story.appearances;
+                
+                // Helper to render character card
+                const renderCharacterCard = (c) => {
+                    const costumeImg = c.portret_costume_img || c.costume_img || null;
+                    const regularImg = c.portret_img || c.image || null;
                     
-                    const storyStaff = groupStaffRoles(persons.filter(p => p.story_id === story.id));
-                    const storyStaffHTML = storyStaff.length
-                        ? `<div class="issue-story-staff">
-                               <div class="issue-story-staff-grid">
-                                   ${storyStaff.map(person => {
-                                       const personImg = person.image ? comicVineImageUrl(person.image) : '';
-                                       const imgHTML = personImg
-                                           ? `<img class="issue-story-staff-avatar" src="${escapeHtmlAttribute(personImg)}" alt="${escapeHtmlAttribute(person.name)}">`
-                                           : `<div class="issue-story-staff-avatar--empty">${ICON.smallImage}</div>`;
-                                       const rolesJoined = person.roles.map(r => translateStaffRole(r)).join(', ');
-                                       return `
-                                           <a class="issue-story-staff-card">
-                                               ${imgHTML}
-                                               <div class="issue-story-staff-info">
-                                                   <span class="issue-story-staff-name">${escapeHtmlAttribute(person.name)}</span>
-                                                   <span class="issue-story-staff-role">${escapeHtmlAttribute(rolesJoined)}</span>
-                                               </div>
-                                           </a>
-                                       `;
-                                   }).join('')}
-                               </div>
-                           </div>`
+                    let imgHTML = '';
+                    if (costumeImg && regularImg) {
+                        const defUrl = comicVineImageUrl(costumeImg);
+                        const hovUrl = comicVineImageUrl(regularImg);
+                        imgHTML = `
+                            <div class="story-appearance-avatar-wrap has-hover">
+                                <img class="story-appearance-avatar default-avatar" src="${escapeHtmlAttribute(defUrl)}" alt="${escapeHtmlAttribute(c.name)}">
+                                <img class="story-appearance-avatar hover-avatar" src="${escapeHtmlAttribute(hovUrl)}" alt="${escapeHtmlAttribute(c.name)}">
+                            </div>
+                        `;
+                    } else {
+                        const singleImg = costumeImg || regularImg;
+                        imgHTML = singleImg
+                            ? `<div class="story-appearance-avatar-wrap">
+                                   <img class="story-appearance-avatar default-avatar" src="${escapeHtmlAttribute(comicVineImageUrl(singleImg))}" alt="${escapeHtmlAttribute(c.name)}">
+                               </div>`
+                            : `<div class="story-appearance-avatar--empty">${ICON.smallImage}</div>`;
+                    }
+                    
+                    const details = [];
+                    if (c.status) details.push(translateAppearanceStatus(c.status));
+                    if (c.comment) details.push(c.comment);
+                    const detailsText = details.join(' • ');
+                    
+                    const primaryName = c.name_uk || c.name || c.real_name_uk || c.real_name || 'Невідомий персонаж';
+                    const hasMainName = !!(c.name_uk || c.name);
+                    const subRealName = c.real_name_uk || c.real_name;
+                    const showRealName = hasMainName && subRealName;
+                    const realNameHTML = showRealName 
+                        ? `<span class="story-appearance-real-name">${escapeHtmlAttribute(subRealName)}</span>` 
                         : '';
-
+                    
+                    const roleTranslations = {
+                        'main': 'ГОЛОВНИЙ',
+                        'supporting': 'ДРУГОРЯДНИЙ',
+                        'minor': 'ІНШІ',
+                        'cameo': 'КАМЕО'
+                    };
+                    const roleKey = (c.role || 'minor').toLowerCase();
+                    const roleLabel = roleTranslations[roleKey] || roleKey.toUpperCase();
+                    
                     return `
-                        <div class="issue-story-item">
-                            <div class="issue-story-num-badge">Історія ${index + 1}</div>
-                            <div class="issue-story-content">
-                                <div class="issue-story-main-title">${escapeHtmlAttribute(mainTitle)}</div>
-                                ${subTitle ? `<div class="issue-story-sub-title">${escapeHtmlAttribute(subTitle)}</div>` : ''}
-                                ${storyStaffHTML}
+                        <div class="story-appearance-card character">
+                            <span class="character-card-role ${roleKey}">${roleLabel}</span>
+                            ${imgHTML}
+                            <div class="story-appearance-info">
+                                <span class="story-appearance-name">${escapeHtmlAttribute(primaryName)}</span>
+                                ${realNameHTML}
+                                ${detailsText ? `<span class="story-appearance-details" title="${escapeHtmlAttribute(detailsText)}">${escapeHtmlAttribute(detailsText)}</span>` : ''}
                             </div>
                         </div>
                     `;
-                }).join('')}
-           </div>`
-        : '';
+                };
+
+                // Characters group
+                if (apps.characters && apps.characters.length > 0) {
+                    const teamMap = {};
+                    if (apps.teams && apps.teams.length > 0) {
+                        apps.teams.forEach(t => {
+                            teamMap[t.id] = t;
+                        });
+                    }
+
+                    const groupedByTeam = {};
+                    const independentCharacters = [];
+
+                    apps.characters.forEach(c => {
+                        if (c.team_id && teamMap[c.team_id]) {
+                            if (!groupedByTeam[c.team_id]) {
+                                groupedByTeam[c.team_id] = [];
+                            }
+                            groupedByTeam[c.team_id].push(c);
+                        } else {
+                            independentCharacters.push(c);
+                        }
+                    });
+
+                    const teamGroupsHTML = [];
+                    for (const teamId in groupedByTeam) {
+                        const team = teamMap[teamId];
+                        const teamChars = groupedByTeam[teamId];
+                        const charCards = teamChars.map(c => renderCharacterCard(c)).join('');
+                        
+                        teamGroupsHTML.push(`
+                            <div class="story-appearance-team-group" style="border-left: 3px solid var(--accent-glow); padding-left: 12px;">
+                                <div class="story-appearance-team-header" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                    <span style="color: var(--primary); display: flex; align-items: center;">${ICON.users}</span>
+                                    <a href="#/teams/${team.id}" class="story-appearance-team-title" style="font-weight: bold; font-size: 14px; text-decoration: none; color: var(--text); transition: color 0.2s;">
+                                        ${escapeHtmlAttribute(team.name_uk || team.name)}
+                                    </a>
+                                </div>
+                                <div class="story-appearances-grid characters-grid">
+                                    ${charCards}
+                                </div>
+                            </div>
+                        `);
+                    }
+
+                    let independentHTML = '';
+                    if (independentCharacters.length > 0) {
+                        const cards = independentCharacters.map(c => renderCharacterCard(c)).join('');
+                        independentHTML = `
+                            <div class="story-appearances-grid characters-grid" style="margin-top: 8px;">
+                                ${cards}
+                            </div>
+                        `;
+                    }
+
+                    groups.push(`
+                        <div class="issue-story-appearance-group">
+                            <strong>Персонажі:</strong>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                ${teamGroupsHTML.join('')}
+                                ${independentHTML}
+                            </div>
+                        </div>
+                    `);
+                }
+                
+                // Helper to render other appearance types with icons
+                const renderSimpleAppearances = (title, items, icon, className) => {
+                    if (!items || items.length === 0) return '';
+                    const cards = items.map(item => {
+                        const imgHTML = `<div class="story-appearance-avatar--empty">${icon}</div>`;
+                        const details = [];
+                        if (item.status) details.push(item.status);
+                        if (item.comment) details.push(item.comment);
+                        const detailsText = details.join(' • ');
+                        
+                        return `
+                            <div class="story-appearance-card ${className}">
+                                ${imgHTML}
+                                <div class="story-appearance-info">
+                                    <span class="story-appearance-name">${escapeHtmlAttribute(item.name_uk || item.name)}</span>
+                                    ${detailsText ? `<span class="story-appearance-details" title="${escapeHtmlAttribute(detailsText)}">${escapeHtmlAttribute(detailsText)}</span>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    return `
+                        <div class="issue-story-appearance-group">
+                            <strong>${title}:</strong>
+                            <div class="story-appearances-grid">
+                                ${cards}
+                            </div>
+                        </div>
+                    `;
+                };
+
+                const teamsHTML = renderSimpleAppearances('Команди та Організації', apps.teams, ICON.users, 'team');
+                if (teamsHTML) groups.push(teamsHTML);
+                
+                const objectsHTML = renderSimpleAppearances('Предмети', apps.objects, ICON.box, 'object');
+                if (objectsHTML) groups.push(objectsHTML);
+                
+                const locationsHTML = renderSimpleAppearances('Локації', apps.locations, ICON.mapPin, 'location');
+                if (locationsHTML) groups.push(locationsHTML);
+                
+                const conceptsHTML = renderSimpleAppearances('Концепти', apps.concepts, ICON.helpCircle, 'concept');
+                if (conceptsHTML) groups.push(conceptsHTML);
+
+                appearancesHTML = `<div class="issue-story-appearances-groups">${groups.join('')}</div>`;
+            }
+
+            // Сюжет
+            const plotHTML = hasPlot
+                ? `<div class="issue-story-plot-text">${story.plot}</div>`
+                : '<div class="issue-story-empty">— поки порожньо —</div>';
+
+            return `
+                <div class="issue-story-detail-card">
+                    ${badgeHTML}
+                    <h2 class="issue-story-detail-title">${escapeHtmlAttribute(mainTitle)}</h2>
+                    <div class="issue-story-detail-section">
+                        <div class="issue-story-detail-section-title">Сюжет</div>
+                        ${plotHTML}
+                    </div>
+                    <div class="issue-story-detail-section">
+                        <div class="issue-story-detail-section-title">Появи</div>
+                        ${appearancesHTML}
+                    </div>
+                </div>
+            `;
+        }).filter(Boolean).join('');
+
+        if (blocks) {
+            storiesDetailsHTML = `
+                <div class="issue-stories-details-section">
+                    <div class="issue-section-heading">
+                        <h2>Сюжет та появи</h2>
+                    </div>
+                    ${blocks}
+                </div>
+            `;
+        }
+    }
 
     // ── Event / arc context ───────────────────────
     const contextCards = [
@@ -532,35 +925,74 @@ export async function renderIssueDetail(container, params = {}) {
            </section>`
         : '';
 
-    // ── Issue Staff HTML ──────────────────────────
-    const issueStaff = groupStaffRoles(persons.filter(p => !p.story_id));
-    const staffSectionHTML = issueStaff.length
+    // ── Issue Staff & Stories HTML ────────────────
+    const rawIssuePersons = persons.filter(p => !p.story_id);
+    const issueStaff = groupStaffRoles(rawIssuePersons);
+    let staffImportBadgeHTML = '';
+    if (rawIssuePersons.length > 0 && rawIssuePersons[0].is_imported) {
+        const firstP = rawIssuePersons[0];
+        staffImportBadgeHTML = `
+            <div class="issue-staff-imported-banner">
+                Творці випуску з <a href="#/issues/${firstP.original_issue_id}">
+                    ${escapeHtmlAttribute(firstP.original_volume_name)} #${escapeHtmlAttribute(firstP.original_issue_number)}
+                </a>
+            </div>
+        `;
+    }
+
+    const mainStaffHTML = rawIssuePersons.length
+        ? renderStaffGroups(rawIssuePersons)
+        : '';
+
+    const hasAnyStaff = persons.length > 0;
+    const combinedStaffStoriesHTML = hasAnyStaff || stories.length > 0
         ? `<section class="issue-staff-section">
+               ${staffImportBadgeHTML}
+               ${hasAnyStaff ? `
                <div class="issue-section-heading">
                    <h3>Творці випуску</h3>
                </div>
-               <div class="issue-staff-grid">
-                   ${issueStaff.map(person => {
-                       const personImg = person.image ? comicVineImageUrl(person.image) : '';
-                       const imgHTML = personImg
-                           ? `<img class="issue-staff-avatar" src="${escapeHtmlAttribute(personImg)}" alt="${escapeHtmlAttribute(person.name)}">`
-                           : `<div class="issue-staff-avatar--empty">${ICON.smallImage}</div>`;
-                       const rolesJoined = person.roles.map(r => translateStaffRole(r)).join(', ');
-                       return `
-                           <a class="issue-staff-card">
-                               ${imgHTML}
-                               <div class="issue-staff-info">
-                                   <span class="issue-staff-name">${escapeHtmlAttribute(person.name)}</span>
-                                   <span class="issue-staff-role">${escapeHtmlAttribute(rolesJoined)}</span>
-                               </div>
-                           </a>
-                       `;
-                   }).join('')}
-               </div>
+               ` : ''}
+               ${mainStaffHTML}
+               ${storiesHTML}
            </section>`
         : '';
 
     // ── Assemble ──────────────────────────────────
+    // Визначення підпису для основної історії / історій з оригіналів
+    const importedStories = stories.filter(s => s.is_imported);
+    const isReprintIssue = reprints.some(r => r.reprint_id === issueId);
+    let mainStoryLabelText = 'Основна історія';
+
+    if (importedStories.length > 0) {
+        const count = importedStories.length;
+        let storyWord = 'історій';
+        if (count % 10 === 1 && count % 100 !== 11) {
+            storyWord = 'історія';
+        } else if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) {
+            storyWord = 'історії';
+        }
+        mainStoryLabelText = `${count} ${storyWord} з оригіналів`;
+    } else if (isReprintIssue && stories.length > 0) {
+        const count = stories.length;
+        let storyWord = 'історій';
+        if (count % 10 === 1 && count % 100 !== 11) {
+            storyWord = 'історія';
+        } else if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) {
+            storyWord = 'історії';
+        }
+        mainStoryLabelText = `${count} ${storyWord}-репринтів`;
+    } else if (stories.length > 1) {
+        const count = stories.length;
+        let storyWord = 'історій';
+        if (count % 10 === 1 && count % 100 !== 11) {
+            storyWord = 'історія';
+        } else if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) {
+            storyWord = 'історії';
+        }
+        mainStoryLabelText = `${count} ${storyWord}`;
+    }
+
     container.innerHTML = `
         <div class="issue-detail">
             <div class="container">
@@ -582,13 +1014,7 @@ export async function renderIssueDetail(container, params = {}) {
                             <div class="issue-header-center">
                                 <h1>${escapeHtmlAttribute(issueTitle || displayTitle)}</h1>
                                 <div class="issue-main-story-label">
-                                    <span>Основна історія</span>
-                                    ${hasMultipleStories ? `
-                                        <span class="issue-additional-stories-trigger" id="issue-toggle-stories-btn">
-                                            ${storiesCountText}
-                                            ${chevronIconHTML}
-                                        </span>
-                                    ` : ''}
+                                    <span>${escapeHtmlAttribute(mainStoryLabelText)}</span>
                                 </div>
                             </div>
                             ${navCardHTML(next_issue, 'next')}
@@ -601,9 +1027,7 @@ export async function renderIssueDetail(container, params = {}) {
                             ${pagesBadge}
                         </div>
 
-                        ${staffSectionHTML}
-
-                        ${storiesHTML}
+                        ${combinedStaffStoriesHTML}
 
                         ${descriptionHTML}
                         ${externalLinksHTML}
@@ -612,6 +1036,7 @@ export async function renderIssueDetail(container, params = {}) {
             </section>
 
             <div class="container issue-body">
+                ${storiesDetailsHTML}
                 ${contextHTML}
                 ${collectionsHTML}
                 ${reprintsHTML}
@@ -625,25 +1050,32 @@ export async function renderIssueDetail(container, params = {}) {
                     <button class="btn-admin btn-admin--danger" id="issue-delete-btn" title="Видалити випуск">
                         ${ICON.trash}
                     </button>
-                    <button class="btn-admin btn-admin--secondary" id="issue-scrape-appearances-btn" title="Скрапити появи з Comic Vine">
+                    <button class="btn-admin btn-admin--secondary" id="issue-scrape-appearances-btn" title="Скрапити стаф та появи з Comic Vine">
                         ${ICON.refreshCw}
-                        <span>Скрапити ComicVine</span>
+                        <span>Скрапити стаф та появи</span>
                     </button>
                 </div>
             ` : ''}
         </div>
     `;
 
-    // ── Toggle Stories Accordion ──────────────────────
+    // ── Stories Tabs Switching ──────────────────────
     if (hasMultipleStories) {
-        const toggleBtn = container.querySelector('#issue-toggle-stories-btn');
-        const storiesList = container.querySelector('.issue-stories-list');
-        if (toggleBtn && storiesList) {
-            toggleBtn.addEventListener('click', () => {
-                const isExpanded = storiesList.classList.toggle('is-expanded');
-                toggleBtn.classList.toggle('is-expanded', isExpanded);
+        const tabBtns = container.querySelectorAll('.issue-story-tab-btn');
+        const tabContents = container.querySelectorAll('.issue-story-tab-content');
+        
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetIndex = btn.dataset.storyIndex;
+                
+                tabBtns.forEach(b => b.classList.remove('is-active'));
+                tabContents.forEach(c => c.classList.remove('is-active'));
+                
+                btn.classList.add('is-active');
+                const matchingContent = container.querySelector(`.issue-story-tab-content[data-story-index="${targetIndex}"]`);
+                if (matchingContent) matchingContent.classList.add('is-active');
             });
-        }
+        });
     }
 
     // ── Readlist & Favorites Handlers ──────────────────
@@ -786,7 +1218,7 @@ export async function renderIssueDetail(container, params = {}) {
         const editBtn = container.querySelector('#issue-edit-btn');
         if (editBtn) {
             editBtn.addEventListener('click', () => {
-                const editor = new IssueEditor(issue, stories, persons, reprints, () => {
+                const editor = new IssueEditor(issue, stories, persons, reprints, appearances, () => {
                     renderIssueDetail(container, params);
                 });
                 editor.render();

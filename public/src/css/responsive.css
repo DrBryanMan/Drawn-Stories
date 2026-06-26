@@ -1,0 +1,418 @@
+/* =================================================================
+   RESPONSIVE — усі @media блоки проєкту
+   Упорядковані від найширшого до найвужчого брейкпоінту.
+   Не редагуй цей файл вручну — він є єдиним місцем
+   для всіх медіазапитів.
+   ================================================================= */
+
+
+/* ── 1200px ────────────────────────────────────────────────────── */
+
+@media (max-width: 1200px) {
+  /* views/home.css */
+  #recent-volumes-grid,
+  #recent-issues-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+
+/* ── 1040px ────────────────────────────────────────────────────── */
+
+@media (max-width: 1040px) {
+  /* views/catalog.css */
+  .catalog-layout,
+  .catalog-layout.is-filters-open {
+    grid-template-columns: 1fr;
+  }
+
+  .catalog-layout.is-filters-open .comic-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .catalog-filter-sidebar {
+    position: static;
+    order: -1;
+  }
+}
+
+
+/* ── 1024px ────────────────────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+  /* views/home.css */
+  .home-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ── 900px ─────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  /* components/add-issue-modal.css */
+  .aim-results-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  /* views/catalog.css */
+  .catalog-top-row {
+    flex-direction: column;
+  }
+
+  .catalog-primary-actions {
+    width: 100%;
+  }
+
+  /* views/volume-detail.css */
+  .volume-hero {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    text-align: center;
+  }
+
+  .volume-cover-column {
+    max-width: 200px;
+    margin: 0 auto;
+  }
+
+  .volume-hero-badges,
+  .volume-quick-meta,
+  .volume-hero-actions {
+    justify-content: center;
+  }
+
+  .volume-hero-relations {
+    grid-template-columns: minmax(0, 320px);
+    justify-content: center;
+    text-align: left;
+  }
+
+  .volume-translations-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .volume-translation-card {
+    grid-template-columns: 60px minmax(0, 1fr);
+    min-height: 96px;
+  }
+
+  .volume-translation-poster {
+    width: 60px;
+  }
+
+  .volume-issues-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .volume-toolbar-right {
+    justify-content: space-between;
+  }
+}
+
+
+/* ── 768px ─────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  /* components/comic-card.css */
+  .comic-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* components/filter-bar.css */
+  .filter-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-section + .filter-section {
+    border-left: none;
+    border-top: 1px solid var(--border-s);
+  }
+
+  .results-section {
+    min-width: unset;
+  }
+
+  /* components/header.css */
+  .nav-link span {
+    display: none;
+  }
+
+  /* views/bookmarks.css */
+  .bookmarks-login-banner {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+
+  .banner-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .bookmarks-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 16px;
+  }
+
+  /* views/collections.css */
+  .collection-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .collection-search-wrap {
+    max-width: none;
+  }
+
+  .collection-stats {
+    justify-content: space-around;
+  }
+
+  /* views/home.css */
+  .hero-title {
+    font-size: 28px;
+  }
+
+  .hero-stats {
+    gap: 20px;
+  }
+
+  #weekly-releases-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  #recent-volumes-grid,
+  #recent-issues-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* views/issue-detail.css */
+  .issue-hero {
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: 20px;
+    padding-top: 20px;
+    padding-bottom: 24px;
+  }
+
+  .issue-hero-info h1 {
+    font-size: 22px;
+  }
+
+  .issue-header-block {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .issue-nav-card {
+    width: 100% !important;
+    max-width: none !important;
+    flex: none !important;
+  }
+
+  .issue-nav-card--placeholder {
+    display: none !important;
+  }
+
+  .issue-context-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .issue-collections-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .issue-meta-facts {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* views/publishers.css */
+  .publishers-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ── 760px ─────────────────────────────────────────────────────── */
+
+@media (max-width: 760px) {
+  /* views/event-detail.css */
+  .event-hero {
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: 22px;
+  }
+
+  .event-hero-info h1 {
+    font-size: 30px;
+  }
+
+  .event-form-grid,
+  .event-search-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ── 640px ─────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  /* views/catalog.css */
+  .catalog-top-row,
+  .catalog-primary-actions {
+    align-items: stretch;
+  }
+
+  .catalog-actions-panel {
+    align-items: stretch;
+  }
+
+  .catalog-inline-filter-controls,
+  .catalog-selected-filters,
+  .catalog-selected-filter-group {
+    align-items: stretch;
+  }
+
+  .catalog-inline-filter,
+  .catalog-inline-filter__input-wrap {
+    width: 100%;
+  }
+
+  .catalog-inline-filter + .catalog-inline-filter,
+  .catalog-selected-filter-group + .catalog-selected-filter-group {
+    padding-top: 10px;
+    border-top: 1px solid var(--border-s);
+  }
+
+  .catalog-selected-filter-group.is-first-visible {
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .catalog-inline-filter + .catalog-inline-filter::before,
+  .catalog-selected-filter-group + .catalog-selected-filter-group::before {
+    display: none;
+  }
+
+  .catalog-clear-all-filters-btn {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+    height: 34px;
+    font-size: 13px;
+  }
+
+  .catalog-segmented {
+    width: 100%;
+  }
+
+  .catalog-segment {
+    flex: 1;
+  }
+
+  /* views/collections.css */
+  .volume-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .volume-info-right {
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .volume-progress-bar-track {
+    flex-grow: 1;
+    width: auto;
+    min-width: 100px;
+  }
+
+  .collection-item-wrapper {
+    width: 100px;
+  }
+
+  .collection-volume-card {
+    padding: 16px;
+  }
+
+  /* views/settings.css */
+  .avatar-upload-wrapper {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 20px;
+  }
+}
+
+
+/* ── 520px ─────────────────────────────────────────────────────── */
+
+@media (max-width: 520px) {
+  /* views/event-detail.css */
+  .event-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .event-cover {
+    max-width: 240px;
+  }
+}
+
+
+/* ── 480px ─────────────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  /* components/comic-card.css */
+  .comic-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  }
+
+  /* components/pagination.css */
+  .pagination {
+    gap: 4px;
+  }
+
+  .pagination-info {
+    gap: 4px;
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+
+  .pagination-page-input {
+    width: 46px;
+    height: 26px;
+    padding: 0 6px;
+  }
+
+  /* views/home.css */
+  #weekly-releases-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  #recent-volumes-grid,
+  #recent-issues-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* views/issue-detail.css */
+  .issue-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .issue-cover-column {
+    max-width: 240px;
+    margin: 0 auto;
+  }
+
+  .issue-context-card {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .issue-context-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

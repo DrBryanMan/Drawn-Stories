@@ -53,13 +53,6 @@
   transition: transform .3s ease, box-shadow .3s ease;
 }
 
-.issue-cover:hover {
-  transform: translateY(-3px);
-  box-shadow:
-    0 8px 16px rgba(15, 23, 42, .09),
-    0 24px 48px rgba(15, 23, 42, .14);
-}
-
 .issue-cover--empty {
   display: grid;
   place-items: center;
@@ -146,51 +139,6 @@
   text-decoration: underline;
 }
 
-/* ── Badges ───────────────────────────────────────── */
-.issue-hero-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-/* ── Volume Badges ────────────────────────────────── */
-.volume-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  width: fit-content;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: var(--r);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: .03em;
-  text-decoration: none;
-  transition: all var(--t);
-  border: 1px solid var(--border-s);
-  background: var(--bg-card);
-  color: var(--text-2);
-}
-
-.volume-series-badge {
-  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border-s));
-  background: color-mix(in srgb, var(--accent) 6%, var(--bg-card));
-  color: var(--accent);
-}
-
-.volume-series-badge:hover {
-  background: var(--accent-glow);
-  border-color: var(--accent);
-}
-
-.volume-cover-date-badge,
-.volume-release-date-badge,
-.volume-pages-badge {
-  border: 1px solid var(--border-s);
-  background: var(--bg-card);
-  color: var(--text-2);
-}
-
 /* ── Description ──────────────────────────────────── */
 .issue-description {
   max-width: 680px;
@@ -245,7 +193,7 @@
 
 /* ── Body ─────────────────────────────────────────── */
 .issue-body {
-  margin-top: 48px;
+  margin-top: 2em;
 }
 
 /* ── Section Heading ──────────────────────────────── */
@@ -253,12 +201,6 @@
   display: flex;
   align-items: center;
   gap: 10px;
-
-  &:has(h2) {
-    margin-bottom: 20px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--border-s);
-  }
 }
 
 .issue-section-heading h2 {
@@ -323,7 +265,6 @@
   border-color: color-mix(in srgb, var(--accent) 30%, var(--border-s));
   background: color-mix(in srgb, var(--accent) 3%, var(--bg-card));
   box-shadow: 0 4px 12px rgba(108, 92, 231, 0.06);
-  transform: translateY(-2px);
 }
 
 .issue-nav-card--placeholder {
@@ -496,7 +437,6 @@
 .issue-context-issue-card:hover {
   border-color: rgba(255, 255, 255, .42);
   background: rgba(255, 255, 255, .14);
-  transform: translateY(-1px);
   color: #fff;
 }
 
@@ -592,7 +532,6 @@
   border-color: color-mix(in srgb, var(--accent) 30%, var(--border-s));
   background: color-mix(in srgb, var(--accent) 3%, var(--bg-card));
   box-shadow: 0 4px 12px rgba(108, 92, 231, 0.08);
-  transform: translateY(-2px);
   color: var(--text);
 }
 
@@ -775,6 +714,66 @@
   font-style: italic;
 }
 
+/* ── Stories Tabs ────────────────────────────────── */
+.issue-stories-list-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* background: var(--bg-card); */
+  /* border: 1px solid var(--border-s); */
+  /* border-radius: var(--r); */
+  /* padding: 16px; */
+  /* margin-top: 10px; */
+}
+
+.issue-stories-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-s);
+  padding-bottom: 10px;
+}
+
+.issue-story-tab-btn {
+  font-family: var(--font-oswald);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-2);
+  background: var(--bg-2);
+  border: 1px solid var(--border-s);
+  padding: 5px 12px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: all var(--t);
+}
+
+.issue-story-tab-btn:hover {
+  background: var(--border-s);
+  color: var(--text);
+}
+
+.issue-story-tab-btn.is-active {
+  color: var(--accent);
+  background: var(--accent-glow);
+  border-color: var(--accent);
+}
+
+.issue-stories-tab-contents {
+  position: relative;
+}
+
+.issue-story-tab-content {
+  display: none;
+}
+
+.issue-story-tab-content.is-active {
+  display: block;
+}
+
+
 
 /* ── Editor Tabs ──────────────────────────────────── */
 .editor-tabs-segmented {
@@ -850,82 +849,134 @@
   margin-top: 12px;
 }
 
-/* ── Issue Staff Section ─────────────────────────── */
-.issue-staff-section {
-  margin-top: 24px;
-  margin-bottom: 24px;
+.issue-section-heading h3 {
+  margin: 0;
+  font-family: var(--font-oswald);
+  font-size: 20px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+
+.issue-section-heading::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-s);
+}
+
+.issue-staff-group-section {
+  margin-bottom: 20px;
+}
+
+.issue-staff-group-title {
+  margin: 0 0 10px 0;
+  font-family: var(--font-oswald);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-s);
+}
+
+/* Автори обкладинки + Редакція поряд у рядок */
+.issue-staff-side-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.issue-staff-imported-banner,
+.issue-story-imported-banner {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.issue-staff-imported-banner a,
+.issue-story-imported-banner a {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.issue-staff-imported-banner a:hover,
+.issue-story-imported-banner a:hover {
+  color: var(--accent-h);
+  text-decoration: underline;
 }
 
 .issue-staff-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 16px 12px;
   margin-top: 12px;
 }
 
 .issue-staff-card {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-s);
-  border-radius: var(--r);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
   text-decoration: none;
-  transition: transform var(--t), border-color var(--t), box-shadow var(--t);
-}
-
-.issue-staff-card:hover {
-  border-color: var(--accent);
-  box-shadow: 0 4px 12px rgba(108, 92, 231, 0.06);
+  transition: transform var(--t);
 }
 
 .issue-staff-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  width: 100%;
+  aspect-ratio: 1/1;
+  border-radius: 8px;
   object-fit: cover;
-  flex-shrink: 0;
   border: 1px solid var(--border-s);
   background: var(--bg-2);
 }
 
 .issue-staff-avatar--empty {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  width: 100%;
+  aspect-ratio: 1/1;
+  border-radius: 8px;
   background: var(--bg-2);
   color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
   border: 1px solid var(--border-s);
 }
 
 .issue-staff-info {
+  width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  gap: 2px;
+}
+
+.issue-staff-role-label {
+  font-size: 11px;
+  color: #539bf5;
+  font-weight: 500;
+  margin-bottom: 2px;
+  text-transform: capitalize;
 }
 
 .issue-staff-name {
   font-size: 13px;
   font-weight: 700;
   color: var(--text);
-  line-height: 1.3;
+  line-height: 1.25;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.issue-staff-role {
-  font-size: 11px;
-  color: var(--text-muted);
-  line-height: 1.2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* ── Story Staff ──────────────────────────────────── */
@@ -1099,68 +1150,6 @@
 }
 
 
-/* ── Responsive ───────────────────────────────────── */
-@media (max-width: 768px) {
-  .issue-hero {
-    grid-template-columns: 180px minmax(0, 1fr);
-    gap: 20px;
-    padding-top: 20px;
-    padding-bottom: 24px;
-  }
-
-  .issue-hero-info h1 {
-    font-size: 22px;
-  }
-
-  .issue-header-block {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-
-  .issue-nav-card {
-    width: 100% !important;
-    max-width: none !important;
-    flex: none !important;
-  }
-
-  .issue-nav-card--placeholder {
-    display: none !important;
-  }
-
-  .issue-context-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .issue-collections-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .issue-meta-facts {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 480px) {
-  .issue-hero {
-    grid-template-columns: 1fr;
-  }
-
-  .issue-cover-column {
-    max-width: 240px;
-    margin: 0 auto;
-  }
-
-  .issue-context-card {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .issue-context-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
 
 /* ── Reprints Section ────────────────────────────── */
 .issue-reprints-section {
@@ -1189,9 +1178,7 @@
 }
 
 .issue-reprint-card:hover {
-  transform: translateY(-2px);
   border-color: var(--accent);
-  box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.12);
 }
 
 .issue-reprint-role {
@@ -1239,4 +1226,281 @@
   color: var(--text-muted);
   font-style: italic;
   margin-top: 2px;
+}
+
+/* ── Issue Story Details Section ──────────────────── */
+.issue-stories-details-section {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1em;
+  gap: .5em;
+}
+
+.issue-story-detail-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-s);
+  border-radius: var(--r-lg);
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.issue-story-detail-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-glow);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border-s));
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background var(--t), border-color var(--t), transform var(--t);
+}
+
+.issue-story-detail-badge:hover {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border-color: var(--accent);
+}
+
+.issue-story-detail-badge .reprint-icon {
+  display: flex;
+}
+
+.issue-story-detail-title {
+  margin: 0 0 20px 0;
+  font-family: var(--font-oswald);
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.issue-story-detail-section {
+  margin-bottom: 20px;
+}
+
+.issue-story-detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.issue-story-detail-section-title {
+  font-family: var(--font-oswald);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border-s);
+  padding-bottom: 6px;
+}
+
+.issue-story-empty {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.issue-story-plot-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-2);
+  white-space: pre-line;
+}
+
+.issue-story-appearances-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.issue-story-appearance-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.story-appearances-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.story-appearances-grid.characters-grid {
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 16px 12px;
+}
+
+.story-appearance-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-s);
+  border-radius: var(--r);
+  text-decoration: none;
+  transition: transform var(--t), border-color var(--t), box-shadow var(--t);
+}
+
+.story-appearance-card.character {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  background: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  gap: 6px;
+  transition: transform var(--t);
+}
+
+.character-card-role {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 2px;
+  display: inline-block;
+}
+
+.character-card-role.main {
+  color: #ff7a00;
+}
+
+.character-card-role.supporting,
+.character-card-role.minor,
+.character-card-role.cameo {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.story-appearance-avatar {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border-s);
+  background: var(--bg-2);
+}
+
+.story-appearance-avatar-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1/1;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-s);
+  background: var(--bg-2);
+}
+
+.story-appearance-avatar-wrap .story-appearance-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+  position: absolute;
+  top: 0;
+  left: 0;
+  transition: opacity 0.25s ease-in-out;
+}
+
+.story-appearance-avatar-wrap .hover-avatar {
+  opacity: 0;
+}
+
+.story-appearance-card.character:hover .story-appearance-avatar-wrap.has-hover .hover-avatar {
+  opacity: 1;
+}
+
+.story-appearance-card.character:hover .story-appearance-avatar-wrap.has-hover .default-avatar {
+  opacity: 0;
+}
+
+.story-appearance-avatar--empty {
+  width: 40px;
+  height: 40px;
+  background: var(--bg-2);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--border-s);
+}
+
+.story-appearance-card.character .story-appearance-avatar--empty {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4/5;
+  border-radius: 8px;
+  border: 1px solid var(--border-s);
+  background: var(--bg-2);
+}
+
+.story-appearance-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.story-appearance-card.character .story-appearance-info {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0;
+}
+
+.story-appearance-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.story-appearance-card.character .story-appearance-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.25;
+  margin-top: 2px;
+}
+
+.story-appearance-real-name {
+  font-size: 11px;
+  color: #539bf5;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.story-appearance-details {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.story-appearance-card.character .story-appearance-details {
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

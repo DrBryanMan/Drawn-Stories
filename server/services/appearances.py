@@ -183,7 +183,7 @@ def scrape_issue_appearances_logic(db, scraper, issue_id, log_callback):
     for char in appearances['characters']:
         try:
             char_id = get_or_create_entity(db, 'characters', char['cv_id'], char['name'], char['cv_slug'])
-            db.execute("INSERT OR IGNORE INTO issue_characters (issue_id, character_id) VALUES (?, ?)", [issue_id, char_id])
+            db.execute("INSERT OR IGNORE INTO issue_characters (issue_id, character_id, story_num) VALUES (?, ?, 0)", [issue_id, char_id])
             added_chars += 1
         except Exception as e:
             log_callback(f"Помилка збереження персонажа {char['name']}: {e}")
@@ -208,7 +208,7 @@ def scrape_issue_appearances_logic(db, scraper, issue_id, log_callback):
     for team in appearances['teams']:
         try:
             team_id = get_or_create_entity(db, 'teams', team['cv_id'], team['name'], team['cv_slug'])
-            db.execute("INSERT OR IGNORE INTO issue_teams (issue_id, team_id) VALUES (?, ?)", [issue_id, team_id])
+            db.execute("INSERT OR IGNORE INTO issue_teams (issue_id, team_id, story_num) VALUES (?, ?, 0)", [issue_id, team_id])
             added_teams += 1
         except Exception as e:
             log_callback(f"Помилка збереження команди {team['name']}: {e}")
@@ -220,7 +220,7 @@ def scrape_issue_appearances_logic(db, scraper, issue_id, log_callback):
     for loc in appearances['locations']:
         try:
             loc_id = get_or_create_entity(db, 'locations', loc['cv_id'], loc['name'], loc['cv_slug'])
-            db.execute("INSERT OR IGNORE INTO issue_locations (issue_id, location_id) VALUES (?, ?)", [issue_id, loc_id])
+            db.execute("INSERT OR IGNORE INTO issue_locations (issue_id, location_id, story_num) VALUES (?, ?, 0)", [issue_id, loc_id])
             added_locations += 1
         except Exception as e:
             log_callback(f"Помилка збереження локації {loc['name']}: {e}")
@@ -232,7 +232,7 @@ def scrape_issue_appearances_logic(db, scraper, issue_id, log_callback):
     for conc in appearances['concepts']:
         try:
             conc_id = get_or_create_entity(db, 'concepts', conc['cv_id'], conc['name'], conc['cv_slug'])
-            db.execute("INSERT OR IGNORE INTO issue_concepts (issue_id, concept_id) VALUES (?, ?)", [issue_id, conc_id])
+            db.execute("INSERT OR IGNORE INTO issue_concepts (issue_id, concept_id, story_num) VALUES (?, ?, 0)", [issue_id, conc_id])
             added_concepts += 1
         except Exception as e:
             log_callback(f"Помилка збереження концепту {conc['name']}: {e}")
@@ -244,7 +244,7 @@ def scrape_issue_appearances_logic(db, scraper, issue_id, log_callback):
     for obj in appearances['objects']:
         try:
             obj_id = get_or_create_entity(db, 'objects', obj['cv_id'], obj['name'], obj['cv_slug'])
-            db.execute("INSERT OR IGNORE INTO issue_objects (issue_id, object_id) VALUES (?, ?)", [issue_id, obj_id])
+            db.execute("INSERT OR IGNORE INTO issue_objects (issue_id, object_id, story_num) VALUES (?, ?, 0)", [issue_id, obj_id])
             added_objects += 1
         except Exception as e:
             log_callback(f"Помилка збереження об'єкта {obj['name']}: {e}")

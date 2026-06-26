@@ -70,6 +70,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  height: 32px;
+  padding: 0 12px;
   gap: 6px;
   border-radius: var(--r);
   border: 1px solid color-mix(in srgb, var(--color) 50%, transparent);
@@ -121,11 +123,4 @@
 .btn-admin:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-/* modal */
-
-.ds-modal .btn-admin {
-  height: 32px;
-  padding: 0 12px;
 }

@@ -4,12 +4,6 @@
   gap: 1.5rem;
 }
 
-@media (max-width: 768px) {
-  .publishers-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 .publisher-card {
   background: var(--bg-card);
   border: 1px solid var(--border);

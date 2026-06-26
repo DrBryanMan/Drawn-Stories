@@ -16,18 +16,21 @@ const ICON = {
 };
 
 export class IssueEditor {
-    constructor(issue, stories, persons, reprints, onSave) {
+    constructor(issue, stories, persons, reprints, appearances, onSave) {
         this.issue = issue;
-        this.stories = JSON.parse(JSON.stringify(stories || []));
+        // Відфільтровуємо імпортовані історії
+        const localStories = (stories || []).filter(s => !s.is_imported && !s.is_virtual);
+        this.stories = JSON.parse(JSON.stringify(localStories));
         this.reprints = JSON.parse(JSON.stringify(reprints || []));
         this.onSave = onSave;
         this.modal = null;
         
-        // Ініціалізуємо стаф з прив'язкою до індексів історій
-        this.staff = (persons || []).map(p => {
+        // Відфільтровуємо імпортований стаф і прив'язуємо лише локальний стаф до індексів історій
+        const localPersons = (persons || []).filter(p => !p.is_imported);
+        this.staff = localPersons.map(p => {
             let storyIndex = -1;
             if (p.story_id) {
-                storyIndex = this.stories.findIndex(s => s.id === p.story_id);
+                storyIndex = this.stories.findIndex(s => s.id === p.story_id || s.client_story_id === p.story_id);
             }
             return {
                 id: p.id,
@@ -38,6 +41,64 @@ export class IssueEditor {
                 story_index: storyIndex
             };
         });
+
+        // Ініціалізуємо локальні появи
+        this.appearances = {
+            characters: (appearances?.characters || []).map(c => ({
+                id: c.id,
+                name: c.name,
+                name_uk: c.name_uk || null,
+                real_name: c.real_name || null,
+                real_name_uk: c.real_name_uk || null,
+                creators: c.creators || null,
+                image: c.image || null,
+                portret_img: c.portret_img || null,
+                costume_img: c.costume_img || null,
+                portret_costume_img: c.portret_costume_img || null,
+                cv_slug: c.cv_slug,
+                story_num: c.story_num || 0,
+                status: c.status || '',
+                comment: c.comment || '',
+                role: c.role || 'main',
+                team_id: c.team_id || null
+            })),
+            teams: (appearances?.teams || []).map(t => ({
+                id: t.id,
+                name: t.name,
+                name_uk: t.name_uk || null,
+                cv_slug: t.cv_slug,
+                story_num: t.story_num || 0,
+                status: t.status || '',
+                comment: t.comment || ''
+            })),
+            locations: (appearances?.locations || []).map(l => ({
+                id: l.id,
+                name: l.name,
+                name_uk: l.name_uk || null,
+                cv_slug: l.cv_slug,
+                story_num: l.story_num || 0,
+                status: l.status || '',
+                comment: l.comment || ''
+            })),
+            concepts: (appearances?.concepts || []).map(c => ({
+                id: c.id,
+                name: c.name,
+                name_uk: c.name_uk || null,
+                cv_slug: c.cv_slug,
+                story_num: c.story_num || 0,
+                status: c.status || '',
+                comment: c.comment || ''
+            })),
+            objects: (appearances?.objects || []).map(o => ({
+                id: o.id,
+                name: o.name,
+                name_uk: o.name_uk || null,
+                cv_slug: o.cv_slug,
+                story_num: o.story_num || 0,
+                status: o.status || '',
+                comment: o.comment || ''
+            }))
+        };
     }
 
     initImageHandlers(area) {
@@ -170,6 +231,599 @@ export class IssueEditor {
         `;
     }
 
+    _buildAppearanceStorySelect(currentStoryNum, typeKey, globalIdx) {
+        let options = `<option value="0" ${currentStoryNum === 0 ? 'selected' : ''}>Основна історія</option>`;
+        this.stories.forEach((story, idx) => {
+            const orderNum = story.order_num ?? (idx + 1);
+            const title = story.name_ua || story.name_original || `Історія ${orderNum}`;
+            options += `<option value="${orderNum}" ${currentStoryNum === orderNum ? 'selected' : ''}>Історія ${orderNum}: ${escapeHtmlAttribute(title)}</option>`;
+        });
+        return `
+            <select class="admin-input appearance-story-assignment-select" data-type="${typeKey}" data-index="${globalIdx}" style="height: 32px; padding: 2px 8px; font-size: 12px; max-width: 150px;">
+                ${options}
+            </select>
+        `;
+    }
+
+    renderAppearancesForStory(storyNum) {
+        const container = this.modal.querySelector('#appearances-by-story-container');
+        if (!container) return;
+
+        const types = [
+            { key: 'characters', title: 'Персонажі' },
+            { key: 'teams', title: 'Команди та Організації' },
+            { key: 'locations', title: 'Локації' },
+            { key: 'concepts', title: 'Концепти' },
+            { key: 'objects', title: 'Предмети' }
+        ];
+
+        const teamsOfThisStory = this.appearances.teams.filter(t => t.story_num === storyNum);
+
+        let html = '';
+
+        types.forEach(type => {
+            const list = this.appearances[type.key].filter(item => item.story_num === storyNum);
+            
+            let listHTML = '';
+            if (list.length === 0) {
+                listHTML = `<div style="font-size: 12px; color: var(--text-muted); font-style: italic; padding: 6px 8px; border: 1px dashed var(--border-s); border-radius: var(--r); text-align: center;">Немає появ у цій категорії.</div>`;
+            } else {
+                listHTML = `
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        ${list.map(item => {
+                            const globalIdx = this.appearances[type.key].findIndex(x => x === item);
+                            
+                            let roleSelectHTML = '';
+                            let teamSelectHTML = '';
+                            if (type.key === 'characters') {
+                                roleSelectHTML = `
+                                    <select class="admin-input appearance-item-role" data-type="${type.key}" data-index="${globalIdx}" style="width: 100px; height: 32px; font-size: 12px; padding: 2px 8px; margin-bottom: 0;">
+                                        <option value="main" ${item.role === 'main' ? 'selected' : ''}>Основний</option>
+                                        <option value="supporting" ${item.role === 'supporting' ? 'selected' : ''}>Другорядний</option>
+                                        <option value="minor" ${item.role === 'minor' ? 'selected' : ''}>Інші</option>
+                                        <option value="cameo" ${item.role === 'cameo' ? 'selected' : ''}>Камео</option>
+                                    </select>
+                                `;
+
+                                const teamOptions = teamsOfThisStory.map(team => `
+                                    <option value="${team.id}" ${item.team_id === team.id ? 'selected' : ''}>${escapeHtmlAttribute(team.name_uk || team.name)}</option>
+                                `).join('');
+                                
+                                teamSelectHTML = `
+                                    <select class="admin-input appearance-item-team" data-type="${type.key}" data-index="${globalIdx}" style="width: 120px; height: 32px; font-size: 12px; padding: 2px 8px; margin-bottom: 0;">
+                                        <option value="">-- Без команди --</option>
+                                        ${teamOptions}
+                                    </select>
+                                `;
+                            }
+
+                            let nameHTML = '';
+                            if (type.key === 'characters') {
+                                const primaryName = item.name_uk || item.name || item.real_name_uk || item.real_name || 'Невідомий персонаж';
+                                const hasMainName = !!(item.name_uk || item.name);
+                                const subRealName = item.real_name_uk || item.real_name;
+                                const showRealName = hasMainName && subRealName;
+                                nameHTML = `
+                                    <div style="font-weight: 600; font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.25;" title="${escapeHtmlAttribute(primaryName)}">
+                                        ${escapeHtmlAttribute(primaryName)}
+                                        ${showRealName ? `<div style="font-size: 10px; color: var(--text-muted); font-weight: normal; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtmlAttribute(subRealName)}</div>` : ''}
+                                    </div>
+                                `;
+                            } else {
+                                const displayName = item.name_uk || item.name;
+                                nameHTML = `
+                                    <div style="font-weight: 600; font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtmlAttribute(displayName)}">
+                                        ${escapeHtmlAttribute(displayName)}
+                                    </div>
+                                `;
+                            }
+
+                            const gridTemplate = type.key === 'characters'
+                                ? '1.5fr 120px 120px 125px 1.2fr 100px 32px 32px'
+                                : '1.5fr 150px 125px 1.2fr 32px 32px';
+
+                            return `
+                                <div class="appearance-editor-card" style="
+                                    display: grid; grid-template-columns: ${gridTemplate};
+                                    align-items: center; gap: 8px; padding: 6px 10px; background: var(--bg-card);
+                                    border: 1px solid var(--border-s); border-radius: var(--r);
+                                ">
+                                    ${nameHTML}
+                                    
+                                    ${this._buildAppearanceStorySelect(item.story_num, type.key, globalIdx)}
+                                    
+                                    ${teamSelectHTML}
+                                    
+                                    <select class="admin-input appearance-item-status" data-type="${type.key}" data-index="${globalIdx}" style="height: 32px; font-size: 12px; padding: 2px 8px; margin-bottom: 0;">
+                                        <option value="" ${!item.status ? 'selected' : ''}>-- Статус --</option>
+                                        <option value="flashback" ${item.status === 'flashback' ? 'selected' : ''}>Flashback</option>
+                                        <option value="first appear" ${item.status === 'first appear' ? 'selected' : ''}>First appear</option>
+                                        <option value="death" ${item.status === 'death' ? 'selected' : ''}>Death</option>
+                                        <option value="cameo" ${item.status === 'cameo' ? 'selected' : ''}>Cameo</option>
+                                    </select>
+                                    
+                                    <input type="text" class="admin-input appearance-item-comment" data-type="${type.key}" data-index="${globalIdx}" value="${escapeHtmlAttribute(item.comment || '')}" placeholder="Коментар" style="height: 32px; font-size: 12px; padding: 2px 8px; margin-bottom: 0;">
+                                    
+                                    ${roleSelectHTML}
+                                    
+                                    ${type.key === 'characters' ? `
+                                        <button type="button" class="btn-admin btn-admin--secondary btn-edit-character-modal" data-index="${globalIdx}" style="padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 0;" title="Редагувати профіль персонажа">
+                                            ${ICON.edit}
+                                        </button>
+                                    ` : `
+                                        <button type="button" class="btn-admin btn-admin--secondary btn-edit-entity-modal" data-type="${type.key}" data-index="${globalIdx}" style="padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 0;" title="Редагувати назву">
+                                            ${ICON.edit}
+                                        </button>
+                                    `}
+                                    
+                                    <button type="button" class="btn-admin btn-admin--danger btn-delete-appearance-item" data-type="${type.key}" data-index="${globalIdx}" style="padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 0;">
+                                        ${ICON.trash}
+                                    </button>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }
+
+            html += `
+                <div class="appearance-section-block" style="margin-bottom: 20px; background: var(--bg-body); padding: 12px; border-radius: var(--r); border: 1px solid var(--border-s);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <h5 style="margin: 0; font-family: var(--font-oswald); text-transform: uppercase; font-size: 13px; color: var(--text);">${type.title}</h5>
+                        <button type="button" class="btn-admin btn-admin--secondary" id="btn-add-appearance-${type.key}" style="padding: 2px 8px; font-size: 11px; height: 24px;">+ Додати</button>
+                    </div>
+                    <div id="appearance-list-${type.key}">
+                        ${listHTML}
+                    </div>
+                    <div id="appearance-search-wrap-${type.key}"></div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+
+        // Listeners for inputs
+        container.querySelectorAll('.appearance-item-status').forEach(select => {
+            select.addEventListener('change', (e) => {
+                const type = e.target.dataset.type;
+                const idx = parseInt(e.target.dataset.index);
+                this.appearances[type][idx].status = e.target.value || null;
+            });
+        });
+
+        container.querySelectorAll('.appearance-item-comment').forEach(input => {
+            input.addEventListener('input', (e) => {
+                const type = e.target.dataset.type;
+                const idx = parseInt(e.target.dataset.index);
+                this.appearances[type][idx].comment = e.target.value;
+            });
+        });
+
+        container.querySelectorAll('.appearance-item-role').forEach(select => {
+            select.addEventListener('change', (e) => {
+                const type = e.target.dataset.type;
+                const idx = parseInt(e.target.dataset.index);
+                this.appearances[type][idx].role = e.target.value;
+            });
+        });
+
+        // Story assignment change listener
+        container.querySelectorAll('.appearance-story-assignment-select').forEach(select => {
+            select.addEventListener('change', (e) => {
+                const type = e.target.dataset.type;
+                const idx = parseInt(e.target.dataset.index);
+                const newStoryNum = parseInt(e.target.value);
+                this.appearances[type][idx].story_num = newStoryNum;
+                this.renderAppearancesForStory(storyNum);
+            });
+        });
+
+        container.querySelectorAll('.btn-delete-appearance-item').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const type = e.currentTarget.dataset.type;
+                const idx = parseInt(e.currentTarget.dataset.index);
+                this.appearances[type].splice(idx, 1);
+                this.renderAppearancesForStory(storyNum);
+            });
+        });
+
+        // Team assignment change listener
+        container.querySelectorAll('.appearance-item-team').forEach(select => {
+            select.addEventListener('change', (e) => {
+                const type = e.target.dataset.type;
+                const idx = parseInt(e.target.dataset.index);
+                const val = e.target.value;
+                this.appearances[type][idx].team_id = val ? parseInt(val) : null;
+            });
+        });
+
+        // Edit character modal listener
+        container.querySelectorAll('.btn-edit-character-modal').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(e.currentTarget.dataset.index);
+                const char = this.appearances.characters[idx];
+                this.openEditCharacterModal(char, (updatedChar) => {
+                    this.appearances.characters[idx] = {
+                        ...char,
+                        name: updatedChar.name,
+                        name_uk: updatedChar.name_uk,
+                        real_name: updatedChar.real_name,
+                        real_name_uk: updatedChar.real_name_uk,
+                        creators: updatedChar.creators,
+                        image: updatedChar.image,
+                        portret_img: updatedChar.portret_img,
+                        costume_img: updatedChar.costume_img,
+                        portret_costume_img: updatedChar.portret_costume_img
+                    };
+                    this.renderAppearancesForStory(storyNum);
+                });
+            });
+        });
+
+        // Edit entity modal listener (teams, locations, concepts, objects)
+        container.querySelectorAll('.btn-edit-entity-modal').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const type = e.currentTarget.dataset.type;
+                const idx = parseInt(e.currentTarget.dataset.index);
+                const item = this.appearances[type][idx];
+                this.openEditAppearanceModal(type, item, (updatedItem) => {
+                    this.appearances[type][idx] = {
+                        ...item,
+                        name: updatedItem.name,
+                        name_uk: updatedItem.name_uk
+                    };
+                    this.renderAppearancesForStory(storyNum);
+                });
+            });
+        });
+
+        // Initialize searches
+        types.forEach(type => {
+            this.initAppearanceSearch(type.key, `btn-add-appearance-${type.key}`, `appearance-search-wrap-${type.key}`, storyNum);
+        });
+    }
+
+    initAppearanceSearch(typeKey, btnId, containerId, targetStoryNum) {
+        const btn = this.modal.querySelector(`#${btnId}`);
+        const container = this.modal.querySelector(`#${containerId}`);
+        if (!btn || !container) return;
+        
+        btn.addEventListener('click', () => {
+            let wrap = container.querySelector('.appearance-search-wrapper');
+            if (wrap) {
+                wrap.remove();
+                return;
+            }
+            
+            wrap = document.createElement('div');
+            wrap.className = 'appearance-search-wrapper';
+            wrap.style.cssText = 'margin-top: 8px; position: relative; width: 100%; display: flex; flex-direction: column; gap: 4px;';
+            wrap.innerHTML = `
+                <input type="text" class="admin-input appearance-search-input" placeholder="Введіть назву для пошуку..." autocomplete="off" style="margin-bottom: 0;">
+                <div class="appearance-search-results" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border: 1px solid var(--border-s); border-radius: var(--r); z-index: 10; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>
+            `;
+            
+            container.appendChild(wrap);
+            
+            const input = wrap.querySelector('.appearance-search-input');
+            const results = wrap.querySelector('.appearance-search-results');
+            input.focus();
+            
+            let timeout = null;
+            input.addEventListener('input', () => {
+                const q = input.value.trim();
+                clearTimeout(timeout);
+                if (!q) {
+                    results.style.display = 'none';
+                    results.innerHTML = '';
+                    return;
+                }
+                
+                results.style.display = 'block';
+                results.innerHTML = '<div style="padding: 8px; font-size: 12px; color: var(--text-muted);">Пошук...</div>';
+                
+                timeout = setTimeout(async () => {
+                    try {
+                        const res = await API.get(`/issues/appearances/search/${typeKey}`, { search: q });
+                        const items = res || [];
+                        if (items.length === 0) {
+                            results.innerHTML = '<div style="padding: 8px; font-size: 12px; color: var(--text-muted);">Нічого не знайдено</div>';
+                            return;
+                        }
+                        
+                        results.innerHTML = items.map(item => {
+                            let avatarHTML = '';
+                            if (typeKey === 'characters') {
+                                const img = item.image ? comicVineImageUrl(item.image) : '';
+                                avatarHTML = img
+                                    ? `<img src="${escapeHtmlAttribute(img)}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">`
+                                    : `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--bg-2); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text-muted);">?</div>`;
+                            }
+                            const displayName = typeKey === 'characters' 
+                                ? (item.name_uk || item.name || item.real_name_uk || item.real_name || 'Невідомий персонаж') 
+                                : (item.name_uk || item.name);
+                            const subtitle = typeKey === 'characters' && (item.name_uk || item.name) && (item.real_name_uk || item.real_name)
+                                ? ` <span style="font-size: 11px; color: var(--text-muted);">(${escapeHtmlAttribute(item.real_name_uk || item.real_name)})</span>`
+                                : '';
+                            return `
+                                <div class="appearance-search-result-item" 
+                                    data-id="${item.id}" 
+                                    data-name="${escapeHtmlAttribute(item.name)}" 
+                                    data-name-uk="${escapeHtmlAttribute(item.name_uk || '')}"
+                                    data-real-name="${escapeHtmlAttribute(item.real_name || '')}"
+                                    data-real-name-uk="${escapeHtmlAttribute(item.real_name_uk || '')}"
+                                    data-creators="${escapeHtmlAttribute(item.creators || '')}"
+                                    data-slug="${escapeHtmlAttribute(item.cv_slug || '')}" 
+                                    data-image="${escapeHtmlAttribute(item.image || '')}" 
+                                    style="
+                                        display: flex; align-items: center; gap: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px;
+                                        border-bottom: 1px solid var(--border-s); transition: background var(--t);
+                                        color: var(--text);
+                                    "
+                                >
+                                    ${avatarHTML}
+                                    <span>${escapeHtmlAttribute(displayName)}${subtitle}</span>
+                                </div>
+                            `;
+                        }).join('');
+                        
+                        results.querySelectorAll('.appearance-search-result-item').forEach(el => {
+                            el.addEventListener('click', () => {
+                                const entityId = parseInt(el.dataset.id);
+                                const name = el.dataset.name;
+                                const slug = el.dataset.slug;
+                                const image = el.dataset.image;
+                                
+                                const exists = this.appearances[typeKey].some(x => x.id === entityId && x.story_num === targetStoryNum);
+                                if (!exists) {
+                                    const baseObj = {
+                                        id: entityId,
+                                        name: name,
+                                        image: image || null,
+                                        cv_slug: slug,
+                                        story_num: targetStoryNum,
+                                        status: '',
+                                        comment: ''
+                                    };
+                                    if (typeKey === 'characters') {
+                                        baseObj.role = 'main';
+                                        baseObj.team_id = null;
+                                        baseObj.name_uk = el.dataset.nameUk || null;
+                                        baseObj.real_name = el.dataset.realName || null;
+                                        baseObj.real_name_uk = el.dataset.realNameUk || null;
+                                        baseObj.creators = el.dataset.creators || null;
+                                    } else {
+                                        baseObj.name_uk = el.dataset.nameUk || null;
+                                    }
+                                    this.appearances[typeKey].push(baseObj);
+                                }
+                                
+                                wrap.remove();
+                                this.renderAppearancesForStory(targetStoryNum);
+                            });
+                        });
+                    } catch (err) {
+                        results.innerHTML = `<div style="padding: 8px; font-size: 12px; color: var(--text-danger);">Помилка пошуку</div>`;
+                    }
+                }, 250);
+            });
+            
+            const closeSearch = (e) => {
+                if (wrap && !wrap.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+                    wrap.remove();
+                    document.removeEventListener('click', closeSearch);
+                }
+            };
+            document.addEventListener('click', closeSearch);
+        });
+    }
+
+    openEditCharacterModal(char, onUpdate) {
+        const modalId = 'admin-edit-character-modal';
+        let modal = document.getElementById(modalId);
+        if (modal) modal.remove();
+        
+        modal = document.createElement('div');
+        modal.id = modalId;
+        modal.className = 'admin-modal-overlay';
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6); display: flex; align-items: center;
+            justify-content: center; z-index: 10000;
+        `;
+        
+        modal.innerHTML = `
+            <div class="admin-modal-content" style="
+                background: var(--bg-card); border: 1px solid var(--border-s);
+                border-radius: var(--r-lg); width: 560px; padding: 24px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.25); display: flex;
+                flex-direction: column; gap: 16px; position: relative;
+            ">
+                <h4 style="margin: 0; font-family: var(--font-oswald); text-transform: uppercase; font-size: 16px; color: var(--text);">Редагування персонажа</h4>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Оригінальне ім'я</label>
+                        <input type="text" id="edit-char-name" class="admin-input" value="${escapeHtmlAttribute(char.name || '')}" style="margin-bottom: 0;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Українське ім'я</label>
+                        <input type="text" id="edit-char-name-uk" class="admin-input" value="${escapeHtmlAttribute(char.name_uk || '')}" style="margin-bottom: 0;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Реальне ім'я</label>
+                        <input type="text" id="edit-char-real-name" class="admin-input" value="${escapeHtmlAttribute(char.real_name || '')}" style="margin-bottom: 0;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Реальне ім'я (Укр)</label>
+                        <input type="text" id="edit-char-real-name-uk" class="admin-input" value="${escapeHtmlAttribute(char.real_name_uk || '')}" style="margin-bottom: 0;">
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Автори (IDs через кому)</label>
+                    <input type="text" id="edit-char-creators" class="admin-input" value="${escapeHtmlAttribute(char.creators || '')}" placeholder="напр. 12, 45, 87" style="margin-bottom: 0;">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Зображення (URL)</label>
+                        <input type="text" id="edit-char-image" class="admin-input" value="${escapeHtmlAttribute(char.image || '')}" placeholder="URL" style="margin-bottom: 0;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Портрет (Звичайний)</label>
+                        <input type="text" id="edit-char-portret-img" class="admin-input" value="${escapeHtmlAttribute(char.portret_img || '')}" placeholder="URL" style="margin-bottom: 0;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Костюм (Повний зріст)</label>
+                        <input type="text" id="edit-char-costume-img" class="admin-input" value="${escapeHtmlAttribute(char.costume_img || '')}" placeholder="URL" style="margin-bottom: 0;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Костюм (Портрет)</label>
+                        <input type="text" id="edit-char-portret-costume-img" class="admin-input" value="${escapeHtmlAttribute(char.portret_costume_img || '')}" placeholder="URL" style="margin-bottom: 0;">
+                    </div>
+                </div>
+                
+                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+                    <button type="button" class="btn-admin btn-admin--secondary btn-close-char-modal" style="margin-bottom: 0;">Скасувати</button>
+                    <button type="button" class="btn-admin btn-admin--primary btn-save-char-modal" style="margin-bottom: 0;">Зберегти</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        const close = () => modal.remove();
+        modal.querySelector('.btn-close-char-modal').addEventListener('click', close);
+
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+
+        const onEsc = (e) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); } };
+        document.addEventListener('keydown', onEsc);
+        
+        modal.querySelector('.btn-save-char-modal').addEventListener('click', async () => {
+            const updated = {
+                name: modal.querySelector('#edit-char-name').value.trim(),
+                name_uk: modal.querySelector('#edit-char-name-uk').value.trim() || null,
+                real_name: modal.querySelector('#edit-char-real-name').value.trim() || null,
+                real_name_uk: modal.querySelector('#edit-char-real-name-uk').value.trim() || null,
+                creators: modal.querySelector('#edit-char-creators').value.trim() || null,
+                image: modal.querySelector('#edit-char-image').value.trim() || null,
+                portret_img: modal.querySelector('#edit-char-portret-img').value.trim() || null,
+                costume_img: modal.querySelector('#edit-char-costume-img').value.trim() || null,
+                portret_costume_img: modal.querySelector('#edit-char-portret-costume-img').value.trim() || null
+            };
+            
+            if (!updated.name) {
+                alert('Оригінальне ім\'я обов\'язкове');
+                return;
+            }
+            
+            try {
+                await API.put(`/characters/${char.id}`, updated);
+                onUpdate(updated);
+                close();
+            } catch (err) {
+                alert('Помилка збереження: ' + err.message);
+            }
+        });
+    }
+
+    openEditAppearanceModal(typeKey, item, onUpdate) {
+        const modalId = 'admin-edit-appearance-modal';
+        let modal = document.getElementById(modalId);
+        if (modal) modal.remove();
+        
+        const titleMap = {
+            teams: 'команди',
+            locations: 'локації',
+            concepts: 'концепту',
+            objects: 'предмета'
+        };
+        const displayTitle = titleMap[typeKey] || 'сутності';
+        
+        modal = document.createElement('div');
+        modal.id = modalId;
+        modal.className = 'admin-modal-overlay';
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6); display: flex; align-items: center;
+            justify-content: center; z-index: 10000;
+        `;
+        
+        modal.innerHTML = `
+            <div class="admin-modal-content" style="
+                background: var(--bg-card); border: 1px solid var(--border-s);
+                border-radius: var(--r-lg); width: 450px; padding: 24px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.25); display: flex;
+                flex-direction: column; gap: 16px; position: relative;
+            ">
+                <h4 style="margin: 0; font-family: var(--font-oswald); text-transform: uppercase; font-size: 16px; color: var(--text);">Редагування ${displayTitle}</h4>
+                
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Оригінальна назва</label>
+                    <input type="text" id="edit-entity-name" class="admin-input" value="${escapeHtmlAttribute(item.name || '')}" style="margin-bottom: 0;">
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Українська назва</label>
+                    <input type="text" id="edit-entity-name-uk" class="admin-input" value="${escapeHtmlAttribute(item.name_uk || '')}" style="margin-bottom: 0;">
+                </div>
+                
+                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+                    <button type="button" class="btn-admin btn-admin--secondary btn-close-entity-modal" style="margin-bottom: 0;">Скасувати</button>
+                    <button type="button" class="btn-admin btn-admin--primary btn-save-entity-modal" style="margin-bottom: 0;">Зберегти</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        const close = () => modal.remove();
+        modal.querySelector('.btn-close-entity-modal').addEventListener('click', close);
+        
+        modal.querySelector('.btn-save-entity-modal').addEventListener('click', async () => {
+            const updated = {
+                name: modal.querySelector('#edit-entity-name').value.trim(),
+                name_uk: modal.querySelector('#edit-entity-name-uk').value.trim() || null
+            };
+            
+            if (!updated.name) {
+                alert('Оригінальна назва обов\'язкова');
+                return;
+            }
+            
+            try {
+                await API.put(`/issues/appearances/${typeKey}/${item.id}`, updated);
+                onUpdate(updated);
+                close();
+            } catch (err) {
+                alert('Помилка збереження: ' + err.message);
+            }
+        });
+    }
+
+    renderAppearanceStoryOptions() {
+        const select = this.modal.querySelector('#appearance-story-select');
+        if (!select) return;
+        
+        const currentValue = select.value ? parseInt(select.value) : 0;
+        
+        let html = '<option value="0">Основна історія (0)</option>';
+        this.stories.forEach((story, idx) => {
+            const orderNum = story.order_num ?? (idx + 1);
+            const title = story.name_ua || story.name_original || `Історія ${orderNum}`;
+            html += `<option value="${orderNum}">Історія ${orderNum}: ${escapeHtmlAttribute(title)}</option>`;
+        });
+        
+        select.innerHTML = html;
+        select.value = String(currentValue);
+        
+        if (select.value !== String(currentValue)) {
+            select.value = '0';
+        }
+    }
+
     renderStaffList(containerId, storyIndex) {
         const container = this.modal.querySelector(`#${containerId}`);
         if (!container) return;
@@ -270,12 +924,12 @@ export class IssueEditor {
                         : (r.original_volume_name_uk || r.original_volume_name || '');
                     const issueNum = isOriginal ? r.reprint_number : r.original_number;
                     
-                    let displayTitle = 'Основна історія';
-                    if (r.story_id) {
-                        displayTitle = r.story_name_ua || r.story_name_original || 'Історія';
-                    } else {
-                        const issueName = isOriginal ? r.reprint_name : r.original_name;
-                        if (issueName) displayTitle = issueName;
+                    const issueName = isOriginal ? r.reprint_name : r.original_name;
+                    let displayTitle = issueName ? `Основна: ${issueName}` : 'Основна історія';
+
+                    if (r.story_num !== null && r.story_num !== undefined && r.story_num !== 0) {
+                        const storyName = r.story_name_ua || r.story_name_original || 'Без назви';
+                        displayTitle = `Історія ${r.story_num}: ${storyName}`;
                     }
 
                     const reprintLang = r.reprint_volume_lang || '';
@@ -299,14 +953,58 @@ export class IssueEditor {
                                 </div>
                                 ${foreignNameHtml}
                             </div>
-                            <button type="button" class="btn-admin btn-admin--danger btn-delete-reprint" data-link-id="${r.id}" style="padding: 6px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                ${ICON.trash}
-                            </button>
+                            <div style="display: flex; gap: 6px;">
+                                <button type="button" class="btn-admin btn-admin--secondary btn-edit-reprint" data-reprint-id="${r.id}" style="padding: 6px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    ${ICON.edit}
+                                </button>
+                                <button type="button" class="btn-admin btn-admin--danger btn-delete-reprint" data-link-id="${r.id}" style="padding: 6px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    ${ICON.trash}
+                                </button>
+                            </div>
                         </div>
                     `;
                 }).join('')}
             </div>
         `;
+
+        container.querySelectorAll('.btn-edit-reprint').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const reprintLinkId = parseInt(e.currentTarget.dataset.reprintId);
+                const r = this.reprints.find(item => item.id === reprintLinkId);
+                if (!r) return;
+
+                const isOriginal = r.original_id === this.issue.id;
+                
+                // Збираємо спрощену картку випуску, який має бути обраний в модалі
+                const preselectedIssue = {
+                    id: isOriginal ? r.reprint_id : r.original_id,
+                    name: isOriginal ? r.reprint_name : r.original_name,
+                    issue_number: isOriginal ? r.reprint_number : r.original_number,
+                    volume_name: isOriginal ? r.reprint_volume_name : r.original_volume_name,
+                    volume_name_uk: isOriginal ? r.reprint_volume_name_uk : r.original_volume_name_uk,
+                    cv_img: isOriginal ? r.reprint_cv_img : r.original_cv_img
+                };
+
+                openAddReprintModal({
+                    issueId: this.issue.id,
+                    stories: this.stories,
+                    reprintLinkId: reprintLinkId,
+                    preselectedIssue: preselectedIssue,
+                    preselectedRole: isOriginal ? 'original' : 'reprint', // оскільки поточний є оригіналом, то обраний випуск є репринтом (role='reprint'), і навпаки
+                    preselectedForeignName: r.story_foreign_name,
+                    preselectedStoryOrder: r.story_num !== null ? r.story_num : 0,
+                    onAdd: async () => {
+                        try {
+                            const res = await API.get(`/issues/${this.issue.id}`);
+                            this.reprints = res.reprints || [];
+                            this.renderReprintsList();
+                        } catch (err) {
+                            console.error('Помилка оновлення списку репринтів після редагування:', err);
+                        }
+                    }
+                });
+            });
+        });
 
         container.querySelectorAll('.btn-delete-reprint').forEach(btn => {
             btn.addEventListener('click', async (e) => {
@@ -463,7 +1161,10 @@ export class IssueEditor {
                 <div class="admin-form-group admin-form-group--full" style="margin-top: 8px; border-top: 1px solid var(--border-s); padding-top: 8px;">
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
                         <span style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Творці історії</span>
-                        <button type="button" class="btn-admin btn-admin--secondary" id="btn-add-story-staff-${index}" style="padding: 2px 8px; font-size: 11px; height: 24px;">+ Додати автора</button>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" class="btn-admin btn-admin--danger btn-clear-story-staff" data-index="${index}" style="padding: 2px 8px; font-size: 11px; height: 24px;">Видалити всіх</button>
+                            <button type="button" class="btn-admin btn-admin--secondary" id="btn-add-story-staff-${index}" style="padding: 2px 8px; font-size: 11px; height: 24px;">+ Додати автора</button>
+                        </div>
                     </div>
                     <div id="story-staff-container-${index}"></div>
                     <div id="story-staff-search-wrap-${index}"></div>
@@ -483,6 +1184,7 @@ export class IssueEditor {
             });
 
             row.querySelector('.btn-delete-story-row').addEventListener('click', () => {
+                const targetOrderNum = this.stories[index].order_num ?? (index + 1);
                 // Якщо ми видаляємо історію, перепризначимо її авторів на основний випуск
                 this.staff.forEach(s => {
                     if (s.story_index === index) {
@@ -491,8 +1193,28 @@ export class IssueEditor {
                         s.story_index -= 1;
                     }
                 });
+                
+                // Якщо ми видаляємо історію, перепризначимо її появам story_num на 0
+                const appearance_types = ["characters", "teams", "locations", "concepts", "objects"];
+                appearance_types.forEach(t => {
+                    this.appearances[t].forEach(item => {
+                        if (item.story_num === targetOrderNum) {
+                            item.story_num = 0;
+                        }
+                    });
+                });
+
                 this.stories.splice(index, 1);
                 this.renderStoryRows();
+                this.renderAppearanceStoryOptions();
+                const activeStoryNum = parseInt(this.modal.querySelector('#appearance-story-select').value);
+                this.renderAppearancesForStory(activeStoryNum);
+            });
+
+            row.querySelector('.btn-clear-story-staff').addEventListener('click', () => {
+                if (!confirm('Ви впевнені, що хочете видалити всіх авторів цієї історії?')) return;
+                this.staff = this.staff.filter(s => s.story_index !== index);
+                this.renderAllStaffLists();
             });
 
             container.appendChild(row);
@@ -521,6 +1243,7 @@ export class IssueEditor {
                     <div class="editor-tabs-segmented">
                         <button class="editor-tab-btn is-active" data-tab="info">Основна інформація</button>
                         <button class="editor-tab-btn" data-tab="stories">Історії</button>
+                        <button class="editor-tab-btn" data-tab="appearances">Появи</button>
                         <button class="editor-tab-btn" data-tab="reprints">Репрінти</button>
                     </div>
 
@@ -579,7 +1302,10 @@ export class IssueEditor {
                             <div class="admin-form-group admin-form-group--full" style="background: var(--bg-body); padding: 16px; border-radius: var(--r); border: 1px solid var(--border-s); margin-bottom: 16px;">
                                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
                                     <h4 style="margin: 0; font-family: var(--font-oswald); text-transform: uppercase; font-size: 15px; color: var(--text);">Основний персонал випуску</h4>
-                                    <button type="button" class="btn-admin btn-admin--secondary" id="btn-add-main-staff" style="padding: 4px 12px; font-size: 12px; height: 28px;">+ Додати автора</button>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button type="button" class="btn-admin btn-admin--danger" id="btn-clear-main-staff" style="padding: 4px 12px; font-size: 12px; height: 28px;">Видалити всіх</button>
+                                        <button type="button" class="btn-admin btn-admin--secondary" id="btn-add-main-staff" style="padding: 4px 12px; font-size: 12px; height: 28px;">+ Додати автора</button>
+                                    </div>
                                 </div>
                                 <div id="main-staff-container"></div>
                                 <div id="main-staff-search-wrap"></div>
@@ -594,6 +1320,19 @@ export class IssueEditor {
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                     Додати історію
                                 </button>
+                            </div>
+                        </div>
+
+                        <!-- Вкладка: Появи -->
+                        <div class="editor-tab-content" id="tab-appearances">
+                            <div class="appearances-editor-container">
+                                <div class="admin-form-group" style="margin-bottom: 20px;">
+                                    <label class="admin-label">Оберіть історію для редагування появ:</label>
+                                    <select id="appearance-story-select" class="admin-input" style="height: 38px; margin-bottom: 0;">
+                                    </select>
+                                </div>
+                                <div id="appearances-by-story-container">
+                                </div>
                             </div>
                         </div>
 
@@ -646,6 +1385,7 @@ export class IssueEditor {
             });
             this.renderStoryRows();
             this.renderAllStaffLists(); // перерендерити списки для нових опцій селекту
+            this.renderAppearanceStoryOptions();
         });
 
         this._handleEsc = (e) => {
@@ -659,6 +1399,13 @@ export class IssueEditor {
         this.initImageHandlers(modal);
         this.renderStoryRows();
         this.renderReprintsList();
+        
+        this.renderAppearanceStoryOptions();
+        this.renderAppearancesForStory(0);
+        
+        modal.querySelector('#appearance-story-select').addEventListener('change', (e) => {
+            this.renderAppearancesForStory(parseInt(e.target.value));
+        });
         
         modal.querySelector('#btn-add-reprint').addEventListener('click', () => {
             openAddReprintModal({
@@ -680,6 +1427,12 @@ export class IssueEditor {
         // Рендеримо основний стаф випуску
         this.renderStaffList('main-staff-container', -1);
         this.initStaffSearch('btn-add-main-staff', 'main-staff-search-wrap', -1);
+
+        modal.querySelector('#btn-clear-main-staff').addEventListener('click', () => {
+            if (!confirm('Ви впевнені, що хочете видалити весь основний персонал випуску?')) return;
+            this.staff = this.staff.filter(s => s.story_index !== -1);
+            this.renderAllStaffLists();
+        });
     }
 
     close() {
@@ -707,6 +1460,13 @@ export class IssueEditor {
             role: s.role,
             story_index: s.story_index
         }));
+
+        // Передаємо оновлені появи
+        data.characters = this.appearances.characters;
+        data.teams = this.appearances.teams;
+        data.locations = this.appearances.locations;
+        data.concepts = this.appearances.concepts;
+        data.objects = this.appearances.objects;
 
         const saveBtn = this.modal.querySelector('#edit-save');
         saveBtn.disabled = true;

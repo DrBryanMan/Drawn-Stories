@@ -121,20 +121,3 @@
   color: var(--border);
 }
 
-@media (max-width: 480px) {
-  .pagination {
-    gap: 4px;
-  }
-
-  .pagination-info {
-    gap: 4px;
-    padding: 6px 8px;
-    font-size: 11px;
-  }
-
-  .pagination-page-input {
-    width: 46px;
-    height: 26px;
-    padding: 0 6px;
-  }
-}

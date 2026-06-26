@@ -136,24 +136,35 @@ function ensureModal() {
         const storySelect = document.getElementById('arm-story-select');
         const foreignNameInput = document.getElementById('arm-foreign-name');
         
-        const storyId = storySelect.value === '-1' ? null : parseInt(storySelect.value);
+        const storyId = parseInt(storySelect.value); // 0 або порядковий номер історії
         const storyForeignName = foreignNameInput.value.trim() || null;
         
         try {
-            await API.post(`/issues/${_config.issueId}/reprints`, {
-                original_id: originalId,
-                reprint_id: reprintId,
-                story_id: storyId,
-                story_foreign_name: storyForeignName
-            });
+            if (_config.reprintLinkId) {
+                // Режим редагування зв'язку репринту
+                await API.put(`/issues/reprints/${_config.reprintLinkId}`, {
+                    original_id: originalId,
+                    reprint_id: reprintId,
+                    story_num: storyId,
+                    story_foreign_name: storyForeignName
+                });
+            } else {
+                // Режим додавання нового
+                await API.post(`/issues/${_config.issueId}/reprints`, {
+                    original_id: originalId,
+                    reprint_id: reprintId,
+                    story_num: storyId,
+                    story_foreign_name: storyForeignName
+                });
+            }
             if (_config.onAdd) {
                 _config.onAdd();
             }
             closeAddReprintModal();
         } catch (err) {
-            alert('Помилка додавання репринту: ' + err.message);
+            alert('Помилка збереження репринту: ' + err.message);
             confirmBtn.disabled = false;
-            confirmBtn.innerHTML = `${ICON.plus} Додати репринт`;
+            confirmBtn.innerHTML = _config.reprintLinkId ? `Зберегти зміни` : `${ICON.plus} Додати репринт`;
         }
     };
 
@@ -168,14 +179,15 @@ function updateStoriesDropdown() {
     if (!select) return;
     
     const isOriginalRoleSelected = document.getElementById('arm-role-original').checked;
-    let selectHTML = '<option value="-1">Основна історія</option>';
+    let selectHTML = '<option value="0">Основна історія (0)</option>';
     
     if (isOriginalRoleSelected) {
         // Ми додаємо оригінал, тому оригінальні історії беруться з обраного випуску
         if (_selectedIssueStories && _selectedIssueStories.length > 0) {
             _selectedIssueStories.forEach(story => {
                 const name = story.name_ua || story.name_original || `Історія ${story.order_num}`;
-                selectHTML += `<option value="${story.id}">${escapeHtmlAttribute(name)}</option>`;
+                const val = story.order_num || 1;
+                selectHTML += `<option value="${val}">${escapeHtmlAttribute(name)} (${val})</option>`;
             });
         }
     } else {
@@ -183,12 +195,18 @@ function updateStoriesDropdown() {
         if (_config.stories && _config.stories.length > 0) {
             _config.stories.forEach(story => {
                 const name = story.name_ua || story.name_original || `Історія ${story.order_num}`;
-                selectHTML += `<option value="${story.id}">${escapeHtmlAttribute(name)}</option>`;
+                const val = story.order_num || 1;
+                selectHTML += `<option value="${val}">${escapeHtmlAttribute(name)} (${val})</option>`;
             });
         }
     }
     
     select.innerHTML = selectHTML;
+    
+    // Якщо відкрили в режимі редагування і підставлено preselectedStoryOrder
+    if (_config && _config.preselectedStoryOrder !== undefined) {
+        select.value = String(_config.preselectedStoryOrder);
+    }
 }
 
 export function openAddReprintModal(config) {
@@ -208,11 +226,35 @@ export function openAddReprintModal(config) {
     document.getElementById('arm-volume').value = '';
     document.getElementById('arm-results').innerHTML = '';
     
-    document.getElementById('arm-role-reprint').checked = true; // за замовчуванням обраний є репринтом
-    document.getElementById('arm-selected-info').style.display = 'block';
-    document.getElementById('arm-selected-info').innerHTML = 'Виберіть випуск-репринт зі списку результатів нижче';
-    document.getElementById('arm-fields-group').style.display = 'none';
-    document.getElementById('arm-confirm-btn').disabled = true;
+    // Перевіряємо, чи це режим редагування
+    if (config.reprintLinkId && config.preselectedIssue) {
+        document.getElementById('arm-confirm-btn').innerHTML = `Зберегти зміни`;
+        
+        // Підставляємо налаштування ролі
+        const isOriginal = config.preselectedRole === 'original';
+        document.getElementById('arm-role-original').checked = isOriginal;
+        document.getElementById('arm-role-reprint').checked = !isOriginal;
+
+        // Заповнюємо назву іншою мовою
+        document.getElementById('arm-foreign-name').value = config.preselectedForeignName || '';
+
+        // Емулюємо вибір картки випуску
+        _selectedIssue = config.preselectedIssue;
+        
+        // Відображаємо результати пошуку з єдиною карткою (обраним випуском)
+        _searchResults = [config.preselectedIssue];
+        renderResults();
+        
+        // Завантажуємо історії та показуємо панель налаштувань
+        selectIssue(config.preselectedIssue);
+    } else {
+        document.getElementById('arm-confirm-btn').innerHTML = `${ICON.plus} Додати репринт`;
+        document.getElementById('arm-role-reprint').checked = true; // за замовчуванням обраний є репринтом
+        document.getElementById('arm-selected-info').style.display = 'block';
+        document.getElementById('arm-selected-info').innerHTML = 'Виберіть випуск-репринт зі списку результатів нижче';
+        document.getElementById('arm-fields-group').style.display = 'none';
+        document.getElementById('arm-confirm-btn').disabled = true;
+    }
 
     // Налаштовуємо пошук
     const inputs = ['arm-number', 'arm-issue-id', 'arm-volume-id', 'arm-cv-vol-id', 'arm-volume', 'arm-name'];
@@ -224,7 +266,9 @@ export function openAddReprintModal(config) {
     });
 
     _modal.style.display = 'flex';
-    document.getElementById('arm-volume').focus();
+    if (!config.reprintLinkId) {
+        document.getElementById('arm-volume').focus();
+    }
 }
 
 export function closeAddReprintModal() {
@@ -372,7 +416,16 @@ async function selectIssue(issue) {
         fields.style.display = 'flex';
         
         updateStoriesDropdown();
-        foreignInput.value = '';
+        
+        // Якщо ми в режимі редагування, не затираємо початкове іноземне ім'я при ініціалізації
+        if (_config && _config.reprintLinkId && _config.preselectedForeignName !== undefined) {
+            foreignInput.value = _config.preselectedForeignName || '';
+            // Видаляємо preselectedForeignName з _config, щоб при подальших кліках по інших картках воно скидалось
+            delete _config.preselectedForeignName;
+        } else {
+            foreignInput.value = '';
+        }
+        
         document.getElementById('arm-confirm-btn').disabled = false;
     } catch (err) {
         info.innerHTML = `<span style="color: var(--red)">Помилка завантаження історій: ${err.message}</span>`;

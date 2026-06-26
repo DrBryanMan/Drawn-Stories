@@ -132,9 +132,6 @@
     gap: 20px;
 }
 
-@media (max-width: 900px) {
-    .aim-results-grid { grid-template-columns: repeat(4, 1fr); }
-}
 
 .aim-card {
     background: var(--bg-card);

@@ -341,61 +341,6 @@
   background: var(--accent-glow);
 }
 
-.volume-hero-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.volume-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  width: fit-content;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: var(--r);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: .03em;
-  text-decoration: none;
-  transition: all var(--t);
-}
-
-.volume-publisher-badge {
-  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border-s));
-  background: color-mix(in srgb, var(--accent) 6%, #ffffff);
-  color: var(--accent);
-}
-
-.volume-publisher-badge:hover {
-  background: var(--accent-glow);
-  border-color: var(--accent);
-}
-
-.volume-magazine-badge {
-  border: 1px solid #bbf7d0;
-  background: #dcfce7;
-  color: #166534;
-}
-
-.volume-magazine-badge:hover {
-  background: #bbf7d0;
-  border-color: #86efac;
-}
-
-.volume-year-badge {
-  border: 1px solid #e7c29c;
-  background: rgba(217, 119, 6, 0.08);
-  color: #b45309;
-}
-
-.volume-lang-badge {
-  border: 1px solid var(--border);
-  background: rgba(148, 163, 184, 0.08);
-  color: #475569;
-}
-
 .volume-hero-info h1 {
   display: inline-flex;
   margin: 0;
@@ -1702,18 +1647,6 @@
   box-sizing: border-box;
 }
 
-/* ── Responsive ───────────────────────────────────── */
-@media (max-width: 900px) {
-  .volume-hero { grid-template-columns: 1fr; gap: 24px; text-align: center; }
-  .volume-cover-column { max-width: 200px; margin: 0 auto; }
-  .volume-hero-badges, .volume-quick-meta, .volume-hero-actions { justify-content: center; }
-  .volume-hero-relations { grid-template-columns: minmax(0, 320px); justify-content: center; text-align: left; }
-  .volume-translations-grid { grid-template-columns: 1fr; }
-  .volume-translation-card { grid-template-columns: 60px minmax(0, 1fr); min-height: 96px; }
-  .volume-translation-poster { width: 60px; }
-  .volume-issues-toolbar { flex-direction: column; align-items: stretch; }
-  .volume-toolbar-right { justify-content: space-between; }
-}
 
 /* ── Parent Volumes Summary (vol-summary) ────────────────── */
 .vol-summary {

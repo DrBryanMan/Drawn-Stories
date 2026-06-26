@@ -11,17 +11,17 @@ if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from server.db import init_db, close_db
-from server.routes import stats, catalog, volumes, publishers, themes, auth, user_readlist, favorites, collections, issues, events, reading_orders, images, characters, personnel, scrape
+from server.routes import stats, catalog, volumes, publishers, themes, auth, user_readlist, favorites, collections, issues, events, reading_orders, images, characters, personnel, scrape, wanted
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Initialize DB and show status
     init_db()
-    print("[Server] Server successfully started and ready to accept connections")
+    print("\033[92m[Сервер] Базу даних ініціалізовано, сервер успішно запущено і готовий приймати підключення\033[0m")
     yield
     # Shutdown: Close DB
     close_db()
-    print("[Server] Server stopped")
+    print("\033[93m[Сервер] Роботу сервера завершено\033[0m")
 
 app = FastAPI(title="Drawn Stories API", lifespan=lifespan)
 
@@ -54,7 +54,43 @@ async def log_requests(request: Request, call_next):
     if should_log_request(path, accept):
         client_host = request.client.host if request.client else "unknown"
         time_str = datetime.now().strftime("%H:%M:%S")
-        print(f"[{time_str}] {client_host} - {request.method} {path} -> {response.status_code} ({duration_ms:.1f}ms)")
+        
+        # Color codes
+        grey = "\033[90m"
+        cyan = "\033[36m"
+        reset = "\033[0m"
+        white = "\033[97m"
+        magenta = "\033[35m"
+        
+        # Method color
+        method_colors = {
+            "GET": "\033[92m",      # Green
+            "POST": "\033[94m",     # Blue
+            "PUT": "\033[93m",      # Yellow
+            "PATCH": "\033[33m",     # Orange/Brown
+            "DELETE": "\033[91m",    # Red
+        }
+        method_color = method_colors.get(request.method, white)
+        
+        # Status code color
+        status = response.status_code
+        if 200 <= status < 300:
+            status_color = "\033[92m"  # Green
+        elif 300 <= status < 400:
+            status_color = "\033[36m"  # Cyan
+        elif 400 <= status < 500:
+            status_color = "\033[93m"  # Yellow
+        else:
+            status_color = "\033[91m"  # Red
+            
+        print(
+            f"{grey}[{time_str}]{reset} "
+            f"{cyan}{client_host:15}{reset} | "
+            f"{method_color}{request.method:<6}{reset} "
+            f"{white}{path}{reset} -> "
+            f"{status_color}{status}{reset} "
+            f"{grey}({duration_ms:.1f}ms){reset}"
+        )
         
     return response
 
@@ -80,6 +116,7 @@ app.include_router(images.router)
 app.include_router(characters.router)
 app.include_router(personnel.router)
 app.include_router(scrape.router)
+app.include_router(wanted.router)
 
 @app.get("/api/health")
 async def health_check():
@@ -89,6 +126,15 @@ async def health_check():
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/admin", StaticFiles(directory=os.path.join(BASE_DIR, "admin")), name="admin")
 app.mount("/images", StaticFiles(directory=os.path.join(SERVER_DIR, "images")), name="images")
+
+@app.get("/wanted")
+async def read_wanted(request: Request):
+    # Serve the standalone wanted.html page
+    if "text/html" in request.headers.get("accept", ""):
+        wanted_path = os.path.join(BASE_DIR, "public", "wanted.html")
+        if os.path.exists(wanted_path):
+            return FileResponse(wanted_path)
+    return Response(status_code=404)
 
 @app.get("/{full_path:path}")
 async def read_index(request: Request, full_path: str):
@@ -101,5 +147,21 @@ async def read_index(request: Request, full_path: str):
 
 if __name__ == "__main__":
     import uvicorn
-    print("[Server] Starting Drawn Stories API server on http://localhost:8000 ...")
-    uvicorn.run(app, host="0.0.0.0", port=8000, access_log=False, log_level="warning")
+    import asyncio
+    import sys
+    import warnings
+
+    if sys.platform == "win32":
+        # Enable virtual terminal processing (ANSI escape codes) in Windows CMD/PowerShell
+        import os
+        os.system("")
+        # Fix Ctrl+C hang by switching to SelectorEventLoop on Windows (suppress Python 3.12+ deprecation warnings)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=DeprecationWarning)
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+    print("\033[96m[Сервер] Запуск сервера Drawn Stories API на http://localhost:8000 ...\033[0m")
+    try:
+        uvicorn.run(app, host="0.0.0.0", port=8000, access_log=False, log_level="warning")
+    except KeyboardInterrupt:
+        print("\n\033[93m[Сервер] Сервер зупинено користувачем (KeyboardInterrupt)\033[0m")

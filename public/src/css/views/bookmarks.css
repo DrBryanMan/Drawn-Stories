@@ -131,20 +131,3 @@
     transform: translateY(-1px);
 }
 
-@media (max-width: 768px) {
-    .bookmarks-login-banner {
-        flex-direction: column;
-        text-align: center;
-        gap: 16px;
-    }
-    
-    .banner-btn {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .bookmarks-grid {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 16px;
-    }
-}
