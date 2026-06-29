@@ -39,7 +39,10 @@ async def get_bookmarks_data(items: List[BookmarkItem]):
         if item_type == "volume":
             data = db.get_all(f"""
                 SELECT v.*, p.name as publisher_name, 'volume' as type,
-                       (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id) as issue_count
+                       (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id) as issue_count,
+                       (SELECT COUNT(*) FROM collections c WHERE c.volume_id = v.id) as collection_count,
+                       (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id AND NOT EXISTS (SELECT 1 FROM collection_issues ci WHERE ci.issue_id = i.id)) as unconverted_issue_count,
+                       (SELECT COUNT(*) FROM volume_translations vt WHERE vt.parent_id = v.id) as translation_count
                 FROM volumes v
                 LEFT JOIN publishers p ON v.publisher = p.id
                 WHERE v.id IN ({placeholders})
@@ -109,7 +112,7 @@ async def get_catalog(
 
     if view_type == "series":
         base = "FROM volumes v LEFT JOIN publishers p ON v.publisher = p.id"
-        select_fields = "v.*, p.name as publisher_name, 'volume' as type, (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id) as issue_count"
+        select_fields = "v.*, p.name as publisher_name, 'volume' as type, (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id) as issue_count, (SELECT COUNT(*) FROM collections c WHERE c.volume_id = v.id) as collection_count, (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id AND NOT EXISTS (SELECT 1 FROM collection_issues ci WHERE ci.issue_id = i.id)) as unconverted_issue_count, (SELECT COUNT(*) FROM volume_translations vt WHERE vt.parent_id = v.id) as translation_count"
         primary_sort = CATALOG_SORT_COLUMNS.get(sort, "v.created_at")
         unique_key = "v.id"
         
@@ -204,7 +207,7 @@ async def get_catalog(
     magazine_filter_ids = parse_id_list(magazine_ids)
     if magazine_filter_ids:
         placeholders = ",".join("?" for _ in magazine_filter_ids)
-        filter_clauses.append(f"v.id IN (SELECT child_id FROM volume_magazines WHERE magazine_id IN ({placeholders}))")
+        filter_clauses.append(f"v.id IN (SELECT volume_id FROM volume_magazines WHERE magazine_id IN ({placeholders}))")
         filter_params.extend(magazine_filter_ids)
 
     if langs:

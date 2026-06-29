@@ -43,7 +43,7 @@ VOLUME_CATEGORIES = {
         "label": "Переклад без джерела",
         "clause": (
             f"EXISTS (SELECT 1 FROM volume_themes vt WHERE vt.volume_id = v.id AND vt.theme_id = {THEME_TRANSLATED})"
-            " AND NOT EXISTS (SELECT 1 FROM volume_magazines vm WHERE vm.child_id = v.id)"
+            " AND NOT EXISTS (SELECT 1 FROM volume_magazines vm WHERE vm.volume_id = v.id)"
         ),
         "missing_fields": ["джерело"],
     },
@@ -52,7 +52,7 @@ VOLUME_CATEGORIES = {
         "clause": (
             f"EXISTS (SELECT 1 FROM volume_themes vt WHERE vt.volume_id = v.id AND vt.theme_id = {THEME_MANGA})"
             " AND v.mal_id IS NOT NULL"
-            " AND NOT EXISTS (SELECT 1 FROM volume_magazines vm WHERE vm.child_id = v.id)"
+            " AND NOT EXISTS (SELECT 1 FROM volume_magazines vm WHERE vm.volume_id = v.id)"
         ),
         "missing_fields": ["журнал"],
     },
@@ -70,9 +70,9 @@ VOLUME_CATEGORIES = {
             f"EXISTS (SELECT 1 FROM volume_themes vt WHERE vt.volume_id = v.id AND vt.theme_id = {THEME_COLLECTION})"
             f" AND EXISTS (SELECT 1 FROM volume_themes vt2 WHERE vt2.volume_id = v.id AND vt2.theme_id = {THEME_MANGA})"
             " AND NOT EXISTS ("
-            "   SELECT 1 FROM volume_magazines vm"
-            "   JOIN volumes ov ON ov.id = vm.child_id"
-            "   WHERE vm.magazine_id = v.id AND ov.mal_id IS NOT NULL"
+            "   SELECT 1 FROM volume_translations vt3"
+            "   JOIN volumes ov ON ov.id = vt3.parent_id"
+            "   WHERE vt3.child_id = v.id AND ov.mal_id IS NOT NULL"
             " )"
         ),
         "missing_fields": ["оригінал"],

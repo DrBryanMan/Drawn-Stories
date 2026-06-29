@@ -16,6 +16,10 @@ import { renderEventDetail } from './views/eventDetail.js';
 import { renderEvents } from './views/events.js';
 import { renderCharacters } from './views/characters.js';
 import { renderPersonnel } from './views/personnel.js';
+import { renderMagazineDetail } from './views/magazineDetail.js';
+import { renderMagazineIssueDetail } from './views/magazineIssueDetail.js';
+import { renderMagazineAllItems } from './views/magazineAllItems.js';
+import { renderMangaChapterDetail } from './views/mangaChapterDetail.js';
 
 async function start() {
   const main = await initShell();
@@ -24,8 +28,12 @@ async function start() {
     .on('/',              () => renderHome(main))
     .on('/catalog',       (_path, _params, query) => renderCatalog(main, query))
     .on('/volumes/:id',   (_path, params, _query) => renderVolumeDetail(main, params))
+    .on('/magazines/:id', (_path, params) => renderMagazineDetail(main, params))
+    .on('/magazines/:id/all', (_path, params) => renderMagazineAllItems(main, params))
+    .on('/magazines/issues/:id', (_path, params) => renderMagazineIssueDetail(main, params))
     .on('/collections/:id', (_path, params) => renderCollectionDetail(main, params))
     .on('/issues/:id',    (_path, params) => renderIssueDetail(main, params))
+    .on('/manga-chapters/:id', (_path, params) => renderMangaChapterDetail(main, params))
     .on('/events',        (_path, _params, query) => renderEvents(main, query))
     .on('/events/:id',    (_path, params) => renderEventDetail(main, params))
     .on('/publishers',    (_path, _params, query) => renderPublishers(main, query))

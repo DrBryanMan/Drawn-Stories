@@ -160,6 +160,14 @@ body.wanted-page {
   margin-bottom: 20px;
 }
 
+.wanted-section-header--row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-s);
+  padding-bottom: 16px;
+}
+
 .wanted-section-title {
   font-size: 22px;
   font-weight: 700;

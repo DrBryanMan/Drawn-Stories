@@ -451,7 +451,6 @@
 
 /* Synopsis tabs */
 .volume-synopsis {
-  margin-top: 12px;
   max-width: 700px;
 }
 
@@ -1121,7 +1120,7 @@
 
 .issue-grid-membership-btn {
   position: absolute;
-  top: 8px;
+  bottom: 8px;
   right: 8px;
   display: flex;
   align-items: center;
@@ -1145,9 +1144,6 @@
 }
 
 .issue-grid-actions {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1750,4 +1746,20 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ── Disabled membership buttons (0 count) ── */
+.issue-grid-membership-btn.is-disabled:hover {
+  background: rgba(15, 23, 42, .8) !important;
+  transform: none !important;
+}
+
+.table-membership-btn.is-disabled:hover {
+  border-color: var(--border-s) !important;
+  background: #fff !important;
+  color: var(--text-2) !important;
+}
+
+.table-membership-btn.is-disabled:hover .membership-count {
+  color: var(--text-2) !important;
 }

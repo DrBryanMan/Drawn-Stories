@@ -64,7 +64,25 @@ async def get_volume_detail(volume_id: int, request: Request):
         for t in themes
     )
 
-    if is_collection_volume:
+    has_magazine_parent = db.get_one("SELECT 1 FROM volume_magazines WHERE volume_id = ?", [volume_id]) is not None
+    is_manga_with_mal = volume.get("mal_id") is not None
+    use_manga_chapters = has_magazine_parent or is_manga_with_mal
+
+    if use_manga_chapters:
+        issues = db.get_all(
+            """
+            SELECT id, name, name_native, name_en, name_uk, image as cv_img, volume_id,
+                   chapter_number as issue_number, release_date, synopsis as description, pages,
+                   'manga_chapter' as type, 
+                   (SELECT COUNT(*) FROM collection_issues ci WHERE ci.manga_chapter_id = manga_chapters.id) as collection_count
+            FROM manga_chapters
+            WHERE volume_id = ?
+            ORDER BY CAST(chapter_number AS REAL) ASC, chapter_number ASC
+            """,
+            [volume_id]
+        )
+        direct_issues = issues
+    elif is_collection_volume:
         issues = db.get_all(
             """
             SELECT i.*, 'issue' as type, 
@@ -81,6 +99,16 @@ async def get_volume_detail(volume_id: int, request: Request):
             """,
             [volume_id],
         )
+        direct_issues = db.get_all(
+            """
+            SELECT i.*, 'issue' as type,
+                   (SELECT COUNT(*) FROM collection_issues ci WHERE ci.issue_id = i.id) as collection_count
+            FROM issues i
+            WHERE i.volume_id = ?
+            ORDER BY CAST(i.issue_number AS REAL) ASC, i.issue_number ASC
+            """,
+            [volume_id]
+        )
     else:
         issues = db.get_all(
             """
@@ -91,20 +119,9 @@ async def get_volume_detail(volume_id: int, request: Request):
             """,
             [volume_id],
         )
+        direct_issues = issues
 
-    # Get "direct" issues (those that belong to this volume directly)
-    direct_issues = db.get_all(
-        """
-        SELECT i.*, 'issue' as type,
-               (SELECT COUNT(*) FROM collection_issues ci WHERE ci.issue_id = i.id) as collection_count
-        FROM issues i
-        WHERE i.volume_id = ?
-        ORDER BY CAST(i.issue_number AS REAL) ASC, i.issue_number ASC
-        """,
-        [volume_id]
-    )
-    
-    convertable_count = sum(1 for i in direct_issues if i["collection_count"] == 0)
+    convertable_count = sum(1 for i in direct_issues if i.get("collection_count", 0) == 0)
 
     collections = db.get_all(
         """
@@ -183,30 +200,17 @@ async def get_volume_detail(volume_id: int, request: Request):
 
     magazine_parents = db.get_all(
         """
-        SELECT v.*, p.name as publisher_name, 'volume' as type,
-               (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id) as issue_count
+        SELECT mm.*, 'magazine' as type
         FROM volume_magazines vm
-        JOIN volumes v ON v.id = vm.magazine_id
-        LEFT JOIN publishers p ON p.id = v.publisher
-        WHERE vm.child_id = ?
-        ORDER BY v.name ASC
+        JOIN manga_magazines mm ON mm.id = vm.magazine_id
+        WHERE vm.volume_id = ?
+        ORDER BY mm.name ASC
         """,
         [volume_id]
     )
     magazine = magazine_parents[0] if magazine_parents else None
 
-    magazine_children = db.get_all(
-        """
-        SELECT v.*, p.name as publisher_name, 'volume' as type,
-               (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id) as issue_count
-        FROM volume_magazines vm
-        JOIN volumes v ON v.id = vm.child_id
-        LEFT JOIN publishers p ON p.id = v.publisher
-        WHERE vm.magazine_id = ?
-        ORDER BY v.name ASC
-        """,
-        [volume_id]
-    )
+    magazine_children = []
 
     return {
         "volume": volume_with_end,
@@ -407,7 +411,7 @@ async def convert_all_to_collections(volume_id: int):
             db.conn.execute("INSERT OR IGNORE INTO volume_themes (volume_id, theme_id) VALUES (?, ?)", [volume_id, 44])
             
             # Handle magazine parent logic from DSA
-            has_magazine_parent = db.get_one("SELECT id FROM volume_magazines WHERE child_id = ?", [volume_id])
+            has_magazine_parent = db.get_one("SELECT id FROM volume_magazines WHERE volume_id = ?", [volume_id])
             if has_magazine_parent:
                 # TRANSLATED_THEME_ID = 51
                 db.conn.execute("DELETE FROM volume_themes WHERE volume_id = ? AND theme_id = ?", [volume_id, 51])
@@ -513,7 +517,7 @@ async def delete_volume(volume_id: int):
         
         # 3. Translations/Magazines
         db.conn.execute("DELETE FROM volume_translations WHERE parent_id = ? OR child_id = ?", [volume_id, volume_id])
-        db.conn.execute("DELETE FROM volume_magazines WHERE magazine_id = ? OR child_id = ?", [volume_id, volume_id])
+        db.conn.execute("DELETE FROM volume_magazines WHERE volume_id = ?", [volume_id])
         
         # 4. Issues and their links
         issues = db.get_all("SELECT id FROM issues WHERE volume_id = ?", [volume_id])
@@ -547,19 +551,27 @@ async def delete_volume(volume_id: int):
     return {"message": "Том та всі пов'язані дані успішно видалено"}
 
 @router.get("/issue/{issue_id}/collections-membership")
-async def get_issue_collections_membership(issue_id: int):
+async def get_issue_collections_membership(issue_id: int, type: str = "issue"):
     db = get_db()
-    collections = db.get_all(
+    if type == "manga_chapter":
+        query = """
+            SELECT c.*, v.name as volume_name, v.id as volume_id
+            FROM collection_issues ci
+            JOIN collections c ON c.id = ci.collection_id
+            LEFT JOIN volumes v ON c.volume_id = v.id
+            WHERE ci.manga_chapter_id = ?
+            ORDER BY CAST(c.issue_number AS REAL) ASC, COALESCE(c.release_date, c.cover_date) ASC
         """
-        SELECT c.*, v.name as volume_name, v.id as volume_id
-        FROM collection_issues ci
-        JOIN collections c ON c.id = ci.collection_id
-        LEFT JOIN volumes v ON c.volume_id = v.id
-        WHERE ci.issue_id = ?
-        ORDER BY CAST(c.issue_number AS REAL) ASC, COALESCE(c.release_date, c.cover_date) ASC
-        """,
-        [issue_id],
-    )
+    else:
+        query = """
+            SELECT c.*, v.name as volume_name, v.id as volume_id
+            FROM collection_issues ci
+            JOIN collections c ON c.id = ci.collection_id
+            LEFT JOIN volumes v ON c.volume_id = v.id
+            WHERE ci.issue_id = ?
+            ORDER BY CAST(c.issue_number AS REAL) ASC, COALESCE(c.release_date, c.cover_date) ASC
+        """
+    collections = db.get_all(query, [issue_id])
     return {"data": collections}
 
 # ── Relations ─────────────────────────────────────────────────────────────
@@ -609,9 +621,17 @@ async def add_volume_to_magazine(volume_id: int, data: dict):
     if not child_id:
         raise HTTPException(status_code=400, detail="child_id обов'язковий")
         
+    volume = db.get_one("SELECT * FROM volumes WHERE id = ?", [volume_id])
+    if not volume:
+        raise HTTPException(status_code=404, detail="Том-журнал не знайдено")
+        
+    magazine = db.get_one("SELECT id FROM manga_magazines WHERE cv_id = ? OR name = ?", [volume.get("cv_id"), volume.get("name")])
+    if not magazine:
+        raise HTTPException(status_code=400, detail="Цей журнал ще не сконвертовано в нову структуру журналів. Спочатку конвертуйте його.")
+        
     db.execute(
-        "INSERT INTO volume_magazines (magazine_id, child_id) VALUES (?, ?)",
-        [volume_id, child_id]
+        "INSERT INTO volume_magazines (magazine_id, volume_id) VALUES (?, ?)",
+        [magazine["id"], child_id]
     )
     
     # Auto-add 'Magazine' theme (ID 35) to magazine if it exists
@@ -627,9 +647,17 @@ async def add_volume_to_magazine(volume_id: int, data: dict):
 @router.delete("/{volume_id}/magazine-children/{child_id}")
 async def remove_volume_from_magazine(volume_id: int, child_id: int):
     db = get_db()
+    volume = db.get_one("SELECT * FROM volumes WHERE id = ?", [volume_id])
+    if not volume:
+        raise HTTPException(status_code=404, detail="Том-журнал не знайдено")
+        
+    magazine = db.get_one("SELECT id FROM manga_magazines WHERE cv_id = ? OR name = ?", [volume.get("cv_id"), volume.get("name")])
+    if not magazine:
+        return {"message": "Зв'язок не знайдено"}
+        
     db.execute(
-        "DELETE FROM volume_magazines WHERE magazine_id = ? AND child_id = ?",
-        [volume_id, child_id]
+        "DELETE FROM volume_magazines WHERE magazine_id = ? AND volume_id = ?",
+        [magazine["id"], child_id]
     )
     return {"message": "Том видалено з журналу"}
 

@@ -15,7 +15,9 @@ const ICON = {
     image: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>',
     externalLink: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 22 3 22 10"></polyline><line x1="10" y1="14" x2="22" y2="3"></line></svg>',
     edit: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>',
-    trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>'
+    trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
+    x: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
+    plus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>'
 };
 
 const fieldValue = (value) => escapeHtmlAttribute(value ?? '');
@@ -157,14 +159,16 @@ export class CollectionEditor {
         window._emThemeChangeCol = () => { this._rebuildThemeChips(modal); };
         window._emFilterThemesCol = (q) => { Utils.filterThemeCheckboxList(q, 'themes-list'); };
 
-        let contentsText = '';
         if (c.contents) {
             try {
                 const list = typeof c.contents === 'string' ? JSON.parse(c.contents) : c.contents;
-                contentsText = Array.isArray(list) ? list.join('\n') : '';
+                this.contents = Array.isArray(list) ? list : [];
             } catch (e) {
                 console.error('Error parsing contents:', e);
+                this.contents = [];
             }
+        } else {
+            this.contents = [];
         }
 
         modal.innerHTML = `
@@ -177,97 +181,106 @@ export class CollectionEditor {
                     <button class="ds-modal-close">&times;</button>
                 </div>
                 <div class="ds-modal-body">
+                    <div class="editor-tabs-segmented" style="margin-bottom: 20px;">
+                        <button class="editor-tab-btn is-active" data-tab="info">Основна інформація</button>
+                        <button class="editor-tab-btn" data-tab="contents">Зміст</button>
+                    </div>
+
                     <form id="edit-collection-form">
-                        <div class="admin-form-grid">
-                            <div class="admin-form-group">
-                                <label class="admin-label">${ICON.hash} CV ID</label>
-                                <input type="number" name="cv_id" class="admin-input" value="${fieldValue(c.cv_id)}">
-                            </div>
-                            <div class="admin-form-group">
-                                <label class="admin-label">${ICON.link} CV Slug</label>
-                                <input type="text" name="cv_slug" class="admin-input" value="${fieldValue(c.cv_slug)}">
-                            </div>
+                        <!-- Вкладка: Основна інформація -->
+                        <div class="editor-tab-content is-active" id="tab-info">
+                            <div class="admin-form-grid">
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${ICON.hash} CV ID</label>
+                                    <input type="number" name="cv_id" class="admin-input" value="${fieldValue(c.cv_id)}">
+                                </div>
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${ICON.link} CV Slug</label>
+                                    <input type="text" name="cv_slug" class="admin-input" value="${fieldValue(c.cv_slug)}">
+                                </div>
 
-                            <div class="admin-form-group">
-                                <label class="admin-label">${ICON.hash} Номер</label>
-                                <input type="text" name="issue_number" class="admin-input" value="${fieldValue(c.issue_number)}">
-                            </div>
-                            <div class="admin-form-group">
-                                <label class="admin-label">${ICON.type} Назва</label>
-                                <input type="text" name="name" class="admin-input" value="${fieldValue(c.name)}">
-                            </div>
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${ICON.hash} Номер</label>
+                                    <input type="text" name="issue_number" class="admin-input" value="${fieldValue(c.issue_number)}">
+                                </div>
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${ICON.type} Назва</label>
+                                    <input type="text" name="name" class="admin-input" value="${fieldValue(c.name)}">
+                                </div>
 
-                            <div class="admin-form-group">
-                                <label class="admin-label">${ICON.calendar} Дата обкладинки</label>
-                                <input type="text" name="cover_date" class="admin-input" value="${fieldValue(c.cover_date)}" placeholder="YYYY-MM-DD">
-                            </div>
-                            <div class="admin-form-group">
-                                <label class="admin-label">${ICON.calendar} Дата виходу</label>
-                                <input type="text" name="release_date" class="admin-input" value="${fieldValue(c.release_date)}" placeholder="YYYY-MM-DD">
-                            </div>
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${ICON.calendar} Дата обкладинки</label>
+                                    <input type="text" name="cover_date" class="admin-input" value="${fieldValue(c.cover_date)}" placeholder="YYYY-MM-DD">
+                                </div>
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${ICON.calendar} Дата виходу</label>
+                                    <input type="text" name="release_date" class="admin-input" value="${fieldValue(c.release_date)}" placeholder="YYYY-MM-DD">
+                                </div>
 
-                            <div class="admin-form-group">
-                                <label class="admin-label">${ICON.hash} ISBN</label>
-                                <input type="text" name="isbn" class="admin-input" value="${fieldValue(c.isbn)}">
-                            </div>
-                            <div class="admin-form-group">
-                                <label class="admin-label">${ICON.hash} Сторінок</label>
-                                <input type="number" name="pages" class="admin-input" value="${fieldValue(c.pages)}">
-                            </div>
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${ICON.hash} ISBN</label>
+                                    <input type="text" name="isbn" class="admin-input" value="${fieldValue(c.isbn)}">
+                                </div>
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${ICON.hash} Сторінок</label>
+                                    <input type="number" name="pages" class="admin-input" value="${fieldValue(c.pages)}">
+                                </div>
 
-                            ${this._imgFieldHTML('cv_img', 'Обкладинка', c.cv_img, ICON.image)}
+                                ${this._imgFieldHTML('cv_img', 'Обкладинка', c.cv_img, ICON.image)}
 
-                            <div class="admin-form-group admin-form-group--full">
-                                <label class="admin-label">${ICON.externalLink} Посилання на сайт джерела</label>
-                                <input type="url" name="site_link" class="admin-input" value="${fieldValue(c.site_link)}" placeholder="https://...">
-                            </div>
+                                <div class="admin-form-group admin-form-group--full">
+                                    <label class="admin-label">${ICON.externalLink} Посилання на сайт джерела</label>
+                                    <input type="url" name="site_link" class="admin-input" value="${fieldValue(c.site_link)}" placeholder="https://...">
+                                </div>
 
-                            <div class="admin-form-group admin-form-group--full">
-                                <label class="admin-label">${ICON.alignLeft} Синопсис (UA)</label>
-                                <textarea name="synopsis_ua" class="admin-textarea">${fieldValue(c.synopsis_ua)}</textarea>
-                            </div>
+                                <div class="admin-form-group admin-form-group--full">
+                                    <label class="admin-label">${ICON.alignLeft} Синопсис (UA)</label>
+                                    <textarea name="synopsis_ua" class="admin-textarea">${fieldValue(c.synopsis_ua)}</textarea>
+                                </div>
 
-                            <div class="admin-form-group admin-form-group--full">
-                                <label class="admin-label">${ICON.alignLeft} Синопсис (EN)</label>
-                                <textarea name="synopsis" class="admin-textarea">${fieldValue(c.synopsis)}</textarea>
-                            </div>
+                                <div class="admin-form-group admin-form-group--full">
+                                    <label class="admin-label">${ICON.alignLeft} Синопсис (EN)</label>
+                                    <textarea name="synopsis" class="admin-textarea">${fieldValue(c.synopsis)}</textarea>
+                                </div>
 
-                            <div class="admin-form-group admin-form-group--full">
-                                <label class="admin-label">${ICON.alignLeft} Опис (Description)</label>
-                                <textarea name="description" class="admin-textarea">${fieldValue(c.description)}</textarea>
-                            </div>
+                                <div class="admin-form-group admin-form-group--full">
+                                    <label class="admin-label">${ICON.alignLeft} Опис (Description)</label>
+                                    <textarea name="description" class="admin-textarea">${fieldValue(c.description)}</textarea>
+                                </div>
 
-                            <div class="admin-form-group admin-form-group--full">
-                                <label class="admin-label">${ICON.alignLeft} Зміст (по одному на рядок)</label>
-                                <textarea name="contents_raw" class="admin-textarea" style="height: 120px;">${fieldValue(contentsText)}</textarea>
-                            </div>
+                                <div class="admin-form-group admin-form-group--full">
+                                    <label class="admin-label">${ICON.building} Видавництво</label>
+                                    <div id="col-pub-search-container">
+                                        ${Utils.publisherSearchHTML({
+                                            publisherId: c.publisher || '',
+                                            publisherName: c.publisher_name || '',
+                                            inputId: 'col-pub-input',
+                                            hiddenId: 'col-pub-id',
+                                            resultsId: 'col-pub-results',
+                                            chipId: 'col-pub-chip',
+                                            ICON: ICON
+                                        })}
+                                    </div>
+                                </div>
 
-                            <div class="admin-form-group admin-form-group--full">
-                                <label class="admin-label">${ICON.building} Видавництво</label>
-                                <div id="col-pub-search-container">
-                                    ${Utils.publisherSearchHTML({
-                                        publisherId: c.publisher || '',
-                                        publisherName: c.publisher_name || '',
-                                        inputId: 'col-pub-input',
-                                        hiddenId: 'col-pub-id',
-                                        resultsId: 'col-pub-results',
-                                        chipId: 'col-pub-chip',
-                                        ICON: ICON
-                                    })}
+                                <div class="admin-form-group admin-form-group--full">
+                                    <label class="admin-label">${ICON.tags} Теми</label>
+                                    <div id="col-theme-chips" style="display:flex; flex-wrap:wrap; gap:0.35rem; margin-bottom:0.5rem; min-height:0; align-items:center;">
+                                        ${Utils.buildThemeChipsHTML(this.allThemes.filter(t => this.currentThemeIds.has(t.id)), 'window._emRemoveThemeCol')}
+                                    </div>
+                                    <input type="text" id="theme-search" class="admin-input" placeholder="Пошук тем..." style="margin-bottom:0.5rem; width:100%;"
+                                        oninput="window._emFilterThemesCol(this.value)">
+                                    <div id="themes-list" class="themes-checkbox-list">
+                                        ${Utils.buildThemeCheckboxListHTML(this.allThemes, this.currentThemeIds, 'window._emThemeChangeCol')}
+                                    </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="admin-form-group admin-form-group--full">
-                                <label class="admin-label">${ICON.tags} Теми</label>
-                                <div id="col-theme-chips" style="display:flex; flex-wrap:wrap; gap:0.35rem; margin-bottom:0.5rem; min-height:0; align-items:center;">
-                                    ${Utils.buildThemeChipsHTML(this.allThemes.filter(t => this.currentThemeIds.has(t.id)), 'window._emRemoveThemeCol')}
-                                </div>
-                                <input type="text" id="theme-search" class="admin-input" placeholder="Пошук тем..." style="margin-bottom:0.5rem; width:100%;"
-                                    oninput="window._emFilterThemesCol(this.value)">
-                                <div id="themes-list" class="themes-checkbox-list">
-                                    ${Utils.buildThemeCheckboxListHTML(this.allThemes, this.currentThemeIds, 'window._emThemeChangeCol')}
-                                </div>
-                            </div>
+                        <!-- Вкладка: Зміст -->
+                        <div class="editor-tab-content" id="tab-contents">
+                            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--text);">Розділи</h3>
+                            <div id="col-contents-editor-container"></div>
                         </div>
                     </form>
                 </div>
@@ -283,6 +296,19 @@ export class CollectionEditor {
         modal.querySelector('#edit-save').addEventListener('click', () => this.save());
         modal.addEventListener('click', (e) => { if (e.target === modal) this.close(); });
 
+        const tabBtns = modal.querySelectorAll('.editor-tab-btn');
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                tabBtns.forEach(b => b.classList.remove('is-active'));
+                modal.querySelectorAll('.editor-tab-content').forEach(pane => pane.classList.remove('is-active'));
+
+                btn.classList.add('is-active');
+                const targetTab = btn.dataset.tab;
+                modal.querySelector(`#tab-${targetTab}`).classList.add('is-active');
+            });
+        });
+
         this._handleEsc = (e) => {
             if (e.key === 'Escape') this.close();
         };
@@ -292,6 +318,7 @@ export class CollectionEditor {
         document.body.appendChild(modal);
 
         this.initImageHandlers(modal);
+        this._renderContentsEditor(modal);
 
         Utils.initPublisherSearch({
             inputId: 'col-pub-input',
@@ -299,6 +326,89 @@ export class CollectionEditor {
             resultsId: 'col-pub-results',
             chipId: 'col-pub-chip',
             API
+        });
+    }
+
+    _renderContentsEditor(modal) {
+        const container = modal.querySelector('#col-contents-editor-container');
+        if (!container) return;
+
+        let html = `
+            <div class="col-contents-editor-list" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
+        `;
+
+        this.contents.forEach((item, index) => {
+            html += `
+                <div class="col-content-row" style="display: flex; align-items: center; gap: 12px;">
+                    <input type="text" class="admin-input col-content-input" data-index="${index}" value="${escapeHtmlAttribute(item)}" style="flex: 1;" placeholder="Розділ ${index + 1}">
+                    <button type="button" class="btn-remove-content" data-index="${index}" style="background: none; border: none; color: #ef4444; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 4px;" title="Видалити">
+                        ${ICON.x}
+                    </button>
+                </div>
+            `;
+        });
+
+        html += `
+            </div>
+            <div class="col-content-add-row" style="display: flex; gap: 12px; align-items: center;">
+                <input type="text" id="new-content-name" class="admin-input" style="flex: 1;" placeholder="Назва нового розділу">
+                <button type="button" id="btn-add-content-row" style="
+                    background: var(--bg-success-subtle, #e6f7ed);
+                    color: var(--text-success, #1f9d55);
+                    border: 1px solid var(--border-success-subtle, #d3f2df);
+                    border-radius: 6px;
+                    padding: 8px 16px;
+                    font-weight: 600;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    cursor: pointer;
+                    white-space: nowrap;
+                    font-size: 14px;
+                    height: 38px;
+                ">
+                    ${ICON.plus} Додати
+                </button>
+            </div>
+        `;
+
+        container.innerHTML = html;
+
+        // Add event listeners
+        const inputs = container.querySelectorAll('.col-content-input');
+        inputs.forEach(input => {
+            input.addEventListener('input', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                this.contents[index] = e.target.value;
+            });
+        });
+
+        const removeBtns = container.querySelectorAll('.btn-remove-content');
+        removeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const index = parseInt(btn.dataset.index);
+                this.contents.splice(index, 1);
+                this._renderContentsEditor(modal);
+            });
+        });
+
+        const newNameInput = container.querySelector('#new-content-name');
+        const addBtn = container.querySelector('#btn-add-content-row');
+
+        const doAdd = () => {
+            const val = newNameInput.value.trim();
+            if (val) {
+                this.contents.push(val);
+                this._renderContentsEditor(modal);
+            }
+        };
+
+        addBtn.addEventListener('click', doAdd);
+        newNameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                doAdd();
+            }
         });
     }
 
@@ -331,10 +441,8 @@ export class CollectionEditor {
             data[key] = data[key] ? parseInt(data[key]) : null;
         });
 
-        // Contents parsing
-        const contentsRaw = data.contents_raw || '';
-        data.contents = JSON.stringify(contentsRaw.split('\n').map(s => s.trim()).filter(s => s));
-        delete data.contents_raw;
+        // Save stringified array of contents
+        data.contents = JSON.stringify((this.contents || []).map(s => s.trim()).filter(s => s));
         
         const themeCheckboxes = this.modal.querySelectorAll('#themes-list input[type="checkbox"]:checked');
         data.theme_ids = Array.from(themeCheckboxes).map(cb => parseInt(cb.value));

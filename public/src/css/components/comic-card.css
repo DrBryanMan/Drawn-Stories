@@ -25,8 +25,7 @@
   backdrop-filter: blur(4px);
   color: #fff;
   font-family: var(--font-monos);
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: .04em;
   z-index: 2;
@@ -34,6 +33,41 @@
 
 .comic-type-badge--collection {
   background: color-mix(in srgb, var(--purple) 85%, transparent);
+}
+
+.comic-card[href*="issues"] .comic-type-badge {
+  font-size: 14px;
+  padding: 0 .5em;
+}
+
+.comic-sources-list {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  display: flex;
+  gap: 4px;
+  z-index: 2;
+}
+
+.comic-source-badge {
+  padding: 3px 6px;
+  border-radius: var(--r-s);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.comic-source-badge--mal {
+  background: color-mix(in srgb, var(--source-mal) 75%, rgba(15, 23, 42, .4));
+}
+
+.comic-source-badge--hikka {
+  background: color-mix(in srgb, var(--source-hikka) 75%, rgba(15, 23, 42, .4));
+}
+
+.comic-source-badge--cv {
+  background: color-mix(in srgb, var(--source-cv) 75%, rgba(15, 23, 42, .4));
 }
 
 .comic-stat-badge {
@@ -56,6 +90,11 @@
 
 .comic-stat-badge svg {
   opacity: 0.8;
+}
+
+.comic-stat-badge--unconverted {
+  background: rgba(220, 38, 38, 0.6);
+  border-color: rgba(220, 38, 38, 0.3);
 }
 
 .comic-list-badge {

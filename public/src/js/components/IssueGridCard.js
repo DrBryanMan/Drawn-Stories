@@ -17,15 +17,16 @@ const ICON = {
  * @returns {string} HTML string
  */
 export function renderIssueGridCard(item, options = {}) {
-    const cover = comicVineImageUrl(item.cv_img || item.hikka_img);
+    const cover = comicVineImageUrl(item.cv_img || item.hikka_img || item.image);
     const isCollection = item.type === 'collection' || item.is_collection;
     const isVolume = item.type === 'volume';
+    const isMangaChapter = item.type === 'manga_chapter';
     
     // Issue number always in the corner
-    const issueNumLabel = item.issue_number ? `#${item.issue_number}` : '';
+    const issueNumLabel = item.chapter_number ? `#${item.chapter_number}` : (item.issue_number ? `#${item.issue_number}` : '');
     
     // Logic for title: use issue name, or volume name in italics if no issue name
-    let mainTitle = options.chapterTitle || item.name_uk || item.name;
+    let mainTitle = options.chapterTitle || item.name_uk || item.name_en || item.name;
     let titleHtml = '';
     if (mainTitle) {
         titleHtml = escapeHtmlAttribute(mainTitle);
@@ -35,7 +36,7 @@ export function renderIssueGridCard(item, options = {}) {
     }
 
     const subTitle = isVolume ? (item.start_year || '') : formatDate(item.cover_date || item.release_date, '—');
-    const link = isVolume ? `#/volumes/${item.id}` : (isCollection ? `#/collections/${item.id}` : `#/issues/${item.id}`);
+    const link = isVolume ? `#/volumes/${item.id}` : (isCollection ? `#/collections/${item.id}` : (isMangaChapter ? `#/manga-chapters/${item.id}` : `#/issues/${item.id}`));
 
     // Order number badge for moderators
     const orderBadge = options.showOrder && options.orderNum 
@@ -48,7 +49,7 @@ export function renderIssueGridCard(item, options = {}) {
 
     return `
         <a href="${link || '#'}" class="issue-grid-card ${options.draggable ? 'is-draggable' : ''}" 
-             ${options.draggable ? `data-id="${item.id}"` : ''}>
+             ${options.draggable ? `data-id="${item.id}" data-item-type="${isMangaChapter ? 'manga_chapter' : 'issue'}"` : ''}>
             <div class="issue-grid-cover-wrap">
                 ${cover
                     ? `<img class="issue-grid-cover" src="${escapeHtmlAttribute(cover)}" loading="lazy">`
@@ -63,12 +64,16 @@ export function renderIssueGridCard(item, options = {}) {
                 <div class="issue-grid-actions">
                     ${isCollection ? `
                         <button class="issue-grid-toggle-btn ${item.is_owned ? 'is-owned' : ''}" data-id="${item.id}" title="${item.is_owned ? 'Видалити з колекції' : 'Додати в колекцію'}">
-                            ${item.is_owned ? ICON.trash : ICON.plus}
+                             ${item.is_owned ? ICON.trash : ICON.plus}
                         </button>
                     ` : `
-                        <button class="issue-grid-membership-btn" data-issue-id="${item.id}" title="У збірниках">
+                        <button class="issue-grid-membership-btn ${item.collection_count === 0 ? 'is-disabled' : ''}" 
+                                data-issue-id="${item.id}" 
+                                data-item-type="${isMangaChapter ? 'manga_chapter' : 'issue'}" 
+                                title="${item.collection_count > 0 ? 'У збірниках' : 'Не у збірниках'}"
+                                ${item.collection_count === 0 ? 'style="opacity: 0.4; cursor: default;"' : ''}>
                             ${ICON.layers}
-                            ${item.collection_count > 0 ? `<span class="membership-count">${item.collection_count}</span>` : ''}
+                            <span class="membership-count">${item.collection_count || 0}</span>
                         </button>
                     `}
                 </div>

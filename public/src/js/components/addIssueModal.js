@@ -18,6 +18,7 @@ let _searchTimeout = null;
 let _selectedIssueIds = new Set();
 let _currentSearchResults = [];
 let _cachedSelectedIssues = new Map();
+let _isMangaMode = false;
 
 function ensureModal() {
     if (document.getElementById('add-issue-modal-overlay')) return;
@@ -52,10 +53,13 @@ function ensureModal() {
 
     document.getElementById('aim-confirm-btn').onclick = async (e) => {
         if (!_config || _selectedIssueIds.size === 0) return;
-        const ids = Array.from(_selectedIssueIds);
+        const items = Array.from(_selectedIssueIds).map(id => ({
+            id,
+            is_manga: _isMangaMode
+        }));
         const onAdd = _config.onAdd;
         e.currentTarget.disabled = true;
-        await onAdd(ids);
+        await onAdd(items);
         closeAddIssueModal();
     };
 
@@ -256,8 +260,16 @@ async function runSearch() {
         if (hikkaSlug) params.hikka_slug = hikkaSlug;
         if (exact) params.exact = true;
 
-        const response = await API.get('/issues', params);
-        const data = response.data || [];
+        let data = [];
+        if (_config.collectionId) {
+            const response = await API.get(`/collections/${_config.collectionId}/candidates`, params);
+            data = response.data || [];
+            _isMangaMode = response.is_manga || false;
+        } else {
+            const response = await API.get('/issues', params);
+            data = response.data || [];
+            _isMangaMode = false;
+        }
 
         if (data.length === 0) {
             setEmptyState('Нічого не знайдено');

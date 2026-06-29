@@ -31,3 +31,5 @@
 
 /* Адаптивність — усі @media блоки проєкту */
 @import url('responsive.css');
+
+@import url('wanted.css');

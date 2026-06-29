@@ -25,7 +25,8 @@ const ICON = {
     refreshCw: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>',
     sortAsc: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m11 12-4-4-4 4"/><path d="M7 16V8"/><path d="M14 9h8"/><path d="M14 15h5"/><path d="M14 21h2"/></svg>',
     sortDesc: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m11 12-4 4-4-4"/><path d="M7 8v8"/><path d="M14 9h8"/><path d="M14 15h5"/><path d="M14 21h2"/></svg>',
-    edit: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'
+    edit: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+    externalLink: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 22 3 22 10"></polyline><line x1="10" y1="14" x2="22" y2="3"></line></svg>'
 };
 
 const THEME_ICON = {
@@ -173,7 +174,7 @@ export async function renderCollectionDetail(main, params = {}) {
 
         main.innerHTML = `
             <div class="collection-detail">
-                <div class="container" style="padding-top: 20px;">
+                <div class="container">
                     ${createBreadcrumbs([
                         { label: 'Каталог', href: '#/catalog' },
                         ...(collection.volume_id ? [{ label: collection.volume_name_uk || collection.volume_name, href: `#/volumes/${collection.volume_id}` }] : []),
@@ -216,19 +217,10 @@ export async function renderCollectionDetail(main, params = {}) {
                                     <span class="volume-main-title">
                                         <h1>${title} ${collection.issue_number ? `#${escapeHtmlAttribute(collection.issue_number)}` : ''}</h1>
                                     </span>
-                                    ${collection.volume_id ? `
-                                        <span class="volume-original-title">
-                                            Том: <a href="#/volumes/${collection.volume_id}" style="color: var(--accent); text-decoration: none; font-weight: 600;">${escapeHtmlAttribute(collection.volume_name_uk || collection.volume_name)}</a>
-                                        </span>
-                                    ` : ''}
                                 </div>
                             </div>
 
                             <div class="volume-hero-badges">
-                                <a href="#/catalog?publisher_ids=${collection.publisher}" class="volume-badge volume-publisher-badge" title="Видавництво">
-                                    ${ICON.building}
-                                    ${publisherName}
-                                </a>
                                 ${collection.cover_date || collection.release_date ? `
                                     <span class="volume-badge volume-year-badge" title="Дата виходу">
                                         ${ICON.calendar}
@@ -238,10 +230,12 @@ export async function renderCollectionDetail(main, params = {}) {
                             </div>
 
                             <div class="volume-hero-actions">
-                                <button class="volume-action-btn volume-details-trigger" id="btn-col-details" title="Деталі">
-                                    ${ICON.info}
-                                    Деталі
-                                </button>
+                                ${collection.site_link ? `
+                                    <a href="${escapeHtmlAttribute(collection.site_link)}" target="_blank" rel="noopener noreferrer" class="volume-action-btn" style="text-decoration: none;">
+                                        ${ICON.externalLink}
+                                        На сайті
+                                    </a>
+                                ` : ''}
                             </div>
 
                             ${isModerator ? `
@@ -255,7 +249,7 @@ export async function renderCollectionDetail(main, params = {}) {
                                 </div>
                             ` : ''}
 
-                            <div class="volume-synopsis" style="margin-top: 24px;">
+                            <div class="volume-synopsis">
                                 <div class="synopsis-header">
                                     <h2 class="synopsis-title">Синопсис</h2>
                                     <div class="synopsis-tabs">
@@ -273,13 +267,13 @@ export async function renderCollectionDetail(main, params = {}) {
                                 </div>
                             </div>
 
-                            <div class="collection-meta-details" style="margin-top: 24px;">
+                            <div class="collection-meta-details">
                                 <div class="collection-meta-item">
-                                    <span class="collection-meta-label">Зміст</span>
+                                    <span class="collection-meta-label">Том</span>
                                     <span class="collection-meta-value">
-                                        <button class="readlist-btn" id="btn-show-contents" style="height: 30px; padding: 0 10px; font-size: 12px; gap: 6px;">
-                                            ${ICON.layers} Переглянути
-                                        </button>
+                                        ${collection.volume_id ? `
+                                            <a href="#/volumes/${collection.volume_id}">${escapeHtmlAttribute(collection.volume_name_uk || collection.volume_name)}</a>
+                                        ` : '—'}
                                     </span>
                                 </div>
                                 <div class="collection-meta-item">
@@ -289,16 +283,6 @@ export async function renderCollectionDetail(main, params = {}) {
                                 <div class="collection-meta-item">
                                     <span class="collection-meta-label">Сторінок</span>
                                     <span class="collection-meta-value">${escapeHtmlAttribute(collection.pages || '—')}</span>
-                                </div>
-                                <div class="collection-meta-item">
-                                    <span class="collection-meta-label">Джерело</span>
-                                    <span class="collection-meta-value">
-                                        ${collection.site_link ? `
-                                            <a href="${escapeHtmlAttribute(collection.site_link)}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 4px;"> 
-                                                ComicVine ${ICON.link}
-                                            </a>
-                                        ` : '—'}
-                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -364,11 +348,21 @@ export async function renderCollectionDetail(main, params = {}) {
                                 <h2 class="collection-issues-title" style="margin: 0;">Вміст збірника</h2>
                                 <span class="collection-issues-count" style="color: var(--text-muted); font-size: 14px;">${issues.length} випусків</span>
                             </div>
-                            ${(isModerator) ? `
-                                <button class="readlist-btn" id="btn-add-issue" style="height: 34px; padding: 0 12px; font-size: 13px; gap: 6px; background: var(--bg-card); border: 1px solid var(--border);">
-                                    ${ICON.plus} Додати випуск
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <button class="readlist-btn" id="btn-show-contents" style="height: 34px; padding: 0 12px; font-size: 13px; gap: 6px; background: var(--bg-card); border: 1px solid var(--border);">
+                                    ${ICON.layers} Зміст
                                 </button>
-                            ` : ''}
+                                ${(isModerator && collection.collection_issues_count > 0) ? `
+                                    <button class="readlist-btn" id="btn-clear-issues" style="height: 34px; padding: 0 12px; font-size: 13px; gap: 6px; background: color-mix(in srgb, var(--red) 8%, var(--bg-card)); border: 1px solid color-mix(in srgb, var(--red) 35%, transparent); color: var(--red);" title="Очистити вміст збірника">
+                                        ${ICON.trash} ${collection.collection_issues_count}
+                                    </button>
+                                ` : ''}
+                                ${(isModerator) ? `
+                                    <button class="readlist-btn" id="btn-add-issue" style="height: 34px; padding: 0 12px; font-size: 13px; gap: 6px; background: var(--bg-card); border: 1px solid var(--border);">
+                                        ${ICON.plus} Додати випуск
+                                    </button>
+                                ` : ''}
+                            </div>
                         </div>
 
                         ${sortedIssues.length === 0 ? `
@@ -418,13 +412,6 @@ export async function renderCollectionDetail(main, params = {}) {
             });
         }
 
-        // Details trigger (Facts modal)
-        const detailsBtn = main.querySelector('#btn-col-details');
-        if (detailsBtn) {
-            detailsBtn.addEventListener('click', () => {
-                openFactsModal(collection);
-            });
-        }
 
         // --- Helper: Drag & Drop Reordering ---
         const initReordering = () => {
@@ -446,11 +433,14 @@ export async function renderCollectionDetail(main, params = {}) {
 
             const saveOrder = async () => {
                 if (isSaving) return;
-                const ids = getCards().map(c => Number(c.dataset.id)).filter(id => !isNaN(id));
+                const items = getCards().map(c => ({
+                    id: Number(c.dataset.id),
+                    type: c.dataset.itemType
+                })).filter(item => !isNaN(item.id));
                 
                 isSaving = true;
                 try {
-                    await API.put(`/collections/${collectionId}/reorder-issues`, { issue_ids: ids });
+                    await API.put(`/collections/${collectionId}/reorder-issues`, { items });
                     console.log('Order updated');
                 } catch (err) {
                     alert('Помилка оновлення порядку: ' + err.message);
@@ -635,19 +625,37 @@ export async function renderCollectionDetail(main, params = {}) {
         if (btnAddIssue) {
             btnAddIssue.addEventListener('click', () => {
                 openAddIssueModal({
-                    title: 'Додати випуски до збірника',
+                    title: 'Додати вміст до збірника',
+                    collectionId: collectionId,
                     alreadyIds: new Set(issues.map(i => i.id)),
-                    onAdd: async (issueIds) => {
-                        for (const id of issueIds) {
+                    onAdd: async (items) => {
+                        for (const item of items) {
                             try {
-                                await API.post(`/collections/${collectionId}/issues`, { issue_id: id });
+                                const payload = item.is_manga 
+                                    ? { manga_chapter_id: item.id } 
+                                    : { issue_id: item.id };
+                                await API.post(`/collections/${collectionId}/issues`, payload);
                             } catch (err) {
-                                console.error(`Error adding issue ${id}:`, err);
+                                console.error(`Error adding item ${item.id}:`, err);
                             }
                         }
                         renderCollectionDetail(main, params);
                     }
                 });
+            });
+        }
+
+        // --- Clear Issues ---
+        const btnClearIssues = main.querySelector('#btn-clear-issues');
+        if (btnClearIssues) {
+            btnClearIssues.addEventListener('click', async () => {
+                if (!confirm(`Видалити всі ${collection.collection_issues_count} зв'язків із випусками? Самі випуски/розділи не будуть видалені.`)) return;
+                try {
+                    await API.delete(`/collections/${collectionId}/issues`);
+                    renderCollectionDetail(main, params);
+                } catch (err) {
+                    alert('Помилка: ' + err.message);
+                }
             });
         }
 
@@ -677,8 +685,8 @@ export async function renderCollectionDetail(main, params = {}) {
                                 ${contentsList && contentsList.length > 0 ? `
                                     <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;">
                                         ${contentsList.map((item, idx) => `
-                                            <li style="padding: 10px 14px; background: var(--bg-input); border-radius: 8px; font-size: 14px; font-weight: 500; display: flex; gap: 12px; align-items: baseline;">
-                                                <span style="color: var(--text-muted); font-size: 12px; font-weight: 800; min-width: 20px;">${idx + 1}.</span>
+                                            <li style="background: var(--bg-input); display: flex; align-items: baseline;">
+                                                <span style="color: var(--text-muted); min-width: 20px;">${idx + 1}.</span>
                                                 <span style="color: var(--text);">${escapeHtmlAttribute(item)}</span>
                                             </li>
                                         `).join('')}
@@ -715,54 +723,3 @@ export async function renderCollectionDetail(main, params = {}) {
     }
 }
 
-function openFactsModal(collection) {
-    if (document.querySelector('.ds-modal-overlay')) return;
-    const modal = document.createElement('div');
-    modal.className = 'ds-modal-overlay';
-    
-    const fact = (label, value) => value ? `<div class="volume-fact"><dt>${label}</dt><dd>${escapeHtmlAttribute(String(value))}</dd></div>` : '';
-
-    modal.innerHTML = `
-        <div class="ds-modal ds-modal--small">
-            <div class="ds-modal-header">
-                <div class="ds-modal-title">
-                    ${ICON.info}
-                    Детальна інформація
-                </div>
-                <button class="ds-modal-close" id="modal-close">&times;</button>
-            </div>
-            <div class="ds-modal-body">
-                <dl class="volume-facts">
-                    ${fact('ComicVine ID', collection.cv_id)}
-                    ${fact('CV Slug', collection.cv_slug)}
-                    ${fact('Номер', collection.issue_number)}
-                    ${fact('Дата обкладинки', collection.cover_date)}
-                    ${fact('Дата виходу', collection.release_date)}
-                    ${fact('ISBN', collection.isbn)}
-                    ${fact('Сторінок', collection.pages)}
-                    ${fact('Створено', collection.created_at)}
-                    ${fact('Оновлено', collection.updated_at)}
-                </dl>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-    document.body.style.overflow = 'hidden';
-
-    const close = () => {
-        document.removeEventListener('keydown', handleEsc);
-        modal.remove();
-        document.body.style.overflow = '';
-    };
-
-    const handleEsc = (e) => {
-        if (e.key === 'Escape') close();
-    };
-    document.addEventListener('keydown', handleEsc);
-
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) close();
-    });
-    modal.querySelector('#modal-close').addEventListener('click', close);
-}

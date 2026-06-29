@@ -379,15 +379,17 @@ function renderItems(container, items) {
                     </thead>
                     <tbody>
                         ${items.map(item => {
-                            const cover = comicVineImageUrl(item.cv_img || item.hikka_img);
+                            const cover = comicVineImageUrl(item.cv_img || item.hikka_img || item.image);
                             const isCollection = item.type === 'collection' || item.is_collection;
                             const isVolume = item.type === 'volume';
-                            const link = isVolume ? `#/volumes/${item.id}` : (isCollection ? `#/collections/${item.id}` : null);
+                            const isMangaChapter = item.type === 'manga_chapter';
+                            const link = isVolume ? `#/volumes/${item.id}` : (isCollection ? `#/collections/${item.id}` : (isMangaChapter ? `#/manga-chapters/${item.id}` : `#/issues/${item.id}`));
                             const title = escapeHtmlAttribute(item.name_uk || item.name || 'Без назви');
+                            const issueNumLabel = item.chapter_number || item.issue_number || '—';
 
                             return `
-                                <tr ${link ? `onclick="location.hash='${link}'" style="cursor: pointer;"` : ''}>
-                                    <td class="table-issue-num">${escapeHtmlAttribute(item.issue_number || '—')}</td>
+                                <tr ${link ? `data-link="${link}" style="cursor: pointer;"` : ''}>
+                                    <td class="table-issue-num">${escapeHtmlAttribute(issueNumLabel)}</td>
                                     <td>
                                         <div class="table-issue-info">
                                             ${cover ? `<img class="table-issue-thumb" src="${escapeHtmlAttribute(cover)}" loading="lazy">` : ''}
@@ -396,7 +398,7 @@ function renderItems(container, items) {
                                                 ${(() => {
                                                     const volLabel = item.volume_name_uk || item.volume_name || '';
                                                     const isDup = !volLabel || volLabel === (item.name_uk || item.name || '');
-                                                    return (!isCollection && !isVolume && !isDup)
+                                                    return (!isCollection && !isVolume && !isMangaChapter && !isDup)
                                                         ? `<span class="table-issue-volume-label">${escapeHtmlAttribute(volLabel)}</span>`
                                                         : '';
                                                 })()}
@@ -406,17 +408,21 @@ function renderItems(container, items) {
                                     </td>
                                     <td class="table-issue-date">${isVolume ? (item.start_year || '') : formatDate(item.cover_date || item.release_date, '—')}</td>
                                     <td>
-                                        ${isCollection ? `
-                                            <button class="issue-grid-toggle-btn ${item.is_owned ? 'is-owned' : ''}" data-id="${item.id}" title="${item.is_owned ? 'Видалити з колекції' : 'Додати в колекцію'}" style="position: static; width: 28px; height: 28px;">
-                                                ${item.is_owned ? ICON.trash : ICON.plus}
-                                            </button>
-                                        ` : ''}
-                                        ${(!isCollection && !isVolume) ? `
-                                            <button class="table-membership-btn" data-issue-id="${item.id}">
-                                                ${ICON.layers}
-                                                ${item.collection_count > 0 ? `<span class="membership-count">${item.collection_count}</span>` : ''}
-                                            </button>` : ''}
-                                    </td>
+                                         ${isCollection ? `
+                                             <button class="issue-grid-toggle-btn ${item.is_owned ? 'is-owned' : ''}" data-id="${item.id}" title="${item.is_owned ? 'Видалити з колекції' : 'Додати в колекцію'}" style="position: static; width: 28px; height: 28px;">
+                                                 ${item.is_owned ? ICON.trash : ICON.plus}
+                                             </button>
+                                         ` : ''}
+                                         ${(!isCollection && !isVolume) ? `
+                                             <button class="table-membership-btn ${item.collection_count === 0 ? 'is-disabled' : ''}" 
+                                                     data-issue-id="${item.id}" 
+                                                     data-item-type="${item.type || 'issue'}"
+                                                     title="${item.collection_count > 0 ? 'У збірниках' : 'Не у збірниках'}"
+                                                     ${item.collection_count === 0 ? 'style="opacity: 0.4; cursor: default;"' : ''}>
+                                                 ${ICON.layers}
+                                                 <span class="membership-count">${item.collection_count || 0}</span>
+                                             </button>` : ''}
+                                     </td>
                                 </tr>
                             `;
                         }).join('')}
@@ -620,10 +626,6 @@ export async function renderVolumeDetail(main, params = {}) {
                                         </a>
                                     ` : ''}
                                 </div>
-                                <button class="volume-action-btn volume-details-trigger" title="Деталі">
-                                    ${ICON.info}
-                                    Деталі
-                                </button>
                             </div>
 
                             ${isModerator ? `
@@ -648,6 +650,12 @@ export async function renderVolumeDetail(main, params = {}) {
                                         <button class="btn-admin btn-admin--warning" id="volume-convert-btn" title="Конвертувати всі випуски у збірники">
                                             ${ICON.layers}
                                             У збірники (${data.convertable_count})
+                                        </button>
+                                    ` : ''}
+                                    ${isMagazine && isManga ? `
+                                        <button class="btn-admin btn-admin--warning" id="volume-convert-to-magazine-btn" title="Конвертувати том у повноцінний журнал манґи">
+                                            ${ICON.newspaper}
+                                            У журнал манґи
                                         </button>
                                     ` : ''}
                                     ${isCollection && data.collections.length > 0 ? `
@@ -1022,12 +1030,21 @@ export async function renderVolumeDetail(main, params = {}) {
             });
         }
 
-        const detailsBtn = main.querySelector('.volume-details-trigger');
-        if (detailsBtn) {
-            detailsBtn.addEventListener('click', () => {
-                openFactsModal(volume, stats);
+        const convertToMagBtn = main.querySelector('#volume-convert-to-magazine-btn');
+        if (convertToMagBtn) {
+            convertToMagBtn.addEventListener('click', async () => {
+                if (!confirm('Ви впевнені, що хочете конвертувати цей том та його випуски в окрему структуру журналів манґи? Цей том буде видалено як звичайний том.')) return;
+                
+                try {
+                    const res = await API.post(`/magazines/convert-from-volume/${volumeId}`);
+                    alert(res.message);
+                    window.location.hash = '#/catalog';
+                } catch (err) {
+                    alert('Помилка конвертації: ' + err.message);
+                }
             });
         }
+
 
         const synonymsBtn = main.querySelector('#btn-show-synonyms');
         if (synonymsBtn) {
@@ -1230,13 +1247,17 @@ export async function renderVolumeDetail(main, params = {}) {
             const membershipBtn = e.target.closest('.issue-grid-membership-btn, .table-membership-btn');
             if (membershipBtn) {
                 e.stopPropagation();
-                openIssueMembershipModal(membershipBtn.dataset.issueId);
+                e.preventDefault();
+                if (!membershipBtn.classList.contains('is-disabled')) {
+                    openIssueMembershipModal(membershipBtn.dataset.issueId, membershipBtn.dataset.itemType);
+                }
                 return;
             }
 
             const toggleBtn = e.target.closest('.issue-grid-toggle-btn');
             if (toggleBtn) {
                 e.stopPropagation();
+                e.preventDefault();
                 if (!currentUser) {
                     alert('Будь ласка, увійдіть, щоб керувати колекцією');
                     return;
@@ -1259,6 +1280,15 @@ export async function renderVolumeDetail(main, params = {}) {
                 } catch (err) {
                     console.error(err);
                     alert('Помилка: ' + err.message);
+                }
+                return;
+            }
+
+            const tr = e.target.closest('.issues-table tbody tr');
+            if (tr && !e.target.closest('button') && !e.target.closest('a')) {
+                const link = tr.dataset.link;
+                if (link) {
+                    window.location.hash = link;
                 }
             }
         });
@@ -1302,55 +1332,6 @@ window.removeMagazineChild = async (magazineId, childId) => {
         alert('Помилка: ' + err.message);
     }
 };
-
-function openFactsModal(volume, stats) {
-    if (document.querySelector('.ds-modal-overlay')) return;
-    const modal = document.createElement('div');
-    modal.className = 'ds-modal-overlay';
-    modal.innerHTML = `
-        <div class="ds-modal ds-modal--small">
-            <div class="ds-modal-header">
-                <div class="ds-modal-title">
-                    ${ICON.info}
-                    Детальна інформація
-                </div>
-                <button class="ds-modal-close" id="modal-close">&times;</button>
-            </div>
-            <div class="ds-modal-body">
-                <dl class="volume-facts">
-                    ${volumeFact('ComicVine ID', volume.cv_id)}
-                    ${volumeFact('Hikka Slug', volume.hikka_slug)}
-                    ${volumeFact('MAL ID', volume.mal_id)}
-                    ${volumeFact('Старт року', volume.start_year)}
-                    ${volumeFact('Мова', volume.lang)}
-                    ${volumeFact('Випусків', stats.issues)}
-                    ${volumeFact('Збірників', stats.collections)}
-                    ${volumeFact('Створено', formatDate(volume.created_at, '—'))}
-                    ${volumeFact('Оновлено', formatDate(volume.updated_at, '—'))}
-                </dl>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-    document.body.style.overflow = 'hidden';
-
-    const close = () => {
-        document.removeEventListener('keydown', handleEsc);
-        modal.remove();
-        document.body.style.overflow = '';
-    };
-
-    const handleEsc = (e) => {
-        if (e.key === 'Escape') close();
-    };
-    document.addEventListener('keydown', handleEsc);
-
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) close();
-    });
-    modal.querySelector('#modal-close').addEventListener('click', close);
-}
 
 function openSynonymsModal(volume) {
     if (document.querySelector('.ds-modal-overlay')) return;
@@ -1418,7 +1399,7 @@ function openSynonymsModal(volume) {
     modal.querySelector('#modal-close').addEventListener('click', close);
 }
 
-async function openIssueMembershipModal(issueId) {
+async function openIssueMembershipModal(issueId, itemType = 'issue') {
     if (document.querySelector('.ds-modal-overlay')) return;
     const modal = document.createElement('div');
     modal.className = 'ds-modal-overlay';
@@ -1458,7 +1439,7 @@ async function openIssueMembershipModal(issueId) {
     modal.querySelector('#modal-close').addEventListener('click', close);
 
     try {
-        const response = await API.get(`/volumes/issue/${issueId}/collections-membership`);
+        const response = await API.get(`/volumes/issue/${issueId}/collections-membership`, { type: itemType });
         const collections = response.data || [];
         const listContainer = modal.querySelector('#membership-list');
         const loader = modal.querySelector('#membership-loading');

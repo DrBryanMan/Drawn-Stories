@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi import APIRouter, Request, HTTPException, Depends, Query
 from server.db import get_db
 from typing import List, Optional
 from pydantic import BaseModel
@@ -271,40 +271,85 @@ async def add_all_issues_from_volume(req: AddVolumeAllRequest, user_id: int = De
 async def add_issue_to_collection(collection_id: int, data: dict):
     db = get_db()
     issue_id = data.get("issue_id")
-    if not issue_id:
-        raise HTTPException(status_code=400, detail="issue_id is required")
+    manga_chapter_id = data.get("manga_chapter_id")
+    
+    if not issue_id and not manga_chapter_id:
+        raise HTTPException(status_code=400, detail="issue_id or manga_chapter_id is required")
     
     # Check if already exists
-    existing = db.get_one("SELECT 1 FROM collection_issues WHERE collection_id = ? AND issue_id = ?", [collection_id, issue_id])
+    if issue_id:
+        existing = db.get_one("SELECT 1 FROM collection_issues WHERE collection_id = ? AND issue_id = ?", [collection_id, issue_id])
+    else:
+        existing = db.get_one("SELECT 1 FROM collection_issues WHERE collection_id = ? AND manga_chapter_id = ?", [collection_id, manga_chapter_id])
+        
     if existing:
-        return {"message": "Випуск вже є у збірнику"}
+        return {"message": "Випуск/розділ вже є у збірнику"}
     
     # Get next order_num
     last_order = db.get_one("SELECT MAX(order_num) as max_order FROM collection_issues WHERE collection_id = ?", [collection_id])
     next_order = (last_order['max_order'] or 0) + 1
     
-    db.execute(
-        "INSERT INTO collection_issues (collection_id, issue_id, order_num) VALUES (?, ?, ?)",
-        [collection_id, issue_id, next_order]
-    )
+    if issue_id:
+        db.execute(
+            "INSERT INTO collection_issues (collection_id, issue_id, manga_chapter_id, order_num) VALUES (?, ?, NULL, ?)",
+            [collection_id, issue_id, next_order]
+        )
+    else:
+        db.execute(
+            "INSERT INTO collection_issues (collection_id, issue_id, manga_chapter_id, order_num) VALUES (?, NULL, ?, ?)",
+            [collection_id, manga_chapter_id, next_order]
+        )
     
-    return {"message": "Випуск додано", "order_num": next_order}
+    return {"message": "Елемент додано", "order_num": next_order}
 
 @router.put("/{collection_id}/reorder-issues")
 async def reorder_collection_issues(collection_id: int, data: dict):
     db = get_db()
+    items = data.get("items")
+    # Підтримка старого формату (про всяк випадок)
     issue_ids = data.get("issue_ids")
-    if not isinstance(issue_ids, list):
-        raise HTTPException(status_code=400, detail="issue_ids list is required")
     
-    # Update order_num for each issue in the list
-    for index, issue_id in enumerate(issue_ids):
-        db.execute(
-            "UPDATE collection_issues SET order_num = ? WHERE collection_id = ? AND issue_id = ?",
-            [index + 1, collection_id, issue_id]
-        )
+    if items is not None:
+        if not isinstance(items, list):
+            raise HTTPException(status_code=400, detail="items must be a list")
+        for index, item in enumerate(items):
+            item_id = item.get("id")
+            item_type = item.get("type")
+            if item_type == "manga_chapter":
+                db.execute(
+                    "UPDATE collection_issues SET order_num = ? WHERE collection_id = ? AND manga_chapter_id = ?",
+                    [index + 1, collection_id, item_id]
+                )
+            else:
+                db.execute(
+                    "UPDATE collection_issues SET order_num = ? WHERE collection_id = ? AND issue_id = ?",
+                    [index + 1, collection_id, item_id]
+                )
+    elif issue_ids is not None:
+        if not isinstance(issue_ids, list):
+            raise HTTPException(status_code=400, detail="issue_ids must be a list")
+        for index, issue_id in enumerate(issue_ids):
+            db.execute(
+                "UPDATE collection_issues SET order_num = ? WHERE collection_id = ? AND issue_id = ?",
+                [index + 1, collection_id, issue_id]
+            )
+    else:
+        raise HTTPException(status_code=400, detail="items or issue_ids is required")
     
     return {"message": "Порядок оновлено"}
+
+@router.delete("/{collection_id}/issues")
+async def clear_collection_issues(collection_id: int):
+    db = get_db()
+
+    collection = db.get_one("SELECT id FROM collections WHERE id = ?", [collection_id])
+    if not collection:
+        raise HTTPException(status_code=404, detail="Збірник не знайдено")
+
+    count = db.get_one("SELECT COUNT(*) as cnt FROM collection_issues WHERE collection_id = ?", [collection_id])["cnt"]
+    db.execute("DELETE FROM collection_issues WHERE collection_id = ?", [collection_id])
+
+    return {"message": f"Видалено {count} зв'язків", "deleted": count}
 
 def replace_collection_themes(db, collection_id, theme_ids):
     # Delete existing themes
@@ -446,14 +491,27 @@ async def get_collection_detail(collection_id: int, request: Request):
         
     collection = dict(collection)
     
-    # 2. Отримуємо випуски, що входять до збірника
+    # 2. Отримуємо випуски та розділи манги, що входять до збірника
     issues = db.get_all(
         """
-        SELECT i.*, ci.order_num, ci.chapter_title, 
-               v.name as volume_name, v.name_uk as volume_name_uk
+        SELECT 
+            ci.order_num, ci.chapter_title,
+            COALESCE(i.id, mc.id) as id,
+            CASE WHEN ci.manga_chapter_id IS NOT NULL THEN 'manga_chapter' ELSE 'issue' END as type,
+            COALESCE(i.name, mc.name) as name,
+            COALESCE(i.name_uk, mc.name_uk) as name_uk,
+            COALESCE(i.cv_img, mc.image) as cv_img,
+            COALESCE(i.issue_number, mc.chapter_number) as issue_number,
+            COALESCE(i.release_date, mc.release_date) as release_date,
+            COALESCE(i.description, mc.synopsis) as description,
+            COALESCE(i.pages, mc.pages) as pages,
+            COALESCE(i.volume_id, mc.volume_id) as volume_id,
+            v.name as volume_name, 
+            v.name_uk as volume_name_uk
         FROM collection_issues ci
-        JOIN issues i ON ci.issue_id = i.id
-        LEFT JOIN volumes v ON i.volume_id = v.id
+        LEFT JOIN issues i ON ci.issue_id = i.id
+        LEFT JOIN manga_chapters mc ON ci.manga_chapter_id = mc.id
+        LEFT JOIN volumes v ON COALESCE(i.volume_id, mc.volume_id) = v.id
         WHERE ci.collection_id = ?
         ORDER BY ci.order_num
         """,
@@ -478,7 +536,13 @@ async def get_collection_detail(collection_id: int, request: Request):
         [collection_id]
     )
 
-    # 4. Отримуємо усі збірники цього ж тому
+    # 4. Пряма кількість зв'язків у collection_issues (незалежно від типу — issues або manga_chapters)
+    raw_links_count = db.get_one(
+        "SELECT COUNT(*) as cnt FROM collection_issues WHERE collection_id = ?",
+        [collection_id]
+    )["cnt"]
+
+    # 5. Отримуємо усі збірники цього ж тому
     related_collections = []
     if collection.get('volume_id'):
         related_collections = db.get_all(
@@ -492,9 +556,164 @@ async def get_collection_detail(collection_id: int, request: Request):
         )
     
     return {
-        "collection": collection,
+        "collection": {**collection, "collection_issues_count": raw_links_count},
         "issues": [dict(issue) for issue in issues],
         "themes": [dict(theme) for theme in themes],
         "related_collections": [dict(rc) for rc in related_collections]
+    }
+
+@router.get("/{collection_id}/candidates")
+async def get_collection_candidates(
+    collection_id: int,
+    name: Optional[str] = None,
+    volume_name: Optional[str] = None,
+    issue_number: Optional[str] = None,
+    volume_id: Optional[int] = None,
+    cv_vol_id: Optional[int] = None,
+    hikka_slug: Optional[str] = None,
+    exact: bool = False,
+    limit: int = Query(100, ge=1, le=500)
+):
+    db = get_db()
+    
+    # 1. Шукаємо спочатку в issues
+    clauses_issues = []
+    params_issues = []
+    
+    if volume_id:
+        clauses_issues.append("i.volume_id = ?")
+        params_issues.append(volume_id)
+    if hikka_slug:
+        clauses_issues.append("ULOWER(v.hikka_slug) LIKE ?")
+        params_issues.append(f"%{hikka_slug.lower()}%")
+    if cv_vol_id:
+        clauses_issues.append("v.cv_id = ?")
+        params_issues.append(cv_vol_id)
+        
+    if name:
+        if exact:
+            clauses_issues.append("ULOWER(i.name) = ?")
+            params_issues.append(name.lower())
+        else:
+            words = [w.strip() for w in name.split() if w.strip()]
+            if words:
+                name_parts = []
+                for word in words:
+                    name_parts.append("(ULOWER(i.name) LIKE ? OR ULOWER(i.name_uk) LIKE ?)")
+                    params_issues.extend([f"%{word.lower()}%", f"%{word.lower()}%"])
+                clauses_issues.append(f"({' AND '.join(name_parts)})")
+                
+    if volume_name:
+        if exact:
+            clauses_issues.append("(ULOWER(v.name) = ? OR ULOWER(v.name_uk) = ?)")
+            params_issues.extend([volume_name.lower(), volume_name.lower()])
+        else:
+            words = [w.strip() for w in volume_name.split() if w.strip()]
+            if words:
+                vol_parts = []
+                for word in words:
+                    vol_parts.append("(ULOWER(v.name) LIKE ? OR ULOWER(v.name_uk) LIKE ?)")
+                    params_issues.extend([f"%{word.lower()}%", f"%{word.lower()}%"])
+                clauses_issues.append(f"({' AND '.join(vol_parts)})")
+                
+    if issue_number:
+        clauses_issues.append("i.issue_number = ?")
+        params_issues.append(issue_number)
+        
+    where_issues = f" WHERE {' AND '.join(clauses_issues)}" if clauses_issues else ""
+    
+    results = db.get_all(
+        f"""
+        SELECT 
+            i.id, 
+            i.name, 
+            i.name_uk, 
+            i.cv_img, 
+            i.issue_number,
+            i.volume_id,
+            v.name as volume_name, 
+            v.name_uk as volume_name_uk
+        FROM issues i
+        LEFT JOIN volumes v ON i.volume_id = v.id
+        {where_issues}
+        ORDER BY i.volume_id DESC, CAST(i.issue_number AS FLOAT) ASC, i.issue_number ASC
+        LIMIT ?
+        """,
+        params_issues + [limit]
+    )
+    
+    is_manga = False
+    
+    # 2. Якщо нічого не знайшли, шукаємо в manga_chapters
+    if not results:
+        clauses_manga = []
+        params_manga = []
+        
+        if volume_id:
+            clauses_manga.append("mc.volume_id = ?")
+            params_manga.append(volume_id)
+        if hikka_slug:
+            clauses_manga.append("ULOWER(v.hikka_slug) LIKE ?")
+            params_manga.append(f"%{hikka_slug.lower()}%")
+        if cv_vol_id:
+            clauses_manga.append("v.cv_id = ?")
+            params_manga.append(cv_vol_id)
+            
+        if name:
+            if exact:
+                clauses_manga.append("ULOWER(mc.name) = ?")
+                params_manga.append(name.lower())
+            else:
+                words = [w.strip() for w in name.split() if w.strip()]
+                if words:
+                    name_parts = []
+                    for word in words:
+                        name_parts.append("(ULOWER(mc.name) LIKE ? OR ULOWER(mc.name_uk) LIKE ?)")
+                        params_manga.extend([f"%{word.lower()}%", f"%{word.lower()}%"])
+                    clauses_manga.append(f"({' AND '.join(name_parts)})")
+                    
+        if volume_name:
+            if exact:
+                clauses_manga.append("(ULOWER(v.name) = ? OR ULOWER(v.name_uk) = ?)")
+                params_manga.extend([volume_name.lower(), volume_name.lower()])
+            else:
+                words = [w.strip() for w in volume_name.split() if w.strip()]
+                if words:
+                    vol_parts = []
+                    for word in words:
+                        vol_parts.append("(ULOWER(v.name) LIKE ? OR ULOWER(v.name_uk) LIKE ?)")
+                        params_manga.extend([f"%{word.lower()}%", f"%{word.lower()}%"])
+                    clauses_manga.append(f"({' AND '.join(vol_parts)})")
+                    
+        if issue_number:
+            clauses_manga.append("mc.chapter_number = ?")
+            params_manga.append(issue_number)
+            
+        where_manga = f" WHERE {' AND '.join(clauses_manga)}" if clauses_manga else ""
+        
+        results = db.get_all(
+            f"""
+            SELECT 
+                mc.id, 
+                mc.name, 
+                mc.name_uk, 
+                mc.image as cv_img, 
+                mc.chapter_number as issue_number,
+                mc.volume_id,
+                v.name as volume_name, 
+                v.name_uk as volume_name_uk
+            FROM manga_chapters mc
+            LEFT JOIN volumes v ON mc.volume_id = v.id
+            {where_manga}
+            ORDER BY mc.volume_id DESC, CAST(mc.chapter_number AS FLOAT) ASC, mc.chapter_number ASC
+            LIMIT ?
+            """,
+            params_manga + [limit]
+        )
+        is_manga = True
+        
+    return {
+        "is_manga": is_manga,
+        "data": [dict(r) for r in results]
     }
 

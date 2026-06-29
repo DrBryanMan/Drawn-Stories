@@ -19,7 +19,6 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 16px;
-  margin-top: 20px;
   padding: 16px;
   background: var(--bg-card);
   border: 1px solid var(--border-s);

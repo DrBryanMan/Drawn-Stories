@@ -81,7 +81,31 @@ export function createComicCard(item) {
             <span class="comic-meta-item">${calendarIcon} ${year}</span>
         `;
     } else {
-        statBadge = `<div class="comic-stat-badge">${issueIcon} ${item.issue_count || 0}</div>`;
+        const issueCount = item.issue_count || 0;
+        const collectionCount = item.collection_count || 0;
+        const unconvertedCount = item.unconverted_issue_count || 0;
+        const translationCount = item.translation_count || 0;
+        
+        let statText = `${issueCount}`;
+        let statClass = 'comic-stat-badge';
+        let currentIcon = issueIcon;
+        
+        if (translationCount > 0) {
+            statText = `${translationCount}`;
+            currentIcon = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>';
+        } else if (collectionCount > 0) {
+            if (unconvertedCount > 0) {
+                statText = `${unconvertedCount}? ${collectionCount}`;
+                statClass += ' comic-stat-badge--unconverted';
+            } else {
+                statText = `${collectionCount}`;
+            }
+        } else if (issueCount > 0) {
+            statClass += ' comic-stat-badge--unconverted';
+            statText = `${issueCount}`;
+        }
+
+        statBadge = `<div class="${statClass}">${currentIcon} ${statText}</div>`;
         metaText = `
             <span class="comic-meta-item">${calendarIcon} ${year}</span>
         `;
@@ -100,8 +124,9 @@ export function createComicCard(item) {
     if (isIssue) {
         badge = `<div class="comic-type-badge">#${escapeHtmlAttribute(item.issue_number || '?')}</div>`;
     } else if (isCollection) {
-        const isManga = item.is_manga || (item.volume_name && (item.volume_name.toLowerCase().includes('manga') || item.volume_name.toLowerCase().includes('манга')));
-        badge = `<div class="comic-type-badge comic-type-badge--collection">${isManga ? 'Том' : 'Збірник'}</div>`;
+        badge = `<div class="comic-type-badge comic-type-badge--collection">#${escapeHtmlAttribute(item.issue_number || '?')}</div>`;
+    } else if (isVolume && item.translation_count > 0) {
+        badge = `<div class="comic-type-badge comic-type-badge--original">Оригінал</div>`;
     }
 
     let listBadge = '';
@@ -116,12 +141,19 @@ export function createComicCard(item) {
         `;
     }
 
+    const sources = [];
+    if (item.mal_id) sources.push('<span class="comic-source-badge comic-source-badge--mal">MAL</span>');
+    if (item.hikka_slug) sources.push('<span class="comic-source-badge comic-source-badge--hikka">HIKKA</span>');
+    if (item.cv_id) sources.push('<span class="comic-source-badge comic-source-badge--cv">CV</span>');
+    const sourcesHTML = sources.length > 0 ? `<div class="comic-sources-list">${sources.join('')}</div>` : '';
+
     a.innerHTML = `
         <div class="comic-media">
             ${coverHTML}
             ${badge}
             ${statBadge}
             ${listBadge}
+            ${sourcesHTML}
         </div>
         <div class="comic-body">
             <div class="comic-title">${title}</div>
