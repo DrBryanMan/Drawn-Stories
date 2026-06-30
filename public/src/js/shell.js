@@ -209,6 +209,9 @@ function updateAuthUI() {
 
   const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'moderator');
   const addBtnHTML = isAdmin ? `
+    <a href="/wanted" class="bookmarks-trigger" id="wanted-btn" title="Wanted Content" style="display: inline-flex; align-items: center; justify-content: center; margin-right: 2px;">
+      ${icon('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>', 20)}
+    </a>
     <button class="bookmarks-trigger" id="global-add-btn" title="Додати контент">
       ${icon('<path d="M12 5v14M5 12h14"/>', 20)}
     </button>

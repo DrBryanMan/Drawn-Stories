@@ -64,7 +64,7 @@ async def get_volume_detail(volume_id: int, request: Request):
         for t in themes
     )
 
-    has_magazine_parent = db.get_one("SELECT 1 FROM volume_magazines WHERE volume_id = ?", [volume_id]) is not None
+    has_magazine_parent = db.get_one("SELECT 1 FROM magazine_volumes WHERE volume_id = ?", [volume_id]) is not None
     is_manga_with_mal = volume.get("mal_id") is not None
     use_manga_chapters = has_magazine_parent or is_manga_with_mal
 
@@ -201,7 +201,7 @@ async def get_volume_detail(volume_id: int, request: Request):
     magazine_parents = db.get_all(
         """
         SELECT mm.*, 'magazine' as type
-        FROM volume_magazines vm
+        FROM magazine_volumes vm
         JOIN manga_magazines mm ON mm.id = vm.magazine_id
         WHERE vm.volume_id = ?
         ORDER BY mm.name ASC
@@ -411,7 +411,7 @@ async def convert_all_to_collections(volume_id: int):
             db.conn.execute("INSERT OR IGNORE INTO volume_themes (volume_id, theme_id) VALUES (?, ?)", [volume_id, 44])
             
             # Handle magazine parent logic from DSA
-            has_magazine_parent = db.get_one("SELECT id FROM volume_magazines WHERE volume_id = ?", [volume_id])
+            has_magazine_parent = db.get_one("SELECT id FROM magazine_volumes WHERE volume_id = ?", [volume_id])
             if has_magazine_parent:
                 # TRANSLATED_THEME_ID = 51
                 db.conn.execute("DELETE FROM volume_themes WHERE volume_id = ? AND theme_id = ?", [volume_id, 51])
@@ -517,7 +517,7 @@ async def delete_volume(volume_id: int):
         
         # 3. Translations/Magazines
         db.conn.execute("DELETE FROM volume_translations WHERE parent_id = ? OR child_id = ?", [volume_id, volume_id])
-        db.conn.execute("DELETE FROM volume_magazines WHERE volume_id = ?", [volume_id])
+        db.conn.execute("DELETE FROM magazine_volumes WHERE volume_id = ?", [volume_id])
         
         # 4. Issues and their links
         issues = db.get_all("SELECT id FROM issues WHERE volume_id = ?", [volume_id])
@@ -630,7 +630,7 @@ async def add_volume_to_magazine(volume_id: int, data: dict):
         raise HTTPException(status_code=400, detail="Цей журнал ще не сконвертовано в нову структуру журналів. Спочатку конвертуйте його.")
         
     db.execute(
-        "INSERT INTO volume_magazines (magazine_id, volume_id) VALUES (?, ?)",
+        "INSERT INTO magazine_volumes (magazine_id, volume_id) VALUES (?, ?)",
         [magazine["id"], child_id]
     )
     
@@ -647,18 +647,23 @@ async def add_volume_to_magazine(volume_id: int, data: dict):
 @router.delete("/{volume_id}/magazine-children/{child_id}")
 async def remove_volume_from_magazine(volume_id: int, child_id: int):
     db = get_db()
-    volume = db.get_one("SELECT * FROM volumes WHERE id = ?", [volume_id])
-    if not volume:
-        raise HTTPException(status_code=404, detail="Том-журнал не знайдено")
-        
-    magazine = db.get_one("SELECT id FROM manga_magazines WHERE cv_id = ? OR name = ?", [volume.get("cv_id"), volume.get("name")])
-    if not magazine:
-        return {"message": "Зв'язок не знайдено"}
-        
+    
+    # 1. Try to delete assuming volume_id is a direct magazine_id from manga_magazines
     db.execute(
-        "DELETE FROM volume_magazines WHERE magazine_id = ? AND volume_id = ?",
-        [magazine["id"], child_id]
+        "DELETE FROM magazine_volumes WHERE magazine_id = ? AND volume_id = ?",
+        [volume_id, child_id]
     )
+    
+    # 2. Backward compatibility: if volume_id is a legacy volume_id from volumes, find its corresponding magazine and delete
+    volume = db.get_one("SELECT * FROM volumes WHERE id = ?", [volume_id])
+    if volume:
+        magazine = db.get_one("SELECT id FROM manga_magazines WHERE cv_id = ? OR name = ?", [volume.get("cv_id"), volume.get("name")])
+        if magazine:
+            db.execute(
+                "DELETE FROM magazine_volumes WHERE magazine_id = ? AND volume_id = ?",
+                [magazine["id"], child_id]
+            )
+            
     return {"message": "Том видалено з журналу"}
 
 @router.get("/{volume_id}/collections-from-issues")

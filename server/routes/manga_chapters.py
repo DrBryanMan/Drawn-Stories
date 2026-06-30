@@ -115,3 +115,54 @@ async def remove_appearance(chapter_id: int, character_id: int, request: Request
         [chapter_id, character_id]
     )
     return {"message": "Появу видалено"}
+
+@router.get("/by-volume/{volume_id}")
+async def get_chapters_by_volume(volume_id: int):
+    db = get_db()
+    chapters = db.get_all("""
+        SELECT mc.*, 'manga_chapter' as type
+        FROM manga_chapters mc
+        WHERE mc.volume_id = ?
+        ORDER BY CAST(mc.chapter_number AS REAL) ASC, mc.chapter_number ASC
+    """, [volume_id])
+    return [dict(ch) for ch in chapters]
+
+@router.post("")
+async def create_chapter(request: Request):
+    check_moderator(request)
+    db = get_db()
+    
+    data = await request.json()
+    volume_id = data.get("volume_id")
+    chapter_number = data.get("chapter_number")
+    name = data.get("name")
+    release_date = data.get("release_date")
+    pages = data.get("pages")
+    
+    if not volume_id or chapter_number is None:
+        raise HTTPException(status_code=400, detail="volume_id та chapter_number обов'язкові")
+        
+    volume_exists = db.get_one("SELECT 1 FROM volumes WHERE id = ?", [volume_id])
+    if not volume_exists:
+        raise HTTPException(status_code=404, detail="Том не знайдено")
+        
+    cursor = db.conn.execute(
+        """
+        INSERT INTO manga_chapters (volume_id, chapter_number, name, release_date, pages)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        [volume_id, str(chapter_number), name, release_date, pages]
+    )
+    db.conn.commit()
+    
+    new_id = cursor.lastrowid
+    
+    return {
+        "message": "Розділ успішно створено",
+        "id": new_id,
+        "volume_id": volume_id,
+        "chapter_number": chapter_number,
+        "name": name,
+        "release_date": release_date,
+        "pages": pages
+    }

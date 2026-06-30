@@ -151,13 +151,15 @@ function themeChipHTML(theme) {
 function relationCardHTML(item, { title, icon, isModerator, onRemove }) {
     if (!item?.id) return '';
 
-    const cover = comicVineImageUrl(item.cv_img || item.hikka_img);
+    const cover = comicVineImageUrl(item.cv_img || item.hikka_img || item.image);
     const name = escapeHtmlAttribute(item.name_uk || item.name || 'Без назви');
     const originalName = item.name_uk && item.name_uk !== item.name ? item.name : '';
     const lang = langDisplay(item.lang);
 
+    const href = item.type === 'magazine' ? `#/magazines/${item.id}` : `#/volumes/${item.id}`;
+
     return `
-        <a class="volume-relation-card" href="#/volumes/${item.id}">
+        <a class="volume-relation-card" href="${href}">
             ${isModerator && onRemove ? `<button class="btn-remove-rel" onclick="event.preventDefault(); event.stopPropagation(); ${onRemove}" title="Видалити зв'язок">✕</button>` : ''}
             <span class="volume-relation-cover">
                 ${cover
@@ -983,12 +985,12 @@ export async function renderVolumeDetail(main, params = {}) {
             addMagazineBtn.addEventListener('click', () => {
                 const picker = new VolumePicker({
                     title: 'Вибрати журнал',
-                    themeId: 35,
+                    mode: 'magazine',
                     disabledIds: magazineParents.map(m => m.id),
-                    onSelect: async (selectedVol) => {
+                    onSelect: async (selectedMag) => {
                         try {
-                            await API.post(`/volumes/${selectedVol.id}/magazine-children`, {
-                                child_id: volume.id
+                            await API.post(`/magazines/${selectedMag.id}/volumes`, {
+                                volume_id: volume.id
                             });
                             renderVolumeDetail(main, params);
                         } catch (err) {
@@ -1322,7 +1324,7 @@ window.removeTranslation = async (parentId, childId) => {
 window.removeMagazineChild = async (magazineId, childId) => {
     if (!confirm('Від\'єднати цей том від журналу?')) return;
     try {
-        await API.delete(`/volumes/${magazineId}/magazine-children/${childId}`);
+        await API.delete(`/magazines/${magazineId}/volumes/${childId}`);
         const volumeId = Number(new URL(window.location).hash.split('/').pop());
         if (volumeId) {
             const main = document.querySelector('main');

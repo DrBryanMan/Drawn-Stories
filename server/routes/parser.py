@@ -1,0 +1,200 @@
+import os
+import sys
+import re
+import asyncio
+from fastapi import APIRouter, HTTPException, Request, Depends
+from pydantic import BaseModel, Field
+from typing import Optional
+
+router = APIRouter(prefix="/api/parser", tags=["parser"])
+
+# ── Авторизація модератора ───────────────────────────────────────────────────
+def require_moderator(request: Request):
+    role = request.cookies.get("role")
+    if role not in {"moderator", "admin"}:
+        raise HTTPException(status_code=403, detail="Потрібні права модератора")
+
+# ── Моделі запитів ────────────────────────────────────────────────────────────
+class ParserCVRequest(BaseModel):
+    cv_id: int = Field(..., gt=0, description="ComicVine ID (має бути більше 0)")
+
+class ParserCVVolRequest(BaseModel):
+    cv_vol_id: int = Field(..., gt=0, description="ComicVine Volume ID (має бути більше 0)")
+
+class ParserSlugRequest(BaseModel):
+    slug: str = Field(..., min_length=1, description="Слаґ або посилання на сторінку")
+
+# ── Допоміжні функції ────────────────────────────────────────────────────────
+def strip_ansi_codes(text: str) -> str:
+    """Видаляє ANSI escape-коди кольорів з тексту."""
+    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+    return ansi_escape.sub('', text)
+
+def is_meaningful(line: str) -> bool:
+    """Перевіряє, чи є рядок змістовним (не є пустотою чи лінією розділювачем)."""
+    val = line.strip()
+    if not val:
+        return False
+    # Рядки, які повністю складаються з розділювачів, рамок або зірочок
+    if re.match(r'^[─═┌└│┐┘├┤┬┴┼\s\-\=\*]+$', val):
+        return False
+    return True
+
+def extract_cv_id(slug_or_url: str) -> Optional[int]:
+    """Витягує числове ID з ComicVine слага або посилання."""
+    val = slug_or_url.strip()
+    if not val:
+        return None
+    if val.isdigit():
+        return int(val)
+    
+    # 4005-XXXX або 4040-XXXX
+    match = re.search(r'(?:4005|4040)-(\d+)', val)
+    if match:
+        return int(match.group(1))
+        
+    # /characters/XXXX/ або /people/XXXX/
+    match = re.search(r'/(?:characters|people|volume|issue)/(\d+)/?$', val)
+    if match:
+        return int(match.group(1))
+        
+    # /XXXX/ в кінці посилання
+    match = re.search(r'/(\d+)/?$', val)
+    if match:
+        return int(match.group(1))
+        
+    # -XXXX в кінці
+    match = re.search(r'-(\d+)/?$', val)
+    if match:
+        return int(match.group(1))
+        
+    return None
+
+def extract_hikka_slug(slug_or_url: str) -> str:
+    """Витягує слаґ з Hikka посилання або повертає слаґ як є."""
+    val = slug_or_url.strip()
+    # Приклад: https://hikka.io/manga/berserk-fb9fbd/chapters або подібне
+    match = re.search(r'/manga/([^/]+)', val)
+    if match:
+        return match.group(1)
+    return val
+
+async def run_parser_script(script_name: str, args: list) -> dict:
+    """Запускає локальний скрипт парсингу асинхронно та аналізує stdout."""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    script_path = os.path.abspath(os.path.join(script_dir, "..", "scripts", script_name))
+    
+    if not os.path.exists(script_path):
+        return {"ok": False, "message": f"Скрипт {script_name} не знайдено на сервері."}
+        
+    db_path = os.path.abspath(os.path.join(script_dir, "..", "comicsdb.db"))
+    
+    # Створюємо команду запуску через той самий інтерпретатор
+    cmd = [sys.executable, script_path] + args + ["--db", db_path]
+    
+    print(f"[parser] Running: {' '.join(cmd)}")
+    
+    try:
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        
+        stdout_bytes, stderr_bytes = await process.communicate()
+        
+        stdout = stdout_bytes.decode('utf-8', errors='replace')
+        stderr = stderr_bytes.decode('utf-8', errors='replace')
+        
+        print(f"[parser] Exit code: {process.returncode}")
+        
+        # Очищаємо весь stdout від ANSI-кодів та фільтруємо незмістовні лінії
+        clean_lines = []
+        for line in stdout.split('\n'):
+            cleaned = strip_ansi_codes(line).strip()
+            if is_meaningful(cleaned):
+                clean_lines.append(cleaned)
+        
+        log_output = "\n".join(clean_lines)
+        
+        if process.returncode == 0:
+            return {"ok": True, "message": log_output or "Виконано успішно."}
+        else:
+            # Перевіряємо специфічні помилки
+            if "вже є в базі" in stdout or "Вже існує" in stdout or "вже присутня" in stdout or "already exists" in stdout.lower():
+                return {"ok": False, "message": log_output or "Цей запис вже є в базі даних."}
+            if "не знайдено" in stdout or "not found" in stdout.lower():
+                return {"ok": False, "message": log_output or "Запис не знайдено на ComicVine/Hikka."}
+                
+            err_msg = log_output
+            if not err_msg:
+                err_lines = [strip_ansi_codes(line).strip() for line in stderr.split('\n') if line.strip()]
+                err_msg = "\n".join([l for l in err_lines if is_meaningful(l)])
+                if not err_msg:
+                    err_msg = "Невідома помилка під час виконання скрипта."
+                
+            return {"ok": False, "message": err_msg}
+            
+    except Exception as e:
+        print(f"[parser] Subprocess exception: {e}")
+        return {"ok": False, "message": f"Виняток сервера: {str(e)}"}
+
+# ── POST /api/parser/add-issue ────────────────────────────────────────────────
+@router.post("/add-issue", dependencies=[Depends(require_moderator)])
+async def add_issue(req: ParserCVRequest):
+    res = await run_parser_script("add_parser.py", ["issue", str(req.cv_id)])
+    if not res["ok"]:
+        raise HTTPException(status_code=400, detail=res["message"])
+    return res
+
+# ── POST /api/parser/add-volume ───────────────────────────────────────────────
+@router.post("/add-volume", dependencies=[Depends(require_moderator)])
+async def add_volume(req: ParserCVRequest):
+    res = await run_parser_script("add_parser.py", ["volume", str(req.cv_id)])
+    if not res["ok"]:
+        raise HTTPException(status_code=400, detail=res["message"])
+    return res
+
+# ── POST /api/parser/add-volume-issues ────────────────────────────────────────
+@router.post("/add-volume-issues", dependencies=[Depends(require_moderator)])
+async def add_volume_issues(req: ParserCVVolRequest):
+    res = await run_parser_script("add_parser.py", ["volume-issues", str(req.cv_vol_id)])
+    if not res["ok"]:
+        raise HTTPException(status_code=400, detail=res["message"])
+    return res
+
+# ── POST /api/parser/add-manga ────────────────────────────────────────────────
+@router.post("/add-manga", dependencies=[Depends(require_moderator)])
+async def add_manga(req: ParserSlugRequest):
+    manga_slug = extract_hikka_slug(req.slug)
+    if not manga_slug:
+        raise HTTPException(status_code=400, detail="Некоректний слаґ або посилання Hikka.")
+    
+    res = await run_parser_script("hikka_manga_parser.py", ["slug", manga_slug])
+    if not res["ok"]:
+        raise HTTPException(status_code=400, detail=res["message"])
+    return res
+
+# ── POST /api/parser/add-character ────────────────────────────────────────────
+@router.post("/add-character", dependencies=[Depends(require_moderator)])
+async def add_character(req: ParserSlugRequest):
+    cv_id = extract_cv_id(req.slug)
+    if cv_id is None:
+        raise HTTPException(status_code=400, detail="Не вдалося розпізнати ComicVine ID персонажа.")
+        
+    res = await run_parser_script("cv_characters_api_parser.py", ["--id", str(cv_id)])
+    if not res["ok"]:
+        raise HTTPException(status_code=400, detail=res["message"])
+    return res
+
+# ── POST /api/parser/add-person ───────────────────────────────────────────────
+@router.post("/add-person", dependencies=[Depends(require_moderator)])
+async def add_person(req: ParserSlugRequest):
+    cv_id = extract_cv_id(req.slug)
+    if cv_id is None:
+        raise HTTPException(status_code=400, detail="Не вдалося розпізнати ComicVine ID персони.")
+        
+    res = await run_parser_script("cv_persons_api_parser.py", ["--id", str(cv_id)])
+    if not res["ok"]:
+        raise HTTPException(status_code=400, detail=res["message"])
+    return res

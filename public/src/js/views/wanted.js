@@ -23,6 +23,9 @@ const ICONS = {
   check:     '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
   warning:   '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
   search:    '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  plus:      '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  package:   '<path d="M12.89 2.24a2 2 0 0 0-1.78 0L3.5 6.13a2 2 0 0 0-1.1 1.77v8.2a2 2 0 0 0 1.1 1.77l7.61 3.89a2 2 0 0 0 1.78 0l7.61-3.89a2 2 0 0 0 1.1-1.77V7.9a2 2 0 0 0-1.1-1.77ZM21 8.5l-9 4.5-9-4.5M12 22.5v-14M12 13l9-4.5M12 13l-9-4.5"/>',
+  book:      '<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>',
 };
 
 // ── Sections config ───────────────────────────────────────
@@ -33,6 +36,7 @@ const SECTIONS = [
   { key: 'characters',  label: 'Персонажі',   icon: ICONS.characters },
   { key: 'personnel',   label: 'Персонал',    icon: ICONS.personnel },
   { key: 'publishers',  label: 'Видавництва', icon: ICONS.publishers },
+  { key: 'add',         label: 'Додавання',   icon: ICONS.plus },
 ];
 
 // ── Volume categories ─────────────────────────────────────
@@ -46,6 +50,7 @@ const VOLUME_CATEGORIES = [
   { key: 'manga_no_journal',     label: 'Манґа без журналу' },
   { key: 'collection_unconverted', label: 'Неконвертовані збірники' },
   { key: 'collection_no_origin', label: 'Манґа-збірник без оригіналу' },
+  { key: 'mixed_sources',        label: 'Змішані джерела' },
 ];
 
 // ── Collection categories ─────────────────────────────────
@@ -166,20 +171,22 @@ function showAccessDenied(root) {
   `;
 }
 
-// ── Layout HTML ────────────────────────────────────────────
 function buildLayout() {
-  const navItems = SECTIONS.map(s => `
-    <button
-      class="wanted-nav-item ${s.key === state.section ? 'is-active' : ''}"
-      data-section="${s.key}"
-    >
-      <span class="wanted-nav-item-left">
-        ${icon(s.icon, 15)}
-        <span>${s.label}</span>
-      </span>
-      <span class="wanted-nav-count" id="nav-count-${s.key}">—</span>
-    </button>
-  `).join('');
+  const navItems = SECTIONS.map(s => {
+    const countHtml = s.key !== 'add' ? `<span class="wanted-nav-count" id="nav-count-${s.key}">—</span>` : '';
+    return `
+      <button
+        class="wanted-nav-item ${s.key === state.section ? 'is-active' : ''}"
+        data-section="${s.key}"
+      >
+        <span class="wanted-nav-item-left">
+          ${icon(s.icon, 15)}
+          <span>${s.label}</span>
+        </span>
+        ${countHtml}
+      </button>
+    `;
+  }).join('');
 
   return `
     <div class="wanted-layout">
@@ -262,6 +269,13 @@ async function renderSection(root) {
   if (!content) return;
 
   const sectionConfig = SECTIONS.find(s => s.key === state.section);
+
+  if (state.section === 'add') {
+    content.innerHTML = buildAddPanel(sectionConfig);
+    attachAddPanelEvents(content);
+    return;
+  }
+
   const categories    = SECTION_CATEGORIES[state.section] || [];
 
   // Reset category counts before loading new section
@@ -522,6 +536,187 @@ function renderPagination(container, data) {
   container.appendChild(paginator.render(data.total || 0, () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }));
+}
+
+// ── Add Panel UI & Events ───────────────────────────────────
+function buildAddPanel(config) {
+  return `
+    <div class="wanted-section-header">
+      <div class="wanted-section-title">
+        ${icon(config?.icon || ICONS.plus, 22)}
+        ${config?.label || 'Додавання'}
+      </div>
+      <div class="wanted-section-desc">Додавання нових об'єктів до бази даних за допомогою парсерів</div>
+    </div>
+    
+    <div class="wanted-add-panel">
+      <div class="wanted-add-grid">
+        
+        <!-- Додати випуск -->
+        <div class="wanted-add-card" id="card-add-issue">
+          <div class="wanted-add-card-title">
+            ${icon(ICONS.issues, 18)}
+            Додати випуск (ComicVine)
+          </div>
+          <div class="wanted-add-card-desc">
+            Введіть ComicVine ID випуску. Скрипт завантажить дані з ComicVine API та збереже в базу.
+          </div>
+          <div class="wanted-add-card-row">
+            <input type="number" min="1" class="wanted-add-input" placeholder="CV ID випуску (напр. 306640)" required>
+            <button class="wanted-add-btn">Додати</button>
+          </div>
+          <div class="wanted-add-card-status"></div>
+        </div>
+
+        <!-- Додати том -->
+        <div class="wanted-add-card" id="card-add-volume">
+          <div class="wanted-add-card-title">
+            ${icon(ICONS.volumes, 18)}
+            Додати том (ComicVine)
+          </div>
+          <div class="wanted-add-card-desc">
+            Введіть ComicVine ID тому. Скрипт завантажить назву, обкладинку, видавництво та рік початку.
+          </div>
+          <div class="wanted-add-card-row">
+            <input type="number" min="1" class="wanted-add-input" placeholder="CV ID тому (напр. 18138)" required>
+            <button class="wanted-add-btn">Додати</button>
+          </div>
+          <div class="wanted-add-card-status"></div>
+        </div>
+
+        <!-- Всі випуски тому -->
+        <div class="wanted-add-card" id="card-add-volume-issues">
+          <div class="wanted-add-card-title">
+            ${icon(ICONS.package, 18)}
+            Всі випуски тому (ComicVine)
+          </div>
+          <div class="wanted-add-card-desc">
+            Завантажить <em>усі</em> випуски вказаного тому. Наявні випуски пропускаються. Може тривати кілька хвилин.
+          </div>
+          <div class="wanted-add-card-row">
+            <input type="number" min="1" class="wanted-add-input" placeholder="CV ID тому (напр. 18138)" required>
+            <button class="wanted-add-btn">Завантажити</button>
+          </div>
+          <div class="wanted-add-card-status"></div>
+        </div>
+
+        <!-- Додати манґу -->
+        <div class="wanted-add-card" id="card-add-manga">
+          <div class="wanted-add-card-title">
+            ${icon(ICONS.book, 18)}
+            Додати манґу / манхву (Hikka)
+          </div>
+          <div class="wanted-add-card-desc">
+            Введіть слаґ манґи або повне посилання з Hikka (наприклад, <code>manga-slug</code> або <code>https://hikka.io/manga/manga-slug</code>).
+          </div>
+          <div class="wanted-add-card-row">
+            <input type="text" class="wanted-add-input" placeholder="Слаґ або посилання Hikka" required>
+            <button class="wanted-add-btn">Додати</button>
+          </div>
+          <div class="wanted-add-card-status"></div>
+        </div>
+
+        <!-- Додати персонажа -->
+        <div class="wanted-add-card" id="card-add-character">
+          <div class="wanted-add-card-title">
+            ${icon(ICONS.characters, 18)}
+            Додати персонажа (ComicVine)
+          </div>
+          <div class="wanted-add-card-desc">
+            Введіть ComicVine ID персонажа (напр. <code>1699</code>) або повне посилання.
+          </div>
+          <div class="wanted-add-card-row">
+            <input type="text" class="wanted-add-input" placeholder="ID персонажа або посилання CV" required>
+            <button class="wanted-add-btn">Додати</button>
+          </div>
+          <div class="wanted-add-card-status"></div>
+        </div>
+
+        <!-- Додати персону -->
+        <div class="wanted-add-card" id="card-add-person">
+          <div class="wanted-add-card-title">
+            ${icon(ICONS.personnel, 18)}
+            Додати персону / автора (ComicVine)
+          </div>
+          <div class="wanted-add-card-desc">
+            Введіть ComicVine ID персони (напр. <code>3596</code>) або повне посилання.
+          </div>
+          <div class="wanted-add-card-row">
+            <input type="text" class="wanted-add-input" placeholder="ID персони або посилання CV" required>
+            <button class="wanted-add-btn">Додати</button>
+          </div>
+          <div class="wanted-add-card-status"></div>
+        </div>
+
+      </div>
+    </div>
+  `;
+}
+
+function attachAddPanelEvents(content) {
+  setupCardOp(content, '#card-add-issue', '/parser/add-issue', (val) => ({ cv_id: parseInt(val, 10) }));
+  setupCardOp(content, '#card-add-volume', '/parser/add-volume', (val) => ({ cv_id: parseInt(val, 10) }));
+  setupCardOp(content, '#card-add-volume-issues', '/parser/add-volume-issues', (val) => ({ cv_vol_id: parseInt(val, 10) }));
+  setupCardOp(content, '#card-add-manga', '/parser/add-manga', (val) => ({ slug: val }));
+  setupCardOp(content, '#card-add-character', '/parser/add-character', (val) => ({ slug: val }));
+  setupCardOp(content, '#card-add-person', '/parser/add-person', (val) => ({ slug: val }));
+}
+
+function setupCardOp(content, cardSelector, endpoint, payloadFn) {
+  const card = content.querySelector(cardSelector);
+  if (!card) return;
+  
+  const input = card.querySelector('.wanted-add-input');
+  const btn = card.querySelector('.wanted-add-btn');
+  const statusEl = card.querySelector('.wanted-add-card-status');
+  
+  const setStatus = (text, type = '') => {
+    statusEl.textContent = text;
+    statusEl.className = 'wanted-add-card-status' + (type ? ' ' + type : '');
+  };
+  
+  const execute = async () => {
+    const val = input.value.trim();
+    if (!val) {
+      setStatus('⚠ Будь ласка, заповніть поле.', 'warn');
+      return;
+    }
+    
+    btn.disabled = true;
+    const oldBtnText = btn.textContent;
+    btn.textContent = '⏳ Обробка…';
+    setStatus('Запит надіслано, зачекайте...', '');
+    
+    let elapsed = 0;
+    const timer = setInterval(() => {
+      elapsed++;
+      setStatus(`⏳ Виконується… (${elapsed}с)`, '');
+    }, 1000);
+    
+    try {
+      const payload = payloadFn(val);
+      const res = await API.post(endpoint, payload);
+      clearInterval(timer);
+      
+      if (res.ok) {
+        setStatus(res.message || 'Успішно виконано!', 'ok');
+        input.value = '';
+      } else {
+        setStatus('○ ' + (res.message || 'Сталася помилка.'), 'err');
+      }
+    } catch (err) {
+      clearInterval(timer);
+      setStatus('✗ Помилка: ' + (err.message || 'Не вдалося виконати запит.'), 'err');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = oldBtnText;
+    }
+  };
+  
+  btn.addEventListener('click', execute);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') execute();
+  });
 }
 
 // ── Utils ──────────────────────────────────────────────────

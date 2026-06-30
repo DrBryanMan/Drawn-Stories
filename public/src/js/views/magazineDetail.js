@@ -121,7 +121,7 @@ export async function renderMagazineDetail(main, params = {}) {
                                     </a>
                                 ` : ''}
                             </div>
-                            <div class="issues-view-grid">
+                            <div class="issues-view-grid" id="magazine-ongoing-grid">
                                 ${series.map(ser => {
                                     const serCover = comicVineImageUrl(ser.cv_img || ser.hikka_img);
                                     return `
@@ -137,11 +137,52 @@ export async function renderMagazineDetail(main, params = {}) {
                                     `;
                                 }).join('')}
                             </div>
+                            ${(data.series_count || series.length) > 6 ? `
+                                <div style="display: flex; justify-content: center; margin-top: 24px;">
+                                    <button class="btn-admin btn-admin--secondary" id="btn-show-all-ongoing" style="height: 38px; padding: 0 24px; font-size: 13px; font-weight: 600;">
+                                        Показати всі
+                                    </button>
+                                </div>
+                            ` : ''}
                         </section>
                     ` : ''}
                 </div>
             </div>
         `;
+
+        const btnShowAll = main.querySelector('#btn-show-all-ongoing');
+        if (btnShowAll) {
+            btnShowAll.onclick = async () => {
+                btnShowAll.disabled = true;
+                btnShowAll.textContent = 'Завантаження...';
+                try {
+                    const res = await API.get(`/magazines/${magazineId}/all-series`, { ongoing: true, limit: 100 });
+                    const allSeries = res.items || [];
+                    const grid = main.querySelector('#magazine-ongoing-grid');
+                    if (grid) {
+                        grid.innerHTML = allSeries.map(ser => {
+                            const serCover = comicVineImageUrl(ser.cv_img || ser.hikka_img);
+                            return `
+                                <a class="issue-grid-card" href="#/volumes/${ser.id}">
+                                    <div class="issue-grid-poster">
+                                        ${serCover ? `<img src="${escapeHtmlAttribute(serCover)}" alt="${escapeHtmlAttribute(ser.name)}" loading="lazy">` : ''}
+                                    </div>
+                                    <div class="issue-grid-body">
+                                        <h3 class="issue-grid-title">${escapeHtmlAttribute(ser.name_uk || ser.name)}</h3>
+                                        <span class="issue-grid-date">${escapeHtmlAttribute(ser.publisher_name || '')}</span>
+                                    </div>
+                                </a>
+                            `;
+                        }).join('');
+                    }
+                    btnShowAll.parentElement.remove(); // Remove the button wrapper container
+                } catch (e) {
+                    alert('Помилка завантаження серій: ' + e.message);
+                    btnShowAll.disabled = false;
+                    btnShowAll.textContent = 'Показати всі';
+                }
+            };
+        }
     } catch (err) {
         main.innerHTML = `<div class="container"><div class="error-state">Помилка завантаження журналу: ${err.message}</div></div>`;
     }

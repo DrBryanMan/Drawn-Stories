@@ -207,7 +207,7 @@ async def get_catalog(
     magazine_filter_ids = parse_id_list(magazine_ids)
     if magazine_filter_ids:
         placeholders = ",".join("?" for _ in magazine_filter_ids)
-        filter_clauses.append(f"v.id IN (SELECT volume_id FROM volume_magazines WHERE magazine_id IN ({placeholders}))")
+        filter_clauses.append(f"v.id IN (SELECT volume_id FROM magazine_volumes WHERE magazine_id IN ({placeholders}))")
         filter_params.extend(magazine_filter_ids)
 
     if langs:
@@ -301,10 +301,12 @@ async def get_catalog(
 async def search_volumes_for_picker(
     search: Optional[str] = None,
     id: Optional[int] = None,
+    ids: Optional[str] = None,
     cv_id: Optional[int] = None,
     mal_id: Optional[int] = None,
     hikka_slug: Optional[str] = None,
     theme_id: Optional[int] = None,
+    has_mal: Optional[bool] = None,
     limit: int = Query(50, ge=1, le=100)
 ):
     db = get_db()
@@ -314,6 +316,12 @@ async def search_volumes_for_picker(
     if id:
         clauses.append("v.id = ?")
         params.append(id)
+    if ids:
+        id_list = [int(x.strip()) for x in ids.split(",") if x.strip().isdigit()]
+        if id_list:
+            placeholders = ",".join("?" for _ in id_list)
+            clauses.append(f"v.id IN ({placeholders})")
+            params.extend(id_list)
     if cv_id:
         clauses.append("v.cv_id = ?")
         params.append(cv_id)
@@ -326,9 +334,11 @@ async def search_volumes_for_picker(
     if theme_id:
         clauses.append("EXISTS (SELECT 1 FROM volume_themes vt WHERE vt.theme_id = ? AND vt.volume_id = v.id)")
         params.append(theme_id)
+    if has_mal:
+        clauses.append("v.mal_id IS NOT NULL")
     if search:
-        clauses.append("(ULOWER(v.name) LIKE ? OR ULOWER(v.name_uk) LIKE ?)")
-        params.extend([f"%{search.lower()}%", f"%{search.lower()}%"])
+        clauses.append("(ULOWER(v.name) LIKE ? OR ULOWER(v.name_en) LIKE ? OR ULOWER(v.name_uk) LIKE ? OR ULOWER(v.name_native) LIKE ?)")
+        params.extend([f"%{search.lower()}%"] * 4)
 
     if not clauses:
         return {"items": [], "total": 0}
@@ -343,7 +353,7 @@ async def search_volumes_for_picker(
         LIMIT ?
     """
     items = db.get_all(query, params + [limit])
-    return {"items": items, "total": len(items)}
+    return {"items": [dict(x) for x in items], "total": len(items)}
 
 @router.get("/volumes/suggestions")
 async def get_volume_suggestions(
@@ -352,11 +362,11 @@ async def get_volume_suggestions(
 ):
     db = get_db()
     
-    # If theme_id is 35 (Magazine), order by number of children in volume_magazines
+    # If theme_id is 35 (Magazine), order by number of children in magazine_volumes
     if theme_id == 35:
         query = f"""
             SELECT v.*, p.name as publisher_name, 'volume' as type,
-                   (SELECT COUNT(*) FROM volume_magazines vm WHERE vm.magazine_id = v.id) as children_count
+                   (SELECT COUNT(*) FROM magazine_volumes vm WHERE vm.magazine_id = v.id) as children_count
             FROM volumes v
             JOIN volume_themes vt ON v.id = vt.volume_id
             LEFT JOIN publishers p ON v.publisher = p.id

@@ -43,7 +43,7 @@ VOLUME_CATEGORIES = {
         "label": "Переклад без джерела",
         "clause": (
             f"EXISTS (SELECT 1 FROM volume_themes vt WHERE vt.volume_id = v.id AND vt.theme_id = {THEME_TRANSLATED})"
-            " AND NOT EXISTS (SELECT 1 FROM volume_magazines vm WHERE vm.volume_id = v.id)"
+            " AND NOT EXISTS (SELECT 1 FROM magazine_volumes vm WHERE vm.volume_id = v.id)"
         ),
         "missing_fields": ["джерело"],
     },
@@ -52,7 +52,7 @@ VOLUME_CATEGORIES = {
         "clause": (
             f"EXISTS (SELECT 1 FROM volume_themes vt WHERE vt.volume_id = v.id AND vt.theme_id = {THEME_MANGA})"
             " AND v.mal_id IS NOT NULL"
-            " AND NOT EXISTS (SELECT 1 FROM volume_magazines vm WHERE vm.volume_id = v.id)"
+            " AND NOT EXISTS (SELECT 1 FROM magazine_volumes vm WHERE vm.volume_id = v.id)"
         ),
         "missing_fields": ["журнал"],
     },
@@ -76,6 +76,11 @@ VOLUME_CATEGORIES = {
             " )"
         ),
         "missing_fields": ["оригінал"],
+    },
+    "mixed_sources": {
+        "label": "Змішані джерела",
+        "clause": "v.mal_id IS NOT NULL AND v.cv_id IS NOT NULL",
+        "missing_fields": ["змішані джерела"],
     },
 }
 

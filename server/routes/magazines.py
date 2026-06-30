@@ -1,5 +1,11 @@
 from fastapi import APIRouter, HTTPException, Request
 from ..db import get_db
+from typing import Optional
+
+def check_moderator(request: Request):
+    role = request.cookies.get("role")
+    if role not in {"moderator", "admin"}:
+        raise HTTPException(status_code=403, detail="Доступ заборонено")
 
 router = APIRouter(prefix="/api/magazines", tags=["magazines"])
 
@@ -70,9 +76,9 @@ async def convert_from_volume(volume_id: int):
         # We copy this relationship into the updated structure:
         # magazine_id = new_mag_id (from manga_magazines), volume_id = old child_id (from volumes)
         db.conn.execute("""
-            INSERT OR IGNORE INTO volume_magazines (magazine_id, volume_id)
+            INSERT OR IGNORE INTO magazine_volumes (magazine_id, volume_id)
             SELECT ?, volume_id FROM (
-                SELECT volume_id FROM volume_magazines WHERE magazine_id = ?
+                SELECT volume_id FROM magazine_volumes WHERE magazine_id = ?
             )
         """, [new_mag_id, volume_id])
 
@@ -81,7 +87,7 @@ async def convert_from_volume(volume_id: int):
         db.conn.execute("DELETE FROM volume_themes WHERE volume_id = ?", [volume_id])
         # Delete volume relations & translations
         db.conn.execute("DELETE FROM volume_translations WHERE parent_id = ? OR child_id = ?", [volume_id, volume_id])
-        db.conn.execute("DELETE FROM volume_magazines WHERE magazine_id = ? OR volume_id = ?", [volume_id, volume_id])
+        db.conn.execute("DELETE FROM magazine_volumes WHERE magazine_id = ? OR volume_id = ?", [volume_id, volume_id])
         # Delete issues
         issue_ids = [iss["id"] for iss in issues]
         if issue_ids:
@@ -98,6 +104,71 @@ async def convert_from_volume(volume_id: int):
         raise HTTPException(status_code=400, detail=f"Помилка при конвертації: {str(e)}")
         
     return {"message": "Журнал успішно сконвертовано та відокремлено від томів", "id": new_mag_id}
+
+@router.get("")
+async def list_magazines(
+    search: Optional[str] = None,
+    id: Optional[int] = None,
+    cv_id: Optional[int] = None,
+    limit: int = 50
+):
+    db = get_db()
+    conditions = []
+    params = []
+
+    if id:
+        conditions.append("mm.id = ?")
+        params.append(id)
+    elif cv_id:
+        conditions.append("mm.cv_id = ?")
+        params.append(cv_id)
+    elif search:
+        conditions.append("(mm.name LIKE ? OR mm.name_native LIKE ?)")
+        params += [f"%{search}%", f"%{search}%"]
+
+    orderBy = "mm.name ASC"
+    if not conditions:
+        orderBy = "(SELECT COUNT(*) FROM magazine_volumes vm WHERE vm.magazine_id = mm.id) DESC, mm.name ASC"
+
+    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+
+    magazines = db.get_all(f"""
+        SELECT mm.*, p.name as publisher_name,
+               (SELECT COUNT(*) FROM magazine_volumes vm WHERE vm.magazine_id = mm.id) as series_count
+        FROM manga_magazines mm
+        LEFT JOIN publishers p ON p.id = mm.publisher
+        {where}
+        ORDER BY {orderBy}
+        LIMIT ?
+    """, params + [limit])
+
+    return {"items": [dict(m) for m in magazines], "total": len(magazines)}
+
+@router.post("/{magazine_id}/volumes")
+async def add_volume_to_magazine_direct(magazine_id: int, data: dict):
+    db = get_db()
+    volume_id = data.get("volume_id")
+    if not volume_id:
+        raise HTTPException(status_code=400, detail="volume_id обов'язковий")
+
+    magazine = db.get_one("SELECT id FROM manga_magazines WHERE id = ?", [magazine_id])
+    if not magazine:
+        raise HTTPException(status_code=404, detail="Журнал не знайдено")
+
+    db.execute(
+        "INSERT OR IGNORE INTO magazine_volumes (magazine_id, volume_id) VALUES (?, ?)",
+        [magazine_id, volume_id]
+    )
+    return {"message": "Том додано до журналу"}
+
+@router.delete("/{magazine_id}/volumes/{volume_id}")
+async def remove_volume_from_magazine_direct(magazine_id: int, volume_id: int):
+    db = get_db()
+    db.execute(
+        "DELETE FROM magazine_volumes WHERE magazine_id = ? AND volume_id = ?",
+        [magazine_id, volume_id]
+    )
+    return {"message": "Том видалено з журналу"}
 
 @router.get("/issues/{issue_id}")
 async def get_magazine_issue_detail(issue_id: int):
@@ -117,19 +188,168 @@ async def get_magazine_issue_detail(issue_id: int):
     # Get chapters (horizontal cards info)
     chapters = db.get_all("""
         SELECT mic.order_num, mic.label,
-               v.name as manga_name, v.name_uk as manga_name_uk, v.cv_img as manga_cover, v.id as manga_volume_id,
-               i.id as chapter_id, i.issue_number as chapter_number, i.name as chapter_name
+               v.name as manga_name, v.name_uk as manga_name_uk, COALESCE(v.cv_img, v.hikka_img) as manga_volume_cover, v.cover_img as manga_banner, v.id as manga_volume_id,
+               mc.id as chapter_id, mc.chapter_number, mc.name as chapter_name, mc.pages, mc.image as chapter_cover
         FROM magazine_issue_chapters mic
         JOIN volumes v ON mic.manga_id = v.id
-        JOIN issues i ON mic.manga_chapter_id = i.id
+        JOIN manga_chapters mc ON mic.manga_chapter_id = mc.id
         WHERE mic.magazine_issue_id = ?
         ORDER BY mic.order_num ASC
     """, [issue_id])
+
+    # Get navigation siblings in the magazine
+    prev_issue = None
+    next_issue = None
+    magazine_id = issue["magazine_id"]
     
+    siblings = db.get_all("""
+        SELECT id, issue_number, name, image, release_date, cover_date
+        FROM magazine_issues
+        WHERE magazine_id = ?
+        ORDER BY CAST(issue_number AS REAL) ASC, issue_number ASC, release_date ASC, cover_date ASC
+    """, [magazine_id])
+    
+    current_idx = next(
+        (i for i, s in enumerate(siblings) if s["id"] == issue_id), None
+    )
+    
+    if current_idx is not None:
+        if current_idx > 0:
+            prev_issue = dict(siblings[current_idx - 1])
+        if current_idx < len(siblings) - 1:
+            next_issue = dict(siblings[current_idx + 1])
+
     return {
         "issue": issue,
-        "chapters": chapters
+        "chapters": [dict(ch) for ch in chapters],
+        "prev_issue": prev_issue,
+        "next_issue": next_issue,
+        "all_issues": [dict(s) for s in siblings]
     }
+
+
+@router.post("/issues/{issue_id}/chapters")
+async def add_chapter_to_magazine_issue(issue_id: int, request: Request):
+    check_moderator(request)
+    db = get_db()
+    
+    data = await request.json()
+    manga_id = data.get("manga_id")
+    manga_chapter_id = data.get("manga_chapter_id")
+    order_num = data.get("order_num")
+    label = data.get("label")
+    
+    if not manga_id or not manga_chapter_id:
+        raise HTTPException(status_code=400, detail="manga_id та manga_chapter_id обов'язкові")
+        
+    issue_row = db.get_one("SELECT magazine_id FROM magazine_issues WHERE id = ?", [issue_id])
+    if not issue_row:
+        raise HTTPException(status_code=404, detail="Випуск журналу не знайдено")
+    magazine_id = issue_row["magazine_id"]
+        
+    existing = db.get_one(
+        "SELECT 1 FROM magazine_issue_chapters WHERE magazine_issue_id = ? AND manga_chapter_id = ?",
+        [issue_id, manga_chapter_id]
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail="Цей розділ вже додано до випуску")
+        
+    if order_num is None:
+        max_order_row = db.get_one(
+            "SELECT MAX(order_num) as max_order FROM magazine_issue_chapters WHERE magazine_issue_id = ?",
+            [issue_id]
+        )
+        order_num = (max_order_row["max_order"] or 0) + 1
+        
+    db.execute(
+        """
+        INSERT INTO magazine_issue_chapters (magazine_issue_id, manga_id, manga_chapter_id, order_num, label)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        [issue_id, manga_id, manga_chapter_id, order_num, label]
+    )
+    
+    # Auto-link series to magazine if not exists
+    mag_vol_exists = db.get_one(
+        "SELECT 1 FROM magazine_volumes WHERE magazine_id = ? AND volume_id = ?",
+        [magazine_id, manga_id]
+    )
+    if not mag_vol_exists:
+        db.execute(
+            "INSERT OR IGNORE INTO magazine_volumes (magazine_id, volume_id) VALUES (?, ?)",
+            [magazine_id, manga_id]
+        )
+    
+    return {"message": "Розділ додано", "order_num": order_num}
+
+@router.delete("/issues/{issue_id}/chapters/{chapter_id}")
+async def remove_chapter_from_magazine_issue(issue_id: int, chapter_id: int, request: Request):
+    check_moderator(request)
+    db = get_db()
+    
+    deleted = db.get_one(
+        "SELECT order_num FROM magazine_issue_chapters WHERE magazine_issue_id = ? AND manga_chapter_id = ?",
+        [issue_id, chapter_id]
+    )
+    if deleted:
+        db.execute(
+            "DELETE FROM magazine_issue_chapters WHERE magazine_issue_id = ? AND manga_chapter_id = ?",
+            [issue_id, chapter_id]
+        )
+        db.execute(
+            "UPDATE magazine_issue_chapters SET order_num = order_num - 1 WHERE magazine_issue_id = ? AND order_num > ?",
+            [issue_id, deleted["order_num"]]
+        )
+        
+    return {"message": "Розділ видалено з випуску"}
+
+@router.put("/issues/{issue_id}/chapters/{chapter_id}")
+async def update_chapter_in_magazine_issue(issue_id: int, chapter_id: int, request: Request):
+    check_moderator(request)
+    db = get_db()
+    data = await request.json()
+    
+    order_num = data.get("order_num")
+    label = data.get("label")
+    
+    db.execute(
+        """
+        UPDATE magazine_issue_chapters
+        SET order_num = COALESCE(?, order_num),
+            label = ?
+        WHERE magazine_issue_id = ? AND manga_chapter_id = ?
+        """,
+        [order_num, label, issue_id, chapter_id]
+    )
+    return {"message": "Зв'язок оновлено успішно"}
+
+@router.put("/issues/{issue_id}/reorder-chapters")
+async def reorder_magazine_issue_chapters(issue_id: int, data: dict, request: Request):
+    check_moderator(request)
+    db = get_db()
+    
+    items = data.get("items", [])
+    if not items:
+        raise HTTPException(status_code=400, detail="items обов'язкові")
+        
+    try:
+        db.conn.execute("BEGIN")
+        for index, item in enumerate(items, 1):
+            ch_id = item.get("id")
+            db.conn.execute(
+                """
+                UPDATE magazine_issue_chapters
+                SET order_num = ?
+                WHERE magazine_issue_id = ? AND manga_chapter_id = ?
+                """,
+                [index, issue_id, ch_id]
+            )
+        db.conn.commit()
+    except Exception as e:
+        db.conn.rollback()
+        raise HTTPException(status_code=400, detail=f"Помилка сортування: {str(e)}")
+        
+    return {"message": "Порядок розділів оновлено"}
 
 @router.get("/{id}")
 async def get_magazine_detail(id: int):
@@ -157,17 +377,17 @@ async def get_magazine_detail(id: int):
     # Get count of total issues
     issues_count = db.get_one("SELECT COUNT(*) as count FROM magazine_issues WHERE magazine_id = ?", [id])["count"]
     
-    # Get active series (volumes connected through updated volume_magazines where theme is 72 or 74)
+    # Get active series (volumes connected through updated magazine_volumes where theme is 72)
     # Limit to 6
     series = db.get_all("""
         SELECT DISTINCT v.*, p.name as publisher_name
         FROM volumes v
-        JOIN volume_magazines vm ON v.id = vm.volume_id
+        JOIN magazine_volumes vm ON v.id = vm.volume_id
         LEFT JOIN publishers p ON v.publisher = p.id
         WHERE vm.magazine_id = ?
           AND EXISTS (
               SELECT 1 FROM volume_themes vt 
-              WHERE vt.volume_id = v.id AND vt.theme_id IN (72, 74)
+              WHERE vt.volume_id = v.id AND vt.theme_id = 72
           )
         ORDER BY v.name ASC
         LIMIT 6
@@ -177,11 +397,11 @@ async def get_magazine_detail(id: int):
     series_count = db.get_one("""
         SELECT COUNT(DISTINCT v.id) as count
         FROM volumes v
-        JOIN volume_magazines vm ON v.id = vm.volume_id
+        JOIN magazine_volumes vm ON v.id = vm.volume_id
         WHERE vm.magazine_id = ?
           AND EXISTS (
               SELECT 1 FROM volume_themes vt 
-              WHERE vt.volume_id = v.id AND vt.theme_id IN (72, 74)
+              WHERE vt.volume_id = v.id AND vt.theme_id = 72
           )
     """, [id])["count"]
         
@@ -215,37 +435,40 @@ async def get_all_magazine_issues(id: int, page: int = 1, limit: int = 24):
     }
 
 @router.get("/{id}/all-series")
-async def get_all_magazine_series(id: int, page: int = 1, limit: int = 24):
+async def get_all_magazine_series(id: int, page: int = 1, limit: int = 24, ongoing: Optional[bool] = None):
     db = get_db()
     offset = (page - 1) * limit
     
-    series = db.get_all("""
+    query_where = "WHERE vm.magazine_id = ?"
+    params = [id]
+    
+    if ongoing:
+        query_where += """
+          AND EXISTS (
+              SELECT 1 FROM volume_themes vt 
+              WHERE vt.volume_id = v.id AND vt.theme_id = 72
+          )
+        """
+        
+    series = db.get_all(f"""
         SELECT DISTINCT v.*, p.name as publisher_name
         FROM volumes v
-        JOIN volume_magazines vm ON v.id = vm.volume_id
+        JOIN magazine_volumes vm ON v.id = vm.volume_id
         LEFT JOIN publishers p ON v.publisher = p.id
-        WHERE vm.magazine_id = ?
-          AND EXISTS (
-              SELECT 1 FROM volume_themes vt 
-              WHERE vt.volume_id = v.id AND vt.theme_id IN (72, 74)
-          )
+        {query_where}
         ORDER BY v.name ASC
         LIMIT ? OFFSET ?
-    """, [id, limit, offset])
+    """, params + [limit, offset])
     
-    total = db.get_one("""
+    total = db.get_one(f"""
         SELECT COUNT(DISTINCT v.id) as count
         FROM volumes v
-        JOIN volume_magazines vm ON v.id = vm.volume_id
-        WHERE vm.magazine_id = ?
-          AND EXISTS (
-              SELECT 1 FROM volume_themes vt 
-              WHERE vt.volume_id = v.id AND vt.theme_id IN (72, 74)
-          )
-    """, [id])["count"]
+        JOIN magazine_volumes vm ON v.id = vm.volume_id
+        {query_where}
+    """, params)["count"]
     
     return {
-        "items": series,
+        "items": [dict(s) for s in series],
         "total": total,
         "page": page,
         "limit": limit

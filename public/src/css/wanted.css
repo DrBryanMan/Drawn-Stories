@@ -153,7 +153,6 @@ body.wanted-page {
   flex: 1;
   min-width: 0;
   padding: 28px 32px;
-  overflow-x: hidden;
 }
 
 .wanted-section-header {
@@ -487,4 +486,134 @@ body.wanted-page {
   color: var(--accent);
   text-decoration: none;
   font-weight: 500;
+}
+
+/* ── Add Panel (Додавання) ───────────────────────────── */
+.wanted-add-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 10px;
+}
+
+.wanted-add-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.wanted-add-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border-s);
+  border-radius: var(--r-lg);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: transform var(--t), box-shadow var(--t);
+}
+
+.wanted-add-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.wanted-add-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border-s);
+  padding-bottom: 8px;
+}
+
+.wanted-add-card-title svg {
+  color: var(--red);
+  flex-shrink: 0;
+}
+
+.wanted-add-card-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.wanted-add-card-row {
+  display: flex;
+  gap: 8px;
+}
+
+.wanted-add-card-row input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  font: inherit;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+  transition: border-color var(--t);
+}
+
+.wanted-add-card-row input:focus {
+  outline: none;
+  border-color: var(--red);
+}
+
+.wanted-add-btn {
+  height: 36px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--r);
+  background: var(--red);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--t);
+}
+
+.wanted-add-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--red) 85%, #000);
+}
+
+.wanted-add-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.wanted-add-card-status {
+  font-size: 12px;
+  min-height: 16px;
+  line-height: 1.4;
+  color: var(--text-muted);
+  margin-top: 4px;
+  word-break: break-word;
+  white-space: pre-wrap;
+  font-family: var(--font-mono, monospace);
+}
+
+.wanted-add-card-status:not(:empty) {
+  background: var(--bg);
+  padding: 8px;
+  border-radius: var(--r);
+  border: 1px dashed var(--border-s);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.wanted-add-card-status.ok {
+  color: #16a34a;
+}
+
+.wanted-add-card-status.err {
+  color: #dc2626;
+}
+
+.wanted-add-card-status.warn {
+  color: #d97706;
 }
