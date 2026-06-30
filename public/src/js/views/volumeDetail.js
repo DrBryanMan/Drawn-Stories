@@ -662,7 +662,7 @@ export async function renderVolumeDetail(main, params = {}) {
                                             <i class="bi bi-bookmark-star"></i>
                                         </button>
                                     ` : ''}
-                                    ${!isMagazine && data.convertable_count > 0 ? `
+                                    ${!isMagazine && !volume.mal_id && data.convertable_count > 0 ? `
                                         <button class="btn-admin btn-admin--warning" id="volume-convert-btn" title="Конвертувати всі випуски у збірники">
                                             ${ICON.layers}
                                             У збірники (${data.convertable_count})
