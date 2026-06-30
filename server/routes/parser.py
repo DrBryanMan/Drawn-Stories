@@ -198,3 +198,12 @@ async def add_person(req: ParserSlugRequest):
     if not res["ok"]:
         raise HTTPException(status_code=400, detail=res["message"])
     return res
+
+# ── POST /api/parser/add-publisher-volumes ────────────────────────────────────
+@router.post("/add-publisher-volumes", dependencies=[Depends(require_moderator)])
+async def add_publisher_volumes(req: ParserCVRequest):
+    res = await run_parser_script("cv_publisher_volumes_scrapper.py", ["--publisher-id", str(req.cv_id)])
+    if not res["ok"]:
+        raise HTTPException(status_code=400, detail=res["message"])
+    return res
+

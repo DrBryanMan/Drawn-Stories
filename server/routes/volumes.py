@@ -66,7 +66,8 @@ async def get_volume_detail(volume_id: int, request: Request):
 
     has_magazine_parent = db.get_one("SELECT 1 FROM magazine_volumes WHERE volume_id = ?", [volume_id]) is not None
     is_manga_with_mal = volume.get("mal_id") is not None
-    use_manga_chapters = has_magazine_parent or is_manga_with_mal
+    has_manga_chapters = db.get_one("SELECT 1 FROM manga_chapters WHERE volume_id = ?", [volume_id]) is not None
+    use_manga_chapters = has_magazine_parent or is_manga_with_mal or has_manga_chapters
 
     if use_manga_chapters:
         issues = db.get_all(
@@ -269,6 +270,14 @@ def replace_issue_with_collection(db, issue_id, collection_id):
     db.conn.execute("UPDATE characters SET first_appearance = NULL WHERE first_appearance = ?", [issue_id])
     db.conn.execute("DELETE FROM issues WHERE id = ?", [issue_id])
 
+def replace_manga_chapter_with_collection(db, chapter_id, collection_id):
+    # Очищуємо зв'язки в журналах (якщо є)
+    db.conn.execute("DELETE FROM magazine_issue_chapters WHERE manga_chapter_id = ?", [chapter_id])
+    # Переносимо зв'язки з collection_issues
+    db.conn.execute("UPDATE collection_issues SET collection_id = ?, manga_chapter_id = NULL WHERE manga_chapter_id = ?", [collection_id, chapter_id])
+    # Видаляємо сам manga_chapter
+    db.conn.execute("DELETE FROM manga_chapters WHERE id = ?", [chapter_id])
+
 @router.post("")
 async def create_volume(data: dict):
     db = get_db()
@@ -355,11 +364,27 @@ async def convert_all_to_collections(volume_id: int):
     if not volume:
         raise HTTPException(status_code=404, detail="Том не знайдено")
 
-    # Get issues
-    issues = db.get_all("SELECT * FROM issues WHERE volume_id = ?", [volume_id])
+    has_magazine_parent = db.get_one("SELECT 1 FROM magazine_volumes WHERE volume_id = ?", [volume_id]) is not None
+    is_manga_with_mal = volume.get("mal_id") is not None
+    has_manga_chapters = db.get_one("SELECT 1 FROM manga_chapters WHERE volume_id = ?", [volume_id]) is not None
+    use_manga_chapters = has_magazine_parent or is_manga_with_mal or has_manga_chapters
+
+    if use_manga_chapters:
+        items = db.get_all(
+            """
+            SELECT id, name, name_native, name_en, name_uk, image as cv_img, volume_id,
+                   chapter_number as issue_number, release_date, synopsis as description, pages,
+                   NULL as cv_id, NULL as cv_slug
+            FROM manga_chapters
+            WHERE volume_id = ?
+            """,
+            [volume_id]
+        )
+    else:
+        items = db.get_all("SELECT * FROM issues WHERE volume_id = ?", [volume_id])
         
-    if not issues:
-        raise HTTPException(status_code=400, detail="У цього тома немає випусків")
+    if not items:
+        raise HTTPException(status_code=400, detail="У цього тома немає випусків або розділів для конвертації")
 
     converted = 0
     skipped = 0
@@ -368,22 +393,29 @@ async def convert_all_to_collections(volume_id: int):
     try:
         # We start a transaction manually
         db.conn.execute("BEGIN")
-        for issue in issues:
-            issue_id = issue["id"]
-            issue_cv_vol_id = issue.get("cv_vol_id") or volume.get("cv_id")
+        for item in items:
+            item_id = item["id"]
+            item_cv_vol_id = item.get("cv_vol_id") or volume.get("cv_id")
             
             # Check if used in collections
-            membership = db.get_one("SELECT COUNT(*) as count FROM collection_issues WHERE issue_id = ?", [issue_id])
+            if use_manga_chapters:
+                membership = db.get_one("SELECT COUNT(*) as count FROM collection_issues WHERE manga_chapter_id = ?", [item_id])
+            else:
+                membership = db.get_one("SELECT COUNT(*) as count FROM collection_issues WHERE issue_id = ?", [item_id])
+
             if membership and membership["count"] > 0:
                 blocked += 1
                 continue
                 
             # Check if collection already exists for this issue
-            issue_cv_id = issue.get("cv_id")
-            if issue_cv_id:
-                existing = db.get_one("SELECT id FROM collections WHERE cv_id = ?", [issue_cv_id])
+            item_cv_id = item.get("cv_id")
+            if item_cv_id:
+                existing = db.get_one("SELECT id FROM collections WHERE cv_id = ?", [item_cv_id])
                 if existing:
-                    replace_issue_with_collection(db, issue_id, existing["id"])
+                    if use_manga_chapters:
+                        replace_manga_chapter_with_collection(db, item_id, existing["id"])
+                    else:
+                        replace_issue_with_collection(db, item_id, existing["id"])
                     skipped += 1
                     continue
             
@@ -396,14 +428,17 @@ async def convert_all_to_collections(volume_id: int):
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
-                    issue_cv_vol_id, issue.get("volume_id") or volume_id, issue.get("name") or "Без назви",
-                    issue.get("cv_img"), issue.get("site_link"), issue.get("cv_id"), issue.get("cv_slug"),
-                    volume.get("publisher"), issue.get("issue_number"), 
-                    issue.get("cover_date"), issue.get("release_date"), issue.get("description"), issue.get("pages")
+                    item_cv_vol_id, item.get("volume_id") or volume_id, item.get("name") or "Без назви",
+                    item.get("cv_img"), item.get("site_link"), item.get("cv_id"), item.get("cv_slug"),
+                    volume.get("publisher"), item.get("issue_number"), 
+                    item.get("cover_date") or item.get("release_date"), item.get("release_date"), item.get("description"), item.get("pages")
                 ]
             )
             
-            replace_issue_with_collection(db, issue_id, cursor.lastrowid)
+            if use_manga_chapters:
+                replace_manga_chapter_with_collection(db, item_id, cursor.lastrowid)
+            else:
+                replace_issue_with_collection(db, item_id, cursor.lastrowid)
             converted += 1
             
         if converted > 0 or skipped > 0:

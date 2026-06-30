@@ -23,6 +23,13 @@
   --source-hikka: #993bf6;
   --source-mal:   #3469e5;
 
+  --status-default:   #94a3b8;
+  --status-planned:   #ca8a04;
+  --status-reading:   #2563eb;
+  --status-completed: #059669;
+  --status-on-hold:   #64748b;
+  --status-dropped:   #dc2626;
+
   --gold:         #b45309;
   --green:        #0d9e5e;
   --l-green:        #12d566;

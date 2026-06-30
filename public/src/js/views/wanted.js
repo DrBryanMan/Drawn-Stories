@@ -123,16 +123,49 @@ const state = {
   catCounts:   {},        // { no_uk_name: N, ... }
 };
 
+function readUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('page')) {
+    const pageVal = parseInt(params.get('page'), 10);
+    if (!isNaN(pageVal) && pageVal > 0) state.page = pageVal;
+  }
+  if (params.has('type')) {
+    state.content_type = params.get('type') || '';
+  }
+  if (params.has('sort')) {
+    state.sort = params.get('sort') || 'recent';
+  }
+  if (params.has('section')) {
+    state.section = params.get('section') || 'volumes';
+  }
+}
+
+function updateUrlParams() {
+  const params = new URLSearchParams();
+  if (state.page > 1) {
+    params.set('page', state.page);
+  }
+  if (state.content_type) {
+    params.set('type', state.content_type);
+  }
+  if (state.sort && state.sort !== 'recent') {
+    params.set('sort', state.sort);
+  }
+  if (state.section) {
+    params.set('section', state.section);
+  }
+  const queryString = params.toString();
+  const newSearch = queryString ? `?${queryString}` : '';
+  const newUrl = `${window.location.pathname}${newSearch}${window.location.hash}`;
+  if (window.location.search !== newSearch) {
+    window.history.replaceState(null, '', newUrl);
+  }
+}
+
 let searchDebounce = null;
 
 const paginator = createPaginator({
-  getPage: () => state.page,
-  getPageSize: () => state.limit,
-  setPage: (p) => {
-    state.page = p;
-    const content = document.querySelector('#wanted-content');
-    if (content) loadItems(content);
-  }
+  pageSize: state.limit
 });
 
 // ── Public render function ─────────────────────────────────
@@ -152,6 +185,8 @@ export async function renderWanted(root) {
     showAccessDenied(root);
     return;
   }
+
+  readUrlParams();
 
   root.innerHTML = buildLayout();
   attachSidebarEvents(root);
@@ -236,6 +271,7 @@ function attachSidebarEvents(root) {
         b.classList.toggle('is-active', b.dataset.section === section)
       );
 
+      updateUrlParams();
       renderSection(root);
     });
   });
@@ -410,6 +446,7 @@ function attachToolbarEvents(root, content) {
       content.querySelectorAll('.wanted-category-chip').forEach(c =>
         c.classList.toggle('is-active', c.dataset.category === state.category)
       );
+      updateUrlParams();
       loadItems(content);
     });
   });
@@ -422,6 +459,7 @@ function attachToolbarEvents(root, content) {
       searchDebounce = setTimeout(() => {
         state.search = searchInput.value.trim();
         state.page = 1;
+        updateUrlParams();
         loadItems(content);
       }, 350);
     });
@@ -437,19 +475,21 @@ function attachToolbarEvents(root, content) {
       if (label) {
         label.textContent = SORT_OPTIONS.find(o => o.value === state.sort)?.label || '';
       }
+      updateUrlParams();
       loadItems(content);
     });
   }
 
   // Content type
-  content.querySelectorAll('.catalog-segment').forEach(btn => {
+  content.querySelectorAll('.wanted-ct-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       state.content_type = btn.dataset.ct;
       state.page = 1;
-      content.querySelectorAll('.catalog-segment').forEach(b =>
+      content.querySelectorAll('.wanted-ct-btn').forEach(b =>
         b.classList.toggle('is-active', b.dataset.ct === state.content_type)
       );
       if (['volumes', 'issues'].includes(state.section)) loadCategoryCounts(root);
+      updateUrlParams();
       loadItems(content);
     });
   });
@@ -457,6 +497,7 @@ function attachToolbarEvents(root, content) {
 
 // ── Load items ─────────────────────────────────────────────
 async function loadItems(content) {
+  paginator.setPage(state.page);
   const area = content.querySelector('#wanted-items-area');
   const paginationEl = content.querySelector('#wanted-pagination');
   if (!area) return;
@@ -534,6 +575,10 @@ function renderPagination(container, data) {
   if (!container) return;
   container.innerHTML = '';
   container.appendChild(paginator.render(data.total || 0, () => {
+    state.page = paginator.getPage();
+    updateUrlParams();
+    const content = document.querySelector('#wanted-content');
+    if (content) loadItems(content);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }));
 }
@@ -648,6 +693,22 @@ function buildAddPanel(config) {
           <div class="wanted-add-card-status"></div>
         </div>
 
+        <!-- Додати видавництво -->
+        <div class="wanted-add-card" id="card-add-publisher-volumes">
+          <div class="wanted-add-card-title">
+            ${icon(ICONS.publishers, 18)}
+            Зв'язати томи видавництва (ComicVine)
+          </div>
+          <div class="wanted-add-card-desc">
+            Введіть ComicVine ID видавництва (напр. <code>4010-6438</code> або просто <code>6438</code>). Скрипт знайде томи видавця на ComicVine та оновить посилання у наявних у базі томах.
+          </div>
+          <div class="wanted-add-card-row">
+            <input type="text" class="wanted-add-input" placeholder="ID видавництва або посилання CV" required>
+            <button class="wanted-add-btn">Оновити томи</button>
+          </div>
+          <div class="wanted-add-card-status"></div>
+        </div>
+
       </div>
     </div>
   `;
@@ -660,6 +721,12 @@ function attachAddPanelEvents(content) {
   setupCardOp(content, '#card-add-manga', '/parser/add-manga', (val) => ({ slug: val }));
   setupCardOp(content, '#card-add-character', '/parser/add-character', (val) => ({ slug: val }));
   setupCardOp(content, '#card-add-person', '/parser/add-person', (val) => ({ slug: val }));
+  setupCardOp(content, '#card-add-publisher-volumes', '/parser/add-publisher-volumes', (val) => {
+    // extract numeric id if it's a link or slug
+    const match = val.match(/(?:4010-)?(\d+)/);
+    const id = match ? parseInt(match[1], 10) : parseInt(val, 10);
+    return { cv_id: id };
+  });
 }
 
 function setupCardOp(content, cardSelector, endpoint, payloadFn) {

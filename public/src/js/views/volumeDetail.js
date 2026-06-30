@@ -113,12 +113,12 @@ const ICON = {
 
 // ── Readlist options config ──────────────────────────
 const READLIST_OPTIONS = [
-    { value: '',          label: 'Додати в список', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>', color: '#94a3b8', bg: 'var(--bg-card)', borderColor: 'var(--border-s)' },
-    { value: 'Planned',   label: 'Заплановано',     icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', color: '#2563eb', bg: 'color-mix(in srgb, #2563eb 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, #2563eb 20%, var(--border-s))' },
-    { value: 'Reading',   label: 'Читаю',           icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>', color: '#16a34a', bg: 'color-mix(in srgb, #16a34a 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, #16a34a 20%, var(--border-s))' },
-    { value: 'Completed', label: 'Прочитано',        icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>', color: '#059669', bg: 'color-mix(in srgb, #059669 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, #059669 20%, var(--border-s))' },
-    { value: 'On Hold',   label: 'Відкладено',       icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="10" y1="15" x2="10" y2="9"/><line x1="14" y1="15" x2="14" y2="9"/></svg>', color: '#d97706', bg: 'color-mix(in srgb, #d97706 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, #d97706 20%, var(--border-s))' },
-    { value: 'Dropped',   label: 'Закинуто',         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>', color: '#dc2626', bg: 'color-mix(in srgb, #dc2626 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, #dc2626 20%, var(--border-s))' },
+    { value: '',          label: 'Додати в список', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>', color: 'var(--status-default)', bg: 'var(--bg-card)', borderColor: 'var(--border-s)' },
+    { value: 'Planned',   label: 'Заплановано',     icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', color: 'var(--status-planned)', bg: 'color-mix(in srgb, var(--status-planned) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-planned) 20%, var(--border-s))' },
+    { value: 'Reading',   label: 'Читаю',           icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>', color: 'var(--status-reading)', bg: 'color-mix(in srgb, var(--status-reading) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-reading) 20%, var(--border-s))' },
+    { value: 'Completed', label: 'Прочитано',        icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>', color: 'var(--status-completed)', bg: 'color-mix(in srgb, var(--status-completed) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-completed) 20%, var(--border-s))' },
+    { value: 'On Hold',   label: 'Відкладено',       icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="10" y1="15" x2="10" y2="9"/><line x1="14" y1="15" x2="14" y2="9"/></svg>', color: 'var(--status-on-hold)', bg: 'color-mix(in srgb, var(--status-on-hold) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-on-hold) 20%, var(--border-s))' },
+    { value: 'Dropped',   label: 'Закинуто',         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>', color: 'var(--status-dropped)', bg: 'color-mix(in srgb, var(--status-dropped) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-dropped) 20%, var(--border-s))' },
 ];
 
 function readlistOptionLabel(value) {
@@ -518,6 +518,20 @@ export async function renderVolumeDetail(main, params = {}) {
         const shouldSeparate = isManga || isCollection;
         currentItems = shouldSeparate ? (data.issues || []) : (data.items || data.issues || []);
 
+        let currentCollections = isMagazine ? magazineChildren : [];
+        if (!isMagazine && translations.length > 0) {
+            try {
+                const collRes = await API.get(`/volumes/${volumeId}/collections-from-issues`);
+                currentCollections = collRes.data || [];
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        const showCounts = !isMagazine && translations.length > 0;
+        const issuesTabSuffix = showCounts ? ` (${currentItems.length})` : '';
+        const collectionsTabSuffix = showCounts ? ` (${currentCollections.length})` : '';
+
         const hasUaSynopsis = !!(volume.synopsis_ua || volume.description);
         const activeTab = hasUaSynopsis ? 'ua' : 'en';
 
@@ -748,13 +762,13 @@ export async function renderVolumeDetail(main, params = {}) {
                     <section class="volume-issues-section">
                         <div class="volume-issues-toolbar block">
                             <div class="volume-tabs-segmented" id="issues-tab-switcher">
-                                <button class="volume-tab-btn is-active" data-tab="issues">
+                                <button class="volume-tab-btn ${(isCollection && isManga) ? '' : 'is-active'}" data-tab="issues">
                                     ${ICON.hash}
-                                    <span>${issuesTabLabel}</span>
+                                    <span>${issuesTabLabel}${issuesTabSuffix}</span>
                                 </button>
-                                <button class="volume-tab-btn" data-tab="collections">
+                                <button class="volume-tab-btn ${(isCollection && isManga) ? 'is-active' : ''}" data-tab="collections">
                                     ${ICON.layers}
-                                    <span>${collectionsTabLabel}</span>
+                                    <span>${collectionsTabLabel}${collectionsTabSuffix}</span>
                                 </button>
                             </div>
 
@@ -1074,8 +1088,10 @@ export async function renderVolumeDetail(main, params = {}) {
         const paginationContainer = document.getElementById('volume-pagination-container');
         const sortGroup = main.querySelector('.volume-sort-group');
 
-        let currentTab = 'issues';
-        let currentCollections = isMagazine ? magazineChildren : [];
+        let currentTab = (isCollection && isManga) ? 'collections' : 'issues';
+        if (isMagazine) {
+            currentCollections = magazineChildren;
+        }
         const paginator = createPaginator({ pageSize: 12 });
 
         const refreshItems = () => {
@@ -1295,7 +1311,7 @@ export async function renderVolumeDetail(main, params = {}) {
             }
         });
 
-        switchTab('issues');
+        switchTab((isCollection && isManga) ? 'collections' : 'issues');
 
     } catch (error) {
         main.innerHTML = `

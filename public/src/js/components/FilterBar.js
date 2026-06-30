@@ -14,12 +14,12 @@ const LIST_ICONS = {
 };
 
 const LIST_COLORS = {
-    'all': { color: '#64748b', bg: 'var(--bg-card)', borderColor: 'var(--border-s)' },
-    'Planned': { color: '#2563eb', bg: 'color-mix(in srgb, #2563eb 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, #2563eb 20%, var(--border-s))' },
-    'Reading': { color: '#16a34a', bg: 'color-mix(in srgb, #16a34a 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, #16a34a 20%, var(--border-s))' },
-    'Completed': { color: '#059669', bg: 'color-mix(in srgb, #059669 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, #059669 20%, var(--border-s))' },
-    'On Hold': { color: '#d97706', bg: 'color-mix(in srgb, #d97706 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, #d97706 20%, var(--border-s))' },
-    'Dropped': { color: '#dc2626', bg: 'color-mix(in srgb, #dc2626 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, #dc2626 20%, var(--border-s))' },
+    'all': { color: 'var(--status-default)', bg: 'var(--bg-card)', borderColor: 'var(--border-s)' },
+    'Planned': { color: 'var(--status-planned)', bg: 'color-mix(in srgb, var(--status-planned) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-planned) 20%, var(--border-s))' },
+    'Reading': { color: 'var(--status-reading)', bg: 'color-mix(in srgb, var(--status-reading) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-reading) 20%, var(--border-s))' },
+    'Completed': { color: 'var(--status-completed)', bg: 'color-mix(in srgb, var(--status-completed) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-completed) 20%, var(--border-s))' },
+    'On Hold': { color: 'var(--status-on-hold)', bg: 'color-mix(in srgb, var(--status-on-hold) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-on-hold) 20%, var(--border-s))' },
+    'Dropped': { color: 'var(--status-dropped)', bg: 'color-mix(in srgb, var(--status-dropped) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-dropped) 20%, var(--border-s))' },
     'favorites': { color: '#e11d48', bg: 'color-mix(in srgb, #e11d48 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, #e11d48 20%, var(--border-s))' }
 };
 
