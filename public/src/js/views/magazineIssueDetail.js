@@ -40,8 +40,49 @@ export async function renderMagazineIssueDetail(main, params = {}) {
         const coverUrl = comicVineImageUrl(issue.image);
         const title = escapeHtmlAttribute(issue.name || `Випуск #${issue.issue_number}`);
         const magazineName = escapeHtmlAttribute(issue.magazine_name || 'Журнал');
-        const releaseDate = issue.release_date || issue.cover_date || 'невідомо';
-        const coverDate = issue.cover_date || 'невідомо';
+        const ukMonths = {
+            '01': 'січня', '02': 'лютого', '03': 'березня', '04': 'квітня',
+            '05': 'травня', '06': 'червня', '07': 'липня', '08': 'серпня',
+            '09': 'вересня', '10': 'жовтня', '11': 'листопада', '12': 'грудня'
+        };
+
+        const ukMonthsNominal = {
+            '01': 'Січень', '02': 'Лютий', '03': 'Березень', '04': 'Квітень',
+            '05': 'Травень', '06': 'Червень', '07': 'Липень', '08': 'Серпень',
+            '09': 'Вересень', '10': 'Жовтень', '11': 'Листопад', '12': 'Грудень'
+        };
+
+        const formatDateHuman = (dateStr) => {
+            if (!dateStr || dateStr === 'невідомо') return 'невідомо';
+            const parts = dateStr.split('-');
+            if (parts.length >= 2) {
+                const year = parts[0];
+                const month = ukMonths[parts[1]] || parts[1];
+                if (parts.length > 2) {
+                    const day = parseInt(parts[2], 10);
+                    return `${day} ${month} ${year}`;
+                }
+                return `${month} ${year}`;
+            }
+            return dateStr;
+        };
+
+        const formatCoverDateHuman = (dateStr) => {
+            if (!dateStr || dateStr === 'невідомо') return 'невідомо';
+            const parts = dateStr.split('-');
+            if (parts.length >= 2) {
+                const year = parts[0];
+                const month = ukMonthsNominal[parts[1]] || parts[1];
+                return `${month} ${year}`;
+            }
+            return dateStr;
+        };
+
+        const releaseDateRaw = issue.release_date || issue.cover_date || 'невідомо';
+        const coverDateRaw = issue.cover_date || 'невідомо';
+        
+        const releaseDate = formatDateHuman(releaseDateRaw);
+        const coverDate = formatCoverDateHuman(coverDateRaw);
         
         const isModerator = currentUser?.role === 'admin' || currentUser?.role === 'moderator';
 
@@ -53,15 +94,21 @@ export async function renderMagazineIssueDetail(main, params = {}) {
             layers: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M21 12H3"/><path d="M12 3v18"/></svg>`
         };
 
-        const ukMonths = {
-            '01': 'Січень', '02': 'Лютий', '03': 'Березень', '04': 'Квітень',
-            '05': 'Травень', '06': 'Червень', '07': 'Липень', '08': 'Серпень',
-            '09': 'Вересень', '10': 'Жовтень', '11': 'Листопад', '12': 'Грудень'
-        };
-
         const formatTitle = (issueItem) => {
-            const num = issueItem.name || `No. ${issueItem.issue_number}`;
-            return `${num}`;
+            let num = issueItem.name || `No. ${issueItem.issue_number}`;
+            // Strip year (e.g., ", 2026" or " 2026")
+            num = num.replace(/,?\s*\d{4}/g, '').trim();
+            
+            const dateStr = issueItem.cover_date || issueItem.release_date || '';
+            let monthStr = '';
+            if (dateStr.includes('-')) {
+                const parts = dateStr.split('-');
+                if (parts.length >= 2) {
+                    const m = parts[1];
+                    monthStr = ukMonthsNominal[m] || '';
+                }
+            }
+            return monthStr ? `${num}, ${monthStr}` : num;
         };
 
         const navCardHTML = (sibling, direction) => {
@@ -292,14 +339,14 @@ export async function renderMagazineIssueDetail(main, params = {}) {
                                 ${navCardHTML(next_issue, 'next')}
                             </div>
                             <div class="volume-hero-badges" style="margin-top: 15px;">
-                                <a href="#/magazines/${issue.magazine_id}" class="volume-badge volume-series-badge" style="color: var(--primary); text-decoration: none; font-weight: 600;">
-                                    ${ICON.book} Журнал: ${magazineName}
+                                <a href="#/magazines/${issue.magazine_id}" title="Журнал" class="volume-badge volume-series-badge" style="color: var(--primary); text-decoration: none; font-weight: 600;">
+                                    ${ICON.book} ${magazineName}
                                 </a>
                                 <span class="volume-badge volume-cover-date-badge" title="Дата обкладинки">
-                                    ${ICON.calendar} Обкладинка: ${coverDate}
+                                    ${ICON.calendar} ${coverDate}
                                 </span>
-                                <span class="volume-badge volume-year-badge">
-                                    ${ICON.calendar} Дата релізу: ${releaseDate}
+                                <span class="volume-badge volume-year-badge" title="Дата релізу">
+                                    ${ICON.calendar} ${releaseDate}
                                 </span>
                                 ${pagesHtml}
                             </div>
@@ -404,8 +451,9 @@ export async function renderMagazineIssueDetail(main, params = {}) {
         let currentIssuesPage = 1;
         const issuesPerPage = 10;
         let selectedYear = '';
-        if (coverDate && coverDate.includes('-')) {
-            selectedYear = coverDate.split('-')[0];
+        const issueCoverDate = issue.cover_date || issue.release_date || '';
+        if (issueCoverDate && issueCoverDate.includes('-')) {
+            selectedYear = issueCoverDate.split('-')[0];
         }
 
         let filteredIssues = all_issues;
