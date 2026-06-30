@@ -299,6 +299,8 @@ async def create_volume(data: dict):
     
     for key, value in data.items():
         if key in allowed_fields and value is not None:
+            if value == "":
+                value = None
             columns.append(key)
             placeholders.append("?")
             params.append(value)
@@ -339,6 +341,8 @@ async def update_volume(volume_id: int, data: dict):
     
     for key, value in data.items():
         if key in allowed_fields:
+            if value == "":
+                value = None
             fields.append(f"{key} = ?")
             params.append(value)
             

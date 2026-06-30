@@ -132,7 +132,11 @@ async def update_event(event_id: int, data: dict, request: Request):
     db = get_db()
     get_event_or_404(db, event_id)
 
-    if not data.get("name"):
+    def to_null(val):
+        return None if val == "" else val
+
+    name = to_null(data.get("name"))
+    if not name:
         raise HTTPException(status_code=400, detail="Назва події обов'язкова")
 
     db.execute(
@@ -146,11 +150,11 @@ async def update_event(event_id: int, data: dict, request: Request):
         WHERE id = ?
         """,
         [
-            data.get("name"),
-            data.get("description"),
-            data.get("cv_img"),
-            data.get("start_year"),
-            data.get("end_year"),
+            name,
+            to_null(data.get("description")),
+            to_null(data.get("cv_img")),
+            to_null(data.get("start_year")),
+            to_null(data.get("end_year")),
             event_id,
         ],
     )

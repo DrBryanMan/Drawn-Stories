@@ -67,15 +67,18 @@ async def update_character(character_id: int, data: dict, request: Request):
     if not char:
         raise HTTPException(status_code=404, detail="Персонажа не знайдено")
         
-    name = data.get("name")
-    name_uk = data.get("name_uk")
-    real_name = data.get("real_name")
-    real_name_uk = data.get("real_name_uk")
-    creators = data.get("creators")
-    image = data.get("image")
-    portret_img = data.get("portret_img")
-    costume_img = data.get("costume_img")
-    portret_costume_img = data.get("portret_costume_img")
+    def to_null(val):
+        return None if val == "" else val
+
+    name = to_null(data.get("name"))
+    name_uk = to_null(data.get("name_uk"))
+    real_name = to_null(data.get("real_name"))
+    real_name_uk = to_null(data.get("real_name_uk"))
+    creators = to_null(data.get("creators"))
+    image = to_null(data.get("image"))
+    portret_img = to_null(data.get("portret_img"))
+    costume_img = to_null(data.get("costume_img"))
+    portret_costume_img = to_null(data.get("portret_costume_img"))
     
     if not name:
         raise HTTPException(status_code=400, detail="Оригінальне ім'я обов'язкове")

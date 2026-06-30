@@ -181,14 +181,23 @@ async def get_catalog(
 
     # Common Filters (Publishers, Themes, Magazines, Languages, Sources)
     source_map = {
-        "hikka": "v.hikka_slug IS NOT NULL",
-        "mal": "v.mal_id IS NOT NULL",
-        "cv": "v.cv_id IS NOT NULL"
+        "hikka": {
+            "include": "(v.hikka_slug IS NOT NULL AND v.hikka_slug != '')",
+            "exclude": "(v.hikka_slug IS NULL OR v.hikka_slug = '')"
+        },
+        "mal": {
+            "include": "v.mal_id IS NOT NULL",
+            "exclude": "v.mal_id IS NULL"
+        },
+        "cv": {
+            "include": "v.cv_id IS NOT NULL",
+            "exclude": "v.cv_id IS NULL"
+        }
     }
 
     if sources:
         # Use OR for multiple inclusion sources (any of the selected)
-        clauses = [source_map[s] for s in sources.split(',') if s in source_map]
+        clauses = [source_map[s]["include"] for s in sources.split(',') if s in source_map]
         if clauses:
             filter_clauses.append(f"({' OR '.join(clauses)})")
     
@@ -196,7 +205,7 @@ async def get_catalog(
         # Use AND for multiple exclusion sources (none of the selected)
         for s in exclude_sources.split(','):
             if s in source_map:
-                filter_clauses.append(source_map[s].replace("IS NOT NULL", "IS NULL"))
+                filter_clauses.append(source_map[s]["exclude"])
 
     publisher_filter_ids = parse_id_list(publisher_ids)
     if publisher_filter_ids:

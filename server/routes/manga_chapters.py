@@ -59,6 +59,9 @@ async def update_chapter(chapter_id: int, request: Request):
     
     data = await request.json()
     
+    def to_null(val):
+        return None if val == "" else val
+    
     # Оновлення полів
     db.execute(
         """
@@ -68,15 +71,15 @@ async def update_chapter(chapter_id: int, request: Request):
         WHERE id = ?
         """,
         [
-            data.get("name"),
-            data.get("name_native"),
-            data.get("name_en"),
-            data.get("name_uk"),
-            data.get("image"),
-            data.get("chapter_number"),
-            data.get("release_date"),
-            data.get("synopsis"),
-            data.get("pages"),
+            to_null(data.get("name")),
+            to_null(data.get("name_native")),
+            to_null(data.get("name_en")),
+            to_null(data.get("name_uk")),
+            to_null(data.get("image")),
+            to_null(data.get("chapter_number")),
+            to_null(data.get("release_date")),
+            to_null(data.get("synopsis")),
+            to_null(data.get("pages")),
             chapter_id
         ]
     )

@@ -682,6 +682,8 @@ async def create_issue(data: dict):
     
     for key, value in data.items():
         if key in allowed_fields and value is not None:
+            if value == "":
+                value = None
             columns.append(key)
             placeholders.append("?")
             params.append(value)
@@ -722,6 +724,8 @@ async def update_issue(issue_id: int, data: dict, request: Request):
     
     for key, value in data.items():
         if key in allowed_fields:
+            if value == "":
+                value = None
             fields.append(f"{key} = ?")
             params.append(value)
             
@@ -922,8 +926,8 @@ async def update_issue_reprint(reprint_link_id: int, data: dict, request: Reques
     
     original_id = data.get("original_id")
     reprint_id = data.get("reprint_id")
-    story_num = data.get("story_num")
-    story_foreign_name = data.get("story_foreign_name")
+    story_num = None if data.get("story_num") == "" else data.get("story_num")
+    story_foreign_name = None if data.get("story_foreign_name") == "" else data.get("story_foreign_name")
     
     if not original_id or not reprint_id:
         raise HTTPException(status_code=400, detail="original_id та reprint_id обов'язкові")
