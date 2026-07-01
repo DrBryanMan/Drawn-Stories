@@ -1,5 +1,7 @@
 import re
 import time
+import os
+import json
 import cloudscraper
 from bs4 import BeautifulSoup
 from fastapi import HTTPException
@@ -133,6 +135,114 @@ def get_or_create_entity(db, table_name, cv_id, name, cv_slug):
     new_row = db.get_one(f"SELECT id FROM {table_name} WHERE cv_id = ?", [cv_id])
     return new_row['id']
 
+# ── API character parser helpers ─────────────────────
+API_KEY = os.environ.get("CV_API_KEY", "99b8aaa60addd5a3a119afbb1c57625e4c808c26")
+
+def extract_image_path(image_url):
+    if not image_url:
+        return None
+    match = re.search(r'(\d+/\d+/[^/\s]+(?:\.(?:jpg|jpeg|png|gif|webp))?)', image_url)
+    return f"/{match.group(1)}" if match else None
+
+def extract_slug(site_url, cv_prefix):
+    if not site_url:
+        return None
+    match = re.search(rf'/([^/]+)/{cv_prefix}-\d+/?$', site_url)
+    return match.group(1) if match else None
+
+def normalize_aliases(raw):
+    if not raw:
+        return None
+    if isinstance(raw, list):
+        lines = [str(x).strip() for x in raw if x]
+    else:
+        lines = [line.strip() for line in str(raw).replace("\r", "").split("\n") if line.strip()]
+    return json.dumps(lines, ensure_ascii=False) if lines else None
+
+def get_or_create_character(db, scraper, cv_id, default_name, default_cv_slug, log_callback):
+    row = db.get_one("SELECT id FROM characters WHERE cv_id = ?", [cv_id])
+    if row:
+        return row['id']
+        
+    log_callback(f"Персонажа '{default_name}' (CV ID: {cv_id}) немає в базі. Запит до ComicVine API...")
+    url = f"https://comicvine.gamespot.com/api/character/4005-{cv_id}/"
+    params = {
+        "api_key": API_KEY,
+        "format": "json",
+        "field_list": "id,name,real_name,site_detail_url,image,aliases,birth,death,gender,origin,first_appeared_in_issue,publisher"
+    }
+    
+    try:
+        response = scraper.get(url, params=params, timeout=20)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("status_code") == 1 and data.get("results"):
+                res = data["results"]
+                
+                char_name = res.get("name") or default_name
+                real_name = res.get("real_name")
+                cv_slug = extract_slug(res.get("site_detail_url"), "4005") or default_cv_slug
+                image_path = extract_image_path(res.get("image", {}).get("original_url")) if res.get("image") else None
+                aliases = normalize_aliases(res.get("aliases"))
+                birth = res.get("birth")
+                death = res.get("death")
+                gender = res.get("gender")
+                origin = res.get("origin", {}).get("name") if res.get("origin") else None
+                
+                # Resolve publisher
+                publisher_id = None
+                pub_data = res.get("publisher")
+                if pub_data and pub_data.get("id"):
+                    pub_cv_id = pub_data["id"]
+                    pub_name = pub_data.get("name")
+                    pub_row = db.get_one("SELECT id FROM publishers WHERE cv_id = ?", [pub_cv_id])
+                    if pub_row:
+                        publisher_id = pub_row["id"]
+                    else:
+                        db.execute("INSERT INTO publishers (cv_id, name) VALUES (?, ?)", [pub_cv_id, pub_name])
+                        new_pub = db.get_one("SELECT id FROM publishers WHERE cv_id = ?", [pub_cv_id])
+                        publisher_id = new_pub["id"]
+                        log_callback(f"Створено видавництво для персонажа: {pub_name} (CV ID: {pub_cv_id})")
+                
+                # Resolve first appearance
+                first_app_id = None
+                first_app_data = res.get("first_appeared_in_issue")
+                if first_app_data and first_app_data.get("id"):
+                    fa_cv_id = first_app_data["id"]
+                    issue_row = db.get_one("SELECT id FROM issues WHERE cv_id = ?", [fa_cv_id])
+                    if issue_row:
+                        first_app_id = issue_row["id"]
+                
+                db.execute(
+                    """
+                    INSERT INTO characters (
+                        cv_id, name, real_name, cv_slug, image, aliases, birth, death, gender, origin, first_appearance, publisher
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    [
+                        cv_id, char_name, real_name, cv_slug, image_path, aliases, birth, death, gender, origin, first_app_id, publisher_id
+                    ]
+                )
+                
+                new_char = db.get_one("SELECT id FROM characters WHERE cv_id = ?", [cv_id])
+                log_callback(f"Персонажа {char_name} успішно імпортовано з ComicVine API!")
+                return new_char["id"]
+            else:
+                log_callback(f"Попередження: ComicVine API повернув статус {data.get('status_code')} або результати порожні.")
+        else:
+            log_callback(f"Попередження: Не вдалося отримати дані з ComicVine API. Статус-код: {response.status_code}")
+    except Exception as api_err:
+        log_callback(f"Помилка при запиті до API ComicVine для персонажа: {api_err}")
+        
+    # Fallback
+    log_callback(f"Створюємо персонажа {default_name} за спрощеною схемою...")
+    db.execute(
+        "INSERT INTO characters (cv_id, name, cv_slug) VALUES (?, ?, ?)",
+        [cv_id, default_name, default_cv_slug]
+    )
+    new_char = db.get_one("SELECT id FROM characters WHERE cv_id = ?", [cv_id])
+    return new_char["id"]
+
 # ── Scraper services ─────────────────────────────────
 def scrape_issue_appearances_logic(db, scraper, issue_id, log_callback):
     # 1. Get issue from DB
@@ -182,7 +292,7 @@ def scrape_issue_appearances_logic(db, scraper, issue_id, log_callback):
     added_chars = 0
     for char in appearances['characters']:
         try:
-            char_id = get_or_create_entity(db, 'characters', char['cv_id'], char['name'], char['cv_slug'])
+            char_id = get_or_create_character(db, scraper, char['cv_id'], char['name'], char['cv_slug'], log_callback)
             db.execute("INSERT OR IGNORE INTO issue_characters (issue_id, character_id, story_num) VALUES (?, ?, 0)", [issue_id, char_id])
             added_chars += 1
         except Exception as e:

@@ -657,7 +657,7 @@ export async function renderVolumeDetail(main, params = {}) {
                                             <i class="bi bi-book"></i>
                                         </button>
                                     ` : ''}
-                                    ${!isMagazine && isCollection ? `
+                                    ${!isMagazine ? `
                                         <button class="btn-admin btn-admin--secondary" id="volume-add-original-btn" title="Додати до оригіналу">
                                             <i class="bi bi-bookmark-star"></i>
                                         </button>
