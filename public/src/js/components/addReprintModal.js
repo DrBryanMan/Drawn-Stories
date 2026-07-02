@@ -179,26 +179,17 @@ function updateStoriesDropdown() {
     if (!select) return;
     
     const isOriginalRoleSelected = document.getElementById('arm-role-original').checked;
-    let selectHTML = '<option value="0">Основна історія (0)</option>';
+    const storiesSource = isOriginalRoleSelected ? _selectedIssueStories : _config.stories;
+    let selectHTML = '';
     
-    if (isOriginalRoleSelected) {
-        // Ми додаємо оригінал, тому оригінальні історії беруться з обраного випуску
-        if (_selectedIssueStories && _selectedIssueStories.length > 0) {
-            _selectedIssueStories.forEach(story => {
-                const name = story.name_ua || story.name_original || `Історія ${story.order_num}`;
-                const val = story.order_num || 1;
-                selectHTML += `<option value="${val}">${escapeHtmlAttribute(name)} (${val})</option>`;
-            });
-        }
+    if (storiesSource && storiesSource.length > 0) {
+        storiesSource.forEach((story, idx) => {
+            const name = story.name_ua || story.name_original || `Історія ${idx + 1}`;
+            const val = idx === 0 ? 0 : (story.order_num || idx + 1);
+            selectHTML += `<option value="${val}">Історія ${idx + 1}: ${escapeHtmlAttribute(name)} (${val})</option>`;
+        });
     } else {
-        // Ми додаємо репринт, тому оригінал - поточний випуск
-        if (_config.stories && _config.stories.length > 0) {
-            _config.stories.forEach(story => {
-                const name = story.name_ua || story.name_original || `Історія ${story.order_num}`;
-                const val = story.order_num || 1;
-                selectHTML += `<option value="${val}">${escapeHtmlAttribute(name)} (${val})</option>`;
-            });
-        }
+        selectHTML = '<option value="0">Історія 1 (0)</option>';
     }
     
     select.innerHTML = selectHTML;

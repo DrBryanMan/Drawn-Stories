@@ -164,14 +164,15 @@
 .issue-external-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  justify-content: center;
+  gap: 6px;
 }
 
 .issue-ext-link {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 5px 12px;
+  padding: 3px 6px;
   border-radius: var(--r);
   font-size: 12px;
   font-weight: 700;
@@ -182,7 +183,7 @@
 }
 
 .issue-ext-link--cv {
-  color: var(--source-cv);
+  color: var(--source-cv) !important;
   background: color-mix(in srgb, var(--source-cv) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--source-cv) 20%, var(--border-s));
 }
@@ -782,7 +783,6 @@
   padding: 4px;
   border-radius: 10px;
   border: 1px solid var(--border-s);
-  margin-bottom: 20px;
 }
 
 .editor-tab-btn {
@@ -1085,9 +1085,10 @@
 }
 
 .staff-editor-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: 40px;
+  height: auto;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--r);
   object-fit: cover;
   flex-shrink: 0;
   border: 1px solid var(--border-s);
@@ -1503,4 +1504,83 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ── Issue Page Tabs & Tab Panes ── */
+.issue-hero-tabs-band {
+  background: var(--bg-card);
+  padding: 10px 0;
+  position: relative;
+  z-index: 2;
+}
+
+.issue-page-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  background: var(--bg-body);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border-s);
+  width: fit-content;
+}
+
+.issue-page-tab-btn {
+  border: none;
+  background: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-family: var(--font-oswald);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--t);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.issue-page-tab-btn:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--bg-card-h);
+}
+
+.issue-page-tab-btn.is-active {
+  background: var(--accent-glow);
+  color: var(--accent);
+}
+
+.issue-page-tab-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.issue-page-tab-btn .tab-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.8;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.issue-tab-pane {
+  display: none;
+}
+
+.issue-tab-pane.is-active {
+  display: block;
+}
+
+.issue-tab-pane.is-fade-in {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

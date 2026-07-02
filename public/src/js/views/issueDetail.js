@@ -127,8 +127,8 @@ function renderStaffGroups(personsList) {
         : '';
 
     return `
-        ${renderGroup('Інші автори', featuredGroup)}
         ${sideRow}
+        ${renderGroup('Інші автори', featuredGroup)}
     `;
 }
 
@@ -413,7 +413,7 @@ export async function renderIssueDetail(container, params = {}) {
     } = data;
 
     // Metadata
-    const issueTitle = issue.name || '';
+    const issueTitle = issue.name_uk || issue.name || '';
     const issueNum = issue.issue_number ? `#${issue.issue_number}` : '';
     const displayTitle = issueTitle || (issueNum ? `Випуск ${issueNum}` : 'Без назви');
 
@@ -481,12 +481,15 @@ export async function renderIssueDetail(container, params = {}) {
 
     // ── External links ────────────────────────────
     const externalLinksHTML = cvUrl
-        ? `<div class="issue-external-links">
-               <a class="issue-ext-link issue-ext-link--cv"
-                  href="${escapeHtmlAttribute(cvUrl)}"
-                  target="_blank" rel="noopener noreferrer">
-                   ComicVine ${ICON.externalLink}
-               </a>
+        ? `<div class="issue-cover-ext-sources" style="margin-top: 16px; border-top: 1px solid var(--border-s); padding-top: 16px; width: 100%;">
+               <div style="font-family: var(--font-oswald); font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; text-align: center;">Зовнішні джерела</div>
+               <div class="issue-external-links">
+                   <a class="issue-ext-link issue-ext-link--cv"
+                      href="${escapeHtmlAttribute(cvUrl)}"
+                      target="_blank" rel="noopener noreferrer">
+                       ComicVine ${ICON.externalLink}
+                   </a>
+               </div>
            </div>`
         : '';
 
@@ -496,17 +499,12 @@ export async function renderIssueDetail(container, params = {}) {
     let storiesHTML = '';
     if (stories.length) {
         if (hasMultipleStories) {
-            const hasImported = stories.some(s => s.is_imported);
-            const hasMain = !hasImported && stories[0] && stories[0].order_num === 0;
             const tabsHTML = `
                 <div class="issue-stories-tabs">
                     ${stories.map((story, index) => {
-                        const tabLabel = (index === 0 && hasMain)
-                            ? 'Основна'
-                            : `Історія ${hasMain ? index : index + 1}`;
                         return `
                             <button class="issue-story-tab-btn ${index === 0 ? 'is-active' : ''}" data-story-index="${index}">
-                                ${tabLabel}
+                                Історія ${index + 1}
                             </button>
                         `;
                     }).join('')}
@@ -522,7 +520,11 @@ export async function renderIssueDetail(container, params = {}) {
                             ? story.name_original 
                             : '';
                         
-                        const rawStoryPersons = persons.filter(p => p.story_id === story.id || p.story_id === story.client_story_id);
+                        const rawStoryPersons = persons.filter(p => 
+                            p.story_id === story.id || 
+                            p.story_id === story.client_story_id ||
+                            (index === 0 && !p.story_id)
+                        );
                         
                         let storyImportBadgeHTML = '';
                         if (story.is_imported) {
@@ -569,7 +571,11 @@ export async function renderIssueDetail(container, params = {}) {
                 ? story.name_original 
                 : '';
             
-            const rawStoryPersons = persons.filter(p => p.story_id === story.id || p.story_id === story.client_story_id);
+            const rawStoryPersons = persons.filter(p => 
+                p.story_id === story.id || 
+                p.story_id === story.client_story_id ||
+                (!p.story_id)
+            );
             let storyImportBadgeHTML = '';
             if (story.is_imported) {
                 storyImportBadgeHTML = `
@@ -896,12 +902,14 @@ export async function renderIssueDetail(container, params = {}) {
                            : (r.original_volume_name_uk || r.original_volume_name || '');
                        const issueNum = isOriginal ? r.reprint_number : r.original_number;
                        
-                       let displayTitle = 'Основна історія';
-                       if (r.story_id) {
-                           displayTitle = r.story_name_ua || r.story_name_original || 'Історія';
+                       let displayTitle = '';
+                       const issueName = isOriginal ? r.reprint_name : r.original_name;
+                       if (r.story_num === 0 || r.story_num === null || r.story_num === undefined) {
+                           const storyName = r.story_name_ua || r.story_name_original || issueName || 'Без назви';
+                           displayTitle = `Історія 1: ${storyName}`;
                        } else {
-                           const issueName = isOriginal ? r.reprint_name : r.original_name;
-                           if (issueName) displayTitle = issueName;
+                           const storyName = r.story_name_ua || r.story_name_original || 'Без назви';
+                           displayTitle = `Історія ${r.story_num}: ${storyName}`;
                        }
                        
                        const reprintLang = r.reprint_volume_lang || '';
@@ -926,34 +934,8 @@ export async function renderIssueDetail(container, params = {}) {
         : '';
 
     // ── Issue Staff & Stories HTML ────────────────
-    const rawIssuePersons = persons.filter(p => !p.story_id);
-    const issueStaff = groupStaffRoles(rawIssuePersons);
-    let staffImportBadgeHTML = '';
-    if (rawIssuePersons.length > 0 && rawIssuePersons[0].is_imported) {
-        const firstP = rawIssuePersons[0];
-        staffImportBadgeHTML = `
-            <div class="issue-staff-imported-banner">
-                Творці випуску з <a href="#/issues/${firstP.original_issue_id}">
-                    ${escapeHtmlAttribute(firstP.original_volume_name)} #${escapeHtmlAttribute(firstP.original_issue_number)}
-                </a>
-            </div>
-        `;
-    }
-
-    const mainStaffHTML = rawIssuePersons.length
-        ? renderStaffGroups(rawIssuePersons)
-        : '';
-
-    const hasAnyStaff = persons.length > 0;
-    const combinedStaffStoriesHTML = hasAnyStaff || stories.length > 0
+    const combinedStaffStoriesHTML = stories.length > 0
         ? `<section class="issue-staff-section">
-               ${staffImportBadgeHTML}
-               ${hasAnyStaff ? `
-               <div class="issue-section-heading">
-                   <h3>Творці випуску</h3>
-               </div>
-               ` : ''}
-               ${mainStaffHTML}
                ${storiesHTML}
            </section>`
         : '';
@@ -962,7 +944,7 @@ export async function renderIssueDetail(container, params = {}) {
     // Визначення підпису для основної історії / історій з оригіналів
     const importedStories = stories.filter(s => s.is_imported);
     const isReprintIssue = reprints.some(r => r.reprint_id === issueId);
-    let mainStoryLabelText = 'Основна історія';
+    let mainStoryLabelText = '0 історій';
 
     if (importedStories.length > 0) {
         const count = importedStories.length;
@@ -982,7 +964,7 @@ export async function renderIssueDetail(container, params = {}) {
             storyWord = 'історії';
         }
         mainStoryLabelText = `${count} ${storyWord}-репринтів`;
-    } else if (stories.length > 1) {
+    } else if (stories.length > 0) {
         const count = stories.length;
         let storyWord = 'історій';
         if (count % 10 === 1 && count % 100 !== 11) {
@@ -1006,6 +988,7 @@ export async function renderIssueDetail(container, params = {}) {
                         ${issueNum ? `<div class="issue-cover-number">${escapeHtmlAttribute(issueNum)}</div>` : ''}
                         ${readlistUIHTML()}
                         ${collectionUIHTML(readlistStatus.collection_status, readlistStatus.collection_barter)}
+                        ${externalLinksHTML}
                     </div>
 
                     <div class="issue-hero-info">
@@ -1026,20 +1009,51 @@ export async function renderIssueDetail(container, params = {}) {
                             ${releaseDateBadge}
                             ${pagesBadge}
                         </div>
+                    </div>
+                </div>
 
-                        ${combinedStaffStoriesHTML}
-
-                        ${descriptionHTML}
-                        ${externalLinksHTML}
+                <div class="issue-hero-tabs-band">
+                    <div class="container" style="display: flex; justify-content: center;">
+                        <div class="issue-page-tabs">
+                            <button class="issue-page-tab-btn" data-page-tab="main">Основне</button>
+                            <button class="issue-page-tab-btn" data-page-tab="staff-appearances">Творці та появи</button>
+                            <button class="issue-page-tab-btn" data-page-tab="collections" ${collections.length === 0 ? 'disabled' : ''}>
+                                <span>Збірники</span>
+                                ${collections.length > 0 ? `<span class="tab-count">${collections.length}</span>` : ''}
+                            </button>
+                            <button class="issue-page-tab-btn" data-page-tab="reprints" ${reprints.length === 0 ? 'disabled' : ''}>
+                                <span>Репринти</span>
+                                ${reprints.length > 0 ? `<span class="tab-count">${reprints.length}</span>` : ''}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </section>
 
             <div class="container issue-body">
-                ${storiesDetailsHTML}
-                ${contextHTML}
-                ${collectionsHTML}
-                ${reprintsHTML}
+                <!-- Вкладка: Основне -->
+                <div class="issue-tab-pane" id="page-tab-pane-main">
+                    ${descriptionHTML ? `<div class="issue-main-description-section" style="margin-bottom: 24px;">${descriptionHTML}</div>` : ''}
+                    ${contextHTML}
+                    ${(!descriptionHTML && !contextHTML) ? '<div class="issue-story-empty">— немає опису або контексту —</div>' : ''}
+                </div>
+
+                <!-- Вкладка: Творці та появи -->
+                <div class="issue-tab-pane" id="page-tab-pane-staff-appearances">
+                    ${combinedStaffStoriesHTML}
+                    ${storiesDetailsHTML}
+                    ${(!combinedStaffStoriesHTML && !storiesDetailsHTML) ? '<div class="issue-story-empty">— немає відомостей про творців або появи —</div>' : ''}
+                </div>
+
+                <!-- Вкладка: Збірники -->
+                <div class="issue-tab-pane" id="page-tab-pane-collections">
+                    ${collectionsHTML}
+                </div>
+
+                <!-- Вкладка: Репринти -->
+                <div class="issue-tab-pane" id="page-tab-pane-reprints">
+                    ${reprintsHTML}
+                </div>
             </div>
 
             ${isModerator ? `
@@ -1058,6 +1072,70 @@ export async function renderIssueDetail(container, params = {}) {
             ` : ''}
         </div>
     `;
+
+    // ── Page Tabs Logic ──────────────────────────────
+    const pageTabs = container.querySelectorAll('.issue-page-tab-btn');
+    const pagePanes = container.querySelectorAll('.issue-tab-pane');
+    let currentPageTab = 'main';
+
+    const switchPageTab = (tabName, scroll = true) => {
+        currentPageTab = tabName;
+        
+        // Update URL query parameter
+        const hashPath = window.location.hash.split('?')[0];
+        const newHash = tabName === 'main' ? hashPath : `${hashPath}?tab=${tabName}`;
+        window.history.replaceState(null, '', newHash);
+        
+        pageTabs.forEach(btn => {
+            btn.classList.toggle('is-active', btn.dataset.pageTab === tabName);
+        });
+
+        const currentPane = Array.from(pagePanes).find(pane => pane.classList.contains('is-active'));
+        if (currentPane) {
+            currentPane.classList.remove('is-fade-in');
+        }
+
+        setTimeout(() => {
+            pagePanes.forEach(pane => {
+                pane.classList.remove('is-active');
+            });
+
+            const newPane = container.querySelector(`#page-tab-pane-${tabName}`);
+            if (newPane) {
+                newPane.classList.add('is-active');
+                newPane.offsetHeight; // Reflow
+                newPane.classList.add('is-fade-in');
+            }
+
+            if (scroll) {
+                const tabsNav = container.querySelector('.issue-hero-tabs-band');
+                if (tabsNav) {
+                    window.scrollTo({ top: tabsNav.offsetTop - 20, behavior: 'smooth' });
+                }
+            }
+        }, currentPane ? 200 : 0);
+    };
+
+    pageTabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.classList.contains('is-active') || btn.disabled) return;
+            switchPageTab(btn.dataset.pageTab);
+        });
+    });
+
+    // Check URL query parameters for preselected tab
+    const urlParams = new URLSearchParams(window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '');
+    const preselectedTab = urlParams.get('tab');
+    if (preselectedTab && ['main', 'staff-appearances', 'collections', 'reprints'].includes(preselectedTab)) {
+        const tabBtn = container.querySelector(`.issue-page-tab-btn[data-page-tab="${preselectedTab}"]`);
+        if (tabBtn && !tabBtn.disabled) {
+            switchPageTab(preselectedTab, false);
+        } else {
+            switchPageTab('main', false);
+        }
+    } else {
+        switchPageTab('main', false);
+    }
 
     // ── Stories Tabs Switching ──────────────────────
     if (hasMultipleStories) {

@@ -15,6 +15,9 @@
 @import url('components/scrape-progress-modal.css');
 
 /* Сторінки */
+@import url('views/volumeCharacters.css');
+@import url('views/volumeStuff.css');
+
 @import url('views/home.css');
 @import url('views/catalog.css');
 @import url('views/volume-detail.css');
@@ -26,7 +29,6 @@
 @import url('views/collection-detail.css');
 @import url('views/issue-detail.css');
 @import url('views/event-detail.css');
-@import url('views/characters.css');
 @import url('views/personnel.css');
 
 /* Адаптивність — усі @media блоки проєкту */

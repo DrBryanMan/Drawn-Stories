@@ -31,7 +31,7 @@ def hydrate_context_issue_nav(db, contexts):
 def get_issue_appearances(db, issue_id):
     characters = db.get_all(
         """
-        SELECT c.id, c.name, c.real_name, c.name_uk, c.real_name_uk, c.creators, c.cv_slug, c.image, 
+        SELECT c.id, c.name, c.real_name, c.name_uk, c.name_ro, c.real_name_uk, c.creators, c.cv_slug, c.image, 
                c.portret_img, c.costume_img, c.portret_costume_img,
                ic.story_num, ic.status, ic.comment, ic.role, ic.team_id 
         FROM issue_characters ic 
@@ -100,13 +100,13 @@ async def search_appearance_entities(app_type: str, search: str = ""):
     if app_type == "characters":
         rows = db.get_all(
             """
-            SELECT id, name, real_name, name_uk, real_name_uk, creators, cv_slug, image, 
+            SELECT id, name, real_name, name_uk, name_ro, real_name_uk, creators, cv_slug, image, 
                    portret_img, costume_img, portret_costume_img
             FROM characters 
-            WHERE name LIKE ? OR real_name LIKE ? OR name_uk LIKE ? OR real_name_uk LIKE ?
+            WHERE name LIKE ? OR real_name LIKE ? OR name_uk LIKE ? OR name_ro LIKE ? OR real_name_uk LIKE ?
             ORDER BY COALESCE(name_uk, name) ASC LIMIT 30
             """,
-            [query, query, query, query]
+            [query, query, query, query, query]
         )
     else:
         rows = db.get_all(
@@ -676,7 +676,7 @@ async def create_issue(data: dict):
     params = []
     
     allowed_fields = [
-        "name", "issue_number", "volume_id", "cv_id", "cv_slug", 
+        "name", "name_uk", "issue_number", "volume_id", "cv_id", "cv_slug", 
         "cv_img", "cover_date", "release_date", "description"
     ]
     
@@ -718,7 +718,7 @@ async def update_issue(issue_id: int, data: dict, request: Request):
     params = []
     
     allowed_fields = [
-        "name", "issue_number", "volume_id", "cv_id", "cv_slug", 
+        "name", "name_uk", "issue_number", "volume_id", "cv_id", "cv_slug", 
         "cv_img", "cover_date", "release_date", "description", "pages"
     ]
     
@@ -806,7 +806,7 @@ async def update_issue(issue_id: int, data: dict, request: Request):
                 story_idx = s.get("story_index", -1)
                 
                 real_story_id = None
-                if story_idx is not None and story_idx != -1:
+                if story_idx is not None and story_idx > 0:
                     real_story_id = story_ids_by_index.get(story_idx)
                 
                 if person_id and role:

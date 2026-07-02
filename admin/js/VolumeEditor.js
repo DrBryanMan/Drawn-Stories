@@ -1,7 +1,9 @@
 import { API } from '/static/js/helpers/api.js';
 import { LANG_MAP } from '/static/js/helpers/lang.js';
-import { comicVineImageUrl } from '/static/js/helpers/image.js';
+import { comicVineImageUrl, escapeHtmlAttribute } from '/static/js/helpers/image.js';
+import { STAFF_ROLES, getRoleSortIndex } from '/static/js/helpers/staff.js';
 import * as Utils from './editorUtils.js';
+import { openEditCharacterModal } from './EditCharacterModal.js';
 
 const ICON = {
     hash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"></line><line x1="4" y1="15" x2="20" y2="15"></line><line x1="10" y1="3" x2="8" y2="21"></line><line x1="16" y1="3" x2="14" y2="21"></line></svg>',
@@ -29,6 +31,8 @@ export class VolumeEditor {
         this.modal = null;
         this.allThemes = [];
         this.currentThemeIds = new Set();
+        this.staff = [];
+        this.characters = [];
     }
 
     async fetchExtraData() {
@@ -40,6 +44,26 @@ export class VolumeEditor {
             this.allThemes = themesRes.items || themesRes.data || [];
             this.currentThemeIds = new Set((volRes.themes || []).map(t => t.id));
             this.volume = { ...this.volume, ...volRes.volume };
+            const rawStaff = volRes.staff || [];
+            const groupedStaff = new Map();
+            rawStaff.forEach(p => {
+                const pid = p.person_id || p.id;
+                if (!groupedStaff.has(pid)) {
+                    groupedStaff.set(pid, {
+                        person_id: pid,
+                        name: p.name,
+                        image: p.image,
+                        roles: [p.role || 'writer']
+                    });
+                } else {
+                    const existing = groupedStaff.get(pid);
+                    if (p.role && !existing.roles.includes(p.role)) {
+                        existing.roles.push(p.role);
+                    }
+                }
+            });
+            this.staff = Array.from(groupedStaff.values());
+            this.characters = volRes.characters || [];
         } catch (err) {
             console.error('Error fetching extra data:', err);
         }
@@ -146,6 +170,403 @@ export class VolumeEditor {
         `;
     }
 
+    _buildRoleSelect(currentRoles, staffIndex) {
+        if (!Array.isArray(currentRoles)) currentRoles = [currentRoles];
+        const roles = currentRoles.filter(Boolean).map(r => r.trim().toLowerCase());
+        
+        const standardKeys = Object.keys(STAFF_ROLES);
+        const sortedKeys = standardKeys.sort((a, b) => getRoleSortIndex(a) - getRoleSortIndex(b));
+        
+        let allKeys = Array.from(new Set([...sortedKeys, ...roles]));
+        
+        let optionsHtml = '';
+        for (const key of allKeys) {
+            const isChecked = roles.includes(key);
+            const label = STAFF_ROLES[key] || escapeHtmlAttribute(key);
+            optionsHtml += `
+                <label class="staff-role-option" onclick="event.stopPropagation()">
+                    <input type="checkbox" value="${key}" data-staff-idx="${staffIndex}" ${isChecked ? 'checked' : ''}>
+                    ${label}
+                </label>
+            `;
+        }
+        
+        let buttonLabel = 'Оберіть ролі...';
+        if (roles.length > 0) {
+            buttonLabel = roles.map(r => STAFF_ROLES[r] || escapeHtmlAttribute(r)).join(', ');
+        }
+        
+        return `
+            <div class="staff-role-multiselect" data-staff-idx="${staffIndex}">
+                <div class="staff-role-text-toggle" onclick="const p = this.parentElement; document.querySelectorAll('.staff-role-multiselect.open').forEach(el => { if(el !== p) el.classList.remove('open'); }); p.classList.toggle('open'); event.stopPropagation();" title="Змінити ролі">
+                    ${buttonLabel}
+                </div>
+                <div class="staff-role-dropdown" onclick="event.stopPropagation()">
+                    ${optionsHtml}
+                </div>
+            </div>
+        `;
+    }
+
+    renderStaffList() {
+        const container = this.modal.querySelector('#volume-staff-container');
+        if (!container) return;
+        
+        if (this.staff.length === 0) {
+            container.innerHTML = `
+                <div style="font-size: 12px; color: var(--text-muted); padding: 8px; text-align: center; border: 1px dashed var(--border-s); border-radius: var(--r);">
+                     Немає призначених авторів.
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = `
+            <div class="staff-editor-grid">
+                ${this.staff.map((person, idx) => {
+                    const personImg = person.image ? comicVineImageUrl(person.image) : '';
+                    const imgHTML = personImg
+                        ? `<img class="staff-editor-avatar" src="${escapeHtmlAttribute(personImg)}" alt="${escapeHtmlAttribute(person.name)}">`
+                        : `<div class="staff-editor-avatar staff-editor-avatar--empty"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg></div>`;
+                    
+                    return `
+                        <div class="staff-editor-card" data-idx="${idx}">
+                            ${imgHTML}
+                            <div class="staff-editor-info">
+                                <span class="staff-editor-name" title="${escapeHtmlAttribute(person.name)}">${escapeHtmlAttribute(person.name)}</span>
+                                <div style="display: flex; gap: 8px; margin-top: 4px; width: 100%;">
+                                    ${this._buildRoleSelect(person.roles, idx)}
+                                </div>
+                            </div>
+                            <button type="button" class="btn-admin btn-admin--danger btn-delete-staff" data-staff-idx="${idx}" style="opacity: .5; padding: 0; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+        
+        container.querySelectorAll('.staff-role-dropdown input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const idx = parseInt(e.target.dataset.staffIdx);
+                const val = e.target.value;
+                if (!this.staff[idx].roles) this.staff[idx].roles = [];
+                if (e.target.checked) {
+                    if (!this.staff[idx].roles.includes(val)) this.staff[idx].roles.push(val);
+                } else {
+                    this.staff[idx].roles = this.staff[idx].roles.filter(r => r !== val);
+                }
+                
+                const multiselect = e.target.closest('.staff-role-multiselect');
+                const btn = multiselect.querySelector('.staff-role-text-toggle');
+                let buttonLabel = 'Оберіть ролі...';
+                if (this.staff[idx].roles.length > 0) {
+                    buttonLabel = this.staff[idx].roles.map(r => STAFF_ROLES[r] || escapeHtmlAttribute(r)).join(', ');
+                }
+                btn.textContent = buttonLabel;
+            });
+        });
+        
+        if (!this._globalClickAdded) {
+            document.addEventListener('click', () => {
+                document.querySelectorAll('.staff-role-multiselect.open').forEach(el => el.classList.remove('open'));
+            });
+            this._globalClickAdded = true;
+        }
+        
+        container.querySelectorAll('.btn-delete-staff').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(e.currentTarget.dataset.staffIdx);
+                this.staff.splice(idx, 1);
+                this.renderStaffList();
+            });
+        });
+    }
+
+    renderCharactersList() {
+        const container = this.modal.querySelector('#volume-characters-container');
+        if (!container) return;
+        
+        if (this.characters.length === 0) {
+            container.innerHTML = `
+                <div style="font-size: 12px; color: var(--text-muted); padding: 8px; text-align: center; border: 1px dashed var(--border-s); border-radius: var(--r);">
+                    Немає доданих персонажів.
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = `
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+                ${this.characters.map((char, idx) => {
+                    const displayName = char.name_uk || char.name || 'Невідомий персонаж';
+                    const img = char.image ? comicVineImageUrl(char.image) : '';
+                    const avatarHTML = img
+                        ? `<img src="${escapeHtmlAttribute(img)}" style="width: 40px; height: auto; aspect-ratio: 3 / 4; border-radius: var(--r); object-fit: cover;">`
+                        : `<div style="width: 32px; height: 32px; border-radius: 50%; background: var(--bg-2); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-muted);">?</div>`;
+                    
+                    return `
+                        <div class="appearance-editor-card" style="
+                            display: grid; grid-template-columns: 1.5fr 120px 32px 32px;
+                            align-items: center; gap: 8px; padding: 6px 10px; background: var(--bg-card);
+                            border: 1px solid var(--border-s); border-radius: var(--r);
+                        ">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                ${avatarHTML}
+                                <div style="font-weight: 600; font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    ${escapeHtmlAttribute(displayName)}
+                                </div>
+                            </div>
+                            
+                            <select class="admin-input appearance-item-role" data-idx="${idx}" style="height: 32px; font-size: 12px; padding: 2px 8px; margin-bottom: 0;">
+                                <option value="main" ${char.role === 'main' ? 'selected' : ''}>Основний</option>
+                                <option value="supporting" ${char.role === 'supporting' ? 'selected' : ''}>Другорядний</option>
+                            </select>
+
+                            <button type="button" class="btn-admin btn-admin--secondary btn-edit-character-modal" data-idx="${idx}" style="padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 0;" title="Редагувати профіль персонажа">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
+                            
+                            <button type="button" class="btn-admin btn-admin--danger btn-delete-character" data-idx="${idx}" style="padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 0;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+        
+        container.querySelectorAll('.appearance-item-role').forEach(select => {
+            select.addEventListener('change', (e) => {
+                const idx = parseInt(e.target.dataset.idx);
+                this.characters[idx].role = e.target.value;
+            });
+        });
+
+        container.querySelectorAll('.btn-edit-character-modal').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(e.currentTarget.dataset.idx);
+                const char = this.characters[idx];
+                openEditCharacterModal(char, (updatedChar) => {
+                    if (updatedChar === null) {
+                        this.characters.splice(idx, 1);
+                    } else {
+                        this.characters[idx] = {
+                            ...char,
+                            name: updatedChar.name,
+                            name_uk: updatedChar.name_uk,
+                            name_ro: updatedChar.name_ro,
+                            real_name: updatedChar.real_name,
+                            real_name_uk: updatedChar.real_name_uk,
+                            creators: updatedChar.creators,
+                            image: updatedChar.image,
+                            portret_img: updatedChar.portret_img,
+                            costume_img: updatedChar.costume_img,
+                            portret_costume_img: updatedChar.portret_costume_img
+                        };
+                    }
+                    this.renderCharactersList();
+                });
+            });
+        });
+        
+        container.querySelectorAll('.btn-delete-character').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(e.currentTarget.dataset.idx);
+                this.characters.splice(idx, 1);
+                this.renderCharactersList();
+            });
+        });
+    }
+
+    initStaffSearch() {
+        const btn = this.modal.querySelector('#btn-add-volume-staff');
+        const container = this.modal.querySelector('#volume-staff-search-wrap');
+        if (!btn || !container) return;
+        
+        btn.addEventListener('click', () => {
+            let wrap = container.querySelector('.staff-search-wrapper');
+            if (wrap) {
+                wrap.remove();
+                return;
+            }
+            
+            wrap = document.createElement('div');
+            wrap.className = 'staff-search-wrapper';
+            wrap.style.cssText = 'margin-top: 8px; position: relative; width: 100%; display: flex; flex-direction: column; gap: 4px;';
+            wrap.innerHTML = `
+                <input type="text" class="admin-input staff-search-input" placeholder="Введіть ім'я автора для пошуку..." autocomplete="off">
+                <div class="staff-search-results" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border: 1px solid var(--border-s); border-radius: var(--r); z-index: 10; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>
+            `;
+            
+            container.appendChild(wrap);
+            
+            const input = wrap.querySelector('.staff-search-input');
+            const results = wrap.querySelector('.staff-search-results');
+            input.focus();
+            
+            let timeout = null;
+            input.addEventListener('input', () => {
+                const q = input.value.trim();
+                clearTimeout(timeout);
+                if (!q) {
+                     results.style.display = 'none';
+                     results.innerHTML = '';
+                     return;
+                }
+                 
+                results.style.display = 'block';
+                results.innerHTML = '<div style="padding: 8px; font-size: 12px; color: var(--text-muted);">Пошук...</div>';
+                 
+                timeout = setTimeout(async () => {
+                     try {
+                         const res = await API.get('/personnel', { search: q, limit: 8 });
+                         const items = res.items || [];
+                         if (items.length === 0) {
+                             results.innerHTML = '<div style="padding: 8px; font-size: 12px; color: var(--text-muted);">Нічого не знайдено</div>';
+                             return;
+                         }
+                         
+                         results.innerHTML = items.map(p => {
+                             const personImg = p.image ? comicVineImageUrl(p.image) : '';
+                             const imgHTML = personImg
+                                 ? `<img src="${escapeHtmlAttribute(personImg)}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">`
+                                 : `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--bg-2); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text-muted);">?</div>`;
+                             return `
+                                 <div class="staff-search-result-item" data-id="${p.id}" data-name="${escapeHtmlAttribute(p.name)}" data-image="${escapeHtmlAttribute(p.image || '')}" style="
+                                     display: flex; align-items: center; gap: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px;
+                                     border-bottom: 1px solid var(--border-s); transition: background var(--t);
+                                     color: var(--text);
+                                 ">
+                                     ${imgHTML}
+                                     <span>${escapeHtmlAttribute(p.name)}</span>
+                                 </div>
+                             `;
+                         }).join('');
+                         
+                         results.querySelectorAll('.staff-search-result-item').forEach(item => {
+                             item.addEventListener('click', () => {
+                                 const personId = parseInt(item.dataset.id);
+                                 const name = item.dataset.name;
+                                 const image = item.dataset.image;
+                                 
+                                 const exists = this.staff.some(x => x.person_id === personId);
+                                 if (!exists) {
+                                     this.staff.push({
+                                         person_id: personId,
+                                         name: name,
+                                         image: image,
+                                         roles: ['writer']
+                                     });
+                                     this.renderStaffList();
+                                 }
+                                 wrap.remove();
+                             });
+                         });
+                     } catch (err) {
+                         console.error(err);
+                     }
+                }, 300);
+            });
+        });
+    }
+
+    initCharacterSearch() {
+        const btn = this.modal.querySelector('#btn-add-volume-character');
+        const container = this.modal.querySelector('#volume-characters-search-wrap');
+        if (!btn || !container) return;
+        
+        btn.addEventListener('click', () => {
+            let wrap = container.querySelector('.character-search-wrapper');
+            if (wrap) {
+                wrap.remove();
+                return;
+            }
+            
+            wrap = document.createElement('div');
+            wrap.className = 'character-search-wrapper';
+            wrap.style.cssText = 'margin-top: 8px; position: relative; width: 100%; display: flex; flex-direction: column; gap: 4px;';
+            wrap.innerHTML = `
+                <input type="text" class="admin-input character-search-input" placeholder="Введіть ім'я персонажа для пошуку..." autocomplete="off">
+                <div class="character-search-results" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border: 1px solid var(--border-s); border-radius: var(--r); z-index: 10; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>
+            `;
+            
+            container.appendChild(wrap);
+            
+            const input = wrap.querySelector('.character-search-input');
+            const DefenseResults = wrap.querySelector('.character-search-results');
+            input.focus();
+            
+            let timeout = null;
+            input.addEventListener('input', () => {
+                const q = input.value.trim();
+                clearTimeout(timeout);
+                if (!q) {
+                     DefenseResults.style.display = 'none';
+                     DefenseResults.innerHTML = '';
+                     return;
+                }
+                 
+                DefenseResults.style.display = 'block';
+                DefenseResults.innerHTML = '<div style="padding: 8px; font-size: 12px; color: var(--text-muted);">Пошук...</div>';
+                 
+                timeout = setTimeout(async () => {
+                     try {
+                         const res = await API.get('/issues/appearances/search/characters', { search: q });
+                         const items = res || [];
+                         if (items.length === 0) {
+                             DefenseResults.innerHTML = '<div style="padding: 8px; font-size: 12px; color: var(--text-muted);">Нічого не знайдено</div>';
+                             return;
+                         }
+                         
+                         DefenseResults.innerHTML = items.map(c => {
+                             const img = c.image ? comicVineImageUrl(c.image) : '';
+                             const imgHTML = img
+                                 ? `<img src="${escapeHtmlAttribute(img)}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">`
+                                 : `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--bg-2); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text-muted);">?</div>`;
+                             const displayName = c.name_uk || c.name || 'Невідомий персонаж';
+                             return `
+                                 <div class="character-search-result-item" data-id="${c.id}" data-name="${escapeHtmlAttribute(c.name)}" data-name-uk="${escapeHtmlAttribute(c.name_uk || '')}" data-image="${escapeHtmlAttribute(c.image || '')}" style="
+                                     display: flex; align-items: center; gap: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px;
+                                     border-bottom: 1px solid var(--border-s); transition: background var(--t);
+                                     color: var(--text);
+                                 ">
+                                     ${imgHTML}
+                                     <span>${escapeHtmlAttribute(displayName)}</span>
+                                 </div>
+                             `;
+                         }).join('');
+                         
+                         DefenseResults.querySelectorAll('.character-search-result-item').forEach(item => {
+                             item.addEventListener('click', () => {
+                                 const charId = parseInt(item.dataset.id);
+                                 const name = item.dataset.name;
+                                 const nameUk = item.dataset.nameUk;
+                                 const image = item.dataset.image;
+                                 
+                                 const exists = this.characters.some(x => x.id === charId);
+                                 if (!exists) {
+                                     this.characters.push({
+                                         id: charId,
+                                         name: name,
+                                         name_uk: nameUk || null,
+                                         image: image,
+                                         role: 'main'
+                                     });
+                                     this.renderCharactersList();
+                                 }
+                                 wrap.remove();
+                             });
+                         });
+                     } catch (err) {
+                         console.error(err);
+                     }
+                }, 300);
+            });
+        });
+    }
+
     async render() {
         await this.fetchExtraData();
         
@@ -181,114 +602,147 @@ export class VolumeEditor {
                     <button class="ds-modal-close">&times;</button>
                 </div>
                 <div class="ds-modal-body">
+                    <div class="editor-tabs-segmented">
+                        <button class="editor-tab-btn is-active" data-tab="info">Основна інформація</button>
+                        <button class="editor-tab-btn" data-tab="staff">Персонал</button>
+                        <button class="editor-tab-btn" data-tab="appearances">Появи</button>
+                    </div>
+
                     <form id="edit-volume-form">
-                        <div class="admin-form-grid">
-                            <div class="admin-form-group">
-                                <label class="admin-label">${ICON.hash} CV ID</label>
-                                <input type="number" name="cv_id" class="admin-input" value="${v.cv_id || ''}">
-                            </div>
-                            <div class="admin-form-group">
-                                <label class="admin-label">${ICON.link} CV Slug</label>
-                                <input type="text" name="cv_slug" class="admin-input" value="${v.cv_slug || ''}">
-                            </div>
-                            
-                            <div class="admin-form-group">
-                                <label class="admin-label">${ICON.database} MAL ID</label>
-                                <input type="number" name="mal_id" class="admin-input" value="${v.mal_id || ''}" placeholder="напр. 123456">
-                            </div>
-                            <div class="admin-form-group">
-                                <label class="admin-label">${ICON.link2} Hikka Slug</label>
-                                <input type="text" name="hikka_slug" class="admin-input" value="${v.hikka_slug || ''}" placeholder="напр. berserk-ek0mv">
-                            </div>
+                        <!-- Вкладка: Основна інформація -->
+                        <div class="editor-tab-content is-active" id="tab-info">
+                            <div class="admin-form-grid">
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${ICON.hash} CV ID</label>
+                                    <input type="number" name="cv_id" class="admin-input" value="${v.cv_id || ''}">
+                                </div>
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${ICON.link} CV Slug</label>
+                                    <input type="text" name="cv_slug" class="admin-input" value="${v.cv_slug || ''}">
+                                </div>
+                                
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${ICON.database} MAL ID</label>
+                                    <input type="number" name="mal_id" class="admin-input" value="${v.mal_id || ''}" placeholder="напр. 123456">
+                                </div>
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${ICON.link2} Hikka Slug</label>
+                                    <input type="text" name="hikka_slug" class="admin-input" value="${v.hikka_slug || ''}" placeholder="напр. berserk-ek0mv">
+                                </div>
 
-                            <div class="admin-form-group">
-                                <label class="admin-label">${ICON.hash} LocG ID</label>
-                                <input type="number" name="locg_id" class="admin-input" value="${v.locg_id || ''}">
-                            </div>
-                            <div class="admin-form-group">
-                                <label class="admin-label">${ICON.link} LocG Slug</label>
-                                <input type="text" name="locg_slug" class="admin-input" value="${v.locg_slug || ''}">
-                            </div>
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${ICON.hash} LocG ID</label>
+                                    <input type="number" name="locg_id" class="admin-input" value="${v.locg_id || ''}">
+                                </div>
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${ICON.link} LocG Slug</label>
+                                    <input type="text" name="locg_slug" class="admin-input" value="${v.locg_slug || ''}">
+                                </div>
 
-                            <div class="admin-form-group">
-                                <label class="admin-label">${ICON.calendar} Рік початку</label>
-                                <input type="number" name="start_year" class="admin-input" value="${v.start_year || ''}">
-                            </div>
-                            <div class="admin-form-group">
-                                <label class="admin-label">${ICON.type} Назва</label>
-                                <input type="text" name="name" class="admin-input" value="${v.name || ''}">
-                            </div>
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${ICON.calendar} Рік початку</label>
+                                    <input type="number" name="start_year" class="admin-input" value="${v.start_year || ''}">
+                                </div>
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${ICON.type} Назва</label>
+                                    <input type="text" name="name" class="admin-input" value="${v.name || ''}">
+                                </div>
 
-                            <div class="admin-form-group">
-                                <label class="admin-label">${ICON.type} Рідна назва</label>
-                                <input type="text" name="name_native" class="admin-input" value="${v.name_native || ''}">
-                            </div>
-                            <div class="admin-form-group">
-                                <label class="admin-label">${ICON.type} Назва UA</label>
-                                <input type="text" name="name_uk" class="admin-input" value="${v.name_uk || ''}">
-                            </div>
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${ICON.type} Рідна назва</label>
+                                    <input type="text" name="name_native" class="admin-input" value="${v.name_native || ''}">
+                                </div>
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${ICON.type} Назва UA</label>
+                                    <input type="text" name="name_uk" class="admin-input" value="${v.name_uk || ''}">
+                                </div>
 
-                            ${this._imgFieldHTML('cv_img', 'Обкладинка', v.cv_img || v.hikka_img, ICON.image)}
-                            ${this._imgFieldHTML('cover_img', 'Банер', v.cover_img, ICON.layout, true)}
+                                ${this._imgFieldHTML('cv_img', 'Обкладинка', v.cv_img || v.hikka_img, ICON.image)}
+                                ${this._imgFieldHTML('cover_img', 'Банер', v.cover_img, ICON.layout, true)}
 
-                            <div class="admin-form-group">
-                                <label class="admin-label">${ICON.externalLink} Посилання на сайт джерела</label>
-                                <input type="url" name="site_link" class="admin-input" value="${v.site_link || ''}" placeholder="https://...">
-                            </div>
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${ICON.externalLink} Посилання на сайт джерела</label>
+                                    <input type="url" name="site_link" class="admin-input" value="${v.site_link || ''}" placeholder="https://...">
+                                </div>
 
-                            <div class="admin-form-group admin-form-group--full">
-                                <label class="admin-label">${ICON.languages} Мова</label>
-                                <input type="hidden" name="lang" id="lang-hidden" value="${v.lang || ''}">
-                                <div id="lang-chips" style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.2rem;">
-                                    <span class="lang-chip${!v.lang ? ' lang-chip--active' : ''}"
-                                        data-code="" onclick="window._emSelectLang(this)">—</span>
-                                    ${Object.entries(LANG_MAP).map(([code, { flag, label }]) =>
-                                        `<span class="lang-chip${v.lang === code ? ' lang-chip--active' : ''}"
-                                            data-code="${code}" onclick="window._emSelectLang(this)" title="${label}">${flag}</span>`
-                                    ).join('')}
+                                <div class="admin-form-group admin-form-group--full">
+                                    <label class="admin-label">${ICON.languages} Мова</label>
+                                    <input type="hidden" name="lang" id="lang-hidden" value="${v.lang || ''}">
+                                    <div id="lang-chips" style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.2rem;">
+                                        <span class="lang-chip${!v.lang ? ' lang-chip--active' : ''}"
+                                            data-code="" onclick="window._emSelectLang(this)">—</span>
+                                        ${Object.entries(LANG_MAP).map(([code, { flag, label }]) =>
+                                            `<span class="lang-chip${v.lang === code ? ' lang-chip--active' : ''}"
+                                                data-code="${code}" onclick="window._emSelectLang(this)" title="${label}">${flag}</span>`
+                                        ).join('')}
+                                    </div>
+                                </div>
+
+                                <div class="admin-form-group admin-form-group--full">
+                                    <label class="admin-label">${ICON.alignLeft} Синопсис (UA)</label>
+                                    <textarea name="synopsis_ua" class="admin-textarea">${v.synopsis_ua || ''}</textarea>
+                                </div>
+
+                                <div class="admin-form-group admin-form-group--full">
+                                    <label class="admin-label">${ICON.alignLeft} Синопсис (EN)</label>
+                                    <textarea name="synopsis" class="admin-textarea">${v.synopsis || ''}</textarea>
+                                </div>
+
+                                <div class="admin-form-group admin-form-group--full">
+                                    <label class="admin-label">${ICON.alignLeft} Опис</label>
+                                    <textarea name="description" class="admin-textarea">${v.description || ''}</textarea>
+                                </div>
+
+                                <div class="admin-form-group admin-form-group--full">
+                                    <label class="admin-label">${ICON.building} Видавництво</label>
+                                    <div id="vol-pub-search-container">
+                                        ${Utils.publisherSearchHTML({
+                                            publisherId: v.publisher || '',
+                                            publisherName: v.publisher_name || '',
+                                            inputId: 'vol-pub-input',
+                                            hiddenId: 'vol-pub-id',
+                                            resultsId: 'vol-pub-results',
+                                            chipId: 'vol-pub-chip',
+                                            ICON: ICON
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div class="admin-form-group admin-form-group--full">
+                                    <label class="admin-label">${ICON.tags} Теми</label>
+                                    <input type="text" id="theme-search" class="admin-input" placeholder="Пошук тем..." style="margin-bottom:0.5rem; width:100%;"
+                                        oninput="window._emFilterThemesVol(this.value)">
+                                    <div id="themes-list" class="themes-checkbox-list">
+                                        ${Utils.buildThemeCheckboxListHTML(this.allThemes, this.currentThemeIds, 'window._emThemeChangeVol')}
+                                    </div>
+                                    <div id="vol-theme-chips" style="display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.5rem; min-height:0; align-items:center;">
+                                        ${Utils.buildThemeChipsHTML(this.allThemes.filter(t => this.currentThemeIds.has(t.id)), 'window._emRemoveThemeVol')}
+                                    </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="admin-form-group admin-form-group--full">
-                                <label class="admin-label">${ICON.alignLeft} Синопсис (UA)</label>
-                                <textarea name="synopsis_ua" class="admin-textarea">${v.synopsis_ua || ''}</textarea>
-                            </div>
-
-                            <div class="admin-form-group admin-form-group--full">
-                                <label class="admin-label">${ICON.alignLeft} Синопсис (EN)</label>
-                                <textarea name="synopsis" class="admin-textarea">${v.synopsis || ''}</textarea>
-                            </div>
-
-                            <div class="admin-form-group admin-form-group--full">
-                                <label class="admin-label">${ICON.alignLeft} Опис</label>
-                                <textarea name="description" class="admin-textarea">${v.description || ''}</textarea>
-                            </div>
-
-                            <div class="admin-form-group admin-form-group--full">
-                                <label class="admin-label">${ICON.building} Видавництво</label>
-                                <div id="vol-pub-search-container">
-                                    ${Utils.publisherSearchHTML({
-                                        publisherId: v.publisher || '',
-                                        publisherName: v.publisher_name || '',
-                                        inputId: 'vol-pub-input',
-                                        hiddenId: 'vol-pub-id',
-                                        resultsId: 'vol-pub-results',
-                                        chipId: 'vol-pub-chip',
-                                        ICON: ICON
-                                    })}
+                        <!-- Вкладка: Персонал -->
+                        <div class="editor-tab-content" id="tab-staff">
+                            <div class="admin-form-group admin-form-group--full" style="background: var(--bg-body); padding: 16px; border-radius: var(--r); border: 1px solid var(--border-s); margin-bottom: 16px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                                    <h4 style="margin: 0; font-family: var(--font-oswald); text-transform: uppercase; font-size: 15px; color: var(--text);">Персонал тома</h4>
+                                    <button type="button" class="btn-admin btn-admin--secondary" id="btn-add-volume-staff" style="padding: 4px 12px; font-size: 12px; height: 28px;">+ Додати автора</button>
                                 </div>
+                                <div id="volume-staff-container"></div>
+                                <div id="volume-staff-search-wrap"></div>
                             </div>
+                        </div>
 
-                            <div class="admin-form-group admin-form-group--full">
-                                <label class="admin-label">${ICON.tags} Теми</label>
-                                <input type="text" id="theme-search" class="admin-input" placeholder="Пошук тем..." style="margin-bottom:0.5rem; width:100%;"
-                                    oninput="window._emFilterThemesVol(this.value)">
-                                <div id="themes-list" class="themes-checkbox-list">
-                                    ${Utils.buildThemeCheckboxListHTML(this.allThemes, this.currentThemeIds, 'window._emThemeChangeVol')}
+                        <!-- Вкладка: Появи -->
+                        <div class="editor-tab-content" id="tab-appearances">
+                            <div class="admin-form-group admin-form-group--full" style="background: var(--bg-body); padding: 16px; border-radius: var(--r); border: 1px solid var(--border-s); margin-bottom: 16px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                                    <h4 style="margin: 0; font-family: var(--font-oswald); text-transform: uppercase; font-size: 15px; color: var(--text);">Персонажі тома</h4>
+                                    <button type="button" class="btn-admin btn-admin--secondary" id="btn-add-volume-character" style="padding: 4px 12px; font-size: 12px; height: 28px;">+ Додати персонажа</button>
                                 </div>
-                                <div id="vol-theme-chips" style="display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.5rem; min-height:0; align-items:center;">
-                                    ${Utils.buildThemeChipsHTML(this.allThemes.filter(t => this.currentThemeIds.has(t.id)), 'window._emRemoveThemeVol')}
-                                </div>
+                                <div id="volume-characters-container"></div>
+                                <div id="volume-characters-search-wrap"></div>
                             </div>
                         </div>
                     </form>
@@ -310,6 +764,18 @@ export class VolumeEditor {
         };
         document.addEventListener('keydown', this._handleEsc);
 
+        // Tab selection click handler
+        const tabBtns = modal.querySelectorAll('.editor-tab-btn');
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+                tabBtns.forEach(b => b.classList.toggle('is-active', b === btn));
+                modal.querySelectorAll('.editor-tab-content').forEach(c => {
+                    c.classList.toggle('is-active', c.id === `tab-${tab}`);
+                });
+            });
+        });
+
         this.modal = modal;
         document.body.appendChild(modal);
 
@@ -322,6 +788,14 @@ export class VolumeEditor {
             chipId: 'vol-pub-chip',
             API
         });
+
+        // Render staff and characters initially
+        this.renderStaffList();
+        this.renderCharactersList();
+
+        // Initialize search events
+        this.initStaffSearch();
+        this.initCharacterSearch();
     }
 
     _rebuildThemeChips(modal) {
@@ -355,6 +829,13 @@ export class VolumeEditor {
         
         const themeCheckboxes = this.modal.querySelectorAll('#themes-list input[type="checkbox"]:checked');
         data.theme_ids = Array.from(themeCheckboxes).map(cb => parseInt(cb.value));
+
+        // Add staff and characters data
+        data.staff = this.staff.flatMap(s => (s.roles || []).map(r => ({
+            person_id: s.person_id,
+            role: r
+        })));
+        data.characters = this.characters;
 
         const saveBtn = this.modal.querySelector('#edit-save');
         saveBtn.disabled = true;

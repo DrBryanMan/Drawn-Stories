@@ -43,7 +43,7 @@ async def get_characters(
 
     rows = db.get_all(
         f"""
-        SELECT c.id, c.cv_id, c.name, c.real_name, c.cv_slug, c.image, c.gender,
+        SELECT c.id, c.cv_id, c.name, c.name_uk, c.name_ro, c.real_name, c.cv_slug, c.image, c.gender,
                (SELECT COUNT(*) FROM issue_characters ic WHERE ic.character_id = c.id) as issue_count
         FROM characters c
         {where_clause}
@@ -72,6 +72,7 @@ async def update_character(character_id: int, data: dict, request: Request):
 
     name = to_null(data.get("name"))
     name_uk = to_null(data.get("name_uk"))
+    name_ro = to_null(data.get("name_ro"))
     real_name = to_null(data.get("real_name"))
     real_name_uk = to_null(data.get("real_name_uk"))
     creators = to_null(data.get("creators"))
@@ -86,11 +87,30 @@ async def update_character(character_id: int, data: dict, request: Request):
     db.execute(
         """
         UPDATE characters
-        SET name = ?, name_uk = ?, real_name = ?, real_name_uk = ?, creators = ?, 
+        SET name = ?, name_uk = ?, name_ro = ?, real_name = ?, real_name_uk = ?, creators = ?, 
             image = ?, portret_img = ?, costume_img = ?, portret_costume_img = ?, 
             date_last_updated = datetime('now', 'localtime')
         WHERE id = ?
         """,
-        [name, name_uk, real_name, real_name_uk, creators, image, portret_img, costume_img, portret_costume_img, character_id]
+        [name, name_uk, name_ro, real_name, real_name_uk, creators, image, portret_img, costume_img, portret_costume_img, character_id]
     )
     return {"message": "Персонаж успішно оновлений"}
+
+
+@router.delete("/{character_id}")
+async def delete_character(character_id: int, request: Request):
+    role = request.cookies.get("role")
+    if role not in {"moderator", "admin"}:
+        raise HTTPException(status_code=403, detail="Потрібні права модератора")
+    
+    db = get_db()
+    char = db.get_one("SELECT id FROM characters WHERE id = ?", [character_id])
+    if not char:
+        raise HTTPException(status_code=404, detail="Персонажа не знайдено")
+        
+    # Видаляємо зв'язки з випусками та томами
+    db.execute("DELETE FROM issue_characters WHERE character_id = ?", [character_id])
+    db.execute("DELETE FROM volume_characters WHERE character_id = ?", [character_id])
+    # Видаляємо самого персонажа
+    db.execute("DELETE FROM characters WHERE id = ?", [character_id])
+    return {"message": "Персонаж успішно видалений"}

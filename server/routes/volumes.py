@@ -213,6 +213,30 @@ async def get_volume_detail(volume_id: int, request: Request):
 
     magazine_children = []
 
+    characters = db.get_all(
+        """
+        SELECT c.id, c.cv_id, c.name, c.name_uk, c.name_ro, c.real_name, c.real_name_uk, c.image, c.cv_slug, vc.role, c.mal_id, c.hikka_slug
+        FROM volume_characters vc
+        JOIN characters c ON vc.character_id = c.id
+        WHERE vc.volume_id = ?
+        ORDER BY 
+          CASE vc.role WHEN 'main' THEN 0 WHEN 'supporting' THEN 1 ELSE 2 END,
+          COALESCE(c.name_uk, c.name) ASC
+        """,
+        [volume_id]
+    )
+
+    staff = db.get_all(
+        """
+        SELECT p.id, p.name, p.image, p.cv_slug, vp.role
+        FROM volume_persons vp
+        JOIN persons p ON vp.person_id = p.id
+        WHERE vp.volume_id = ?
+        ORDER BY vp.role ASC, p.name ASC
+        """,
+        [volume_id]
+    )
+
     return {
         "volume": volume_with_end,
         "items": items,
@@ -226,6 +250,8 @@ async def get_volume_detail(volume_id: int, request: Request):
         "translations": translations,
         "magazine_parents": magazine_parents,
         "magazine_children": magazine_children,
+        "characters": characters,
+        "staff": staff,
         "stats": {
             "issues": len(issues),
             "collections": len(collections),
@@ -278,6 +304,36 @@ def replace_manga_chapter_with_collection(db, chapter_id, collection_id):
     # Видаляємо сам manga_chapter
     db.conn.execute("DELETE FROM manga_chapters WHERE id = ?", [chapter_id])
 
+def sync_volume_staff_and_characters(db, volume_id, data):
+    # Sync staff if present
+    if "staff" in data and isinstance(data["staff"], list):
+        incoming_staff = data["staff"]
+        db.conn.execute("DELETE FROM volume_persons WHERE volume_id = ?", [volume_id])
+        for s in incoming_staff:
+            person_id = s.get("person_id")
+            role = s.get("role")
+            if person_id and role:
+                db.conn.execute(
+                    "INSERT OR IGNORE INTO volume_persons (volume_id, person_id, role) VALUES (?, ?, ?)",
+                    [volume_id, person_id, role]
+                )
+        db.conn.commit()
+
+    # Sync characters if present
+    if "characters" in data and isinstance(data["characters"], list):
+        incoming_characters = data["characters"]
+        db.conn.execute("DELETE FROM volume_characters WHERE volume_id = ?", [volume_id])
+        for c in incoming_characters:
+            char_id = c.get("id") or c.get("character_id")
+            role = c.get("role")
+            if char_id:
+                db.conn.execute(
+                    "INSERT OR IGNORE INTO volume_characters (volume_id, character_id, role) VALUES (?, ?, ?)",
+                    [volume_id, char_id, role]
+                )
+        db.conn.commit()
+
+
 @router.post("")
 async def create_volume(data: dict):
     db = get_db()
@@ -317,6 +373,8 @@ async def create_volume(data: dict):
     # Update themes if provided
     if "theme_ids" in data and isinstance(data["theme_ids"], list):
         replace_volume_themes(db, new_id, data["theme_ids"])
+        
+    sync_volume_staff_and_characters(db, new_id, data)
     
     return {"message": "Том успішно створено", "id": new_id}
 
@@ -356,6 +414,8 @@ async def update_volume(volume_id: int, data: dict):
     # Update themes if provided
     if "theme_ids" in data and isinstance(data["theme_ids"], list):
         replace_volume_themes(db, volume_id, data["theme_ids"])
+        
+    sync_volume_staff_and_characters(db, volume_id, data)
     
     return {"message": "Volume updated successfully"}
 
@@ -774,3 +834,27 @@ async def get_volume_collections_from_issues(volume_id: int, request: Request):
         result.append(col)
 
     return {"data": result}
+
+
+@router.get("/{volume_id}/characters")
+async def get_volume_characters(volume_id: int):
+    db = get_db()
+    
+    # Check if volume exists
+    volume = db.get_one("SELECT name, name_uk FROM volumes WHERE id = ?", [volume_id])
+    if not volume:
+        raise HTTPException(status_code=404, detail="Том не знайдено")
+        
+    rows = db.get_all(
+        """
+        SELECT c.id, c.cv_id, c.name, c.name_uk, c.name_ro, c.real_name, c.real_name_uk, c.image, c.cv_slug, vc.role, c.mal_id, c.hikka_slug
+        FROM volume_characters vc
+        JOIN characters c ON vc.character_id = c.id
+        WHERE vc.volume_id = ?
+        ORDER BY 
+          CASE vc.role WHEN 'main' THEN 0 WHEN 'supporting' THEN 1 ELSE 2 END,
+          COALESCE(c.name_uk, c.name) ASC
+        """,
+        [volume_id]
+    )
+    return {"volume": volume, "items": rows}

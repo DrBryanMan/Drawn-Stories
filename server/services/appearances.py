@@ -404,3 +404,191 @@ def scrape_volume_appearances_logic(db, scraper, volume_id, log_callback):
             
     log_callback(f"Завершено обробку тому! Успішно оброблено випусків: {success_count} з {len(issues)}.")
     return True
+
+
+def scrape_manga_characters_logic(db, volume_id, log_callback):
+    import urllib.request
+    import urllib.error
+    import json
+    import time
+
+    # 1. Отримуємо дані тому
+    vol = db.get_one("SELECT name, name_uk, mal_id FROM volumes WHERE id = ?", [volume_id])
+    if not vol:
+        log_callback(f"Помилка: Том з ID {volume_id} не знайдено.")
+        return False
+
+    mal_id = vol.get("mal_id")
+    vol_name = vol['name_uk'] or vol['name']
+    
+    if not mal_id:
+        log_callback(f"Помилка: У тому '{vol_name}' відсутній MAL ID.")
+        return False
+
+    log_callback(f"Початок парсингу персонажів для тому '{vol_name}' (ID: {volume_id}, MAL ID: {mal_id})")
+    
+    url = f"https://api.jikan.moe/v4/manga/{mal_id}/characters"
+    log_callback(f"Запит до API Jikan: {url}")
+    
+    # 2. Виконуємо HTTP запит
+    req = urllib.request.Request(
+        url, 
+        headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+    )
+    
+    try:
+        with urllib.request.urlopen(req, timeout=20) as response:
+            if response.status == 200:
+                res_data = json.loads(response.read().decode('utf-8'))
+            else:
+                log_callback(f"Помилка: Неочікувана відповідь сервера (Код: {response.status})")
+                return False
+    except urllib.error.HTTPError as he:
+        log_callback(f"Помилка HTTP під час запиту до Jikan: {he.code} {he.reason}")
+        if he.code == 429:
+            log_callback("Спробуйте пізніше (Jikan API обмеження запитів).")
+        return False
+    except Exception as e:
+        log_callback(f"Помилка мережі/з'єднання: {e}")
+        return False
+
+    characters_list = res_data.get("data", [])
+    if not characters_list:
+        log_callback("Попередження: Не знайдено персонажів для цієї манґи в MAL.")
+        db.conn.execute("DELETE FROM volume_characters WHERE volume_id = ?", [volume_id])
+        db.conn.commit()
+        return True
+
+    log_callback(f"Отримано персонажів з API: {len(characters_list)}")
+    
+    try:
+        db.conn.execute("BEGIN TRANSACTION")
+        
+        # Видаляємо існуючі зв'язки для цього тому
+        db.conn.execute("DELETE FROM volume_characters WHERE volume_id = ?", [volume_id])
+        
+        added_count = 0
+        
+        for item in characters_list:
+            char_data = item.get("character")
+            if not char_data:
+                continue
+                
+            mal_char_id = char_data.get("mal_id")
+            char_name = char_data.get("name")
+            
+            if not mal_char_id or not char_name:
+                continue
+                
+            # Очищуємо ім'я від коми (Lastname, Firstname -> Lastname Firstname)
+            if char_name and "," in char_name:
+                char_name = char_name.replace(",", "").strip()
+                
+            # Отримуємо роль та нормалізуємо
+            raw_role = item.get("role") or "Supporting"
+            role = "main" if raw_role.lower() == "main" else "supporting"
+            
+            # Отримуємо зображення (webp переважно)
+            images = char_data.get("images") or {}
+            webp_url = images.get("webp", {}).get("image_url")
+            jpg_url = images.get("jpg", {}).get("image_url")
+            image_url = webp_url or jpg_url
+            
+            # Робимо запит до Hikka API по mal_id
+            hikka_slug = None
+            name_native = None
+            name_uk = None
+            
+            HIKKA_CHARACTER_API_URL = ""
+            if HIKKA_CHARACTER_API_URL and mal_char_id:
+                try:
+                    import urllib.request
+                    import json
+                    hikka_url = f"{HIKKA_CHARACTER_API_URL}/{mal_char_id}"
+                    req_hikka = urllib.request.Request(
+                        hikka_url,
+                        headers={'User-Agent': 'Mozilla/5.0'}
+                    )
+                    with urllib.request.urlopen(req_hikka, timeout=5) as resp_hikka:
+                        if resp_hikka.status == 200:
+                            h_data = json.loads(resp_hikka.read().decode('utf-8'))
+                            hikka_slug = h_data.get("hikka_slug") or h_data.get("slug")
+                            name_native = h_data.get("name_ja") or h_data.get("name_native")
+                            name_uk = h_data.get("name_ua") or h_data.get("name_uk")
+                except Exception as ex:
+                    log_callback(f"Помилка запиту до Hikka API для MAL ID {mal_char_id}: {ex}")
+
+            # Шукаємо персонажа в БД
+            char_row = db.get_one("SELECT id, name FROM characters WHERE mal_id = ? LIMIT 1", [mal_char_id])
+            
+            if char_row:
+                char_db_id = char_row["id"]
+                db_name = char_row["name"]
+                
+                updates = []
+                params = []
+                
+                # Перевіряємо кому в імені вже наявного персонажа
+                cleaned_db_name = db_name
+                if db_name and "," in db_name:
+                    cleaned_db_name = db_name.replace(",", "").strip()
+                    
+                if cleaned_db_name != db_name:
+                    updates.append("name = ?")
+                    params.append(cleaned_db_name)
+                elif char_name != db_name:
+                    updates.append("name = ?")
+                    params.append(char_name)
+                    
+                if image_url:
+                    updates.append("image = ?")
+                    params.append(image_url)
+                if hikka_slug:
+                    updates.append("hikka_slug = ?")
+                    params.append(hikka_slug)
+                if name_native:
+                    updates.append("name_native = ?")
+                    params.append(name_native)
+                if name_uk:
+                    updates.append("name_uk = ?")
+                    params.append(name_uk)
+                    
+                if updates:
+                    params.append(char_db_id)
+                    db.conn.execute(
+                        f"UPDATE characters SET {', '.join(updates)} WHERE id = ?",
+                        params
+                    )
+                    log_callback(f"Оновлено персонажа '{char_name}' в БД (ID: {char_db_id}).")
+                else:
+                    log_callback(f"Персонаж '{char_name}' вже існує в БД (ID: {char_db_id}). Використовуємо його.")
+            else:
+                # Створюємо нового персонажа
+                cursor = db.conn.execute(
+                    """
+                    INSERT INTO characters (name, mal_id, image, hikka_slug, name_native, name_uk)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    [char_name, mal_char_id, image_url, hikka_slug, name_native, name_uk]
+                )
+                char_db_id = cursor.lastrowid
+                log_callback(f"Створено нового персонажа '{char_name}' (MAL ID: {mal_char_id}) в БД (ID: {char_db_id}).")
+            
+            # Зв'язуємо з томом
+            db.conn.execute(
+                """
+                INSERT OR IGNORE INTO volume_characters (volume_id, character_id, role)
+                VALUES (?, ?, ?)
+                """,
+                [volume_id, char_db_id, role]
+            )
+            added_count += 1
+            
+        db.conn.commit()
+        log_callback(f"Успішно імпортовано та пов'язано з томом: {added_count} персонажів.")
+        return True
+        
+    except Exception as e:
+        db.conn.rollback()
+        log_callback(f"Помилка під час транзакції в БД: {e}")
+        return False

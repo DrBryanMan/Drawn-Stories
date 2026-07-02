@@ -7,6 +7,7 @@ router = APIRouter(prefix="/api/personnel", tags=["personnel"])
 @router.get("")
 async def get_personnel(
     search: Optional[str] = None,
+    ids: Optional[str] = None,
     sort: Optional[str] = "issues",
     order_dir: Optional[str] = "desc",
     page: int = Query(1, ge=1),
@@ -19,6 +20,13 @@ async def get_personnel(
     if search:
         where_parts.append("ULOWER(p.name) LIKE ?")
         params.append(f"%{search.lower()}%")
+
+    if ids:
+        id_list = [int(x.strip()) for x in ids.split(",") if x.strip().isdigit()]
+        if id_list:
+            placeholders = ",".join("?" for _ in id_list)
+            where_parts.append(f"p.id IN ({placeholders})")
+            params.extend(id_list)
 
     where_clause = "WHERE " + " AND ".join(where_parts) if where_parts else ""
 

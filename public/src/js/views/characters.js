@@ -34,7 +34,7 @@ export async function renderCharacters(container, query) {
       <div class="catalog-layout">
         <div class="catalog-main-column">
           <main class="catalog-results">
-            <div class="characters-grid" id="characters-grid">
+            <div class="characters-grid" id="catalog-grid">
                <div class="loader-container"><div class="loader"></div></div>
             </div>
             <div class="pagination-wrap" id="char-pagination"></div>
@@ -83,7 +83,7 @@ export async function renderCharacters(container, query) {
 }
 
 async function fetchAndRenderCharacters(filterBar) {
-  const grid = document.getElementById('characters-grid');
+  const grid = document.getElementById('catalog-grid');
   const paginationWrap = document.getElementById('char-pagination');
   if (!grid) return;
 

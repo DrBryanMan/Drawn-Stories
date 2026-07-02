@@ -51,7 +51,10 @@ const VOLUME_CATEGORIES = [
   { key: 'collection_unconverted', label: 'Неконвертовані збірники' },
   { key: 'collection_no_origin', label: 'Манґа-збірник без оригіналу' },
   { key: 'mixed_sources',        label: 'Змішані джерела' },
+  { key: 'manga_no_staff',       label: 'Манґа-том без стафу' },
+  { key: 'manga_no_characters',  label: 'Манґа-том без персонажів' },
 ];
+
 
 // ── Collection categories ─────────────────────────────────
 const COLLECTION_CATEGORIES = [

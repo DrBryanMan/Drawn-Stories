@@ -578,6 +578,12 @@
   min-width: 0;
 }
 
+#catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1em;
+}
+
 .catalog-results {
   min-width: 0;
 }

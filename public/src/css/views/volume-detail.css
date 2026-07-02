@@ -2,10 +2,6 @@
    VOLUME DETAIL — v3
    Consistent with project design system (light, Manga Pulse)
 ══════════════════════════════════════════════════════ */
-.volume-detail {
-  padding-bottom: 64px;
-}
-
 /* ── Hero ─────────────────────────────────────────── */
 .volume-hero-band {
   position: relative;
@@ -50,10 +46,59 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: 250px minmax(0, 1fr);
+  grid-template-columns: 250px minmax(0, 1.2fr) 300px;
   gap: 36px;
-  padding-top: 28px;
-  padding-bottom: 32px;
+  padding: 1em 24px;
+}
+
+.volume-hero-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.volume-hero-aside .volume-hero-staff-block,
+.volume-hero-aside .volume-hero-relations-block {
+  background: var(--bg-card);
+  padding: .5em 1em;
+  border-radius: var(--r);
+  border: 1px solid var(--border-s);
+  width: 100%;
+}
+
+.volume-hero-aside .synopsis-header {
+  border-bottom: 1px solid var(--border-s);
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+}
+
+.volume-hero-aside .synopsis-title {
+  margin: 0;
+  font-size: 14px;
+  font-family: var(--font-oswald);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+@media (max-width: 1200px) {
+  .volume-hero {
+    grid-template-columns: 250px minmax(0, 1fr);
+  }
+  .volume-hero-aside {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .volume-hero {
+    grid-template-columns: 1fr;
+  }
+  .volume-cover-column {
+    justify-self: center;
+    max-width: 250px;
+  }
 }
 
 .volume-hero-band--banner .container {
@@ -266,49 +311,65 @@
 
 .source-links {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .source-links > a {
-  font-size: 14px;
-  font-weight: bold;
-  padding: 4px 8px;
-  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 6px;
+  border-radius: var(--r);
+  font-size: 12px;
+  font-weight: 700;
   text-decoration: none;
-  transition: all var(--t);
+  letter-spacing: 0.03em;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.source-links > a:hover {
-  background: var(--accent-glow);
+  transition: all var(--t);
 }
 
 .source-links > a[href*='comicvine'] {
   color: var(--source-cv) !important;
   background: color-mix(in srgb, var(--source-cv) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--source-cv) 20%, var(--border-s));
+}
+.source-links > a[href*='comicvine']:hover {
+  background: color-mix(in srgb, var(--source-cv) 16%, transparent);
 }
 
 .source-links > a[href*='hikka.io'] {
   color: var(--source-hikka) !important;
   background: color-mix(in srgb, var(--source-hikka) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--source-hikka) 20%, var(--border-s));
+}
+.source-links > a[href*='hikka.io']:hover {
+  background: color-mix(in srgb, var(--source-hikka) 16%, transparent);
 }
 
 .source-links > a[href*='myanimelist'] {
   color: var(--source-mal) !important;
   background: color-mix(in srgb, var(--source-mal) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--source-mal) 20%, var(--border-s));
+}
+.source-links > a[href*='myanimelist']:hover {
+  background: color-mix(in srgb, var(--source-mal) 16%, transparent);
 }
 
 .source-links > a:not([href*='comicvine']):not([href*='hikka']):not([href*='myanimelist']) {
   color: var(--accent) !important;
   background: var(--accent-glow);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border-s));
+}
+.source-links > a:not([href*='comicvine']):not([href*='hikka']):not([href*='myanimelist']):hover {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
 .source-links > a svg {
-  margin-left: 4px;
-  opacity: 0.6;
+  margin-left: 0;
+  opacity: 1;
 }
 
 /* ── Hero info ────────────────────────────────────── */
@@ -373,28 +434,24 @@
 
 .volume-ratings {
   display: grid;
-  width: fit-content;
+  grid-template-columns: repeat(3, 1fr);
   background: var(--bg-card);
   padding: .2em;
   border-radius: var(--r);
-  margin-left: auto;
 }
 
 .rating-item {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 4px 10px;
   border-radius: 8px;
 }
 
-.rating-main {
-  background: var(--accent-glow);
-}
-
 .rating-item .rating-value {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 500;
   color: var(--text);
 }
@@ -406,7 +463,7 @@
 }
 
 .rating-item .rating-label {
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -449,11 +506,6 @@
   color: var(--text-muted);
 }
 
-/* Synopsis tabs */
-.volume-synopsis {
-  max-width: 700px;
-}
-
 .synopsis-header {
   display: flex;
   gap: .5em;
@@ -464,7 +516,7 @@
 .synopsis-title {
   margin: 0;
   font-family: var(--font-oswald);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 800;
   color: var(--text);
   text-transform: uppercase;
@@ -493,7 +545,7 @@
 }
 
 .synopsis-tab.is-active {
-  background: var(--bg-card);
+  background: var(--accent-glow);
   color: var(--accent);
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
@@ -553,6 +605,7 @@
 
 .volume-hero-relations {
   display: flex;
+  flex-wrap: wrap;
   /* grid-template-columns: repeat(auto-fit, minmax(260px, 320px)); */
   gap: 10px;
 }
@@ -564,7 +617,8 @@
   align-items: center;
   gap: 12px;
   min-height: 72px;
-  max-width: 320px;
+  width: 100%;
+  /* max-width: 260px; */
   padding: 10px;
   border: 1px solid var(--border-s);
   border-radius: var(--r);
@@ -774,30 +828,6 @@
   color: #5b21b6;
 }
 
-.volume-section-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 14px;
-}
-
-.volume-section-heading h2 {
-  margin: 0;
-  color: var(--text);
-  font-family: var(--font-oswald);
-  font-size: 18px;
-  font-weight: 800;
-}
-
-.volume-section-heading span {
-  display: block;
-  margin-top: 2px;
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 650;
-}
-
 .volume-translations-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -995,7 +1025,7 @@
 .issues-view-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 20px;
+  gap: 1em;
 }
 
 .issue-grid-card {
@@ -1623,26 +1653,6 @@
   font-weight: 600;
 }
 
-.volume-hero-admin-actions {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: color-mix(in srgb, var(--bg-card) 88%, transparent);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border);
-  border-radius: var(--r-xl);
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
-  z-index: 1000;
-  width: max-content;
-  max-width: calc(100vw - 32px);
-  box-sizing: border-box;
-}
-
 
 /* ── Parent Volumes Summary (vol-summary) ────────────────── */
 .vol-summary {
@@ -1762,4 +1772,128 @@
 
 .table-membership-btn.is-disabled:hover .membership-count {
   color: var(--text-2) !important;
+}
+
+
+/* ── Volume Characters & Role Badges ── */
+.char-role-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  padding: 3px 5px;
+  border-radius: 4px;
+  line-height: normal;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  backdrop-filter: blur(4px);
+  z-index: 2;
+}
+
+.char-role-badge.role-main {
+  background: rgba(235, 94, 40, 0.85); /* accent/orange */
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.char-role-badge.role-supporting {
+  background: rgba(30, 41, 59, 0.8); /* slate/dark */
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Volume Page Tabs & Tab Panes (v4) ── */
+.volume-hero-tabs-band {
+  background: var(--bg-card);
+  padding: 10px 0;
+  position: relative;
+  z-index: 2;
+}
+
+.volume-page-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  background: var(--bg-body);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border-s);
+  width: fit-content;
+}
+
+.volume-page-tab-btn {
+  border: none;
+  background: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-family: var(--font-oswald);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--t);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.volume-page-tab-btn:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--bg-card-h);
+}
+
+.volume-page-tab-btn.is-active {
+  background: var(--accent-glow);
+  color: var(--accent);
+}
+
+.volume-page-tab-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.volume-page-tab-btn .tab-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.8;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* Tab Panes and Transitions */
+.volume-tab-pane {
+  display: none;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.volume-tab-pane.is-active {
+  display: block;
+}
+
+.volume-tab-pane.is-fade-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .volume-page-tabs {
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    flex-wrap: nowrap;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .volume-page-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .volume-page-tab-btn {
+    flex: 0 0 auto;
+  }
 }

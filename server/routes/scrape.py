@@ -2,7 +2,7 @@ import asyncio
 from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import StreamingResponse
 from ..db import get_db
-from server.services.appearances import create_scraper_instance, scrape_issue_appearances_logic, scrape_volume_appearances_logic
+from server.services.appearances import create_scraper_instance, scrape_issue_appearances_logic, scrape_volume_appearances_logic, scrape_manga_characters_logic
 
 router = APIRouter(prefix="/api/scrape", tags=["scrape"])
 
@@ -82,5 +82,41 @@ async def scrape_volume_appearances(volume_id: int, request: Request, _ = Depend
             yield "data: [DONE] Парсинг тому завершено успішно!\n\n"
         else:
             yield "data: [ERROR] Помилка під час парсингу тому.\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@router.get("/manga-characters/{volume_id}")
+async def scrape_manga_characters(volume_id: int, request: Request, _ = Depends(require_moderator)):
+    db = get_db()
+    queue = asyncio.Queue()
+    loop = asyncio.get_running_loop()
+
+    def log_callback(msg: str):
+        loop.call_soon_threadsafe(queue.put_nowait, msg)
+
+    async def event_generator():
+        # Run synchronous scraping in a separate thread to prevent blocking the event loop
+        task = asyncio.create_task(
+            asyncio.to_thread(
+                scrape_manga_characters_logic,
+                db, volume_id, log_callback
+            )
+        )
+
+        while not task.done() or not queue.empty():
+            try:
+                msg = await asyncio.wait_for(queue.get(), timeout=0.5)
+                yield f"data: {msg}\n\n"
+                queue.task_done()
+            except asyncio.TimeoutError:
+                # keep-alive comment to keep connection active
+                yield ": keep-alive\n\n"
+        
+        result = task.result()
+        if result:
+            yield "data: [DONE] Парсинг персонажів успішно завершено!\n\n"
+        else:
+            yield "data: [ERROR] Помилка під час парсингу персонажів.\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

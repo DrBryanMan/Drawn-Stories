@@ -2,6 +2,7 @@ import { API } from '/static/js/helpers/api.js';
 import { comicVineImageUrl, escapeHtmlAttribute } from '/static/js/helpers/image.js';
 import { STAFF_ROLES, getRoleSortIndex } from '/static/js/helpers/staff.js';
 import { openAddReprintModal } from '/static/js/components/addReprintModal.js';
+import { openEditCharacterModal } from './EditCharacterModal.js';
 
 const ICON = {
     hash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"></line><line x1="4" y1="15" x2="20" y2="15"></line><line x1="10" y1="3" x2="8" y2="21"></line><line x1="16" y1="3" x2="14" y2="21"></line></svg>',
@@ -21,26 +22,48 @@ export class IssueEditor {
         // Відфільтровуємо імпортовані історії
         const localStories = (stories || []).filter(s => !s.is_imported && !s.is_virtual);
         this.stories = JSON.parse(JSON.stringify(localStories));
+        if (this.stories.length === 0) {
+            this.stories.push({
+                id: null,
+                name_original: this.issue.name || '',
+                name_ua: this.issue.name_uk || '',
+                order_num: 1
+            });
+        } else if (this.stories.length > 0) {
+            this.stories[0].name_original = this.issue.name || '';
+            this.stories[0].name_ua = this.issue.name_uk || '';
+        }
         this.reprints = JSON.parse(JSON.stringify(reprints || []));
         this.onSave = onSave;
         this.modal = null;
         
         // Відфільтровуємо імпортований стаф і прив'язуємо лише локальний стаф до індексів історій
         const localPersons = (persons || []).filter(p => !p.is_imported);
-        this.staff = localPersons.map(p => {
-            let storyIndex = -1;
+        const groupedStaff = new Map();
+        localPersons.forEach(p => {
+            let storyIndex = 0;
             if (p.story_id) {
                 storyIndex = this.stories.findIndex(s => s.id === p.story_id || s.client_story_id === p.story_id);
+                if (storyIndex === -1) storyIndex = 0;
             }
-            return {
-                id: p.id,
-                person_id: p.person_id,
-                name: p.name,
-                image: p.image,
-                role: p.role || 'writer',
-                story_index: storyIndex
-            };
+            const key = `${p.person_id}_${storyIndex}`;
+            if (!groupedStaff.has(key)) {
+                groupedStaff.set(key, {
+                    id: p.id,
+                    person_id: p.person_id,
+                    name: p.name,
+                    image: p.image,
+                    roles: [p.role || 'writer'],
+                    story_index: storyIndex
+                });
+            } else {
+                const existing = groupedStaff.get(key);
+                if (p.role && !existing.roles.includes(p.role)) {
+                    existing.roles.push(p.role);
+                }
+            }
         });
+        this.staff = Array.from(groupedStaff.values());
 
         // Ініціалізуємо локальні появи
         this.appearances = {
@@ -198,7 +221,7 @@ export class IssueEditor {
     }
 
     _buildAssignmentSelect(currentValue, staffIndex) {
-        let options = `<option value="-1" ${currentValue === -1 ? 'selected' : ''}>Основна</option>`;
+        let options = '';
         this.stories.forEach((story, idx) => {
             const title = story.name_ua || story.name_original || `Історія ${idx + 1}`;
             options += `<option value="${idx}" ${currentValue === idx ? 'selected' : ''}>${escapeHtmlAttribute(title)}</option>`;
@@ -210,24 +233,41 @@ export class IssueEditor {
         `;
     }
 
-    _buildRoleSelect(currentValue, staffIndex) {
-        let options = '';
-        const standardKeys = Object.keys(STAFF_ROLES);
-        const cleanCurrent = currentValue ? currentValue.trim().toLowerCase() : '';
+    _buildRoleSelect(currentRoles, staffIndex) {
+        if (!Array.isArray(currentRoles)) currentRoles = [currentRoles];
+        const roles = currentRoles.filter(Boolean).map(r => r.trim().toLowerCase());
         
-        if (cleanCurrent && !standardKeys.includes(cleanCurrent)) {
-            options += `<option value="${currentValue}" selected>${escapeHtmlAttribute(currentValue)}</option>`;
+        const standardKeys = Object.keys(STAFF_ROLES);
+        const sortedKeys = standardKeys.sort((a, b) => getRoleSortIndex(a) - getRoleSortIndex(b));
+        
+        let allKeys = Array.from(new Set([...sortedKeys, ...roles]));
+        
+        let optionsHtml = '';
+        for (const key of allKeys) {
+            const isChecked = roles.includes(key);
+            const label = STAFF_ROLES[key] || escapeHtmlAttribute(key);
+            optionsHtml += `
+                <label class="staff-role-option" onclick="event.stopPropagation()">
+                    <input type="checkbox" value="${key}" data-staff-idx="${staffIndex}" ${isChecked ? 'checked' : ''}>
+                    ${label}
+                </label>
+            `;
         }
         
-        const sortedKeys = Object.keys(STAFF_ROLES).sort((a, b) => getRoleSortIndex(a) - getRoleSortIndex(b));
-        for (const key of sortedKeys) {
-            options += `<option value="${key}" ${cleanCurrent === key ? 'selected' : ''}>${STAFF_ROLES[key]}</option>`;
+        let buttonLabel = 'Оберіть ролі...';
+        if (roles.length > 0) {
+            buttonLabel = roles.map(r => STAFF_ROLES[r] || escapeHtmlAttribute(r)).join(', ');
         }
         
         return `
-            <select class="admin-input staff-role-select" data-staff-idx="${staffIndex}" style="height: 25px; padding: 4px 8px; font-size: 13px; max-width: 140px;">
-                ${options}
-            </select>
+            <div class="staff-role-multiselect" data-staff-idx="${staffIndex}">
+                <div class="staff-role-text-toggle" onclick="const p = this.parentElement; document.querySelectorAll('.staff-role-multiselect.open').forEach(el => { if(el !== p) el.classList.remove('open'); }); p.classList.toggle('open'); event.stopPropagation();" title="Змінити ролі">
+                    ${buttonLabel}
+                </div>
+                <div class="staff-role-dropdown" onclick="event.stopPropagation()">
+                    ${optionsHtml}
+                </div>
+            </div>
         `;
     }
 
@@ -442,19 +482,24 @@ export class IssueEditor {
             btn.addEventListener('click', (e) => {
                 const idx = parseInt(e.currentTarget.dataset.index);
                 const char = this.appearances.characters[idx];
-                this.openEditCharacterModal(char, (updatedChar) => {
-                    this.appearances.characters[idx] = {
-                        ...char,
-                        name: updatedChar.name,
-                        name_uk: updatedChar.name_uk,
-                        real_name: updatedChar.real_name,
-                        real_name_uk: updatedChar.real_name_uk,
-                        creators: updatedChar.creators,
-                        image: updatedChar.image,
-                        portret_img: updatedChar.portret_img,
-                        costume_img: updatedChar.costume_img,
-                        portret_costume_img: updatedChar.portret_costume_img
-                    };
+                openEditCharacterModal(char, (updatedChar) => {
+                    if (updatedChar === null) {
+                        this.appearances.characters.splice(idx, 1);
+                    } else {
+                        this.appearances.characters[idx] = {
+                            ...char,
+                            name: updatedChar.name,
+                            name_uk: updatedChar.name_uk,
+                            name_ro: updatedChar.name_ro,
+                            real_name: updatedChar.real_name,
+                            real_name_uk: updatedChar.real_name_uk,
+                            creators: updatedChar.creators,
+                            image: updatedChar.image,
+                            portret_img: updatedChar.portret_img,
+                            costume_img: updatedChar.costume_img,
+                            portret_costume_img: updatedChar.portret_costume_img
+                        };
+                    }
                     this.renderAppearancesForStory(storyNum);
                 });
             });
@@ -618,116 +663,7 @@ export class IssueEditor {
         });
     }
 
-    openEditCharacterModal(char, onUpdate) {
-        const modalId = 'admin-edit-character-modal';
-        let modal = document.getElementById(modalId);
-        if (modal) modal.remove();
-        
-        modal = document.createElement('div');
-        modal.id = modalId;
-        modal.className = 'admin-modal-overlay';
-        modal.style.cssText = `
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.6); display: flex; align-items: center;
-            justify-content: center; z-index: 10000;
-        `;
-        
-        modal.innerHTML = `
-            <div class="admin-modal-content" style="
-                background: var(--bg-card); border: 1px solid var(--border-s);
-                border-radius: var(--r-lg); width: 560px; padding: 24px;
-                box-shadow: 0 10px 25px rgba(0,0,0,0.25); display: flex;
-                flex-direction: column; gap: 16px; position: relative;
-            ">
-                <h4 style="margin: 0; font-family: var(--font-oswald); text-transform: uppercase; font-size: 16px; color: var(--text);">Редагування персонажа</h4>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Оригінальне ім'я</label>
-                        <input type="text" id="edit-char-name" class="admin-input" value="${escapeHtmlAttribute(char.name || '')}" style="margin-bottom: 0;">
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Українське ім'я</label>
-                        <input type="text" id="edit-char-name-uk" class="admin-input" value="${escapeHtmlAttribute(char.name_uk || '')}" style="margin-bottom: 0;">
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Реальне ім'я</label>
-                        <input type="text" id="edit-char-real-name" class="admin-input" value="${escapeHtmlAttribute(char.real_name || '')}" style="margin-bottom: 0;">
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Реальне ім'я (Укр)</label>
-                        <input type="text" id="edit-char-real-name-uk" class="admin-input" value="${escapeHtmlAttribute(char.real_name_uk || '')}" style="margin-bottom: 0;">
-                    </div>
-                </div>
 
-                <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Автори (IDs через кому)</label>
-                    <input type="text" id="edit-char-creators" class="admin-input" value="${escapeHtmlAttribute(char.creators || '')}" placeholder="напр. 12, 45, 87" style="margin-bottom: 0;">
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Зображення (URL)</label>
-                        <input type="text" id="edit-char-image" class="admin-input" value="${escapeHtmlAttribute(char.image || '')}" placeholder="URL" style="margin-bottom: 0;">
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Портрет (Звичайний)</label>
-                        <input type="text" id="edit-char-portret-img" class="admin-input" value="${escapeHtmlAttribute(char.portret_img || '')}" placeholder="URL" style="margin-bottom: 0;">
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Костюм (Повний зріст)</label>
-                        <input type="text" id="edit-char-costume-img" class="admin-input" value="${escapeHtmlAttribute(char.costume_img || '')}" placeholder="URL" style="margin-bottom: 0;">
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Костюм (Портрет)</label>
-                        <input type="text" id="edit-char-portret-costume-img" class="admin-input" value="${escapeHtmlAttribute(char.portret_costume_img || '')}" placeholder="URL" style="margin-bottom: 0;">
-                    </div>
-                </div>
-                
-                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    <button type="button" class="btn-admin btn-admin--secondary btn-close-char-modal" style="margin-bottom: 0;">Скасувати</button>
-                    <button type="button" class="btn-admin btn-admin--primary btn-save-char-modal" style="margin-bottom: 0;">Зберегти</button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        const close = () => modal.remove();
-        modal.querySelector('.btn-close-char-modal').addEventListener('click', close);
-
-        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-
-        const onEsc = (e) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); } };
-        document.addEventListener('keydown', onEsc);
-        
-        modal.querySelector('.btn-save-char-modal').addEventListener('click', async () => {
-            const updated = {
-                name: modal.querySelector('#edit-char-name').value.trim(),
-                name_uk: modal.querySelector('#edit-char-name-uk').value.trim() || null,
-                real_name: modal.querySelector('#edit-char-real-name').value.trim() || null,
-                real_name_uk: modal.querySelector('#edit-char-real-name-uk').value.trim() || null,
-                creators: modal.querySelector('#edit-char-creators').value.trim() || null,
-                image: modal.querySelector('#edit-char-image').value.trim() || null,
-                portret_img: modal.querySelector('#edit-char-portret-img').value.trim() || null,
-                costume_img: modal.querySelector('#edit-char-costume-img').value.trim() || null,
-                portret_costume_img: modal.querySelector('#edit-char-portret-costume-img').value.trim() || null
-            };
-            
-            if (!updated.name) {
-                alert('Оригінальне ім\'я обов\'язкове');
-                return;
-            }
-            
-            try {
-                await API.put(`/characters/${char.id}`, updated);
-                onUpdate(updated);
-                close();
-            } catch (err) {
-                alert('Помилка збереження: ' + err.message);
-            }
-        });
-    }
 
     openEditAppearanceModal(typeKey, item, onUpdate) {
         const modalId = 'admin-edit-appearance-modal';
@@ -809,11 +745,12 @@ export class IssueEditor {
         
         const currentValue = select.value ? parseInt(select.value) : 0;
         
-        let html = '<option value="0">Основна історія (0)</option>';
+        let html = '';
         this.stories.forEach((story, idx) => {
             const orderNum = story.order_num ?? (idx + 1);
-            const title = story.name_ua || story.name_original || `Історія ${orderNum}`;
-            html += `<option value="${orderNum}">Історія ${orderNum}: ${escapeHtmlAttribute(title)}</option>`;
+            const title = story.name_ua || story.name_original || `Історія ${idx + 1}`;
+            const val = idx === 0 ? 0 : orderNum;
+            html += `<option value="${val}">Історія ${idx + 1}: ${escapeHtmlAttribute(title)}</option>`;
         });
         
         select.innerHTML = html;
@@ -831,7 +768,7 @@ export class IssueEditor {
         const filtered = this.staff
             .map((s, idx) => ({ s, idx }))
             .filter(item => item.s.story_index === storyIndex)
-            .sort((a, b) => getRoleSortIndex(a.s.role) - getRoleSortIndex(b.s.role));
+            .sort((a, b) => getRoleSortIndex((a.s.roles || [])[0]) - getRoleSortIndex((b.s.roles || [])[0]));
         
         if (filtered.length === 0) {
             container.innerHTML = `
@@ -857,11 +794,11 @@ export class IssueEditor {
                             <div class="staff-editor-info">
                                 <span class="staff-editor-name" title="${escapeHtmlAttribute(person.name)}">${escapeHtmlAttribute(person.name)}</span>
                                 <div style="display: flex; gap: 8px; margin-top: 4px; width: 100%;">
-                                    ${this._buildRoleSelect(person.role, item.idx)}
+                                    ${this._buildRoleSelect(person.roles, item.idx)}
                                     ${this._buildAssignmentSelect(person.story_index, item.idx)}
                                 </div>
                             </div>
-                            <button type="button" class="btn-admin btn-admin--danger btn-delete-staff" data-staff-idx="${item.idx}" style="opacity: .5; padding: 0; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; align-self: end;">
+                            <button type="button" class="btn-admin btn-admin--danger btn-delete-staff" data-staff-idx="${item.idx}" style="opacity: .5; padding: 0; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                             </button>
                         </div>
@@ -870,12 +807,33 @@ export class IssueEditor {
             </div>
         `;
         
-        container.querySelectorAll('.staff-role-select').forEach(select => {
-            select.addEventListener('change', (e) => {
+        container.querySelectorAll('.staff-role-dropdown input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
                 const idx = parseInt(e.target.dataset.staffIdx);
-                this.staff[idx].role = e.target.value;
+                const val = e.target.value;
+                if (!this.staff[idx].roles) this.staff[idx].roles = [];
+                if (e.target.checked) {
+                    if (!this.staff[idx].roles.includes(val)) this.staff[idx].roles.push(val);
+                } else {
+                    this.staff[idx].roles = this.staff[idx].roles.filter(r => r !== val);
+                }
+                
+                const multiselect = e.target.closest('.staff-role-multiselect');
+                const btn = multiselect.querySelector('.staff-role-text-toggle');
+                let buttonLabel = 'Оберіть ролі...';
+                if (this.staff[idx].roles.length > 0) {
+                    buttonLabel = this.staff[idx].roles.map(r => STAFF_ROLES[r] || escapeHtmlAttribute(r)).join(', ');
+                }
+                btn.textContent = buttonLabel;
             });
         });
+        
+        if (!this._globalClickAdded) {
+            document.addEventListener('click', () => {
+                document.querySelectorAll('.staff-role-multiselect.open').forEach(el => el.classList.remove('open'));
+            });
+            this._globalClickAdded = true;
+        }
         
         container.querySelectorAll('.staff-assignment-select').forEach(select => {
             select.addEventListener('change', (e) => {
@@ -896,7 +854,6 @@ export class IssueEditor {
     }
 
     renderAllStaffLists() {
-        this.renderStaffList('main-staff-container', -1);
         this.stories.forEach((story, index) => {
             this.renderStaffList(`story-staff-container-${index}`, index);
         });
@@ -925,9 +882,11 @@ export class IssueEditor {
                     const issueNum = isOriginal ? r.reprint_number : r.original_number;
                     
                     const issueName = isOriginal ? r.reprint_name : r.original_name;
-                    let displayTitle = issueName ? `Основна: ${issueName}` : 'Основна історія';
-
-                    if (r.story_num !== null && r.story_num !== undefined && r.story_num !== 0) {
+                    let displayTitle = '';
+                    if (r.story_num === 0 || r.story_num === null || r.story_num === undefined) {
+                        const storyName = r.story_name_ua || r.story_name_original || issueName || 'Без назви';
+                        displayTitle = `Історія 1: ${storyName}`;
+                    } else {
                         const storyName = r.story_name_ua || r.story_name_original || 'Без назви';
                         displayTitle = `Історія ${r.story_num}: ${storyName}`;
                     }
@@ -1098,7 +1057,7 @@ export class IssueEditor {
                                     person_id: personId,
                                     name: name,
                                     image: image,
-                                    role: 'writer',
+                                    roles: ['writer'],
                                     story_index: targetStoryIndex
                                 });
                                 
@@ -1174,10 +1133,18 @@ export class IssueEditor {
             row.querySelector('.story-input-original').addEventListener('input', (e) => {
                 this.stories[index].name_original = e.target.value;
                 this.renderAllStaffLists(); // Щоб оновити назви у селектах призначення
+                
+                if (index === 0) {
+                    this.issue.name = e.target.value;
+                }
             });
             row.querySelector('.story-input-ua').addEventListener('input', (e) => {
                 this.stories[index].name_ua = e.target.value;
                 this.renderAllStaffLists();
+                
+                if (index === 0) {
+                    this.issue.name_uk = e.target.value;
+                }
             });
             row.querySelector('.story-input-order').addEventListener('input', (e) => {
                 this.stories[index].order_num = parseInt(e.target.value) || 0;
@@ -1260,10 +1227,7 @@ export class IssueEditor {
                                     <input type="text" name="cv_slug" class="admin-input" value="${i.cv_slug || ''}">
                                 </div>
 
-                                <div class="admin-form-group">
-                                    <label class="admin-label">${ICON.type} Назва випуску</label>
-                                    <input type="text" name="name" class="admin-input" value="${i.name || ''}">
-                                </div>
+
                                 <div class="admin-form-group">
                                     <label class="admin-label">${ICON.hash} Номер випуску</label>
                                     <input type="text" name="issue_number" class="admin-input" value="${i.issue_number || ''}">
@@ -1299,19 +1263,7 @@ export class IssueEditor {
 
                         <!-- Вкладка: Історії -->
                         <div class="editor-tab-content" id="tab-stories">
-                            <div class="admin-form-group admin-form-group--full" style="background: var(--bg-body); padding: 16px; border-radius: var(--r); border: 1px solid var(--border-s); margin-bottom: 16px;">
-                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                                    <h4 style="margin: 0; font-family: var(--font-oswald); text-transform: uppercase; font-size: 15px; color: var(--text);">Основний персонал випуску</h4>
-                                    <div style="display: flex; gap: 8px;">
-                                        <button type="button" class="btn-admin btn-admin--danger" id="btn-clear-main-staff" style="padding: 4px 12px; font-size: 12px; height: 28px;">Видалити всіх</button>
-                                        <button type="button" class="btn-admin btn-admin--secondary" id="btn-add-main-staff" style="padding: 4px 12px; font-size: 12px; height: 28px;">+ Додати автора</button>
-                                    </div>
-                                </div>
-                                <div id="main-staff-container"></div>
-                                <div id="main-staff-search-wrap"></div>
-                            </div>
-                            
-                            <h4 style="margin: 20px 0 12px; font-family: var(--font-oswald); text-transform: uppercase; font-size: 15px; color: var(--text); border-bottom: 1px solid var(--border-s); padding-bottom: 6px;">Історії випуску</h4>
+                            <h4 style="font-family: var(--font-oswald); text-transform: uppercase; font-size: 15px; color: var(--text); border-bottom: 1px solid var(--border-s); margin-bottom: 1em;">Історії випуску</h4>
                             <div class="stories-editor-list" id="stories-editor-container">
                                 <!-- Рядки історій -->
                             </div>
@@ -1396,6 +1348,8 @@ export class IssueEditor {
         this.modal = modal;
         document.body.appendChild(modal);
 
+
+
         this.initImageHandlers(modal);
         this.renderStoryRows();
         this.renderReprintsList();
@@ -1424,15 +1378,7 @@ export class IssueEditor {
             });
         });
         
-        // Рендеримо основний стаф випуску
-        this.renderStaffList('main-staff-container', -1);
-        this.initStaffSearch('btn-add-main-staff', 'main-staff-search-wrap', -1);
 
-        modal.querySelector('#btn-clear-main-staff').addEventListener('click', () => {
-            if (!confirm('Ви впевнені, що хочете видалити весь основний персонал випуску?')) return;
-            this.staff = this.staff.filter(s => s.story_index !== -1);
-            this.renderAllStaffLists();
-        });
     }
 
     close() {
@@ -1453,13 +1399,15 @@ export class IssueEditor {
         });
 
         data.stories = this.stories;
+        data.name = this.issue.name || '';
+        data.name_uk = this.issue.name_uk || '';
         
         // Передаємо оновлений стаф
-        data.staff = this.staff.map(s => ({
+        data.staff = this.staff.flatMap(s => (s.roles || []).map(r => ({
             person_id: s.person_id,
-            role: s.role,
+            role: r,
             story_index: s.story_index
-        }));
+        })));
 
         // Передаємо оновлені появи
         data.characters = this.appearances.characters;

@@ -82,6 +82,22 @@ VOLUME_CATEGORIES = {
         "clause": "v.mal_id IS NOT NULL AND v.cv_id IS NOT NULL",
         "missing_fields": ["змішані джерела"],
     },
+    "manga_no_staff": {
+        "label": "Манґа-том без стафу",
+        "clause": (
+            "v.mal_id IS NOT NULL"
+            " AND NOT EXISTS (SELECT 1 FROM volume_persons vp WHERE vp.volume_id = v.id)"
+        ),
+        "missing_fields": ["стаф"],
+    },
+    "manga_no_characters": {
+        "label": "Манґа-том без персонажів",
+        "clause": (
+            "v.mal_id IS NOT NULL"
+            " AND NOT EXISTS (SELECT 1 FROM volume_characters vc WHERE vc.volume_id = v.id)"
+        ),
+        "missing_fields": ["персонажі"],
+    },
 }
 
 # ── Collection categories ────────────────────────────────────

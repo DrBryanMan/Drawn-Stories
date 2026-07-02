@@ -23,7 +23,9 @@ export function openScrapeProgressModal(type, id) {
     overlay.className = 'ds-modal-overlay';
     overlay.style.display = 'flex';
 
-    const titleText = type === 'volume' ? 'Скрапінг томів' : 'Скрапінг випуску';
+    const titleText = type === 'volume' 
+        ? 'Скрапінг томів' 
+        : (type === 'manga-characters' ? 'Парсинг персонажів манґи' : 'Скрапінг випуску');
 
     overlay.innerHTML = `
         <div class="ds-modal scrape-progress-modal">
@@ -140,7 +142,9 @@ export function openScrapeProgressModal(type, id) {
             else if (data.toLowerCase().includes('початок')) cat = 'system';
             
             appendLog(data, cat);
-            statusText.textContent = 'Виконується парсинг даних з Comic Vine...';
+            statusText.textContent = type === 'manga-characters' 
+                ? 'Виконується парсинг даних з MyAnimeList...' 
+                : 'Виконується парсинг даних з Comic Vine...';
         }
     };
 

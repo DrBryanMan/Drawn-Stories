@@ -3,6 +3,7 @@ import { initShell, currentUser } from './shell.js';
 import { renderHome }    from './views/home.js';
 import { renderCatalog } from './views/catalog.js';
 import { renderVolumeDetail } from './views/volumeDetail.js?v=3';
+import { renderVolumeCharacters } from './views/volumeCharacters.js';
 import { renderPublishers } from './views/publishers.js';
 import { renderAuth } from './views/auth.js';
 import { renderBookmarks } from './views/bookmarks.js';
@@ -27,7 +28,10 @@ async function start() {
   router
     .on('/',              () => renderHome(main))
     .on('/catalog',       (_path, _params, query) => renderCatalog(main, query))
-    .on('/volumes/:id',   (_path, params, _query) => renderVolumeDetail(main, params))
+    .on('/volumes/:id',   (_path, params, query) => renderVolumeDetail(main, params, query))
+    .on('/volumes/:id/characters', (_path, params) => {
+        router.navigate(`/volumes/${params.id}?tab=characters`);
+    })
     .on('/magazines/:id', (_path, params) => renderMagazineDetail(main, params))
     .on('/magazines/:id/all', (_path, params) => renderMagazineAllItems(main, params))
     .on('/magazines/issues/:id', (_path, params) => renderMagazineIssueDetail(main, params))

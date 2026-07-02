@@ -5,6 +5,16 @@ import { currentUser } from '../shell.js';
 import { MagazineChapterAdder } from '/admin/js/MagazineChapterAdder.js';
 import { MagazineChapterEditor } from '/admin/js/MagazineChapterEditor.js';
 
+// ── Lucide SVG icons ────────────────────────────────
+const ICON = {
+    list: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+    chevronLeft: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>`,
+    chevronRight: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`,
+    calendar: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+    book: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>`,
+    layers: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M21 12H3"/><path d="M12 3v18"/></svg>`
+};
+
 export async function renderMagazineIssueDetail(main, params = {}) {
     const issueId = Number(params.id);
     if (!Number.isFinite(issueId)) {
@@ -19,12 +29,12 @@ export async function renderMagazineIssueDetail(main, params = {}) {
                     <div class="skeleton skeleton-text" style="width: 200px; height: 16px;"></div>
                 </nav>
             </div>
-            <section class="volume-hero-band">
+            <section class="issue-hero-band">
                 <div class="container volume-skeleton-hero">
                     <div class="volume-cover-column">
                         <div class="skeleton skeleton-rect" style="width: 100%; aspect-ratio: 2/3;"></div>
                     </div>
-                    <div class="volume-hero-info">
+                    <div class="issue-hero-info">
                         <div class="skeleton skeleton-text" style="width: 120px; height: 22px;"></div>
                         <div class="skeleton skeleton-text" style="width: 70%; height: 36px;"></div>
                     </div>
@@ -85,14 +95,6 @@ export async function renderMagazineIssueDetail(main, params = {}) {
         const coverDate = formatCoverDateHuman(coverDateRaw);
         
         const isModerator = currentUser?.role === 'admin' || currentUser?.role === 'moderator';
-
-        const ICON = {
-            chevronLeft: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>`,
-            chevronRight: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`,
-            calendar: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
-            book: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>`,
-            layers: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M21 12H3"/><path d="M12 3v18"/></svg>`
-        };
 
         const formatTitle = (issueItem) => {
             let num = issueItem.name || `No. ${issueItem.issue_number}`;
@@ -322,14 +324,14 @@ export async function renderMagazineIssueDetail(main, params = {}) {
                     ], 'breadcrumbs volume-breadcrumbs')}
                 </div>
 
-                <section class="volume-hero-band volume-hero-band--banner" style="--volume-banner-url: url('${escapeHtmlAttribute(coverUrl)}')">
-                    <div class="container volume-hero">
+                <section class="issue-hero-band issue-hero-band--banner" style="--volume-banner-url: url('${escapeHtmlAttribute(coverUrl)}')">
+                    <div class="container issue-hero">
                         <div class="volume-cover-column">
                             ${coverUrl
                                 ? `<img class="volume-cover" src="${escapeHtmlAttribute(coverUrl)}" alt="${title}">`
                                 : `<div class="volume-cover volume-cover--empty"></div>`}
                         </div>
-                        <div class="volume-hero-info">
+                        <div class="issue-hero-info">
                             <div class="issue-header-block" style="border-bottom: 1px solid var(--border-s); padding-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
                                 ${navCardHTML(prev_issue, 'prev')}
                                 <div class="issue-header-center" style="display: flex; flex-direction: column; align-items: center; text-align: center; flex: 1; min-width: 0;">
@@ -338,7 +340,7 @@ export async function renderMagazineIssueDetail(main, params = {}) {
                                 </div>
                                 ${navCardHTML(next_issue, 'next')}
                             </div>
-                            <div class="volume-hero-badges" style="margin-top: 15px;">
+                            <div class="issue-hero-badges" style="margin-top: 15px;">
                                 <a href="#/magazines/${issue.magazine_id}" title="Журнал" class="volume-badge volume-series-badge" style="color: var(--primary); text-decoration: none; font-weight: 600;">
                                     ${ICON.book} ${magazineName}
                                 </a>
@@ -356,11 +358,11 @@ export async function renderMagazineIssueDetail(main, params = {}) {
 
                 <div class="container volume-body">
                     <!-- All Issues Section -->
-                    <section class="related-collections-section" style="margin-bottom: 40px; position: relative;">
-                        <div class="section-header">
-                            <h2 class="section-title">
+                    <section class="related-collections-section block">
+                        <div class="block-header">
+                            <h2>
                                 ${ICON.layers} Всі випуски журналу
-                                <span id="issues-pag-label" style="font-size: 14px; font-weight: normal; color: var(--text-muted);"></span>
+                                <span id="issues-pag-label"></span>
                             </h2>
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 <div id="issues-datepicker-container"></div>
@@ -368,16 +370,16 @@ export async function renderMagazineIssueDetail(main, params = {}) {
                         </div>
                         <div style="position: relative;">
                             <button class="outer-nav-btn outer-nav-btn--prev" id="btn-issues-prev" title="Попередня">${ICON.chevronLeft}</button>
-                            <div class="related-list" id="magazine-issues-list-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 20px;">
+                            <div class="related-list" id="magazine-issues-list-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 1em;">
                             </div>
                             <button class="outer-nav-btn outer-nav-btn--next" id="btn-issues-next" title="Наступна">${ICON.chevronRight}</button>
                         </div>
                     </section>
 
-                    <section class="volume-issues-section">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin: 1em 0 .5em;">
-                            <h2 style="margin: 0; display: flex; align-items: center; gap: 8px;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                    <section class="volume-issues-section block">
+                        <div class="block-header">
+                            <h2>
+                                ${ICON.list}
                                 Серії в номері
                             </h2>
                             ${isModerator ? `
@@ -388,7 +390,7 @@ export async function renderMagazineIssueDetail(main, params = {}) {
                             ` : ''}
                         </div>
 
-                        ${chapters.length === 0 ? '<p>Немає зареєстрованих розділів у цьому випуску.</p>' : `
+                        ${chapters.length === 0 ? '<p>У цей випуск ще не було додано розділів.</p>' : `
                             <div class="magazine-chapters-list" id="magazine-chapters-grid" style="display: flex; flex-direction: column; gap: 6px;">
                                 ${chapters.map((ch, index) => {
                                     const mangaBanner = comicVineImageUrl(ch.manga_banner || ch.manga_volume_cover);
@@ -449,7 +451,7 @@ export async function renderMagazineIssueDetail(main, params = {}) {
         `;
  
         let currentIssuesPage = 1;
-        const issuesPerPage = 10;
+        const issuesPerPage = 8;
         let selectedYear = '';
         const issueCoverDate = issue.cover_date || issue.release_date || '';
         if (issueCoverDate && issueCoverDate.includes('-')) {

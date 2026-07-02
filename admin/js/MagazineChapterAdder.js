@@ -238,8 +238,10 @@ export class MagazineChapterAdder {
                 <input type="number" id="series-local-input" placeholder="Volume ID" value="${escapeHtmlAttribute(this.volumeIdText)}" style="width: 120px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r); background: var(--bg-input); color: var(--text);">
             </div>
             
-            <div id="series-results-grid" style="flex-grow: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; min-height: 200px; max-height: 45vh; width: 100%;">
-                <!-- Results will be loaded here -->
+            <div class="series-results-container" style="flex-grow: 1; overflow-y: auto; max-height: 50vh; min-height: 200px; width: 100%; display: block;">
+                <div id="series-results-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; width: 100%;">
+                    <!-- Results will be loaded here -->
+                </div>
             </div>
         `;
 
@@ -372,7 +374,7 @@ export class MagazineChapterAdder {
                 <div class="series-select-card ${isAdded ? 'is-disabled' : ''}" 
                      data-id="${item.id}"
                      style="display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border-s); border-radius: 8px; overflow: hidden; cursor: ${isAdded ? 'default' : 'pointer'}; position: relative; transition: border-color 0.2s; opacity: ${isAdded ? '0.4' : '1'};">
-                    <div style="aspect-ratio: 2/3; position: relative; background: var(--bg-body); overflow: hidden;">
+                    <div style="aspect-ratio: 2 / 3; position: relative; background: var(--bg-body); overflow: hidden; flex-shrink: 0;">
                         ${cover 
                             ? `<img src="${escapeHtmlAttribute(cover)}" alt="${title}" style="width: 100%; height: 100%; object-fit: cover;">`
                             : '<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>'}
