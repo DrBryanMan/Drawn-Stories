@@ -119,6 +119,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: .5em;
+  align-items: start;
 }
 .nav-dropdown-link {
   display: flex; align-items: flex-start; gap: 12px;
@@ -209,6 +210,62 @@
   margin-bottom: 6px;
   padding-bottom: 4px;
   border-bottom: 1px solid var(--border-s);
+}
+
+/* ── Manga Menu Container & Buttons ─────────────────── */
+.nav-dropdown-link-container {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r);
+  transition: all var(--t);
+  position: relative;
+  border: 1px solid transparent;
+}
+
+.nav-dropdown-link-container:hover,
+.nav-dropdown-link-container:has(.manga-menu-btn.active) {
+  background: var(--bg-card-h);
+  border-color: var(--border-s);
+}
+
+.nav-dropdown-link-container .nav-dropdown-link {
+  border-radius: var(--r) var(--r) 0 0;
+}
+
+.manga-menu-buttons {
+  display: flex;
+  gap: 6px;
+  padding: 0 12px 10px 12px;
+}
+
+.manga-menu-btn {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-2);
+  background: var(--bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: all var(--t);
+  text-align: center;
+  flex: 1;
+}
+
+.manga-menu-btn:hover {
+  color: var(--text);
+}
+
+.manga-menu-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* Edits pending count badge */
+.edits-pending-badge {
+  background: #ef4444 !important;
+  color: #fff !important;
+  border-color: var(--bg-card) !important;
 }
 
 /* ══════════════════════════════════════════════════════

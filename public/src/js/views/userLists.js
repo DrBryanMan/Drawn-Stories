@@ -3,25 +3,31 @@ import { createComicCard } from '../components/ComicCard.js';
 import { escapeHtmlAttribute } from '../helpers/image.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
+import { t } from '../helpers/i18n.js';
 
+function getVolumeListLabels() {
+    return {
+        'Planned': t('list_planned'),
+        'Reading': t('list_reading'),
+        'Completed': t('list_completed'),
+        'On Hold': t('list_on_hold'),
+        'Dropped': t('list_dropped')
+    };
+}
 
-const VOLUME_LIST_LABELS = {
-    'Planned': 'Заплановано',
-    'Reading': 'Читаю',
-    'Completed': 'Прочитано',
-    'On Hold': 'Відкладено',
-    'Dropped': 'Закинуто'
-};
+function getIssueListLabels() {
+    return {
+        'Planned': t('list_planned'),
+        'Completed': t('list_completed')
+    };
+}
 
-const ISSUE_LIST_LABELS = {
-    'Planned': 'Заплановано',
-    'Completed': 'Прочитано'
-};
-
-const SORT_OPTIONS = [
-    { value: 'name', label: 'За назвою' },
-    { value: 'recent', label: 'За датою додавання' },
-];
+function getSortOptions() {
+    return [
+        { value: 'name', label: t('sort_name') },
+        { value: 'recent', label: t('sort_recent') },
+    ];
+}
 
 let allListItems = {};
 let filteredItems = [];
@@ -35,7 +41,7 @@ let filterBar = null;
 export async function renderUserLists(main, params, query = {}) {
     const username = params.username;
     currentTab = query.tab || 'volume';
-    document.title = `Списки ${username} — Drawn Stories`;
+    document.title = `${t('user_lists_label')} ${username} — Drawn Stories`;
 
     currentListType = query.list || 'all';
     searchQuery = ''; // Reset search on new navigation
@@ -48,14 +54,14 @@ export async function renderUserLists(main, params, query = {}) {
         applyFilters();
         renderResults();
     } catch (err) {
-        main.querySelector('#user-lists-results').innerHTML = `<div class="error-state">Помилка: ${escapeHtmlAttribute(err.message)}</div>`;
+        main.querySelector('#user-lists-results').innerHTML = `<div class="error-state">${t('error_label')}: ${escapeHtmlAttribute(err.message)}</div>`;
     }
 }
 
 function renderLayout(main, username) {
-    const currentLabels = currentTab === 'issue' ? ISSUE_LIST_LABELS : VOLUME_LIST_LABELS;
+    const currentLabels = currentTab === 'issue' ? getIssueListLabels() : getVolumeListLabels();
     const listOptions = [
-        { value: 'all', label: 'Усі списки' },
+        { value: 'all', label: t('list_all') },
         ...Object.entries(currentLabels).map(([value, label]) => ({ value, label }))
     ];
 
@@ -67,10 +73,10 @@ function renderLayout(main, username) {
         <div class="container">
             <div class="page-header">
                 ${createBreadcrumbs([
-                    { label: 'Списки користувача' },
+                    { label: t('user_lists_label') },
                     { label: escapeHtmlAttribute(username) }
                 ])}
-                <h1 class="page-title">Списки ${escapeHtmlAttribute(username)}</h1>
+                <h1 class="page-title">${t('user_lists_label')} ${escapeHtmlAttribute(username)}</h1>
             </div>
             <div class="catalog-top-row" style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
                 <div id="catalog-filter-bar-container" style="flex: 1; min-width: 280px;">
@@ -78,8 +84,8 @@ function renderLayout(main, username) {
                 </div>
                 <div class="catalog-primary-actions" aria-label="Тип контенту" style="margin-left: auto;">
                     <div class="catalog-segmented" role="group" aria-label="Тип контенту">
-                        <button class="catalog-segment ${currentTab === 'volume' ? 'is-active' : ''}" type="button" data-tab-type="volume">Серії</button>
-                        <button class="catalog-segment ${currentTab === 'issue' ? 'is-active' : ''}" type="button" data-tab-type="issue">Випуски</button>
+                        <button class="catalog-segment ${currentTab === 'volume' ? 'is-active' : ''}" type="button" data-tab-type="volume">${t('series')}</button>
+                        <button class="catalog-segment ${currentTab === 'issue' ? 'is-active' : ''}" type="button" data-tab-type="issue">${t('section_issues')}</button>
                     </div>
                 </div>
             </div>
@@ -92,10 +98,10 @@ function renderLayout(main, username) {
 
     filterBar = mountFilterBar(main.querySelector('#user-lists-filter-bar-container'), {
         resultsCount: 0,
-        resultsLabel: 'Знайдено',
+        resultsLabel: t('found_count'),
         showResults: true,
         showSearch: true,
-        searchPlaceholder: 'Пошук у списках...',
+        searchPlaceholder: t('search_in_lists'),
         searchValue: searchQuery,
         
         showExtraSelect: true,
@@ -111,7 +117,7 @@ function renderLayout(main, username) {
         showSort: true,
         sortId: 'user-lists-sort',
         sortValue: sortField,
-        sortOptions: SORT_OPTIONS,
+        sortOptions: getSortOptions(),
         showSortOrder: true,
         sortOrderId: 'user-lists-sort-order',
         sortOrderValue: sortOrder,
@@ -147,12 +153,10 @@ function applyFilters() {
     if (currentListType === 'all') {
         Object.entries(allListItems).forEach(([listType, list]) => {
             list.forEach(item => {
-                // Ensure list_name is present (it should be from API, but we make sure)
                 if (!item.list_name) item.list_name = listType;
             });
             items = items.concat(list);
         });
-        // Remove duplicates if a volume is in multiple lists
         const seen = new Set();
         items = items.filter(item => {
             if (seen.has(item.id)) return false;
@@ -176,7 +180,6 @@ function applyFilters() {
         );
     }
 
-    // Sort items client-side
     items.sort((a, b) => {
         let valA = sortField === 'recent' ? (a.added_at || a.id || 0) : (a.name_uk || a.name || '');
         let valB = sortField === 'recent' ? (b.added_at || b.id || 0) : (b.name_uk || b.name || '');
@@ -208,7 +211,7 @@ function renderResults() {
                     <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     <line x1="8" y1="11" x2="14" y2="11"/>
                 </svg>
-                <h3>Нічого не знайдено</h3>
+                <h3>${t('nothing_found')}</h3>
             </div>`;
         return;
     }

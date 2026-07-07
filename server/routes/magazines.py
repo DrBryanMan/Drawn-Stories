@@ -9,6 +9,31 @@ def check_moderator(request: Request):
 
 router = APIRouter(prefix="/api/magazines", tags=["magazines"])
 
+@router.get("/recent")
+async def get_recent_magazines(limit: int = 8):
+    db = get_db()
+    magazines = db.get_all("""
+        SELECT mm.*, p.name as publisher_name,
+               (SELECT COUNT(*) FROM magazine_volumes vm WHERE vm.magazine_id = mm.id) as series_count
+        FROM manga_magazines mm
+        LEFT JOIN publishers p ON p.id = mm.publisher
+        ORDER BY mm.created_at DESC, mm.id DESC
+        LIMIT ?
+    """, [limit])
+    return {"items": [dict(m) for m in magazines]}
+
+@router.get("/recent-issues")
+async def get_recent_magazine_issues(limit: int = 8):
+    db = get_db()
+    issues = db.get_all("""
+        SELECT mi.*, mm.name as magazine_name
+        FROM magazine_issues mi
+        JOIN manga_magazines mm ON mi.magazine_id = mm.id
+        ORDER BY mi.created_at DESC, mi.id DESC
+        LIMIT ?
+    """, [limit])
+    return {"items": [dict(iss) for iss in issues]}
+
 @router.post("/convert-from-volume/{volume_id}")
 async def convert_from_volume(volume_id: int):
     db = get_db()
@@ -26,8 +51,8 @@ async def convert_from_volume(volume_id: int):
     if not has_mag_theme or not has_manga_theme:
         raise HTTPException(status_code=400, detail="Том не є журналом манґи (не має тем журналу та манґи)")
 
-    # Check if already converted
-    existing = db.get_one("SELECT id FROM manga_magazines WHERE cv_id = ? OR name = ?", [volume.get("cv_id"), volume.get("name")])
+    # Check if already converted (only by cv_id — same names can exist for different editions)
+    existing = db.get_one("SELECT id FROM manga_magazines WHERE cv_id = ?", [volume.get("cv_id")])
     if existing:
          raise HTTPException(status_code=400, detail="Цей журнал вже сконвертовано")
 
@@ -110,7 +135,13 @@ async def list_magazines(
     search: Optional[str] = None,
     id: Optional[int] = None,
     cv_id: Optional[int] = None,
-    limit: int = 50
+    publisher_ids: Optional[str] = None,
+    formats: Optional[str] = None,
+    demographics: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+    sort: str = "series",
+    order_dir: str = "desc",
 ):
     db = get_db()
     conditions = []
@@ -126,23 +157,80 @@ async def list_magazines(
         conditions.append("(mm.name LIKE ? OR mm.name_native LIKE ?)")
         params += [f"%{search}%", f"%{search}%"]
 
-    orderBy = "mm.name ASC"
-    if not conditions:
-        orderBy = "(SELECT COUNT(*) FROM magazine_volumes vm WHERE vm.magazine_id = mm.id) DESC, mm.name ASC"
+    if publisher_ids:
+        pub_ids = [int(pid.strip()) for pid in publisher_ids.split(",") if pid.strip().isdigit()]
+        if pub_ids:
+            placeholders = ",".join("?" for _ in pub_ids)
+            conditions.append(f"mm.publisher IN ({placeholders})")
+            params += pub_ids
+
+    if formats:
+        fmts = [f.strip() for f in formats.split(",") if f.strip()]
+        if fmts:
+            placeholders = ",".join("?" for _ in fmts)
+            conditions.append(f"mm.format IN ({placeholders})")
+            params += fmts
+
+    if demographics:
+        demos = [d.strip() for d in demographics.split(",") if d.strip()]
+        if demos:
+            placeholders = ",".join("?" for _ in demos)
+            conditions.append(f"mm.demographic IN ({placeholders})")
+            params += demos
+
+    # Validate order direction to prevent SQL injection
+    safe_dir = "DESC" if order_dir.lower() == "desc" else "ASC"
+
+    SORT_COLUMNS = {
+        "name":   "mm.name",
+        "recent": "mm.created_at",
+        "date":   "mm.start_year",
+        "series": "(SELECT COUNT(*) FROM magazine_volumes vm WHERE vm.magazine_id = mm.id)",
+    }
+    sort_col = SORT_COLUMNS.get(sort, SORT_COLUMNS["series"])
+    order_by = f"{sort_col} {safe_dir}"
+    # Always keep name as a secondary sort for stable ordering
+    if sort != "name":
+        order_by += ", mm.name ASC"
 
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
 
     magazines = db.get_all(f"""
         SELECT mm.*, p.name as publisher_name,
-               (SELECT COUNT(*) FROM magazine_volumes vm WHERE vm.magazine_id = mm.id) as series_count
+               (SELECT COUNT(*) FROM magazine_volumes vm WHERE vm.magazine_id = mm.id) as series_count,
+               (SELECT COUNT(*) FROM magazine_volumes vm 
+                JOIN volume_themes vt ON vm.volume_id = vt.volume_id 
+                WHERE vm.magazine_id = mm.id AND vt.theme_id = 72) as series_ongoing_count,
+               (SELECT COUNT(*) FROM magazine_issues mi WHERE mi.magazine_id = mm.id) as issues_count
         FROM manga_magazines mm
         LEFT JOIN publishers p ON p.id = mm.publisher
         {where}
-        ORDER BY {orderBy}
-        LIMIT ?
-    """, params + [limit])
+        ORDER BY {order_by}
+        LIMIT ? OFFSET ?
+    """, params + [limit, offset])
 
-    return {"items": [dict(m) for m in magazines], "total": len(magazines)}
+    total_query = db.get_one(f"""
+        SELECT COUNT(*) as count
+        FROM manga_magazines mm
+        {where}
+    """, params)
+    total = total_query["count"] if total_query else 0
+
+    items = []
+    for m in magazines:
+        mag_dict = dict(m)
+        popular = db.get_all("""
+            SELECT v.id, v.name, v.name_uk, v.cover_img, v.cv_img, v.hikka_img, v.mal_score
+            FROM volumes v
+            JOIN magazine_volumes vm ON v.id = vm.volume_id
+            WHERE vm.magazine_id = ?
+            ORDER BY COALESCE(v.mal_score, 0) DESC, v.id ASC
+            LIMIT 5
+        """, [mag_dict["id"]])
+        mag_dict["popular_series"] = [dict(s) for s in popular]
+        items.append(mag_dict)
+
+    return {"items": items, "total": total}
 
 @router.post("/{magazine_id}/volumes")
 async def add_volume_to_magazine_direct(magazine_id: int, data: dict):

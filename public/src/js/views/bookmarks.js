@@ -4,15 +4,16 @@ import { currentUser } from '../shell.js';
 import { createComicCard } from '../components/ComicCard.js';
 import { escapeHtmlAttribute, comicVineImageUrl } from '../helpers/image.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
+import { t } from '../helpers/i18n.js';
 
 export async function renderBookmarks(main) {
     main.innerHTML = `
         <div class="bookmarks-page">
             <div class="container">
                 <div class="page-header">
-                    ${createBreadcrumbs([{ label: 'Мої закладки' }])}
-                    <h1 class="page-title">Мої закладки</h1>
-                    <p class="bookmarks-subtitle" style="margin-top: 4px; color: var(--text-muted); font-size: 14px;">Ваш персональний список збереженого контенту</p>
+                    ${createBreadcrumbs([{ label: t('bookmarks_title') }])}
+                    <h1 class="page-title">${t('bookmarks_title')}</h1>
+                    <p class="bookmarks-subtitle" style="margin-top: 4px; color: var(--text-muted); font-size: 14px;">${t('bookmarks_sub')}</p>
                 </div>
 
                 ${!currentUser ? `
@@ -21,15 +22,15 @@ export async function renderBookmarks(main) {
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
                         </div>
                         <div class="banner-content">
-                            <h3>Бажаєте зберегти ці закладки назавжди?</h3>
-                            <p>Увійдіть або зареєструйтесь, щоб ваші списки були доступні на будь-якому пристрої.</p>
+                            <h3>${t('bookmarks_banner_title')}</h3>
+                            <p>${t('bookmarks_banner_desc')}</p>
                         </div>
-                        <a href="#/auth" class="banner-btn">Увійти</a>
+                        <a href="#/auth" class="banner-btn">${t('login')}</a>
                     </div>
                 ` : ''}
 
                 <div id="bookmarks-content">
-                    <div class="loading-state">Завантаження закладок...</div>
+                    <div class="loading-state">${t('bookmarks_loading')}</div>
                 </div>
             </div>
         </div>
@@ -44,9 +45,9 @@ export async function renderBookmarks(main) {
                 <div class="empty-icon">
                     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
                 </div>
-                <h3>У вас поки немає закладок</h3>
-                <p>Додавайте томи, випуски або персонажів у закладки, щоб вони завжди були під рукою.</p>
-                <a href="#/catalog" class="bookmarks-empty-btn">Перейти в каталог</a>
+                <h3>${t('bookmarks_empty_title')}</h3>
+                <p>${t('bookmarks_empty_desc')}</p>
+                <a href="#/catalog" class="bookmarks-empty-btn">${t('bookmarks_go_catalog')}</a>
             </div>
         `;
         return;
@@ -56,7 +57,7 @@ export async function renderBookmarks(main) {
         const data = await API.post('/catalog/bookmarks', allBookmarks);
         renderSections(content, data);
     } catch (err) {
-        content.innerHTML = `<div class="error-state">Помилка завантаження: ${escapeHtmlAttribute(err.message)}</div>`;
+        content.innerHTML = `<div class="error-state">${t('loading_error')}: ${escapeHtmlAttribute(err.message)}</div>`;
     }
 }
 
@@ -64,10 +65,10 @@ function renderSections(container, data) {
     container.innerHTML = '';
 
     const sections = [
-        { key: 'volume', title: 'Томи' },
-        { key: 'issue', title: 'Випуски' },
-        { key: 'personnel', title: 'Персонал' },
-        { key: 'character', title: 'Персонажі' }
+        { key: 'volume', title: t('section_volumes') },
+        { key: 'issue', title: t('section_issues') },
+        { key: 'personnel', title: t('personnel') },
+        { key: 'character', title: t('characters') }
     ];
 
     sections.forEach(sec => {
@@ -115,7 +116,7 @@ function createSimpleCard(item, type) {
         </div>
         <div class="comic-body">
             <div class="comic-title">${title}</div>
-            <div class="comic-publisher">${type === 'personnel' ? 'Персонал' : 'Персонаж'}</div>
+            <div class="comic-publisher">${type === 'personnel' ? t('personnel') : t('character_singular')}</div>
         </div>
     `;
     

@@ -275,6 +275,11 @@ async def add_issue_to_collection(collection_id: int, data: dict):
     issue_id = data.get("issue_id")
     manga_chapter_id = data.get("manga_chapter_id")
     
+    if isinstance(issue_id, dict):
+        issue_id = issue_id.get("id")
+    if isinstance(manga_chapter_id, dict):
+        manga_chapter_id = manga_chapter_id.get("id")
+        
     if not issue_id and not manga_chapter_id:
         raise HTTPException(status_code=400, detail="issue_id or manga_chapter_id is required")
     
@@ -380,7 +385,8 @@ async def update_collection(collection_id: int, data: dict):
     allowed_fields = [
         "name", "issue_number", "volume_id", "cv_vol_id", "cv_id", "cv_slug", 
         "cv_img", "cover_date", "release_date", "description", "synopsis_ua",
-        "synopsis", "contents", "publisher", "isbn", "pages", "site_link"
+        "synopsis", "contents", "publisher", "isbn", "pages", "site_link",
+        "verification_status"
     ]
     
     for key, value in data.items():

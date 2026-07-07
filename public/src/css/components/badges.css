@@ -103,8 +103,61 @@
   color: #b45309;
 }
 
+.volume-year-badge--blue {
+  border: 1px solid #bae6fd;
+  background: rgba(14, 165, 233, 0.08);
+  color: #0369a1;
+}
+
+.volume-year-badge--green {
+  border: 1px solid #bbf7d0;
+  background: rgba(34, 197, 94, 0.08);
+  color: #15803d;
+}
+
+.volume-year-badge--yellow {
+  border: 1px solid #e7c29c;
+  background: rgba(217, 119, 6, 0.08);
+  color: #b45309;
+}
+
 .volume-lang-badge {
   border: 1px solid var(--border);
   background: rgba(148, 163, 184, 0.08);
   color: #475569;
+}
+
+.volume-status-unverified {
+  border: 1px solid #fecaca;
+  background: rgba(239, 68, 68, 0.08);
+  color: #b91c1c;
+}
+
+.volume-status-open-sources {
+  border: 1px solid #fed7aa;
+  background: rgba(249, 115, 22, 0.08);
+  color: #c2410c;
+}
+
+.volume-status-physical {
+  border: 1px solid #bbf7d0;
+  background: rgba(34, 197, 94, 0.08);
+  color: #15803d;
+}
+
+.volume-status-announced {
+  border: 1px solid #e2e8f0;
+  background: rgba(148, 163, 184, 0.08);
+  color: #475569;
+}
+
+.volume-volume-badge {
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border-s));
+  background: color-mix(in srgb, var(--accent) 6%, var(--bg-card));
+  color: var(--accent);
+}
+
+.volume-volume-badge:hover {
+  background: var(--accent-glow);
+  border-color: var(--accent);
 }

@@ -4,6 +4,7 @@ import { comicVineImageUrl, escapeHtmlAttribute } from '/static/js/helpers/image
 import { STAFF_ROLES, getRoleSortIndex } from '/static/js/helpers/staff.js';
 import * as Utils from './editorUtils.js';
 import { openEditCharacterModal } from './EditCharacterModal.js';
+import { currentUser } from '/static/js/shell.js';
 
 const ICON = {
     hash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"></line><line x1="4" y1="15" x2="20" y2="15"></line><line x1="10" y1="3" x2="8" y2="21"></line><line x1="16" y1="3" x2="14" y2="21"></line></svg>',
@@ -574,6 +575,28 @@ export class VolumeEditor {
         const modal = document.createElement('div');
         modal.className = 'ds-modal-overlay';
         
+        const isPrivileged = currentUser && (currentUser.role === 'admin' || currentUser.role === 'moderator');
+        const readOnlyAttr = isPrivileged ? '' : ' readonly';
+        const groupClass = isPrivileged ? '' : ' not-allowed';
+
+        const role = currentUser ? currentUser.role : null;
+        let footerButtonsHTML = '';
+        if (role === 'admin') {
+            footerButtonsHTML = `
+                <button class="btn-admin btn-admin--primary btn-admin--purple" id="edit-save-direct">Записати в БД</button>
+                <button class="btn-admin btn-admin--primary btn-admin--green" id="edit-save-approve">Записати і прийняти</button>
+            `;
+        } else if (role === 'moderator' || role === 'editor') {
+            footerButtonsHTML = `
+                <button class="btn-admin btn-admin--primary btn-admin--green" id="edit-save-approve">Записати і прийняти</button>
+            `;
+        } else {
+            footerButtonsHTML = `
+                <input type="text" id="edit-propose-comment" class="admin-input" placeholder="Коментар до вашої правки (необов'язково)..." style="margin-right: auto; max-width: 400px; font-size: 0.85rem; padding: 6px 10px; height: 32px;">
+                <button class="btn-admin btn-admin--primary btn-admin--yellow" id="edit-save-propose" style="height: 32px; padding: 0 16px; font-size: 13px;">Запропонувати</button>
+            `;
+        }
+        
         window._emSelectLang = (el) => {
             modal.querySelectorAll('#lang-chips .lang-chip').forEach(c => c.classList.remove('lang-chip--active'));
             el.classList.add('lang-chip--active');
@@ -612,31 +635,31 @@ export class VolumeEditor {
                         <!-- Вкладка: Основна інформація -->
                         <div class="editor-tab-content is-active" id="tab-info">
                             <div class="admin-form-grid">
-                                <div class="admin-form-group">
+                                <div class="admin-form-group${groupClass}">
                                     <label class="admin-label">${ICON.hash} CV ID</label>
-                                    <input type="number" name="cv_id" class="admin-input" value="${v.cv_id || ''}">
+                                    <input type="number" name="cv_id" class="admin-input" value="${v.cv_id || ''}"${readOnlyAttr}>
                                 </div>
-                                <div class="admin-form-group">
+                                <div class="admin-form-group${groupClass}">
                                     <label class="admin-label">${ICON.link} CV Slug</label>
-                                    <input type="text" name="cv_slug" class="admin-input" value="${v.cv_slug || ''}">
+                                    <input type="text" name="cv_slug" class="admin-input" value="${v.cv_slug || ''}"${readOnlyAttr}>
                                 </div>
                                 
-                                <div class="admin-form-group">
+                                <div class="admin-form-group${groupClass}">
                                     <label class="admin-label">${ICON.database} MAL ID</label>
-                                    <input type="number" name="mal_id" class="admin-input" value="${v.mal_id || ''}" placeholder="напр. 123456">
+                                    <input type="number" name="mal_id" class="admin-input" value="${v.mal_id || ''}" placeholder="напр. 123456"${readOnlyAttr}>
                                 </div>
-                                <div class="admin-form-group">
+                                <div class="admin-form-group${groupClass}">
                                     <label class="admin-label">${ICON.link2} Hikka Slug</label>
-                                    <input type="text" name="hikka_slug" class="admin-input" value="${v.hikka_slug || ''}" placeholder="напр. berserk-ek0mv">
+                                    <input type="text" name="hikka_slug" class="admin-input" value="${v.hikka_slug || ''}" placeholder="напр. berserk-ek0mv"${readOnlyAttr}>
                                 </div>
 
-                                <div class="admin-form-group">
+                                <div class="admin-form-group${groupClass}">
                                     <label class="admin-label">${ICON.hash} LocG ID</label>
-                                    <input type="number" name="locg_id" class="admin-input" value="${v.locg_id || ''}">
+                                    <input type="number" name="locg_id" class="admin-input" value="${v.locg_id || ''}"${readOnlyAttr}>
                                 </div>
-                                <div class="admin-form-group">
+                                <div class="admin-form-group${groupClass}">
                                     <label class="admin-label">${ICON.link} LocG Slug</label>
-                                    <input type="text" name="locg_slug" class="admin-input" value="${v.locg_slug || ''}">
+                                    <input type="text" name="locg_slug" class="admin-input" value="${v.locg_slug || ''}"${readOnlyAttr}>
                                 </div>
 
                                 <div class="admin-form-group">
@@ -657,12 +680,12 @@ export class VolumeEditor {
                                     <input type="text" name="name_uk" class="admin-input" value="${v.name_uk || ''}">
                                 </div>
 
-                                ${this._imgFieldHTML('cv_img', 'Обкладинка', v.cv_img || v.hikka_img, ICON.image)}
+                                ${this._imgFieldHTML('cv_img', 'Обкладинка', v.cv_img, ICON.image)}
                                 ${this._imgFieldHTML('cover_img', 'Банер', v.cover_img, ICON.layout, true)}
 
-                                <div class="admin-form-group">
+                                <div class="admin-form-group${groupClass}">
                                     <label class="admin-label">${ICON.externalLink} Посилання на сайт джерела</label>
-                                    <input type="url" name="site_link" class="admin-input" value="${v.site_link || ''}" placeholder="https://...">
+                                    <input type="url" name="site_link" class="admin-input" value="${v.site_link || ''}" placeholder="https://..."${readOnlyAttr}>
                                 </div>
 
                                 <div class="admin-form-group admin-form-group--full">
@@ -749,14 +772,27 @@ export class VolumeEditor {
                 </div>
                 <div class="ds-modal-footer">
                     <button class="btn-admin btn-admin--secondary" id="edit-cancel">Скасувати</button>
-                    <button class="btn-admin btn-admin--primary" id="edit-save">Зберегти зміни</button>
+                    ${footerButtonsHTML}
                 </div>
             </div>
         `;
 
         modal.querySelector('.ds-modal-close').addEventListener('click', () => this.close());
         modal.querySelector('#edit-cancel').addEventListener('click', () => this.close());
-        modal.querySelector('#edit-save').addEventListener('click', () => this.save());
+        
+        const saveDirectBtn = modal.querySelector('#edit-save-direct');
+        if (saveDirectBtn) {
+            saveDirectBtn.addEventListener('click', () => this.save('direct'));
+        }
+        const saveApproveBtn = modal.querySelector('#edit-save-approve');
+        if (saveApproveBtn) {
+            saveApproveBtn.addEventListener('click', () => this.save('approve'));
+        }
+        const saveProposeBtn = modal.querySelector('#edit-save-propose');
+        if (saveProposeBtn) {
+            saveProposeBtn.addEventListener('click', () => this.save('propose'));
+        }
+
         modal.addEventListener('click', (e) => { if (e.target === modal) this.close(); });
 
         this._handleEsc = (e) => {
@@ -818,7 +854,7 @@ export class VolumeEditor {
         }
     }
 
-    async save() {
+    async save(actionType = 'direct') {
         const form = this.modal.querySelector('#edit-volume-form');
         const formData = new FormData(form);
         const data = Object.fromEntries(formData.entries());
@@ -837,9 +873,29 @@ export class VolumeEditor {
         })));
         data.characters = this.characters;
 
-        const saveBtn = this.modal.querySelector('#edit-save');
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Збереження...';
+        let saveBtnId = '#edit-save-propose';
+        let btnText = 'Запропонувати';
+        if (actionType === 'direct') {
+            saveBtnId = '#edit-save-direct';
+            btnText = 'Записати в БД';
+        } else if (actionType === 'approve') {
+            saveBtnId = '#edit-save-approve';
+            btnText = 'Записати і прийняти';
+        }
+        
+        const saveBtn = this.modal.querySelector(saveBtnId);
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Збереження...';
+        }
+
+        let comment = '';
+        if (actionType === 'propose') {
+            const commentInput = this.modal.querySelector('#edit-propose-comment');
+            if (commentInput) {
+                comment = commentInput.value.trim();
+            }
+        }
 
         try {
             // Handle file uploads
@@ -854,13 +910,27 @@ export class VolumeEditor {
                 }
             }
 
-            await API.put(`/volumes/${this.volume.id}`, data);
+            if (actionType === 'direct') {
+                await API.put(`/volumes/${this.volume.id}`, data);
+            } else {
+                const autoApprove = actionType === 'approve';
+                await API.post('/edits', {
+                    entity_type: 'volume',
+                    entity_id: this.volume.id,
+                    patch_data: data,
+                    auto_approve: autoApprove,
+                    comment: comment
+                });
+            }
+
             this.close();
             if (this.onSave) this.onSave();
         } catch (err) {
             alert('Помилка збереження: ' + (err.message || 'Невідома помилка'));
-            saveBtn.disabled = false;
-            saveBtn.textContent = 'Зберегти зміни';
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = btnText;
+            }
         }
     }
 }

@@ -133,7 +133,10 @@ async def login(req: LoginRequest, response: Response):
     response.set_cookie(key="username", value=user['username'], httponly=True)
     response.set_cookie(key="role", value=user['role'], httponly=True)
     
-    return {"logged_in": True, "username": user['username'], "role": user['role']}
+    pref = db.get_one("SELECT site_lang FROM user_preferences WHERE user_id = ?", [user['id']])
+    site_lang = pref['site_lang'] if pref else 'uk'
+    
+    return {"logged_in": True, "username": user['username'], "role": user['role'], "site_lang": site_lang}
 
 @router.get("/me")
 async def me(request: Request):
@@ -145,10 +148,60 @@ async def me(request: Request):
     db = get_db()
     db.execute("UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE username = ?", [username])
     
-    return {"logged_in": True, "username": username, "role": role}
+    user = db.get_one("SELECT id FROM users WHERE username = ?", [username])
+    site_lang = 'uk'
+    if user:
+        pref = db.get_one("SELECT site_lang FROM user_preferences WHERE user_id = ?", [user['id']])
+        if pref:
+            site_lang = pref['site_lang']
+            
+    return {"logged_in": True, "username": username, "role": role, "site_lang": site_lang}
 
 @router.post("/logout")
 async def logout(response: Response):
     response.delete_cookie("username")
     response.delete_cookie("role")
     return {"status": "ok"}
+
+class PreferencesUpdateRequest(BaseModel):
+    site_lang: str
+
+@router.get("/preferences")
+async def get_preferences(request: Request):
+    username = request.cookies.get("username")
+    if not username:
+        raise HTTPException(status_code=401, detail="Not logged in")
+    
+    db = get_db()
+    user = db.get_one("SELECT id FROM users WHERE username = ?", [username])
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    pref = db.get_one("SELECT site_lang FROM user_preferences WHERE user_id = ?", [user["id"]])
+    if not pref:
+        return {"site_lang": "uk"}
+    return {"site_lang": pref["site_lang"]}
+
+@router.post("/preferences")
+async def update_preferences(req: PreferencesUpdateRequest, request: Request):
+    username = request.cookies.get("username")
+    if not username:
+        raise HTTPException(status_code=401, detail="Not logged in")
+        
+    if req.site_lang not in ["uk", "en"]:
+        raise HTTPException(status_code=400, detail="Invalid language")
+        
+    db = get_db()
+    user = db.get_one("SELECT id FROM users WHERE username = ?", [username])
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    db.execute("""
+        INSERT INTO user_preferences (user_id, site_lang, updated_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id) DO UPDATE SET
+            site_lang = excluded.site_lang,
+            updated_at = CURRENT_TIMESTAMP
+    """, [user["id"], req.site_lang])
+    
+    return {"status": "ok", "site_lang": req.site_lang}

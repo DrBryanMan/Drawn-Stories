@@ -48,20 +48,27 @@ export function langName(code) {
 
 export function formatDate(dateStr, fallback = null) {
     if (!dateStr) return fallback;
+    const currentLang = localStorage.getItem('site_lang') || 'uk';
+    const locale = currentLang === 'en' ? 'en-US' : 'uk-UA';
     let formatted = dateStr;
     if (dateStr.includes('-')) {
         const parts = dateStr.split('-');
         if (parts.length === 3 && parts[2] === '00') {
-            const months = [
+            const monthsUk = [
                 'січень', 'лютий', 'березень', 'квітень', 'травень', 'червень',
                 'липень', 'серпень', 'вересень', 'жовтень', 'листопад', 'грудень',
             ];
+            const monthsEn = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December',
+            ];
+            const months = currentLang === 'en' ? monthsEn : monthsUk;
             const mIdx = parseInt(parts[1], 10) - 1;
             formatted = `${months[mIdx] || parts[1]} ${parts[0]}`;
         } else {
             try {
                 const d = new Date(dateStr);
-                formatted = d.toLocaleDateString('uk-UA', { year: 'numeric', month: 'long', day: 'numeric' });
+                formatted = d.toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' });
             } catch {
                 formatted = dateStr;
             }

@@ -3,19 +3,20 @@ import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { createPaginator } from '../components/Pagination.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
+import { t } from '../helpers/i18n.js';
 
 const paginator = createPaginator({ pageSize: 24 });
 let searchQuery = '';
 
 export async function renderEvents(container, query = {}) {
-  document.title = 'Події — Drawn Stories';
+  document.title = `${t('events')} — Drawn Stories`;
   paginator.reset();
   searchQuery = query.search || '';
 
   container.innerHTML = `
     <div class="container">
       <div class="page-header">
-        ${createBreadcrumbs([{ label: 'Події' }])}
+        ${createBreadcrumbs([{ label: t('events') }])}
       </div>
 
       <div class="catalog-top-row">
@@ -39,10 +40,10 @@ export async function renderEvents(container, query = {}) {
 
   let filterBar = mountFilterBar(container.querySelector('#events-filter-bar-container'), {
     resultsCount: 0,
-    resultsLabel: 'Знайдено подій',
+    resultsLabel: t('events_found'),
     showResults: true,
     showSearch: true,
-    searchPlaceholder: 'Пошук подій...',
+    searchPlaceholder: t('search_events'),
     searchValue: searchQuery,
     onSearch: (val) => {
       searchQuery = val;
@@ -86,7 +87,7 @@ async function fetchAndRenderEvents(filterBar) {
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
-          <h3>Подій не знайдено</h3>
+          <h3>${t('events_not_found')}</h3>
         </div>`;
       paginationWrap.innerHTML = '';
       return;
@@ -96,7 +97,7 @@ async function fetchAndRenderEvents(filterBar) {
       const cover = comicVineImageUrl(event.cv_img || event.image);
       const title = escapeHtmlAttribute(event.name || 'Без назви');
       const years = event.start_year ? (event.end_year && event.start_year !== event.end_year ? `${event.start_year}–${event.end_year}` : event.start_year) : '';
-      const issues = event.issue_count ? `Випусків: ${event.issue_count}` : 'Немає випусків';
+      const issues = event.issue_count ? `${t('section_issues')}: ${event.issue_count}` : t('no_issues_recorded');
 
       return `
         <a href="#/events/${event.id}" class="comic-card">
@@ -113,7 +114,6 @@ async function fetchAndRenderEvents(filterBar) {
     }).join('');
 
     paginationWrap.innerHTML = '';
-    // Since API /events is not fully paginated with a separate total, we just show simple pagination or hide if less than pageSize
     if (totalCount >= paginator.getPageSize() || paginator.getPage() > 1) {
       paginationWrap.appendChild(paginator.render(totalCount, () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -122,7 +122,7 @@ async function fetchAndRenderEvents(filterBar) {
     }
 
   } catch (err) {
-    grid.innerHTML = `<div class="error-state" style="grid-column: 1 / -1;">Помилка завантаження подій: ${escapeHtmlAttribute(err.message)}</div>`;
+    grid.innerHTML = `<div class="error-state" style="grid-column: 1 / -1;">${t('loading_error')}: ${escapeHtmlAttribute(err.message)}</div>`;
     paginationWrap.innerHTML = '';
   }
 }

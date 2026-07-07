@@ -306,22 +306,12 @@
 }
 
 /* ── Event / Arc Context ─────────────────────────── */
-.issue-context-section {
-  margin-bottom: 36px;
-}
-
-.issue-context-grid {
-  display: grid;
-  /* grid-template-columns: repeat(2, minmax(0, 1fr)); */
-  gap: 16px;
-}
-
 .issue-context-card {
   --issue-context-bg: none;
   position: relative;
   min-height: 126px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 42%);
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 50%);
   align-items: center;
   gap: 18px;
   overflow: hidden;

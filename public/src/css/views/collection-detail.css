@@ -23,6 +23,28 @@
   background: var(--bg-card);
   border: 1px solid var(--border-s);
   border-radius: var(--r);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+/* Статус перевірки — колір рамки та фону, без зміни кольору тексту */
+.collection-meta-details--unverified {
+  border-color: #fecaca;
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.collection-meta-details--open_sources {
+  border-color: #fed7aa;
+  background: rgba(249, 115, 22, 0.05);
+}
+
+.collection-meta-details--physical {
+  border-color: #bbf7d0;
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.collection-meta-details--announced {
+  border-color: #e2e8f0;
+  background: rgba(148, 163, 184, 0.05);
 }
 
 .collection-meta-item {

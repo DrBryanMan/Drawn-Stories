@@ -182,6 +182,11 @@ async def add_issue_to_event(event_id: int, data: dict, request: Request):
     if not issue_id:
         raise HTTPException(status_code=400, detail="issue_id обов'язковий")
 
+    if isinstance(issue_id, dict):
+        issue_id = issue_id.get("id")
+        if not issue_id:
+            raise HTTPException(status_code=400, detail="Некоректний формат issue_id")
+
     issue = db.get_one("SELECT id FROM issues WHERE id = ?", [issue_id])
     if not issue:
         raise HTTPException(status_code=404, detail="Випуск не знайдено")

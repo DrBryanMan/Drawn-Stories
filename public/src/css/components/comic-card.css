@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════════════════
    COMIC GRID CARD
 ══════════════════════════════════════════════════════ */
-.comic-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+.comic-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1em; }
 .comic-card {
   position: relative;
   background: var(--bg-card); border: 1px solid var(--border-s);

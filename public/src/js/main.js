@@ -1,6 +1,7 @@
 import { router }        from './helpers/router.js';
 import { initShell, currentUser } from './shell.js';
 import { renderHome }    from './views/home.js';
+import { renderEdits }   from './views/edits.js';
 import { renderCatalog } from './views/catalog.js';
 import { renderVolumeDetail } from './views/volumeDetail.js?v=3';
 import { renderVolumeCharacters } from './views/volumeCharacters.js';
@@ -55,6 +56,13 @@ async function start() {
     .on('/user/:username/lists', (_path, params, query) => renderUserLists(main, params, query))
     .on('/user/:username/collection', (_path, params) => renderCollections(main, params))
     .on('/user/:username/favorites', (_path, params) => renderFavorites(main, params))
+    .on('/edits',         () => {
+        if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'moderator')) {
+            router.navigate('/');
+            return;
+        }
+        renderEdits(main);
+    })
     .notFound(            () => renderHome(main))
     .listen();
 }

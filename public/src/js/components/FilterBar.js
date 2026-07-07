@@ -1,6 +1,6 @@
 import { escapeHtmlAttribute } from '../helpers/image.js';
 import { API } from '../helpers/api.js';
-import Fuse from 'https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.mjs';
+import { t } from '../helpers/i18n.js';
 
 // Custom icons for the list select options (matching volumeDetail.js)
 const LIST_ICONS = {
@@ -25,7 +25,7 @@ const LIST_COLORS = {
 
 export function mountFilterBar(container, {
     resultsCount = 0,
-    resultsLabel = 'Знайдено',
+    resultsLabel = t('found_count'),
     showResults = true,
 
     showSearch = true,
@@ -54,6 +54,7 @@ export function mountFilterBar(container, {
     filtersBtnId = 'open-filters-btn',
     filtersBtnActive = false,
     onFiltersBtnClick, // callback()
+    extraMiddleHtml = '',
 }) {
     if (!container) return null;
 
@@ -77,7 +78,6 @@ export function mountFilterBar(container, {
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                         </span>
                         <input type="text" placeholder="${escapeHtmlAttribute(searchPlaceholder)}" class="search-input-pill" data-filter-bar-search value="${escapeHtmlAttribute(searchValue)}" autocomplete="off">
-                        <div class="search-suggestions" data-search-suggestions hidden></div>
                     </div>
                 </div>
             ` : ''}
@@ -106,6 +106,12 @@ export function mountFilterBar(container, {
                                 `;
                             }).join('')}
                         </select>
+                    </div>
+                ` : ''}
+
+                ${extraMiddleHtml ? `
+                    <div class="filter-group" style="overflow: visible; background: transparent; border: 0;">
+                        ${extraMiddleHtml}
                     </div>
                 ` : ''}
 
@@ -164,54 +170,10 @@ export function mountFilterBar(container, {
     // ── Element references ─────────────────────────────
     const countEl = container.querySelector('[data-filter-bar-count]');
     const searchInput = container.querySelector('[data-filter-bar-search]');
-    const suggestionsEl = container.querySelector('[data-search-suggestions]');
     const extraSelect = container.querySelector(`#${extraSelectId}`);
     const sortSelect = container.querySelector(`#${sortId}`);
     const sortOrderBtn = container.querySelector(`#${sortOrderId}`);
     const filtersBtn = container.querySelector(`#${filtersBtnId}`);
-
-    // ── Suggestions Logic ──────────────────────────────
-    let suggestionsFuse = null;
-    let suggestionsData = [];
-
-    const showSuggestions = async (query) => {
-        if (!query || query.length < 2) {
-            suggestionsEl.hidden = true;
-            return;
-        }
-
-        try {
-            // Fetch a small batch of potential matches from backend
-            const data = await API.get('/catalog', { search: query, limit: 30 });
-            suggestionsData = data.items || [];
-            
-            if (suggestionsData.length === 0) {
-                suggestionsEl.hidden = true;
-                return;
-            }
-
-            // Use Fuse.js to rank/filter the suggestions for better fuzzy matching on the client
-            suggestionsFuse = new Fuse(suggestionsData, {
-                keys: ['name', 'name_en', 'name_uk'],
-                threshold: 0.4,
-                includeMatches: true
-            });
-
-            const results = suggestionsFuse.search(query);
-            const itemsToShow = results.length > 0 ? results.map(r => r.item) : suggestionsData.slice(0, 8);
-
-            suggestionsEl.innerHTML = itemsToShow.slice(0, 8).map(item => `
-                <div class="suggestion-item" data-suggestion-id="${item.id}" data-suggestion-type="${item.type || 'volume'}">
-                    <div class="suggestion-name">${escapeHtmlAttribute(item.name)}</div>
-                    <div class="suggestion-meta">${item.publisher_name || ''} ${item.start_year ? `(${item.start_year})` : ''}</div>
-                </div>
-            `).join('');
-            suggestionsEl.hidden = false;
-        } catch (err) {
-            console.error('Suggestions error:', err);
-            suggestionsEl.hidden = true;
-        }
-    };
 
     // ── Helper to sync extra readlist select style ──────
     const syncExtraSelectStyle = () => {
@@ -245,56 +207,23 @@ export function mountFilterBar(container, {
     // ── Bind events ────────────────────────────────────
     if (searchInput && onSearch) {
         let searchTimer = null;
-        let suggestionTimer = null;
 
         searchInput.addEventListener('input', (e) => {
             const val = e.target.value;
             clearTimeout(searchTimer);
-            clearTimeout(suggestionTimer);
 
             searchTimer = setTimeout(() => {
                 onSearch(val);
             }, 500); // Increased debounce for main search
-
-            suggestionTimer = setTimeout(() => {
-                showSuggestions(val.trim());
-            }, 200);
         });
 
         searchInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 clearTimeout(searchTimer);
-                clearTimeout(suggestionTimer);
-                suggestionsEl.hidden = true;
                 onSearch(searchInput.value);
             }
         });
     }
-
-    if (suggestionsEl) {
-        suggestionsEl.addEventListener('click', (e) => {
-            const item = e.target.closest('.suggestion-item');
-            if (!item) return;
-
-            const id = item.dataset.suggestionId;
-            const type = item.dataset.suggestionType;
-            
-            if (type === 'volume') {
-                window.location.hash = `#/volumes/${id}`;
-            } else {
-                // For issues or other types, we might just set search query
-                searchInput.value = item.querySelector('.suggestion-name').textContent;
-                onSearch(searchInput.value);
-            }
-            suggestionsEl.hidden = true;
-        });
-    }
-
-    document.addEventListener('click', (e) => {
-        if (searchInput && !searchInput.contains(e.target) && suggestionsEl && !suggestionsEl.contains(e.target)) {
-            suggestionsEl.hidden = true;
-        }
-    });
 
     if (extraSelect && onExtraSelectChange) {
         extraSelect.addEventListener('change', (e) => {

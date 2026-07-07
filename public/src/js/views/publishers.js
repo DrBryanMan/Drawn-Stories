@@ -3,27 +3,27 @@ import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { createPaginator } from '../components/Pagination.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
+import { t } from '../helpers/i18n.js';
 
 const paginator = createPaginator({ pageSize: 20 });
-const SORT_OPTIONS = [
-  { value: 'name', label: 'За назвою' },
-  { value: 'founded', label: 'За датою заснування' },
-  { value: 'volumes', label: 'За кількістю видань' },
+const getSortOptions = () => [
+  { value: 'name', label: t('sort_name') },
+  { value: 'founded', label: t('sort_founded') },
+  { value: 'volumes', label: t('sort_volumes') },
 ];
 let searchQuery = '';
-let searchTimer = null;
 let sortField = 'volumes';
 let sortOrder = 'desc';
 
 export async function renderPublishers(container, query) {
-  document.title = 'Видавництва та Команди — Drawn Stories';
+  document.title = `${t('publishers')} — Drawn Stories`;
   paginator.reset();
   searchQuery = query.search || '';
 
   container.innerHTML = `
     <div class="container">
       <div class="page-header">
-        ${createBreadcrumbs([{ label: 'Видавництва та Команди' }])}
+        ${createBreadcrumbs([{ label: t('publishers') }])}
       </div>
 
       <div class="catalog-top-row">
@@ -47,10 +47,10 @@ export async function renderPublishers(container, query) {
 
   let filterBar = mountFilterBar(container.querySelector('#publishers-filter-bar-container'), {
     resultsCount: 0,
-    resultsLabel: 'Знайдено',
+    resultsLabel: t('found_count'),
     showResults: true,
     showSearch: true,
-    searchPlaceholder: 'Пошук видавництв...',
+    searchPlaceholder: t('search_publishers'),
     searchValue: searchQuery,
     onSearch: (val) => {
       searchQuery = val;
@@ -60,7 +60,7 @@ export async function renderPublishers(container, query) {
     showSort: true,
     sortId: 'pub-sort-select',
     sortValue: sortField,
-    sortOptions: SORT_OPTIONS,
+    sortOptions: getSortOptions(),
     showSortOrder: true,
     sortOrderId: 'pub-sort-order-btn',
     sortOrderValue: sortOrder,
@@ -111,7 +111,7 @@ async function fetchAndRenderPublishers(filterBar) {
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             <line x1="8" y1="11" x2="14" y2="11"/>
           </svg>
-          <h3>Видавництв не знайдено</h3>
+          <h3>${t('publishers_not_found')}</h3>
         </div>`;
       paginationWrap.innerHTML = '';
       return;
@@ -120,12 +120,12 @@ async function fetchAndRenderPublishers(filterBar) {
     grid.innerHTML = publishers.map(pub => {
       const statusValue = (pub.status || '').toLowerCase();
       const isActive = statusValue === 'active' || statusValue === 'активне' || statusValue === 'активна';
-      const statusLabel = isActive ? 'Активне' : (statusValue === 'inactive' || statusValue === 'неактивне' ? 'Неактивне' : '—');
+      const statusText = isActive ? t('status_active') : t('status_inactive');
       
       const workTypeMap = {
-        'manga': 'Манґа',
-        'comics': 'Комікси',
-        'mixed': 'Різне'
+        'manga': t('manga'),
+        'comics': t('comics'),
+        'mixed': t('mixed')
       };
 
       const badges = pub.work_type 
@@ -149,11 +149,11 @@ async function fetchAndRenderPublishers(filterBar) {
           return `
             <a href="#/volumes/${vol.id}" class="pub-release-card">
               <div class="pub-release-cover">
-                ${imgUrl ? `<img src="${imgUrl}" alt="${title}" loading="lazy" />` : `<div class="no-cover">Немає обкладинки</div>`}
+                ${imgUrl ? `<img src="${imgUrl}" alt="${title}" loading="lazy" />` : `<div class="no-cover">${t('no_cover')}</div>`}
               </div>
               <div class="pub-release-info">
                 <div class="pub-release-title" title="${title}">${title}</div>
-                <div class="pub-release-episodes">Випусків: ${issueCount}</div>
+                <div class="pub-release-episodes">${t('section_issues')}: ${issueCount}</div>
               </div>
             </a>
           `;
@@ -173,7 +173,7 @@ async function fetchAndRenderPublishers(filterBar) {
             <div class="pub-meta">
               <div class="pub-title-row">
                 <h3 class="pub-name">${escapeHtmlAttribute(pub.name)}</h3>
-                <span class="pub-status ${isActive ? 'active' : ''}">${isActive ? 'Активне' : 'Неактивне'}</span>
+                <span class="pub-status ${isActive ? 'active' : ''}">${statusText}</span>
               </div>
               <div class="pub-badges">
                 ${badges.map(b => `<span class="pub-badge">${b}</span>`).join('')}
@@ -182,15 +182,15 @@ async function fetchAndRenderPublishers(filterBar) {
           </div>
           
           <div class="pub-body">
-            <div class="pub-section-title">Останні видання</div>
+            <div class="pub-section-title">${t('latest_releases')}</div>
             <div class="pub-releases">
-              ${releases.length > 0 ? releasesHtml + emptyPlaceholders : '<div class="text-secondary text-sm">Немає видань</div>'}
+              ${releases.length > 0 ? releasesHtml + emptyPlaceholders : `<div class="text-secondary text-sm">${t('no_releases')}</div>`}
             </div>
           </div>
 
           <div class="pub-footer">
-            <div class="pub-total">Всього видано: <strong>${pub.volume_count || 0}</strong></div>
-            <a href="#/catalog?publisher=${pub.id}" class="pub-btn">Перейти до видавництва</a>
+            <div class="pub-total">${t('total_published')}: <strong>${pub.volume_count || 0}</strong></div>
+            <a href="#/catalog?publisher=${pub.id}" class="pub-btn">${t('go_to_publisher')}</a>
           </div>
         </div>
       `;
@@ -203,7 +203,7 @@ async function fetchAndRenderPublishers(filterBar) {
     }));
 
   } catch (err) {
-    grid.innerHTML = `<div class="error-state">Помилка завантаження видавництв: ${escapeHtmlAttribute(err.message)}</div>`;
+    grid.innerHTML = `<div class="error-state">${t('loading_error')}: ${escapeHtmlAttribute(err.message)}</div>`;
     paginationWrap.innerHTML = '';
   }
 }

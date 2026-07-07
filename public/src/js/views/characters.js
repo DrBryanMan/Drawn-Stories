@@ -3,26 +3,27 @@ import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { createPaginator } from '../components/Pagination.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
+import { t } from '../helpers/i18n.js';
 
 const paginator = createPaginator({ pageSize: 20 });
-const SORT_OPTIONS = [
-  { value: 'issues', label: 'За популярністю' },
-  { value: 'name', label: "За ім'ям" },
-  { value: 'recent', label: 'Нещодавно додані' },
+const getSortOptions = () => [
+  { value: 'issues', label: t('sort_popularity') },
+  { value: 'name', label: t('sort_char_name') },
+  { value: 'recent', label: t('sort_recent') },
 ];
 let searchQuery = '';
 let sortField = 'issues';
 let sortOrder = 'desc';
 
 export async function renderCharacters(container, query) {
-  document.title = 'Персонажі — Drawn Stories';
+  document.title = `${t('characters')} — Drawn Stories`;
   paginator.reset();
   searchQuery = query.search || '';
 
   container.innerHTML = `
     <div class="container">
       <div class="page-header">
-        ${createBreadcrumbs([{ label: 'Персонажі' }])}
+        ${createBreadcrumbs([{ label: t('characters') }])}
       </div>
 
       <div class="catalog-top-row">
@@ -46,10 +47,10 @@ export async function renderCharacters(container, query) {
 
   let filterBar = mountFilterBar(container.querySelector('#characters-filter-bar-container'), {
     resultsCount: 0,
-    resultsLabel: 'Знайдено',
+    resultsLabel: t('found_count'),
     showResults: true,
     showSearch: true,
-    searchPlaceholder: 'Пошук персонажів...',
+    searchPlaceholder: t('search_characters'),
     searchValue: searchQuery,
     onSearch: (val) => {
       searchQuery = val;
@@ -59,7 +60,7 @@ export async function renderCharacters(container, query) {
     showSort: true,
     sortId: 'char-sort-select',
     sortValue: sortField,
-    sortOptions: SORT_OPTIONS,
+    sortOptions: getSortOptions(),
     showSortOrder: true,
     sortOrderId: 'char-sort-order-btn',
     sortOrderValue: sortOrder,
@@ -110,7 +111,7 @@ async function fetchAndRenderCharacters(filterBar) {
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             <line x1="8" y1="11" x2="14" y2="11"/>
           </svg>
-          <h3>Персонажів не знайдено</h3>
+          <h3>${t('characters_not_found')}</h3>
         </div>`;
       paginationWrap.innerHTML = '';
       return;
@@ -120,11 +121,11 @@ async function fetchAndRenderCharacters(filterBar) {
       const cover = comicVineImageUrl(item.image);
       let genderIcon = '';
       if (item.gender === 1) {
-        genderIcon = `<span class="char-gender-badge male" title="Чоловіча"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="m21 3-6.75 6.75"/><circle cx="10" cy="14" r="6"/></svg></span>`;
+        genderIcon = `<span class="char-gender-badge male" title="${t('gender_male')}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="m21 3-6.75 6.75"/><circle cx="10" cy="14" r="6"/></svg></span>`;
       } else if (item.gender === 2) {
-        genderIcon = `<span class="char-gender-badge female" title="Жіноча"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15v7"/><path d="M9 19h6"/><circle cx="12" cy="9" r="6"/></svg></span>`;
+        genderIcon = `<span class="char-gender-badge female" title="${t('gender_female')}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15v7"/><path d="M9 19h6"/><circle cx="12" cy="9" r="6"/></svg></span>`;
       } else {
-        genderIcon = `<span class="char-gender-badge unknown" title="Невідома"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>`;
+        genderIcon = `<span class="char-gender-badge unknown" title="${t('gender_unknown')}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>`;
       }
 
       return `
@@ -140,7 +141,7 @@ async function fetchAndRenderCharacters(filterBar) {
             <h3 class="char-name" title="${escapeHtmlAttribute(item.name)}">${escapeHtmlAttribute(item.name)}</h3>
             ${item.real_name ? `<p class="char-real-name" title="${escapeHtmlAttribute(item.real_name)}">${escapeHtmlAttribute(item.real_name)}</p>` : ''}
             <div class="char-stats">
-              <span class="char-stat-label">Випусків:</span>
+              <span class="char-stat-label">${t('section_issues')}:</span>
               <strong class="char-stat-value">${item.issue_count}</strong>
             </div>
           </div>
@@ -156,6 +157,6 @@ async function fetchAndRenderCharacters(filterBar) {
 
   } catch (err) {
     console.error(err);
-    grid.innerHTML = `<div class="error-state">Помилка завантаження даних</div>`;
+    grid.innerHTML = `<div class="error-state">${t('loading_error')}</div>`;
   }
 }

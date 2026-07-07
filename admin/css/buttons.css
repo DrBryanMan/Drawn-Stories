@@ -89,10 +89,21 @@
 }
 
 .btn-admin--primary {
-  background: var(--accent);
+  --btn-admin-color: var(--accent);
+  background-color: var(--btn-admin-color);
   color: white;
+  
   &:hover {
-      background: var(--accent-h);
+      background: color-mix(in srgb, var(--btn-admin-color) 80%, black 20%);
+  }
+  &.btn-admin--green {
+    --btn-admin-color: var(--green);
+  }
+  &.btn-admin--purple {
+    --btn-admin-color: var(--purple);
+  }
+  &.btn-admin--yellow {
+    --btn-admin-color: var(--yellow);
   }
 }
 

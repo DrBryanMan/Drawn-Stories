@@ -4,10 +4,12 @@
 
 /* ── Hero ────────────────────────────────────────────── */
 .hero {
-  position: relative; overflow: hidden;
+  position: relative;
+  /* overflow: hidden; */
   background: var(--bg-2);
   border-bottom: 1px solid var(--border);
   padding: 2em 0 0;
+  margin-bottom: 2em;
 }
 .hero-bg {
   position: absolute; inset: 0; z-index: 0; pointer-events: none;
@@ -23,7 +25,7 @@
   margin-bottom: 12px;
 }
 .hero-title .accent { color: var(--accent); }
-.hero-sub { font-size: 15px; color: var(--text-2); margin-bottom: 36px; max-width: 520px; line-height: 1.7; }
+.hero-sub { font-size: 15px; color: var(--text-2); margin-bottom: 1em; max-width: 520px; line-height: 1.7; }
 
 /* ── Stats Section ───────────────────────────────────── */
 .stats-section {
@@ -96,8 +98,6 @@
   align-items: start;
 }
 
-
-
 .section {
   margin-bottom: 48px;
 }
@@ -109,5 +109,242 @@
 #recent-volumes-grid, #recent-issues-grid {
   grid-template-columns: repeat(8, 1fr);
 }
+
+/* ── Redesigned Hero Layout ── */
+.hero-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 2em;
+  padding-bottom: 1.5em;
+}
+
+.hero-left {
+  flex: 1;
+}
+
+.hero-right {
+  flex-shrink: 0;
+  margin-top: 10px;
+}
+
+/* ── Vertical Segmented Control ── */
+/* .catalog-segmented--vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid var(--border-s);
+  border-radius: 14px;
+  background: var(--bg-card);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  min-width: 200px;
+}
+
+.catalog-segmented--vertical .catalog-segment {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+  transition: all var(--t);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.catalog-segmented--vertical .catalog-segment:hover {
+  color: var(--text);
+  background: var(--bg-2);
+}
+
+.catalog-segmented--vertical .catalog-segment.is-active {
+  background: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(109, 76, 255, 0.25);
+  border-color: transparent;
+} */
+
+/* ── Popular Contents Widget ── */
+.hero-popular {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.popular-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-bottom: .5em;
+}
+
+.popular-list {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 12px;
+}
+
+/* .popular-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-s);
+  padding: 6px 14px 6px 8px;
+  border-radius: 24px;
+  text-decoration: none;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all var(--t);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.popular-item:hover {
+  border-color: var(--accent);
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 16px rgba(109, 76, 255, 0.1);
+}
+
+.popular-item-img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg-3);
+  border: 1px solid var(--border-s);
+}
+
+.popular-item-name {
+  max-width: 155px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.popular-item-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(109, 76, 255, 0.06);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  margin-left: 4px;
+} */
+
+.popular-item {
+    position: relative;
+    display: grid;
+    align-items: center;
+    justify-items: center;
+    gap: 8px;
+    max-width: 120px;
+    background: none;
+    border: 0px solid var(--border-s);
+    padding: 0;
+    border-radius: 0;
+    text-decoration: none;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+    transition: all var(--t);
+    box-shadow: none;
+}
+
+.popular-item-img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2/3;
+    border-radius: var(--r);
+    object-fit: cover;
+    background: var(--bg-3);
+    border: 1px solid var(--border-s);
+}
+.popular-item-name {
+    position: absolute;
+    bottom: 100%;
+    max-width: calc(50% + 120px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0;
+    visibility: hidden;
+    background: var(--bg);
+    padding: 3px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    transition: all var(--t);
+}
+.popular-item:hover .popular-item-name {
+  opacity: 1;
+  visibility: visible;
+  bottom: 102%;
+}
+
+.popular-item-badge {
+    position: absolute;
+    top: 100%;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, var(--bg));
+    border: 1px solid var(--accent-glow);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    margin-left: 4px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all var(--t);
+}
+.popular-item:hover .popular-item-badge {
+  opacity: 1;
+  visibility: visible;
+  top: 102%;
+}
+
+.hero-content:has([data-home-tab="comics"][class*="is-active"]) .popular-item-img {
+  aspect-ratio: 1/1;
+  object-position: top;
+}
+
+.popular-icon {
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+  .hero-content {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 24px;
+  }
+  .catalog-segmented--vertical {
+    flex-direction: row;
+    min-width: unset;
+  }
+  .catalog-segmented--vertical .catalog-segment {
+    text-align: center;
+    justify-content: center;
+  }
+}
+
 
 

@@ -2,6 +2,7 @@ import { API } from '../helpers/api.js';
 import { currentUser } from '../shell.js';
 import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
+import { t } from '../helpers/i18n.js';
 
 const icon = (d, size = 16, strokeWidth = 2) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
@@ -24,29 +25,34 @@ let hideMissing = false;
 export async function renderCollections(main, params) {
     const username = params.username;
     const isMyCollection = !username || (currentUser && currentUser.username === username);
-    document.title = username ? `Колекція ${username} — Drawn Stories` : `Моя колекція — Drawn Stories`;
+    
+    const pageTitle = username 
+        ? t('collection_title_other').replace('{username}', username)
+        : t('collection_title_my');
+        
+    document.title = `${pageTitle} — Drawn Stories`;
 
     main.innerHTML = `
         <div class="container">
             <div class="page-header">
                 ${createBreadcrumbs([
-                    { label: 'Користувач' },
-                    { label: escapeHtmlAttribute(username || 'Я') },
-                    { label: 'Колекція' }
+                    { label: t('user_label') },
+                    { label: escapeHtmlAttribute(username || t('me_label')) },
+                    { label: t('collection') }
                 ])}
-                <h1 class="page-title">${username ? `Колекція ${escapeHtmlAttribute(username)}` : 'Моя колекція'}</h1>
+                <h1 class="page-title">${escapeHtmlAttribute(pageTitle)}</h1>
             </div>
 
             <div class="collection-controls-row" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 32px;">
                 <div class="collection-segmented-wrap" style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
                     <div class="catalog-segmented" role="group" aria-label="Тип контенту" id="collection-type-segmented">
-                        <button class="catalog-segment ${currentType === 'collection' ? 'is-active' : ''}" data-type="collection">Збірники</button>
-                        <button class="catalog-segment ${currentType === 'issue' ? 'is-active' : ''}" data-type="issue">Випуски</button>
+                        <button class="catalog-segment ${currentType === 'collection' ? 'is-active' : ''}" data-type="collection">${t('collections')}</button>
+                        <button class="catalog-segment ${currentType === 'issue' ? 'is-active' : ''}" data-type="issue">${t('releases')}</button>
                     </div>
                     <div class="collection-segmented" id="collection-tab-segmented">
-                        <button class="collection-segment ${activeTab === 'get' ? 'is-active' : ''}" data-tab="get">Колекція</button>
-                        <button class="collection-segment ${activeTab === 'wanted' ? 'is-active' : ''}" data-tab="wanted">Бажане</button>
-                        <button class="collection-segment ${activeTab === 'barter' ? 'is-active' : ''}" data-tab="barter">Бартер</button>
+                        <button class="collection-segment ${activeTab === 'get' ? 'is-active' : ''}" data-tab="get">${t('have')}</button>
+                        <button class="collection-segment ${activeTab === 'wanted' ? 'is-active' : ''}" data-tab="wanted">${t('wanted')}</button>
+                        <button class="collection-segment ${activeTab === 'barter' ? 'is-active' : ''}" data-tab="barter">${t('barter')}</button>
                     </div>
                 </div>
                 
@@ -54,25 +60,25 @@ export async function renderCollections(main, params) {
                     <div style="display: flex; gap: 16px; align-items: center; flex: 1; flex-wrap: wrap;">
                         <div class="collection-search-wrap" style="flex: 1; max-width: 320px;">
                             <span class="search-icon">${icon(ICON.search, 18, 2.5)}</span>
-                            <input type="text" id="collection-search" placeholder="Пошук у колекції..." value="${escapeHtmlAttribute(searchQuery)}">
+                            <input type="text" id="collection-search" placeholder="${t('search_in_collection')}" value="${escapeHtmlAttribute(searchQuery)}">
                         </div>
                         <label class="collection-hide-missing-label" style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; color: var(--text-2, #4b5563); user-select: none;">
                             <input type="checkbox" id="collection-hide-missing-chk" ${hideMissing ? 'checked' : ''} style="width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--border-color, #d1d5db); cursor: pointer; accent-color: var(--accent-color, #2563eb);">
-                            <span>Приховати відсутні</span>
+                            <span>${t('hide_missing')}</span>
                         </label>
                     </div>
                     <div class="collection-stats">
                         <div class="collection-stat-item">
                             <span class="collection-stat-icon">${icon(ICON.book, 18, 2)}</span>
                             <div class="collection-stat-details">
-                                <span class="collection-stat-label">Серій:</span>
+                                <span class="collection-stat-label">${t('home_stats_volumes')}:</span>
                                 <span class="collection-stat-value" id="stat-series">0</span>
                             </div>
                         </div>
                         <div class="collection-stat-item">
                             <span class="collection-stat-icon">${icon(ICON.layers, 18, 2)}</span>
                             <div class="collection-stat-details">
-                                <span class="collection-stat-label" id="stat-label-collections">Збірників:</span>
+                                <span class="collection-stat-label" id="stat-label-collections">${currentType === 'issue' ? t('releases') : t('collections')}:</span>
                                 <span class="collection-stat-value" id="stat-collections">0</span>
                             </div>
                         </div>
@@ -110,7 +116,7 @@ export async function renderCollections(main, params) {
                 // Update stats label
                 const labelEl = main.querySelector('#stat-label-collections');
                 if (labelEl) {
-                    labelEl.textContent = currentType === 'issue' ? 'Випусків:' : 'Збірників:';
+                    labelEl.textContent = currentType === 'issue' ? `${t('releases')}:` : `${t('collections')}:`;
                 }
                 
                 await loadDataAndRender();
@@ -142,7 +148,7 @@ export async function renderCollections(main, params) {
             });
         }
     } catch (err) {
-        main.querySelector('#collections-results').innerHTML = `<div class="error-state">Помилка: ${err.message}</div>`;
+        main.querySelector('#collections-results').innerHTML = `<div class="error-state">${t('error_label')}: ${err.message}</div>`;
     }
 }
 
@@ -190,7 +196,7 @@ function renderResults(main, isMyCollection = true) {
         container.innerHTML = `
             <div class="empty-state">
                 ${icon(ICON.layers, 48, 1.5)}
-                <h3>Список порожній</h3>
+                <h3>${t('list_empty')}</h3>
             </div>`;
         return;
     }
@@ -207,13 +213,13 @@ function renderResults(main, isMyCollection = true) {
                         <h2 class="volume-title">
                             <a href="#/volumes/${volume.id}">${escapeHtmlAttribute(volume.name_uk || volume.name)}</a>
                         </h2>
-                        <div class="volume-publisher">${escapeHtmlAttribute(volume.publisher_name || 'Невідоме')}</div>
+                        <div class="volume-publisher">${escapeHtmlAttribute(volume.publisher_name || t('unknown_publisher'))}</div>
                     </div>
                     ${isMyCollection ? `
                         <div class="volume-info-right">
                             <div class="volume-progress-row">
                                 ${ownedCount < totalCount ? `
-                                    <button class="volume-add-all-btn" data-volume-id="${volume.id}" title="Додати всі">
+                                    <button class="volume-add-all-btn" data-volume-id="${volume.id}" title="${t('add_all')}">
                                         ${icon(ICON.listPlus, 16)}
                                     </button>
                                 ` : ''}
@@ -256,7 +262,7 @@ function renderResults(main, isMyCollection = true) {
                                         <div class="item-overlay">
                                             <button class="toggle-collection-btn ${isOwned ? 'btn-remove' : 'btn-add'}" 
                                                     data-id="${item.id}" 
-                                                    title="${isOwned ? 'Видалити з колекції' : 'Додати в колекцію'}">
+                                                    title="${isOwned ? t('remove_from_collection') : t('add_to_collection')}">
                                                 ${isOwned ? icon(ICON.trash, 14) : icon(ICON.plus, 14)}
                                             </button>
                                         </div>
@@ -294,7 +300,7 @@ function renderResults(main, isMyCollection = true) {
                     updateStats();
                     renderResults(main, isMyCollection);
                 } catch (err) {
-                    alert('Помилка: ' + err.message);
+                    alert(`${t('error_label')}: ` + err.message);
                     btn.disabled = false;
                 }
             });
@@ -321,7 +327,7 @@ function renderResults(main, isMyCollection = true) {
                     updateStats();
                     renderResults(main, isMyCollection);
                 } catch (err) {
-                    alert('Помилка: ' + err.message);
+                    alert(`${t('error_label')}: ` + err.message);
                     btn.disabled = false;
                 }
             });

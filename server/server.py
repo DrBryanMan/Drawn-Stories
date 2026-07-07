@@ -11,7 +11,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from server.db import init_db, close_db
-from server.routes import stats, catalog, volumes, publishers, themes, auth, user_readlist, favorites, collections, issues, events, reading_orders, images, characters, personnel, scrape, wanted, magazines, manga_chapters, parser
+from server.routes import stats, catalog, volumes, publishers, themes, auth, user_readlist, favorites, collections, issues, events, reading_orders, images, characters, personnel, scrape, wanted, magazines, manga_chapters, parser, edits
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -120,6 +120,7 @@ app.include_router(wanted.router)
 app.include_router(magazines.router)
 app.include_router(manga_chapters.router)
 app.include_router(parser.router)
+app.include_router(edits.router)
 
 @app.get("/api/health")
 async def health_check():

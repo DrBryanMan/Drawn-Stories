@@ -3,26 +3,27 @@ import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { createPaginator } from '../components/Pagination.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
+import { t } from '../helpers/i18n.js';
 
 const paginator = createPaginator({ pageSize: 20 });
-const SORT_OPTIONS = [
-  { value: 'issues', label: 'За кількістю робіт' },
-  { value: 'name', label: "За ім'ям" },
-  { value: 'recent', label: 'Нещодавно додані' },
+const getSortOptions = () => [
+  { value: 'issues', label: t('sort_works_count') },
+  { value: 'name', label: t('sort_char_name') },
+  { value: 'recent', label: t('sort_recent') },
 ];
 let searchQuery = '';
 let sortField = 'issues';
 let sortOrder = 'desc';
 
 export async function renderPersonnel(container, query) {
-  document.title = 'Персонал та Автори — Drawn Stories';
+  document.title = `${t('personnel')} — Drawn Stories`;
   paginator.reset();
   searchQuery = query.search || '';
 
   container.innerHTML = `
     <div class="container">
       <div class="page-header">
-        ${createBreadcrumbs([{ label: 'Персонал' }])}
+        ${createBreadcrumbs([{ label: t('personnel') }])}
       </div>
 
       <div class="catalog-top-row">
@@ -46,10 +47,10 @@ export async function renderPersonnel(container, query) {
 
   let filterBar = mountFilterBar(container.querySelector('#personnel-filter-bar-container'), {
     resultsCount: 0,
-    resultsLabel: 'Знайдено',
+    resultsLabel: t('found_count'),
     showResults: true,
     showSearch: true,
-    searchPlaceholder: 'Пошук авторів та персоналу...',
+    searchPlaceholder: t('search_personnel'),
     searchValue: searchQuery,
     onSearch: (val) => {
       searchQuery = val;
@@ -59,7 +60,7 @@ export async function renderPersonnel(container, query) {
     showSort: true,
     sortId: 'personnel-sort-select',
     sortValue: sortField,
-    sortOptions: SORT_OPTIONS,
+    sortOptions: getSortOptions(),
     showSortOrder: true,
     sortOrderId: 'personnel-sort-order-btn',
     sortOrderValue: sortOrder,
@@ -110,7 +111,7 @@ async function fetchAndRenderPersonnel(filterBar) {
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             <line x1="8" y1="11" x2="14" y2="11"/>
           </svg>
-          <h3>Авторів не знайдено</h3>
+          <h3>${t('personnel_not_found')}</h3>
         </div>`;
       paginationWrap.innerHTML = '';
       return;
@@ -132,7 +133,7 @@ async function fetchAndRenderPersonnel(filterBar) {
             <h3 class="person-name" title="${escapeHtmlAttribute(item.name)}">${escapeHtmlAttribute(item.name)}</h3>
             ${metaInfo ? `<p class="person-meta" title="${escapeHtmlAttribute(metaInfo)}">${escapeHtmlAttribute(metaInfo)}</p>` : ''}
             <div class="person-stats">
-              <span class="person-stat-label">Робіт:</span>
+              <span class="person-stat-label">${t('works_label')}:</span>
               <strong class="person-stat-value">${item.issue_count}</strong>
             </div>
           </div>
@@ -148,6 +149,6 @@ async function fetchAndRenderPersonnel(filterBar) {
 
   } catch (err) {
     console.error(err);
-    grid.innerHTML = `<div class="error-state">Помилка завантаження даних</div>`;
+    grid.innerHTML = `<div class="error-state">${t('loading_error')}</div>`;
   }
 }

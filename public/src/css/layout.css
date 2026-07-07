@@ -21,6 +21,14 @@
       align-items: center;
       justify-content: space-between;
       margin-bottom: 14px;
+      
+      & span {
+        display: block;
+        margin-top: 2px;
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 650;
+      }
     }
     
     & h2 {
@@ -36,14 +44,6 @@
       text-transform: uppercase;
       letter-spacing: 0.02em;
     }
-    
-    & span {
-      display: block;
-      margin-top: 2px;
-      color: var(--text-muted);
-      font-size: 12px;
-      font-weight: 650;
-    }
 
     & svg {
       width: 18px; height: 18px;
@@ -51,12 +51,15 @@
     }
     
     & .section-link {
+      font-size: 0.85rem;
       font-weight: 700;
       color: var(--accent);
       text-decoration: none;
       display: flex;
       align-items: center;
       gap: 4px;
+      padding-left: .5em;
+      border-left: 1px solid var(--accent-50);
     }
     
     & h3 {

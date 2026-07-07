@@ -26,7 +26,10 @@ const ICON = {
     sortAsc: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m11 12-4-4-4 4"/><path d="M7 16V8"/><path d="M14 9h8"/><path d="M14 15h5"/><path d="M14 21h2"/></svg>',
     sortDesc: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m11 12-4 4-4-4"/><path d="M7 8v8"/><path d="M14 9h8"/><path d="M14 15h5"/><path d="M14 21h2"/></svg>',
     edit: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
-    externalLink: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 22 3 22 10"></polyline><line x1="10" y1="14" x2="22" y2="3"></line></svg>'
+    externalLink: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 22 3 22 10"></polyline><line x1="10" y1="14" x2="22" y2="3"></line></svg>',
+    shieldAlert: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+    globe: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+    clock: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
 };
 
 const THEME_ICON = {
@@ -45,8 +48,8 @@ function renderSkeleton(container) {
             <div class="container" style="padding-top: 20px;">
                 <div class="skeleton" style="width: 200px; height: 18px; margin-bottom: 24px;"></div>
             </div>
-            <div class="volume-hero-band" style="height: 320px;">
-                <div class="container volume-hero">
+            <div class="issue-hero-band" style="height: 320px;">
+                <div class="container issue-hero">
                     <div class="skeleton" style="width: 250px; height: 375px; border-radius: 8px;"></div>
                     <div style="display: flex; flex-direction: column; gap: 16px; width: 100%;">
                         <div class="skeleton" style="width: 60%; height: 36px;"></div>
@@ -81,6 +84,47 @@ function formatIssueRanges(nums) {
         }
     }
     return parts.join(', ');
+}
+
+function getVerificationBadgeHTML(collection) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const today = `${year}-${month}-${day}`;
+
+    const isAnnounced = collection.release_date && collection.release_date > today;
+    const status = isAnnounced ? 'announced' : (collection.verification_status || 'unverified');
+
+    if (status === 'announced') {
+        return `
+            <span class="volume-badge volume-status-announced" title="Збірник анонсовано, дата релізу в майбутньому">
+                ${ICON.clock}
+                Анонсовано
+            </span>
+        `;
+    } else if (status === 'physical') {
+        return `
+            <span class="volume-badge volume-status-physical" title="Інформація підтверджена з фізичного примірника">
+                ${ICON.book}
+                З примірника
+            </span>
+        `;
+    } else if (status === 'open_sources') {
+        return `
+            <span class="volume-badge volume-status-open-sources" title="Інформація взята з відкритих джерел">
+                ${ICON.globe}
+                З інтернету
+            </span>
+        `;
+    } else {
+        return `
+            <span class="volume-badge volume-status-unverified" title="Інформація ще не перевірена">
+                ${ICON.shieldAlert}
+                Неперевірено
+            </span>
+        `;
+    }
 }
 
 function themeName(theme) {
@@ -182,18 +226,18 @@ export async function renderCollectionDetail(main, params = {}) {
                     ])}
                 </div>
 
-                <section class="volume-hero-band collection-hero-band">
-                    <div class="container volume-hero">
-                        <div class="volume-cover-column">
+                <section class="issue-hero-band">
+                    <div class="container issue-hero">
+                        <div class="issue-cover-column">
                             ${coverUrl
-                                ? `<img class="volume-cover" src="${escapeHtmlAttribute(coverUrl)}" alt="${title}">`
-                                : `<div class="volume-cover volume-cover--empty">
+                                ? `<img class="issue-cover" src="${escapeHtmlAttribute(coverUrl)}" alt="${title}">`
+                                : `<div class="issue-cover issue-cover--empty">
                                     <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                         <rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h5"/>
                                     </svg>
                                    </div>`}
 
-                            <div class="volume-readlist-controls" style="display: flex; gap: 8px; margin-top: 16px;">
+                            <div class="issue-readlist-controls" style="display: flex; gap: 8px; margin-top: 16px;">
                                 <button class="readlist-btn ${isOwned ? 'is-active' : ''} ${!currentUser ? 'readlist-btn--anon' : ''}" id="btn-toggle-collection" style="flex: 1; height: 42px; padding: 0 16px; gap: 8px; justify-content: center;">
                                     ${isOwned ? ICON.trash : ICON.plus}
                                     <span style="font-weight: 600;">${isOwned ? 'Видалити з колекції' : 'Додати в колекцію'}</span>
@@ -209,6 +253,28 @@ export async function renderCollectionDetail(main, params = {}) {
                                     </button>
                                 `}
                             </div>
+
+                            ${(() => {
+                                const hasLinks = collection.cv_id || collection.site_link;
+                                if (!hasLinks) return '';
+                                return `
+                                    <div class="volume-cover-ext-sources" style="margin-top: 16px; border-top: 1px solid var(--border-s); padding-top: 16px; width: 100%;">
+                                        <div style="font-family: var(--font-oswald); font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; text-align: center;">Зовнішні джерела</div>
+                                        <div class="source-links">
+                                            ${collection.cv_id ? `
+                                                <a href="https://comicvine.gamespot.com/${collection.cv_slug}/4000-${collection.cv_id}/" class="source-link-cv" target="_blank" rel="noreferrer">
+                                                    CV ${ICON.externalLink}
+                                                </a>
+                                            ` : ''}
+                                            ${collection.site_link ? `
+                                                <a href="${escapeHtmlAttribute(collection.site_link)}" class="source-link-site" target="_blank" rel="noreferrer">
+                                                    SITE ${ICON.externalLink}
+                                                </a>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                `;
+                            })()}
                         </div>
 
                         <div class="volume-hero-info">
@@ -221,22 +287,28 @@ export async function renderCollectionDetail(main, params = {}) {
                             </div>
 
                             <div class="volume-hero-badges">
-                                ${collection.cover_date || collection.release_date ? `
-                                    <span class="volume-badge volume-year-badge" title="Дата виходу">
-                                        ${ICON.calendar}
-                                        ${formatDate(collection.release_date || collection.cover_date, '—')}
-                                    </span>
+                            ${collection.volume_id ? `
+                                <a href="#/volumes/${collection.volume_id}" class="volume-badge volume-volume-badge" title="Серія">
+                                ${ICON.book}
+                                ${escapeHtmlAttribute(collection.volume_name_uk || collection.volume_name || '')}
+                                </a>
                                 ` : ''}
+                                ${collection.cover_date || collection.release_date ? (() => {
+                                    const dateStr = collection.release_date || collection.cover_date;
+                                    const now = new Date();
+                                    const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+                                    const isFuture = dateStr && dateStr > today;
+                                    const badgeClass = isFuture ? 'volume-year-badge--yellow' : 'volume-year-badge--green';
+                                    return `
+                                        <span class="volume-badge volume-year-badge ${badgeClass}" title="Дата виходу">
+                                            ${ICON.calendar}
+                                            ${formatDate(dateStr, '—')}
+                                        </span>
+                                    `;
+                                })() : ''}
+                                ${getVerificationBadgeHTML(collection)}
                             </div>
 
-                            <div class="volume-hero-actions">
-                                ${collection.site_link ? `
-                                    <a href="${escapeHtmlAttribute(collection.site_link)}" target="_blank" rel="noopener noreferrer" class="volume-action-btn" style="text-decoration: none;">
-                                        ${ICON.externalLink}
-                                        На сайті
-                                    </a>
-                                ` : ''}
-                            </div>
 
                             ${isModerator ? `
                                 <div class="volume-hero-admin-actions">
@@ -267,15 +339,12 @@ export async function renderCollectionDetail(main, params = {}) {
                                 </div>
                             </div>
 
-                            <div class="collection-meta-details">
-                                <div class="collection-meta-item">
-                                    <span class="collection-meta-label">Том</span>
-                                    <span class="collection-meta-value">
-                                        ${collection.volume_id ? `
-                                            <a href="#/volumes/${collection.volume_id}">${escapeHtmlAttribute(collection.volume_name_uk || collection.volume_name)}</a>
-                                        ` : '—'}
-                                    </span>
-                                </div>
+                            <div class="collection-meta-details collection-meta-details--${(() => {
+                                const now = new Date();
+                                const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+                                if (collection.release_date && collection.release_date > today) return 'announced';
+                                return collection.verification_status || 'unverified';
+                            })()}">
                                 <div class="collection-meta-item">
                                     <span class="collection-meta-label">ISBN</span>
                                     <span class="collection-meta-value">${escapeHtmlAttribute(collection.isbn || '—')}</span>
@@ -327,7 +396,7 @@ export async function renderCollectionDetail(main, params = {}) {
                     ${related_collections.length > 0 ? `
                         <div class="related-collections-section" style="margin-bottom: 40px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                                <h2 style="font-size: 18px; font-weight: 750; margin: 0;">Інші збірники тому</h2>
+                                <h2 style="font-size: 18px; font-weight: 750; margin: 0;">Інші збірники серії</h2>
                                 <div style="display: flex; align-items: center; gap: 12px;">
                                     <button class="readlist-btn" id="btn-sort-related" title="Змінити напрямок" style="width: 34px; height: 34px; padding: 0;">
                                         ${issuesSortDir === 'asc' ? ICON.sortAsc : ICON.sortDesc}

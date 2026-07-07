@@ -435,6 +435,7 @@
 .volume-ratings {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--border-s);
   background: var(--bg-card);
   padding: .2em;
   border-radius: var(--r);
@@ -760,6 +761,7 @@
   flex-wrap: wrap;
   align-items: flex-start;
   gap: 16px;
+  padding: .5em 1em;
 }
 
 .volume-theme-group {
@@ -797,12 +799,10 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  min-height: 28px;
-  padding: 4px 10px;
-  border-radius: 999px;
+  padding: 0px 5px 2px;
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 650;
-  text-decoration: none;
   transition: all var(--t);
 }
 
@@ -1132,7 +1132,7 @@
   transform: scale(0.95);
 }
 
-.issue-grid-type-badge {
+/* .issue-grid-type-badge {
   position: absolute;
   top: 8px;
   right: 8px;
@@ -1146,7 +1146,7 @@
   text-transform: uppercase;
   letter-spacing: .04em;
   z-index: 2;
-}
+} */
 
 .issue-grid-membership-btn {
   position: absolute;
@@ -1174,8 +1174,10 @@
 }
 
 .issue-grid-actions {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
   display: flex;
-  flex-direction: column;
   gap: 8px;
   z-index: 10;
 }

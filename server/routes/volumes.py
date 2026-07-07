@@ -237,6 +237,30 @@ async def get_volume_detail(volume_id: int, request: Request):
         [volume_id]
     )
 
+    # Separate date ranges for issues and collections
+    issue_only_dates = sorted(
+        item.get("cover_date") or item.get("release_date")
+        for item in issues
+        if item.get("cover_date") or item.get("release_date")
+    )
+    collection_only_dates = sorted(
+        item.get("cover_date") or item.get("release_date")
+        for item in collections
+        if item.get("cover_date") or item.get("release_date")
+    )
+
+    def first_year(dates):
+        for d in dates:
+            if d and len(d) >= 4 and d[:4].isdigit():
+                return int(d[:4])
+        return None
+
+    def last_year(dates):
+        for d in reversed(dates):
+            if d and len(d) >= 4 and d[:4].isdigit():
+                return int(d[:4])
+        return None
+
     return {
         "volume": volume_with_end,
         "items": items,
@@ -259,6 +283,10 @@ async def get_volume_detail(volume_id: int, request: Request):
             "total_items": len(items),
             "first_release": issue_dates[0] if issue_dates else None,
             "last_release": issue_dates[-1] if issue_dates else None,
+            "issue_first_year": first_year(issue_only_dates),
+            "issue_last_year": last_year(issue_only_dates),
+            "collection_first_year": first_year(collection_only_dates),
+            "collection_last_year": last_year(collection_only_dates),
         },
     }
 
@@ -378,10 +406,7 @@ async def create_volume(data: dict):
     
     return {"message": "Том успішно створено", "id": new_id}
 
-@router.put("/{volume_id}")
-async def update_volume(volume_id: int, data: dict):
-    db = get_db()
-    
+def apply_volume_update_in_db(db, volume_id: int, data: dict):
     # Check if volume exists
     volume = db.get_one("SELECT id FROM volumes WHERE id = ?", [volume_id])
     if not volume:
@@ -416,7 +441,11 @@ async def update_volume(volume_id: int, data: dict):
         replace_volume_themes(db, volume_id, data["theme_ids"])
         
     sync_volume_staff_and_characters(db, volume_id, data)
-    
+
+@router.put("/{volume_id}")
+async def update_volume(volume_id: int, data: dict):
+    db = get_db()
+    apply_volume_update_in_db(db, volume_id, data)
     return {"message": "Volume updated successfully"}
 
 @router.post("/{volume_id}/convert-all-to-collections")

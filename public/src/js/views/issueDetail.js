@@ -7,6 +7,7 @@ import { openScrapeProgressModal } from '../components/ScrapeProgressModal.js';
 import { IssueEditor } from '/admin/js/IssueEditor.js';
 import { formatDate } from '../helpers/lang.js';
 import { translateStaffRole, getRoleSortIndex } from '../helpers/staff.js';
+import { t } from '../helpers/i18n.js';
 
 
 // ── Lucide SVG icons ──────────────────────────────
@@ -35,35 +36,36 @@ const ICON = {
 };
 
 const EVENT_IMPORTANCE_LABELS = {
-    prologue: 'Пролог',
-    main: 'Основний',
-    'tie-in': 'Тай-ін',
-    epilogue: 'Епілог',
+    prologue: t('event_prologue'),
+    main: t('event_main'),
+    'tie-in': t('event_tiein'),
+    epilogue: t('event_epilogue'),
 };
 
 // ── Readlist options config ──────────────────────────
-const READLIST_OPTIONS = [
-    { value: '',          label: 'Додати в список', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>', color: 'var(--status-default)', bg: 'var(--bg-card)', borderColor: 'var(--border-s)' },
-    { value: 'Planned',   label: 'Заплановано',     icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', color: 'var(--status-planned)', bg: 'color-mix(in srgb, var(--status-planned) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-planned) 20%, var(--border-s))' },
-    { value: 'Completed', label: 'Прочитано',        icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>', color: 'var(--status-completed)', bg: 'color-mix(in srgb, var(--status-completed) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-completed) 20%, var(--border-s))' },
+const getReadlistOptions = () => [
+    { value: '',          label: t('add_to_list'), icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>', color: 'var(--status-default)', bg: 'var(--bg-card)', borderColor: 'var(--border-s)' },
+    { value: 'Planned',   label: t('list_planned'),     icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', color: 'var(--status-planned)', bg: 'color-mix(in srgb, var(--status-planned) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-planned) 20%, var(--border-s))' },
+    { value: 'Reading',   label: t('list_reading'),     icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>', color: 'var(--status-reading)', bg: 'color-mix(in srgb, var(--status-reading) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-reading) 20%, var(--border-s))' },
+    { value: 'Completed', label: t('list_completed'),        icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>', color: 'var(--status-completed)', bg: 'color-mix(in srgb, var(--status-completed) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-completed) 20%, var(--border-s))' },
 ];
 
 function translateCharacterRole(role) {
     const roles = {
-        'main': 'Основний персонаж',
-        'supporting': 'Другорядний персонаж',
-        'minor': 'Інші',
-        'cameo': 'Камео'
+        'main': t('role_main_char'),
+        'supporting': t('role_supporting_char'),
+        'minor': t('role_minor_char'),
+        'cameo': t('role_cameo')
     };
     return roles[role] || role || '';
 }
 
 function translateAppearanceStatus(status) {
     const statuses = {
-        'flashback': 'Спогад',
-        'first appear': 'Перша поява',
-        'death': 'Смерть',
-        'cameo': 'Камео'
+        'flashback': t('status_flashback'),
+        'first appear': t('status_first_appear'),
+        'death': t('status_death'),
+        'cameo': t('role_cameo')
     };
     return statuses[status] || status || '';
 }
@@ -121,24 +123,26 @@ function renderStaffGroups(personsList) {
 
     const sideRow = (coverGroup.length > 0 || productionGroup.length > 0)
         ? `<div class="issue-staff-side-row">
-               ${renderGroup('Автори обкладинки', coverGroup)}
-               ${renderGroup('Редакція та виробництво', productionGroup)}
+               ${renderGroup(t('staff_cover'), coverGroup)}
+               ${renderGroup(t('staff_production'), productionGroup)}
            </div>`
         : '';
 
     return `
         ${sideRow}
-        ${renderGroup('Інші автори', featuredGroup)}
+        ${renderGroup(t('staff_featured'), featuredGroup)}
     `;
 }
 
 function readlistOptionLabel(value) {
-    return READLIST_OPTIONS.find(o => o.value === value) || READLIST_OPTIONS[0];
+    const options = getReadlistOptions();
+    return options.find(o => o.value === value) || options[0];
 }
 
 function readlistUIHTML() {
-    const defaultOpt = READLIST_OPTIONS[0];
-    const activeOpts = READLIST_OPTIONS.filter(opt => opt.value !== '');
+    const options = getReadlistOptions();
+    const defaultOpt = options[0];
+    const activeOpts = options.filter(opt => opt.value !== '');
     return `
         <div class="volume-readlist-controls" style="margin-top: 16px; margin-bottom: 8px; width: 100%;">
             <div class="readlist-select-wrap" style="flex: 1;">
@@ -160,11 +164,11 @@ function readlistUIHTML() {
                     `).join('')}
                     <option value="" class="readlist-remove-option">
                         <span class="readlist-icon" style="color: #dc2626"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></span>
-                        <span>Видалити</span>
+                        <span>${t('remove')}</span>
                     </option>
                 </select>
             </div>
-            <button class="readlist-btn ${!currentUser ? 'readlist-btn--anon' : ''}" id="readlist-favorite-btn" title="${currentUser ? 'В обране' : 'У закладки'}" style="width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <button class="readlist-btn ${!currentUser ? 'readlist-btn--anon' : ''}" id="readlist-favorite-btn" title="${currentUser ? t('add_to_fav') : t('add_to_bookmarks')}" style="width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                 ${currentUser ? ICON.heart : ICON.bookmark}
             </button>
         </div>
@@ -180,14 +184,14 @@ function collectionUIHTML(status, barter) {
         <div class="volume-readlist-controls" id="collection-controls-wrap" style="margin-top: 8px; margin-bottom: 8px; width: 100%; display: flex; gap: 8px;">
             <button class="readlist-btn ${isOwned ? 'is-active' : ''} ${!currentUser ? 'readlist-btn--anon' : ''}" id="btn-toggle-collection" style="flex: 1; height: 42px; padding: 0 16px; gap: 8px; justify-content: center;">
                 ${isOwned ? ICON.trash : ICON.plus}
-                <span style="font-weight: 600;">${isOwned ? 'Видалити з колекції' : 'Додати в колекцію'}</span>
+                <span style="font-weight: 600;">${isOwned ? t('collection_remove') : t('collection_add')}</span>
             </button>
             ${isOwned ? `
-                <button class="readlist-btn ${isBarter ? 'is-active' : ''} ${!currentUser ? 'readlist-btn--anon' : ''}" id="btn-toggle-barter" title="Бартер" style="width: 42px; height: 42px; padding: 0; justify-content: center; flex-shrink: 0;">
+                <button class="readlist-btn ${isBarter ? 'is-active' : ''} ${!currentUser ? 'readlist-btn--anon' : ''}" id="btn-toggle-barter" title="${t('barter')}" style="width: 42px; height: 42px; padding: 0; justify-content: center; flex-shrink: 0;">
                     ${ICON.refreshCw}
                 </button>
             ` : `
-                <button class="readlist-btn ${isWanted ? 'is-active' : ''} ${!currentUser ? 'readlist-btn--anon' : ''}" id="btn-toggle-wishlist" title="У бажане" style="width: 42px; height: 42px; padding: 0; justify-content: center; flex-shrink: 0;">
+                <button class="readlist-btn ${isWanted ? 'is-active' : ''} ${!currentUser ? 'readlist-btn--anon' : ''}" id="btn-toggle-wishlist" title="${t('wishlist')}" style="width: 42px; height: 42px; padding: 0; justify-content: center; flex-shrink: 0;">
                     ${ICON.bookmark}
                 </button>
             `}
@@ -242,8 +246,8 @@ function renderSkeleton(container) {
 function navCardHTML(issue, direction) {
     const isNext = direction === 'next';
     const num = issue?.issue_number ? `#${escapeHtmlAttribute(issue.issue_number)}` : '';
-    const title = escapeHtmlAttribute(issue?.name || 'Без назви');
-    const dirLabel = isNext ? 'НАСТУПНИЙ' : 'ПОПЕРЕДНІЙ';
+    const title = escapeHtmlAttribute(issue?.name || t('no_title'));
+    const dirLabel = isNext ? t('nav_next') : t('nav_prev');
     const link = issue ? `#/issues/${issue.id}` : null;
 
     if (!issue) {
@@ -265,7 +269,7 @@ function navCardHTML(issue, direction) {
 
 function contextIssueNavCard(issue, direction) {
     const isNext = direction === 'next';
-    const label = isNext ? 'Наступний' : 'Попередній';
+    const label = isNext ? t('nav_next') : t('nav_prev');
     const arrow = isNext ? ICON.chevronRight : ICON.chevronLeft;
 
     if (!issue) {
@@ -274,7 +278,7 @@ function contextIssueNavCard(issue, direction) {
                 <div class="issue-context-issue-cover--empty">${ICON.smallImage}</div>
                 <div class="issue-context-issue-body">
                     <span>${label}</span>
-                    <strong>Немає</strong>
+                    <strong>${t('none')}</strong>
                 </div>
                 <div class="issue-context-issue-arrow">${arrow}</div>
             </div>
@@ -283,7 +287,7 @@ function contextIssueNavCard(issue, direction) {
 
     const cover = comicVineImageUrl(issue.cv_img);
     const num = issue.issue_number ? `#${escapeHtmlAttribute(issue.issue_number)}` : '';
-    const title = escapeHtmlAttribute(issue.name || 'Без назви');
+    const title = escapeHtmlAttribute(issue.name || t('no_title'));
 
     return `
         <a class="issue-context-issue-card issue-context-issue-card--${direction}" href="#/issues/${issue.id}" title="${escapeHtmlAttribute(label)}">
@@ -303,14 +307,14 @@ function contextIssueNavCard(issue, direction) {
 function contextCardHTML(item, type) {
     const isEvent = type === 'event';
     const image = comicVineImageUrl(item.cv_img);
-    const name = escapeHtmlAttribute(item.name || (isEvent ? 'Подія' : 'Сюжетна арка'));
-    const typeLabel = isEvent ? 'Подія' : 'Арка';
+    const name = escapeHtmlAttribute(item.name || (isEvent ? t('event') : t('story_arc')));
+    const typeLabel = isEvent ? t('event') : t('story_arc');
     const detailHref = isEvent ? `#/events/${item.id}` : null;
     const issueType = isEvent
         ? (EVENT_IMPORTANCE_LABELS[item.importance] || item.importance || null)
-        : (item.order_num ? `Позиція ${item.order_num}` : null);
+        : (item.order_num ? `${t('position')} ${item.order_num}` : null);
     const issueCount = Number(item.issue_count) || 0;
-    const countLabel = issueCount === 1 ? '1 випуск' : `${issueCount} випусків`;
+    const countLabel = issueCount === 1 ? t('issue_singular', { count: 1 }) : t('issue_plural', { count: issueCount });
     const bgStyle = image ? ` style="--issue-context-bg: url('${escapeHtmlAttribute(image)}')"` : '';
 
     return `
@@ -334,7 +338,7 @@ function contextCardHTML(item, type) {
 // ── Collection card HTML ──────────────────────────
 function collectionCardHTML(col) {
     const cover = comicVineImageUrl(col.cv_img);
-    const name = escapeHtmlAttribute(col.name || 'Збірник');
+    const name = escapeHtmlAttribute(col.name || t('collection'));
     const volumeLabel = col.volume_name_uk || col.volume_name || '';
     const date = formatDate(col.release_date || col.cover_date);
 
@@ -371,8 +375,8 @@ export async function renderIssueDetail(container, params = {}) {
         container.innerHTML = `
             <div class="issue-detail">
                 <div class="container issue-detail-error">
-                    <h2>Некоректний ID</h2>
-                    <p>Не вдалося знайти випуск за вказаним ідентифікатором.</p>
+                    <h2>${t('invalid_id')}</h2>
+                    <p>${t('not_found_id')}</p>
                 </div>
             </div>
         `;
@@ -391,8 +395,8 @@ export async function renderIssueDetail(container, params = {}) {
         container.innerHTML = `
             <div class="issue-detail">
                 <div class="container issue-detail-error">
-                    <h2>Помилка завантаження</h2>
-                    <p>${escapeHtmlAttribute(err.message || 'Щось пішло не так.')}</p>
+                    <h2>${t('loading_error')}</h2>
+                    <p>${escapeHtmlAttribute(err.message || t('something_went_wrong'))}</p>
                 </div>
             </div>
         `;
@@ -415,7 +419,7 @@ export async function renderIssueDetail(container, params = {}) {
     // Metadata
     const issueTitle = issue.name_uk || issue.name || '';
     const issueNum = issue.issue_number ? `#${issue.issue_number}` : '';
-    const displayTitle = issueTitle || (issueNum ? `Випуск ${issueNum}` : 'Без назви');
+    const displayTitle = issueTitle || (issueNum ? `${t('issue')} ${issueNum}` : t('no_title'));
 
     const volumeName = issue.volume_name_uk || issue.volume_name || '';
     const coverUrl = comicVineImageUrl(issue.cv_img);
@@ -432,9 +436,9 @@ export async function renderIssueDetail(container, params = {}) {
 
     // ── Breadcrumb ────────────────────────────────
     const breadcrumb = createBreadcrumbs([
-        { label: 'Каталог', href: '#/catalog' },
+        { label: t('catalog'), href: '#/catalog' },
         ...(issue.volume_id ? [{ label: volumeName, href: `#/volumes/${issue.volume_id}` }] : []),
-        { label: issueNum || issueTitle || 'Випуск' }
+        { label: issueNum || issueTitle || t('release') }
     ]);
 
     // ── Cover ─────────────────────────────────────
@@ -444,37 +448,37 @@ export async function renderIssueDetail(container, params = {}) {
 
     // ── Badges ────────────────────────────────────
     const volumeBadge = issue.volume_id
-        ? `<a href="#/volumes/${issue.volume_id}" class="volume-badge volume-series-badge" title="Серія">
+        ? `<a href="#/volumes/${issue.volume_id}" class="volume-badge volume-series-badge" title="${t('series')}">
                ${ICON.book}
                ${escapeHtmlAttribute(volumeName)}
            </a>`
         : '';
 
     const coverDateBadge = coverDate
-        ? `<span class="volume-badge volume-cover-date-badge" title="Дата обкладинки">
+        ? `<span class="volume-badge volume-cover-date-badge" title="${t('cover_date')}">
                ${ICON.calendar}
-               Обкладинка: ${escapeHtmlAttribute(coverDate)}
+               ${t('cover')}: ${escapeHtmlAttribute(coverDate)}
            </span>`
         : '';
 
     const releaseDateBadge = releaseDate
-        ? `<span class="volume-badge volume-release-date-badge" title="Дата виходу">
+        ? `<span class="volume-badge volume-release-date-badge" title="${t('release_date')}">
                ${ICON.calendar}
-               Реліз: ${escapeHtmlAttribute(releaseDate)}
+               ${t('release')}: ${escapeHtmlAttribute(releaseDate)}
            </span>`
         : '';
 
     const pagesBadge = issue.pages
-        ? `<span class="volume-badge volume-pages-badge" title="Кількість сторінок">
+        ? `<span class="volume-badge volume-pages-badge" title="${t('pages_count')}">
                ${ICON.book}
-               Сторінок: ${escapeHtmlAttribute(issue.pages)}
+               ${t('pages')}: ${escapeHtmlAttribute(issue.pages)}
            </span>`
         : '';
 
     // ── Description ───────────────────────────────
     const descriptionHTML = issue.description
         ? `<div class="issue-description">
-               <h3 class="issue-description-title">Опис</h3>
+               <h3 class="issue-description-title">${t('description')}</h3>
                <div class="issue-description-text">${issue.description}</div>
            </div>`
         : '';
@@ -482,7 +486,7 @@ export async function renderIssueDetail(container, params = {}) {
     // ── External links ────────────────────────────
     const externalLinksHTML = cvUrl
         ? `<div class="issue-cover-ext-sources" style="margin-top: 16px; border-top: 1px solid var(--border-s); padding-top: 16px; width: 100%;">
-               <div style="font-family: var(--font-oswald); font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; text-align: center;">Зовнішні джерела</div>
+               <div style="font-family: var(--font-oswald); font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; text-align: center;">${t('external_sources')}</div>
                <div class="issue-external-links">
                    <a class="issue-ext-link issue-ext-link--cv"
                       href="${escapeHtmlAttribute(cvUrl)}"
@@ -504,7 +508,7 @@ export async function renderIssueDetail(container, params = {}) {
                     ${stories.map((story, index) => {
                         return `
                             <button class="issue-story-tab-btn ${index === 0 ? 'is-active' : ''}" data-story-index="${index}">
-                                Історія ${index + 1}
+                                ${t('story')} ${index + 1}
                             </button>
                         `;
                     }).join('')}
@@ -515,7 +519,7 @@ export async function renderIssueDetail(container, params = {}) {
             const storiesListHTML = `
                 <div class="issue-stories-tab-contents">
                     ${stories.map((story, index) => {
-                        const mainTitle = story.name_ua || story.name_original || 'Без назви';
+                        const mainTitle = story.name_ua || story.name_original || t('no_title');
                         const subTitle = (story.name_ua && story.name_original && story.name_ua.trim() !== story.name_original.trim()) 
                             ? story.name_original 
                             : '';
@@ -530,7 +534,7 @@ export async function renderIssueDetail(container, params = {}) {
                         if (story.is_imported) {
                             storyImportBadgeHTML = `
                                 <div class="issue-story-imported-banner">
-                                    Творці історії з <a href="#/issues/${story.original_issue_id}">
+                                    ${t('reprint_from')} <a href="#/issues/${story.original_issue_id}">
                                         ${escapeHtmlAttribute(story.original_volume_name)} #${escapeHtmlAttribute(story.original_issue_number)}
                                     </a>
                                 </div>
@@ -566,7 +570,7 @@ export async function renderIssueDetail(container, params = {}) {
         } else {
             // Всього 1 історія (простий вивід без вкладок)
             const story = stories[0];
-            const mainTitle = story.name_ua || story.name_original || 'Без назви';
+            const mainTitle = story.name_ua || story.name_original || t('no_title');
             const subTitle = (story.name_ua && story.name_original && story.name_ua.trim() !== story.name_original.trim()) 
                 ? story.name_original 
                 : '';
@@ -580,7 +584,7 @@ export async function renderIssueDetail(container, params = {}) {
             if (story.is_imported) {
                 storyImportBadgeHTML = `
                     <div class="issue-story-imported-banner">
-                        Творці історії з <a href="#/issues/${story.original_issue_id}">
+                        ${t('reprint_from')} <a href="#/issues/${story.original_issue_id}">
                             ${escapeHtmlAttribute(story.original_volume_name)} #${escapeHtmlAttribute(story.original_issue_number)}
                         </a>
                     </div>
@@ -632,20 +636,20 @@ export async function renderIssueDetail(container, params = {}) {
             let badgeHTML = '';
             if (story.is_imported) {
                 const storyLabel = (story.order_num === 0 || !story.order_num) 
-                    ? 'основної історії' 
-                    : `${story.order_num}-ї історії`;
+                    ? t('label_main_story') 
+                    : `${story.order_num}-${t('label_story_ord')}`;
                 badgeHTML = `
                     <a class="issue-story-detail-badge" href="#/issues/${story.original_issue_id}">
                         <span class="reprint-icon">${ICON.book}</span>
-                        <span>Репринт ${storyLabel} з ${escapeHtmlAttribute(story.original_volume_name)} #${escapeHtmlAttribute(story.original_issue_number)}</span>
+                        <span>${t('reprint_of')} ${storyLabel} ${t('from')} ${escapeHtmlAttribute(story.original_volume_name)} #${escapeHtmlAttribute(story.original_issue_number)}</span>
                     </a>
                 `;
             }
 
-            const mainTitle = story.name_ua || story.name_original || (isLocalMain ? displayTitle : 'Без назви');
+            const mainTitle = story.name_ua || story.name_original || (isLocalMain ? displayTitle : t('no_title'));
 
             // Появи
-            let appearancesHTML = '<div class="issue-story-empty">— поки порожньо —</div>';
+            let appearancesHTML = `<div class="issue-story-empty">— ${t('nothing_yet')} —</div>`;
             if (hasAppearances) {
                 const groups = [];
                 const apps = story.appearances;
@@ -679,7 +683,7 @@ export async function renderIssueDetail(container, params = {}) {
                     if (c.comment) details.push(c.comment);
                     const detailsText = details.join(' • ');
                     
-                    const primaryName = c.name_uk || c.name || c.real_name_uk || c.real_name || 'Невідомий персонаж';
+                    const primaryName = c.name_uk || c.name || c.real_name_uk || c.real_name || t('unknown_character');
                     const hasMainName = !!(c.name_uk || c.name);
                     const subRealName = c.real_name_uk || c.real_name;
                     const showRealName = hasMainName && subRealName;
@@ -688,10 +692,10 @@ export async function renderIssueDetail(container, params = {}) {
                         : '';
                     
                     const roleTranslations = {
-                        'main': 'ГОЛОВНИЙ',
-                        'supporting': 'ДРУГОРЯДНИЙ',
-                        'minor': 'ІНШІ',
-                        'cameo': 'КАМЕО'
+                        'main': t('role_main_caps'),
+                        'supporting': t('role_supporting_caps'),
+                        'minor': t('role_minor_caps'),
+                        'cameo': t('role_cameo_caps')
                     };
                     const roleKey = (c.role || 'minor').toLowerCase();
                     const roleLabel = roleTranslations[roleKey] || roleKey.toUpperCase();
@@ -765,7 +769,7 @@ export async function renderIssueDetail(container, params = {}) {
 
                     groups.push(`
                         <div class="issue-story-appearance-group">
-                            <strong>Персонажі:</strong>
+                            <strong>${t('characters')}:</strong>
                             <div style="display: flex; flex-direction: column; gap: 8px;">
                                 ${teamGroupsHTML.join('')}
                                 ${independentHTML}
@@ -804,16 +808,16 @@ export async function renderIssueDetail(container, params = {}) {
                     `;
                 };
 
-                const teamsHTML = renderSimpleAppearances('Команди та Організації', apps.teams, ICON.users, 'team');
+                const teamsHTML = renderSimpleAppearances(t('teams_orgs'), apps.teams, ICON.users, 'team');
                 if (teamsHTML) groups.push(teamsHTML);
                 
-                const objectsHTML = renderSimpleAppearances('Предмети', apps.objects, ICON.box, 'object');
+                const objectsHTML = renderSimpleAppearances(t('objects'), apps.objects, ICON.box, 'object');
                 if (objectsHTML) groups.push(objectsHTML);
                 
-                const locationsHTML = renderSimpleAppearances('Локації', apps.locations, ICON.mapPin, 'location');
+                const locationsHTML = renderSimpleAppearances(t('locations'), apps.locations, ICON.mapPin, 'location');
                 if (locationsHTML) groups.push(locationsHTML);
                 
-                const conceptsHTML = renderSimpleAppearances('Концепти', apps.concepts, ICON.helpCircle, 'concept');
+                const conceptsHTML = renderSimpleAppearances(t('concepts'), apps.concepts, ICON.helpCircle, 'concept');
                 if (conceptsHTML) groups.push(conceptsHTML);
 
                 appearancesHTML = `<div class="issue-story-appearances-groups">${groups.join('')}</div>`;
@@ -822,18 +826,18 @@ export async function renderIssueDetail(container, params = {}) {
             // Сюжет
             const plotHTML = hasPlot
                 ? `<div class="issue-story-plot-text">${story.plot}</div>`
-                : '<div class="issue-story-empty">— поки порожньо —</div>';
+                : `<div class="issue-story-empty">— ${t('nothing_yet')} —</div>`;
 
             return `
                 <div class="issue-story-detail-card">
                     ${badgeHTML}
                     <h2 class="issue-story-detail-title">${escapeHtmlAttribute(mainTitle)}</h2>
                     <div class="issue-story-detail-section">
-                        <div class="issue-story-detail-section-title">Сюжет</div>
+                        <div class="issue-story-detail-section-title">${t('plot')}</div>
                         ${plotHTML}
                     </div>
                     <div class="issue-story-detail-section">
-                        <div class="issue-story-detail-section-title">Появи</div>
+                        <div class="issue-story-detail-section-title">${t('appearances')}</div>
                         ${appearancesHTML}
                     </div>
                 </div>
@@ -844,7 +848,7 @@ export async function renderIssueDetail(container, params = {}) {
             storiesDetailsHTML = `
                 <div class="issue-stories-details-section">
                     <div class="issue-section-heading">
-                        <h2>Сюжет та появи</h2>
+                        <h2>${t('plot_and_appearances')}</h2>
                     </div>
                     ${blocks}
                 </div>
@@ -873,13 +877,13 @@ export async function renderIssueDetail(container, params = {}) {
            </div>`
         : `<div class="issue-empty-collections">
                ${ICON.layers}
-               <p style="margin-top: 10px;">Цей випуск не входить до жодного збірника</p>
+               <p style="margin-top: 10px;">${t('no_collections')}</p>
            </div>`;
 
     const collectionsHTML = `
         <section class="issue-collections-section">
             <div class="issue-section-heading">
-                <h2>Збірники</h2>
+                <h2>${t('collections')}</h2>
                 ${collections.length ? `<span class="issue-section-count">${collections.length}</span>` : ''}
             </div>
             ${collectionsBodyHTML}
@@ -890,7 +894,7 @@ export async function renderIssueDetail(container, params = {}) {
     const reprintsHTML = reprints.length
         ? `<section class="issue-reprints-section">
                <div class="issue-section-heading">
-                   <h2>Репринти</h2>
+                   <h2>${t('reprints')}</h2>
                    <span class="issue-section-count">${reprints.length}</span>
                </div>
                <div class="issue-reprints-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
@@ -905,11 +909,11 @@ export async function renderIssueDetail(container, params = {}) {
                        let displayTitle = '';
                        const issueName = isOriginal ? r.reprint_name : r.original_name;
                        if (r.story_num === 0 || r.story_num === null || r.story_num === undefined) {
-                           const storyName = r.story_name_ua || r.story_name_original || issueName || 'Без назви';
-                           displayTitle = `Історія 1: ${storyName}`;
+                           const storyName = r.story_name_ua || r.story_name_original || issueName || t('no_title');
+                           displayTitle = `${t('story_1')}: ${storyName}`;
                        } else {
-                           const storyName = r.story_name_ua || r.story_name_original || 'Без назви';
-                           displayTitle = `Історія ${r.story_num}: ${storyName}`;
+                           const storyName = r.story_name_ua || r.story_name_original || t('no_title');
+                           displayTitle = `${t('story_n', { n: r.story_num })}: ${storyName}`;
                        }
                        
                        const reprintLang = r.reprint_volume_lang || '';
@@ -918,7 +922,7 @@ export async function renderIssueDetail(container, params = {}) {
                            ? `<div class="issue-reprint-foreign">${langPrefix}${escapeHtmlAttribute(r.story_foreign_name)}</div>`
                            : '';
                            
-                       const roleLabel = isOriginal ? 'Перевидання' : 'Оригінал';
+                       const roleLabel = isOriginal ? t('reprint') : t('original');
                        
                        return `
                            <a class="issue-reprint-card" href="#/issues/${targetIssueId}">
@@ -944,35 +948,17 @@ export async function renderIssueDetail(container, params = {}) {
     // Визначення підпису для основної історії / історій з оригіналів
     const importedStories = stories.filter(s => s.is_imported);
     const isReprintIssue = reprints.some(r => r.reprint_id === issueId);
-    let mainStoryLabelText = '0 історій';
+    let mainStoryLabelText = t('zero_stories');
 
     if (importedStories.length > 0) {
         const count = importedStories.length;
-        let storyWord = 'історій';
-        if (count % 10 === 1 && count % 100 !== 11) {
-            storyWord = 'історія';
-        } else if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) {
-            storyWord = 'історії';
-        }
-        mainStoryLabelText = `${count} ${storyWord} з оригіналів`;
+        mainStoryLabelText = t('imported_stories_count', { count });
     } else if (isReprintIssue && stories.length > 0) {
         const count = stories.length;
-        let storyWord = 'історій';
-        if (count % 10 === 1 && count % 100 !== 11) {
-            storyWord = 'історія';
-        } else if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) {
-            storyWord = 'історії';
-        }
-        mainStoryLabelText = `${count} ${storyWord}-репринтів`;
+        mainStoryLabelText = t('reprint_stories_count', { count });
     } else if (stories.length > 0) {
         const count = stories.length;
-        let storyWord = 'історій';
-        if (count % 10 === 1 && count % 100 !== 11) {
-            storyWord = 'історія';
-        } else if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) {
-            storyWord = 'історії';
-        }
-        mainStoryLabelText = `${count} ${storyWord}`;
+        mainStoryLabelText = t('stories_count', { count });
     }
 
     container.innerHTML = `
@@ -992,6 +978,8 @@ export async function renderIssueDetail(container, params = {}) {
                     </div>
 
                     <div class="issue-hero-info">
+                        
+                        ${contextHTML}
                         <div class="issue-header-block">
                             ${navCardHTML(prev_issue, 'prev')}
                             <div class="issue-header-center">
@@ -1015,14 +1003,14 @@ export async function renderIssueDetail(container, params = {}) {
                 <div class="issue-hero-tabs-band">
                     <div class="container" style="display: flex; justify-content: center;">
                         <div class="issue-page-tabs">
-                            <button class="issue-page-tab-btn" data-page-tab="main">Основне</button>
-                            <button class="issue-page-tab-btn" data-page-tab="staff-appearances">Творці та появи</button>
+                            <button class="issue-page-tab-btn" data-page-tab="main">${t('tab_main')}</button>
+                            <button class="issue-page-tab-btn" data-page-tab="staff-appearances">${t('tab_creators_appearances')}</button>
                             <button class="issue-page-tab-btn" data-page-tab="collections" ${collections.length === 0 ? 'disabled' : ''}>
-                                <span>Збірники</span>
+                                <span>${t('collections')}</span>
                                 ${collections.length > 0 ? `<span class="tab-count">${collections.length}</span>` : ''}
                             </button>
                             <button class="issue-page-tab-btn" data-page-tab="reprints" ${reprints.length === 0 ? 'disabled' : ''}>
-                                <span>Репринти</span>
+                                <span>${t('reprints')}</span>
                                 ${reprints.length > 0 ? `<span class="tab-count">${reprints.length}</span>` : ''}
                             </button>
                         </div>
@@ -1034,15 +1022,14 @@ export async function renderIssueDetail(container, params = {}) {
                 <!-- Вкладка: Основне -->
                 <div class="issue-tab-pane" id="page-tab-pane-main">
                     ${descriptionHTML ? `<div class="issue-main-description-section" style="margin-bottom: 24px;">${descriptionHTML}</div>` : ''}
-                    ${contextHTML}
-                    ${(!descriptionHTML && !contextHTML) ? '<div class="issue-story-empty">— немає опису або контексту —</div>' : ''}
+                    ${(!descriptionHTML && !contextHTML) ? `<div class="issue-story-empty">— ${t('no_description_or_context')} —</div>` : ''}
                 </div>
 
                 <!-- Вкладка: Творці та появи -->
                 <div class="issue-tab-pane" id="page-tab-pane-staff-appearances">
                     ${combinedStaffStoriesHTML}
                     ${storiesDetailsHTML}
-                    ${(!combinedStaffStoriesHTML && !storiesDetailsHTML) ? '<div class="issue-story-empty">— немає відомостей про творців або появи —</div>' : ''}
+                    ${(!combinedStaffStoriesHTML && !storiesDetailsHTML) ? `<div class="issue-story-empty">— ${t('no_creators_or_appearances')} —</div>` : ''}
                 </div>
 
                 <!-- Вкладка: Збірники -->
@@ -1058,15 +1045,15 @@ export async function renderIssueDetail(container, params = {}) {
 
             ${isModerator ? `
                 <div class="volume-hero-admin-actions">
-                    <button class="btn-admin btn-admin--secondary" id="issue-edit-btn" title="Редагувати">
+                    <button class="btn-admin btn-admin--secondary" id="issue-edit-btn" title="${t('edit')}">
                         ${ICON.edit}
                     </button>
-                    <button class="btn-admin btn-admin--danger" id="issue-delete-btn" title="Видалити випуск">
+                    <button class="btn-admin btn-admin--danger" id="issue-delete-btn" title="${t('delete_issue')}">
                         ${ICON.trash}
                     </button>
-                    <button class="btn-admin btn-admin--secondary" id="issue-scrape-appearances-btn" title="Скрапити стаф та появи з Comic Vine">
+                    <button class="btn-admin btn-admin--secondary" id="issue-scrape-appearances-btn" title="${t('scrape_staff_appearances_cv')}">
                         ${ICON.refreshCw}
-                        <span>Скрапити стаф та появи</span>
+                        <span>${t('scrape_staff_appearances')}</span>
                     </button>
                 </div>
             ` : ''}
@@ -1306,7 +1293,7 @@ export async function renderIssueDetail(container, params = {}) {
         const deleteBtn = container.querySelector('#issue-delete-btn');
         if (deleteBtn) {
             deleteBtn.addEventListener('click', async () => {
-                if (!confirm('Ви впевнені, що хочете видалити цей випуск?')) return;
+                if (!confirm(t('confirm_delete_issue'))) return;
                 try {
                     await API.delete(`/issues/${issueId}`);
                     if (issue.volume_id) {
@@ -1315,7 +1302,7 @@ export async function renderIssueDetail(container, params = {}) {
                         window.location.hash = '#/catalog';
                     }
                 } catch (err) {
-                    alert('Помилка видалення: ' + err.message);
+                    alert(`${t('error_deleting')}: ${err.message}`);
                 }
             });
         }

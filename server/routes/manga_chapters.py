@@ -169,3 +169,74 @@ async def create_chapter(request: Request):
         "release_date": release_date,
         "pages": pages
     }
+
+@router.get("")
+async def list_chapters(
+    search: Optional[str] = None,
+    volume_id: Optional[int] = None,
+    magazine_id: Optional[int] = None,
+    limit: int = 50,
+    offset: int = 0,
+    sort_by: str = "created_at",
+    order: str = "desc"
+):
+    db = get_db()
+    conditions = []
+    params = []
+
+    if volume_id:
+        conditions.append("mc.volume_id = ?")
+        params.append(volume_id)
+
+    if magazine_id:
+        conditions.append("mv.magazine_id = ?")
+        params.append(magazine_id)
+
+    if search:
+        conditions.append("""(
+            mc.name LIKE ? OR mc.name_uk LIKE ? OR mc.name_en LIKE ? OR mc.name_native LIKE ?
+            OR v.name LIKE ? OR v.name_uk LIKE ? OR v.name_en LIKE ?
+        )""")
+        s = f"%{search}%"
+        params += [s, s, s, s, s, s, s]
+
+    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+
+    # Sanitize sort fields
+    allowed_sorts = {
+        "created_at": "mc.created_at",
+        "release_date": "mc.release_date"
+    }
+    sort_column = allowed_sorts.get(sort_by, "mc.created_at")
+    sort_order = "DESC" if order.lower() == "desc" else "ASC"
+
+    base_join = """
+        FROM manga_chapters mc
+        JOIN volumes v ON mc.volume_id = v.id
+        LEFT JOIN magazine_volumes mv ON mv.volume_id = v.id
+        LEFT JOIN manga_magazines mm ON mm.id = mv.magazine_id
+    """
+
+    chapters = db.get_all(f"""
+        SELECT mc.*, v.name as volume_name, v.name_uk as volume_name_uk,
+               v.cv_img as volume_cv_img, v.hikka_img as volume_hikka_img, v.cover_img as volume_cover_img,
+               mm.id as magazine_id, mm.name as magazine_name
+        {base_join}
+        {where}
+        GROUP BY mc.id
+        ORDER BY {sort_column} {sort_order}, mc.id {sort_order}
+        LIMIT ? OFFSET ?
+    """, params + [limit, offset])
+
+    total_query = db.get_one(f"""
+        SELECT COUNT(DISTINCT mc.id) as count
+        {base_join}
+        {where}
+    """, params)
+    total = total_query["count"] if total_query else 0
+
+    return {
+        "items": [dict(ch) for ch in chapters],
+        "total": total
+    }
+

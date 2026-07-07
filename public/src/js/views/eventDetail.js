@@ -4,7 +4,7 @@ import { currentUser } from '../shell.js';
 import { openAddIssueModal } from '../components/addIssueModal.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { formatDate } from '../helpers/lang.js';
-
+import { t } from '../helpers/i18n.js';
 
 const ICON = {
     chevronRight: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
@@ -20,14 +20,14 @@ const ICON = {
     book: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>',
 };
 
-const IMPORTANCE_LABELS = {
-    main: 'Основний',
-    'tie-in': 'Тай-ін',
-    prologue: 'Пролог',
-    epilogue: 'Епілог',
-};
-
-
+function getImportanceLabels() {
+    return {
+        main: t('importance_main'),
+        'tie-in': t('importance_tie_in'),
+        prologue: t('importance_prologue'),
+        epilogue: t('importance_epilogue'),
+    };
+}
 
 function eventYears(event) {
     if (event.start_year && event.end_year && event.start_year !== event.end_year) {
@@ -56,13 +56,15 @@ function renderSkeleton(container) {
 }
 
 function importanceOptions(selected = 'main') {
-    return Object.entries(IMPORTANCE_LABELS)
+    const labels = getImportanceLabels();
+    return Object.entries(labels)
         .map(([value, label]) => `<option value="${value}" ${selected === value ? 'selected' : ''}>${label}</option>`)
         .join('');
 }
 
 function importanceBadgeHTML(importance) {
-    const label = IMPORTANCE_LABELS[importance] || importance || IMPORTANCE_LABELS.main;
+    const labels = getImportanceLabels();
+    const label = labels[importance] || importance || labels.main;
     return `<span class="event-importance-badge event-importance-badge--${escapeHtmlAttribute(importance || 'main')}">${escapeHtmlAttribute(label)}</span>`;
 }
 
@@ -72,7 +74,7 @@ function isModerator() {
 
 function issueRowHTML(issue, index, total, canModerate) {
     const cover = comicVineImageUrl(issue.cv_img);
-    const title = escapeHtmlAttribute(issue.name || 'Без назви');
+    const title = escapeHtmlAttribute(issue.name || t('no_title'));
     const number = issue.issue_number ? `#${escapeHtmlAttribute(issue.issue_number)}` : '#?';
     const volume = issue.volume_name_uk || issue.volume_name || '';
     const date = formatDate(issue.release_date || issue.cover_date);
@@ -96,30 +98,14 @@ function issueRowHTML(issue, index, total, canModerate) {
             </td>
             <td><a class="event-issue-number" href="#/issues/${issue.id}">${number}</a></td>
             <td><a class="event-issue-title" href="#/issues/${issue.id}">${title}</a></td>
-            <td>${volume ? `<a class="event-volume-link" href="#/volumes/${issue.volume_id}">${escapeHtmlAttribute(volume)}</a>` : '<span class="event-muted">-</span>'}</td>
+            <td>${volume ? `<a class="event-volume-link" href="#/volumes/${issue.volume_id}">${escapeHtmlAttribute(volume)}</a>` : `<span class="event-muted">-</span>`}</td>
             <td>${date ? escapeHtmlAttribute(date) : '<span class="event-muted">-</span>'}</td>
             ${canModerate ? `
                 <td>
-                    <button class="event-icon-btn event-remove-btn" type="button" data-link-id="${issue.link_id}" title="Видалити з події">${ICON.trash}</button>
+                    <button class="event-icon-btn event-remove-btn" type="button" data-link-id="${issue.link_id}" title="${t('remove_from_event')}">${ICON.trash}</button>
                 </td>
             ` : ''}
         </tr>
-    `;
-}
-
-function modalShell(id, title, body) {
-    return `
-        <div class="ds-modal-overlay" id="${id}" style="display: none;">
-            <div class="ds-modal ds-modal--large">
-                <div class="ds-modal-header">
-                    <div class="ds-modal-title">${escapeHtmlAttribute(title)}</div>
-                    <button class="ds-modal-close" type="button" data-close-modal="${id}">&times;</button>
-                </div>
-                <div class="ds-modal-body" style="display: block;">
-                    ${body}
-                </div>
-            </div>
-        </div>
     `;
 }
 
@@ -128,44 +114,43 @@ function editModalHTML(event) {
         <div class="ds-modal-overlay" id="event-edit-modal" style="display: none;">
             <div class="ds-modal ds-modal--large">
                 <div class="ds-modal-header">
-                    <div class="ds-modal-title">${ICON.edit} Редагування події</div>
+                    <div class="ds-modal-title">${ICON.edit} ${t('edit_event')}</div>
                     <button class="ds-modal-close" type="button" data-close-modal="event-edit-modal">&times;</button>
                 </div>
                 <form id="event-edit-form">
                     <div class="ds-modal-body" style="display: block;">
                         <div class="admin-form-grid">
                             <div class="admin-form-group admin-form-group--full">
-                                <label class="admin-label">${ICON.type} Назва</label>
+                                <label class="admin-label">${ICON.type} ${t('name')}</label>
                                 <input type="text" name="name" class="admin-input" value="${escapeHtmlAttribute(event.name || '')}" required>
                             </div>
                             <div class="admin-form-group admin-form-group--full">
-                                <label class="admin-label">${ICON.image} Зображення (URL)</label>
+                                <label class="admin-label">${ICON.image} ${t('image_url')}</label>
                                 <input type="url" name="cv_img" class="admin-input" value="${escapeHtmlAttribute(event.cv_img || '')}">
                             </div>
                             <div class="admin-form-group">
-                                <label class="admin-label">${ICON.calendar} Рік початку</label>
+                                <label class="admin-label">${ICON.calendar} ${t('start_year')}</label>
                                 <input type="number" name="start_year" class="admin-input" value="${event.start_year || ''}">
                             </div>
                             <div class="admin-form-group">
-                                <label class="admin-label">${ICON.calendar} Рік завершення</label>
+                                <label class="admin-label">${ICON.calendar} ${t('end_year')}</label>
                                 <input type="number" name="end_year" class="admin-input" value="${event.end_year || ''}">
                             </div>
                             <div class="admin-form-group admin-form-group--full">
-                                <label class="admin-label">${ICON.alignLeft} Короткий опис</label>
+                                <label class="admin-label">${ICON.alignLeft} ${t('short_description')}</label>
                                 <textarea name="description" class="admin-textarea" rows="5">${escapeHtmlAttribute(event.description || '')}</textarea>
                             </div>
                         </div>
                     </div>
                     <div class="ds-modal-footer">
-                        <button class="btn-admin btn-admin--secondary" type="button" data-close-modal="event-edit-modal">Скасувати</button>
-                        <button class="btn-admin btn-admin--primary" type="submit">Зберегти зміни</button>
+                        <button class="btn-admin btn-admin--secondary" type="button" data-close-modal="event-edit-modal">${t('cancel')}</button>
+                        <button class="btn-admin btn-admin--primary" type="submit">${t('save_changes')}</button>
                     </div>
                 </form>
             </div>
         </div>
     `;
 }
-
 
 async function loadEvent(eventId) {
     const [event, issuesRes] = await Promise.all([
@@ -178,7 +163,7 @@ async function loadEvent(eventId) {
 export async function renderEventDetail(container, params = {}) {
     const eventId = Number(params.id);
     if (!Number.isFinite(eventId)) {
-        container.innerHTML = `<div class="container event-detail-error"><h2>Некоректний ID події</h2></div>`;
+        container.innerHTML = `<div class="container event-detail-error"><h2>${t('invalid_event_id')}</h2></div>`;
         return;
     }
 
@@ -190,8 +175,8 @@ export async function renderEventDetail(container, params = {}) {
     } catch (err) {
         container.innerHTML = `
             <div class="container event-detail-error">
-                <h2>Помилка завантаження</h2>
-                <p>${escapeHtmlAttribute(err.message || 'Не вдалося завантажити подію.')}</p>
+                <h2>${t('loading_error')}</h2>
+                <p>${escapeHtmlAttribute(err.message || t('failed_to_load_event'))}</p>
             </div>
         `;
         return;
@@ -207,7 +192,7 @@ export async function renderEventDetail(container, params = {}) {
     container.innerHTML = `
         <div class="event-detail">
             <div class="container">
-                ${createBreadcrumbs([{ label: event.name || 'Подія' }])}
+                ${createBreadcrumbs([{ label: event.name || t('event') }])}
             </div>
 
             <section class="event-hero-band" ${cover ? `style="--event-bg:url('${escapeHtmlAttribute(cover)}')"` : ''}>
@@ -216,14 +201,13 @@ export async function renderEventDetail(container, params = {}) {
                         ${cover ? `<img src="${escapeHtmlAttribute(cover)}" alt="${escapeHtmlAttribute(event.name)}">` : `<div class="event-cover-empty">${ICON.image}</div>`}
                     </div>
                     <div class="event-hero-info">
-                        <div class="event-kicker">Подія</div>
-                        <h1>${escapeHtmlAttribute(event.name || 'Без назви')}</h1>
+                        <div class="event-kicker">${t('event')}</div>
+                        <h1>${escapeHtmlAttribute(event.name || t('no_title'))}</h1>
                         <div class="event-meta">
                             ${years ? `<span>${ICON.calendar} ${escapeHtmlAttribute(String(years))}</span>` : ''}
-                            <span>${issues.length} випусків</span>
+                            <span>${t('issues_count_label').replace('{count}', issues.length)}</span>
                         </div>
                         ${event.description ? `<div class="event-description">${event.description}</div>` : ''}
-
                     </div>
                 </div>
             </section>
@@ -238,11 +222,11 @@ export async function renderEventDetail(container, params = {}) {
                 <section class="event-issues-section">
                     <div class="event-section-heading">
                         <div class="event-section-heading__left">
-                            <h2>Випуски події</h2>
+                            <h2>${t('event_issues')}</h2>
                             <span>${issues.length}</span>
                         </div>
                         ${canModerate ? `
-                            <button class="readlist-btn" id="btn-add-issue" style="height: 34px; padding: 0 12px; font-size: 13px; gap: 6px; background: var(--bg-card); border: 1px solid var(--border);">${ICON.plus} Додати випуск</button>
+                            <button class="readlist-btn" id="btn-add-issue" style="height: 34px; padding: 0 12px; font-size: 13px; gap: 6px; background: var(--bg-card); border: 1px solid var(--border);">${ICON.plus} ${t('add_issue')}</button>
                         ` : ''}
                     </div>
                     ${issues.length ? `
@@ -251,19 +235,19 @@ export async function renderEventDetail(container, params = {}) {
                                 <thead>
                                     <tr>
                                         <th>#</th>
-                                        <th>Обкладинка</th>
-                                        <th>Тип</th>
-                                        <th>Випуск</th>
-                                        <th>Назва</th>
-                                        <th>Том</th>
-                                        <th>Дата</th>
+                                        <th>${t('cover')}</th>
+                                        <th>${t('type')}</th>
+                                        <th>${t('release')}</th>
+                                        <th>${t('name')}</th>
+                                        <th>${t('volume')}</th>
+                                        <th>${t('date')}</th>
                                         ${canModerate ? '<th></th>' : ''}
                                     </tr>
                                 </thead>
                                 <tbody>${issues.map((issue, index) => issueRowHTML(issue, index, issues.length, canModerate)).join('')}</tbody>
                             </table>
                         </div>
-                    ` : `<div class="event-empty-state">У події ще немає випусків.</div>`}
+                    ` : `<div class="event-empty-state">${t('event_no_issues')}</div>`}
                 </section>
             </div>
 
@@ -295,20 +279,20 @@ function bindEventDetail(container, eventId, existingIds, canModerate) {
     container.querySelector('#event-edit-btn')?.addEventListener('click', () => openModal('event-edit-modal'));
     container.querySelector('#btn-add-issue')?.addEventListener('click', () => {
         openAddIssueModal({
-            title: 'Додати випуск до події',
+            title: t('add_issue_to_event'),
             layout: 'vertical',
             alreadyIds: existingIds,
             extraFiltersHTML: `
                 <div class="aim-filter-group" style="flex: 1;">
-                    <label class="aim-label">Важливість</label>
+                    <label class="aim-label">${t('importance')}</label>
                     <select id="event-issue-importance" class="aim-input">${importanceOptions('main')}</select>
                 </div>
             `,
-            onAdd: async (issueIds) => {
+            onAdd: async (items) => {
                 const importance = document.getElementById('event-issue-importance')?.value || 'main';
-                for (const issueId of issueIds) {
+                for (const item of items) {
                     await API.post(`/events/${eventId}/issues`, {
-                        issue_id: issueId,
+                        issue_id: item.id,
                         importance: importance,
                     });
                 }
@@ -355,7 +339,6 @@ function bindEventDetail(container, eventId, existingIds, canModerate) {
             await renderEventDetail(container, { id: eventId });
         });
     });
-
 }
 
 async function patchEventItem(eventId, linkId, body) {

@@ -1,0 +1,240 @@
+/* Magazine Card Redesign */
+.comic-grid--magazines {
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 1.5rem !important;
+}
+
+.catalog-layout.is-filters-open .comic-grid--magazines {
+  grid-template-columns: repeat(2, 1fr) !important;
+}
+
+.magazine-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border-s);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  transition: transform var(--t), box-shadow var(--t), border-color var(--t);
+  position: relative;
+  min-height: 420px;
+}
+
+.magazine-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  border-color: var(--accent);
+}
+
+.magazine-card-link-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 250px;
+  z-index: 2;
+}
+
+.magazine-card-header {
+  padding: 16px 20px 8px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.magazine-card-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.magazine-card-publisher {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.magazine-card-content {
+  padding: 0 20px 16px 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.magazine-card-title-group {
+  margin-bottom: 12px;
+}
+
+.magazine-card-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 4px 0;
+  line-height: 1.2;
+}
+
+.magazine-card-native {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: normal;
+  margin: 0;
+}
+
+.magazine-card-badges {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.magazine-card-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--border-s);
+  background: var(--bg-body);
+  color: var(--text-muted);
+}
+
+.magazine-card-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--border-s);
+  border-bottom: 1px solid var(--border-s);
+  padding: 16px 0;
+  margin-bottom: 20px;
+  gap: 8px;
+}
+
+.magazine-card-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.magazine-card-stat-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+
+.magazine-card-stat-value span {
+  font-weight: 500;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.magazine-card-stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.magazine-card-series-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.magazine-card-series-title {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.magazine-card-series-list {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.magazine-card-series-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  z-index: 3;
+}
+
+.magazine-card-series-cover {
+  width: 100%;
+  aspect-ratio: 2/3;
+  border-radius: 6px;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: transform var(--t);
+}
+
+.magazine-card-series-cover-placeholder {
+  width: 100%;
+  aspect-ratio: 2/3;
+  border-radius: 6px;
+  background: var(--border-s);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.magazine-card-series-item:hover .magazine-card-series-cover {
+  transform: scale(1.08);
+}
+
+.magazine-card-series-score {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-top: 6px;
+  text-align: center;
+}
+
+/* Sidebar filter checkboxes list */
+.sidebar-filter-list-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.filter-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 0;
+  transition: color var(--t);
+}
+
+.filter-checkbox-label:hover {
+  color: var(--accent);
+}
+
+.filter-checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid var(--border-s);
+  accent-color: var(--accent);
+  cursor: pointer;
+}

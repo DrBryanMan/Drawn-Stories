@@ -247,14 +247,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 34px;
+  width: 30px;
   height: 30px;
-  padding: 0 8px;
-  border: 1px solid var(--border-s);
-  border-radius: var(--r-s);
-  background: var(--bg-2);
-  color: var(--text);
+  color: var(--accent);
   font-weight: 800;
+  font-size: 1.5rem;
+  font-family: var(--font-monos);
 }
 
 .event-issue-cover-link img,
@@ -303,32 +301,34 @@
 .event-importance-badge {
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--border-s);
-  border-radius: 999px;
-  background: var(--bg-2);
+  padding: 2px 6px 3px;
+  border-radius: var(--r);
   color: var(--text-2);
   font-size: 12px;
-  font-weight: 800;
+  /* font-weight: 800; */
+  text-transform: uppercase;
+  letter-spacing: .06em;
   white-space: nowrap;
+  font-family: var(--font-oswald);
 }
 
 .event-importance-badge--main {
-  border-color: color-mix(in srgb, var(--accent) 30%, var(--border-s));
-  background: color-mix(in srgb, var(--accent) 11%, var(--bg-2));
-  color: var(--text);
+  /* border-color: color-mix(in srgb, var(--accent) 30%, var(--border-s)); */
+  /* background: color-mix(in srgb, var(--accent) 11%, var(--bg-2)); */
+  color: #f36a26;
 }
 
 .event-importance-badge--tie-in {
-  border-color: color-mix(in srgb, #0ea5e9 34%, var(--border-s));
-  background: color-mix(in srgb, #0ea5e9 10%, var(--bg-2));
+  /* border-color: color-mix(in srgb, #0ea5e9 34%, var(--border-s)); */
+  /* background: color-mix(in srgb, #0ea5e9 10%, var(--bg-2)); */
+  color: #9ba8c7;
 }
 
 .event-importance-badge--prologue,
 .event-importance-badge--epilogue {
-  border-color: color-mix(in srgb, #22c55e 28%, var(--border-s));
-  background: color-mix(in srgb, #22c55e 9%, var(--bg-2));
+  /* border-color: color-mix(in srgb, #22c55e 28%, var(--border-s)); */
+  /* background: color-mix(in srgb, #22c55e 9%, var(--bg-2)); */
+  color: #fcc00e;
 }
 
 .event-empty-state,
