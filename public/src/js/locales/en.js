@@ -158,6 +158,7 @@ export const en = {
   works_label: "Works",
   sort_founded: "By Founded Date",
   sort_volumes: "By Volumes Count",
+  sort_date_added: "By Date Added to Site",
   sort_date: "By Release Date",
   empty_search_tip: "Try changing your search query",
   no_series: "No series",

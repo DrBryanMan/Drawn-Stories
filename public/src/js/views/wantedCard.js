@@ -2,7 +2,7 @@
  * wantedCard.js — картка для сторінки /wanted.
  * Підтримує всі типи: volumes, collections, issues, characters, personnel, publishers.
  */
-import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
+import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 
 const BADGE_ICON = '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
 
@@ -33,42 +33,42 @@ function resolveCardMeta(item) {
     case 'collection':
       return {
         href:     `/#/collections/${item.id}`,
-        imageUrl: comicVineImageUrl(item.cv_img),
+        imageUrl: normalizeImageUrl(item.cv_img),
         subtitle: item.publisher_name || null,
         placeholder: PLACEHOLDER_IMG,
       };
     case 'issue':
       return {
         href:     `/#/issues/${item.id}`,
-        imageUrl: comicVineImageUrl(item.cv_img || item.volume_img),
+        imageUrl: normalizeImageUrl(item.cv_img || item.volume_img),
         subtitle: item.volume_name || null,
         placeholder: PLACEHOLDER_IMG,
       };
     case 'character':
       return {
         href:     `/#/characters/${item.id}`,
-        imageUrl: comicVineImageUrl(item.image),
+        imageUrl: normalizeImageUrl(item.image),
         subtitle: item.name_uk || null,
         placeholder: PERSON_PLACEHOLDER,
       };
     case 'person':
       return {
         href:     `/#/personnel/${item.id}`,
-        imageUrl: comicVineImageUrl(item.image),
+        imageUrl: normalizeImageUrl(item.image),
         subtitle: item.name_uk || null,
         placeholder: PERSON_PLACEHOLDER,
       };
     case 'publisher':
       return {
         href:     `/#/publishers/${item.id}`,
-        imageUrl: comicVineImageUrl(item.image),
+        imageUrl: normalizeImageUrl(item.image),
         subtitle: item.country || item.place || null,
         placeholder: PLACEHOLDER_IMG,
       };
     default: // volume
       return {
         href:     `/#/volumes/${item.id}`,
-        imageUrl: comicVineImageUrl(item.cv_img || item.hikka_img || item.cover_img),
+        imageUrl: normalizeImageUrl(item.image || item.cover_img),
         subtitle: item.name_uk || null,
         placeholder: PLACEHOLDER_IMG,
       };

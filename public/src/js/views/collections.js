@@ -1,6 +1,6 @@
 import { API } from '../helpers/api.js';
 import { currentUser } from '../shell.js';
-import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
+import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { t } from '../helpers/i18n.js';
 
@@ -254,7 +254,7 @@ function renderResults(main, isMyCollection = true) {
                                 <div class="collection-item-thumb">
                                     <a href="${itemUrl}">
                                         ${item.cv_img 
-                                            ? `<img src="${comicVineImageUrl(item.cv_img)}" alt="${escapeHtmlAttribute(item.name)}">`
+                                            ? `<img src="${normalizeImageUrl(item.cv_img)}" alt="${escapeHtmlAttribute(item.name)}">` 
                                             : `<div class="empty-thumb">${icon(ICON.book, 24)}</div>`}
                                     </a>
                                     <div class="item-number">#${escapeHtmlAttribute(item.issue_number || '—')}</div>

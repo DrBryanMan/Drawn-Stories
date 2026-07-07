@@ -1,5 +1,5 @@
 import { API } from '../helpers/api.js';
-import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
+import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { currentUser } from '../shell.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { formatDate } from '../helpers/lang.js';
@@ -45,7 +45,7 @@ export async function renderMangaChapterDetail(main, params = {}) {
         const { chapter, appearances = {} } = data;
         const characters = appearances.characters || [];
 
-        const coverUrl = comicVineImageUrl(chapter.image);
+        const coverUrl = normalizeImageUrl(chapter.image);
         const title = escapeHtmlAttribute(chapter.name_uk || chapter.name_en || chapter.name || `Розділ #${chapter.chapter_number}`);
         const volName = escapeHtmlAttribute(chapter.volume_name_uk || chapter.volume_name || 'Без назви');
         
@@ -122,7 +122,7 @@ export async function renderMangaChapterDetail(main, params = {}) {
                             ` : `
                                 <div class="characters-appearance-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px;">
                                     ${characters.map(char => {
-                                        const charCover = comicVineImageUrl(char.image);
+                                        const charCover = normalizeImageUrl(char.image);
                                         return `
                                             <a class="character-card-appearance" href="#/characters/${char.id}" style="display: flex; flex-direction: column; text-decoration: none; color: inherit; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-s); overflow: hidden; transition: transform 0.2s, box-shadow 0.2s;">
                                                 <div style="aspect-ratio: 1; overflow: hidden; background: var(--bg-body); display: flex; align-items: center; justify-content: center;">

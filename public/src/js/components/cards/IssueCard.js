@@ -1,4 +1,4 @@
-import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
+import { normalizeImageUrl, escapeHtmlAttribute } from '../../helpers/image.js';
 
 function formatIssueDate(value) {
     if (!value) return '';
@@ -14,7 +14,7 @@ export function createIssueCard(issue) {
     const card = document.createElement('article');
     card.className = 'issue-card';
 
-    const coverUrl = comicVineImageUrl(issue.cv_img);
+    const coverUrl = normalizeImageUrl(issue.image || issue.cv_img);
     const coverSrc = escapeHtmlAttribute(coverUrl);
     const title = escapeHtmlAttribute(issue.name || `Випуск #${issue.issue_number || issue.id}`);
     const issueNumber = issue.issue_number ? escapeHtmlAttribute(issue.issue_number) : '—';

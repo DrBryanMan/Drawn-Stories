@@ -3,7 +3,7 @@ import { router } from '../helpers/router.js';
 import { createPaginator } from '../components/Pagination.js';
 import { updateEditsPendingCount } from '../shell.js';
 import { langName } from '../helpers/lang.js';
-import { comicVineImageUrl } from '../helpers/image.js';
+import { normalizeImageUrl } from '../helpers/image.js';
 
 const ICON = {
     user: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
@@ -264,7 +264,7 @@ export async function renderEdits(main) {
         const beforeData = patchObj.before || {};
         const afterData = patchObj.after || patchObj;
 
-        const volumeImg = comicVineImageUrl(afterData.cv_img || beforeData.cv_img || beforeData.hikka_img || e.volume_cv_img || e.volume_hikka_img || '');
+        const volumeImg = normalizeImageUrl(e.volume_cv_img || afterData.cv_img || beforeData.cv_img || '');
         const volumeImgHTML = `
             <div class="edit-entity-image-wrap">
                 ${volumeImg 
@@ -519,8 +519,8 @@ export async function renderEdits(main) {
         if (key === 'cv_img' || key === 'cover_img') {
             const isBanner = key === 'cover_img';
             const imgClass = isBanner ? 'diff-image-preview diff-image-preview--banner' : 'diff-image-preview';
-            const beforeUrl = comicVineImageUrl(beforeVal);
-            const afterUrl = comicVineImageUrl(afterVal);
+            const beforeUrl = normalizeImageUrl(beforeVal);
+            const afterUrl = normalizeImageUrl(afterVal);
             
             beforeRendered = beforeVal ? `
                 <div class="diff-image-preview-wrap">

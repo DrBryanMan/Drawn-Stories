@@ -34,7 +34,7 @@ async def get_edit_requests(request: Request, status: Optional[str] = None):
     query = """
         SELECT er.*, u.username as proposer_username, m.username as moderator_username,
                v.name as volume_name, v.name_uk as volume_name_uk,
-               v.cv_img as volume_cv_img, v.hikka_img as volume_hikka_img
+               v.image as volume_cv_img, NULL as volume_hikka_img
         FROM edit_requests er
         JOIN users u ON er.user_id = u.id
         LEFT JOIN users m ON er.moderator_id = m.id

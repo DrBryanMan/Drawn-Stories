@@ -1,5 +1,5 @@
 import { API } from '../helpers/api.js';
-import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
+import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { createPaginator } from '../components/Pagination.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
@@ -118,7 +118,7 @@ async function fetchAndRenderCharacters(filterBar) {
     }
 
     grid.innerHTML = items.map(item => {
-      const cover = comicVineImageUrl(item.image);
+      const cover = normalizeImageUrl(item.image);
       let genderIcon = '';
       if (item.gender === 1) {
         genderIcon = `<span class="char-gender-badge male" title="${t('gender_male')}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="m21 3-6.75 6.75"/><circle cx="10" cy="14" r="6"/></svg></span>`;

@@ -129,8 +129,8 @@ export async function initShell() {
                               ${linkHtml}
                               <div class="manga-menu-buttons">
                                 <a href="#/catalog?content_type=manga" class="manga-menu-btn" data-route="/catalog" data-content-type="manga">${t('series')}</a>
-                                <a href="#/catalog?content_type=manga-magazines" class="manga-menu-btn" data-route="/catalog" data-content-type="manga-magazines">${t('manga_magazines')}</a>
-                                <a href="#/catalog?content_type=manga-chapters" class="manga-menu-btn" data-route="/catalog" data-content-type="manga-chapters">${t('manga_chapters')}</a>
+                                <a href="#/manga-magazines" class="manga-menu-btn" data-route="/manga-magazines">${t('manga_magazines')}</a>
+                                <a href="#/manga-chapters" class="manga-menu-btn" data-route="/manga-chapters">${t('manga_chapters')}</a>
                               </div>
                             </div>
                           `;

@@ -1,7 +1,7 @@
 import { API } from '../helpers/api.js';
 import { currentUser } from '../shell.js';
-import { createComicCard } from '../components/ComicCard.js';
-import { escapeHtmlAttribute, comicVineImageUrl } from '../helpers/image.js';
+import { createComicCard } from '../components/cards/ComicCard.js';
+import { escapeHtmlAttribute, normalizeImageUrl } from '../helpers/image.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { t } from '../helpers/i18n.js';
 
@@ -92,7 +92,7 @@ function createSimpleCard(item, type) {
     const card = document.createElement('div');
     card.className = 'comic-card simple-card';
     
-    const coverUrl = comicVineImageUrl(item.cv_img);
+    const coverUrl = normalizeImageUrl(item.image || item.cv_img);
     const title = escapeHtmlAttribute(item.name || 'Без назви');
     
     card.innerHTML = `

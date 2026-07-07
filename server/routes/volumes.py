@@ -88,7 +88,7 @@ async def get_volume_detail(volume_id: int, request: Request):
             """
             SELECT i.*, 'issue' as type, 
                    v.name as volume_name, v.name_uk as volume_name_uk,
-                   v.cv_img as volume_cv_img, v.cover_img as volume_cover_img,
+                    v.image as volume_cv_img, v.cover_img as volume_cover_img,
                    v.id as volume_db_id, v.cv_id as volume_cv_id,
                    (SELECT COUNT(DISTINCT ci2.collection_id) FROM collection_issues ci2 WHERE ci2.issue_id = i.id) as collection_count
             FROM issues i
@@ -377,7 +377,7 @@ async def create_volume(data: dict):
     
     allowed_fields = [
         "name", "name_uk", "name_native", "description", "synopsis", "synopsis_ua", "start_year", 
-        "status", "lang", "publisher", "cv_img", "cover_img",
+        "status", "lang", "publisher", "image", "cover_img",
         "cv_id", "cv_slug", "hikka_slug", "mal_id", "locg_id", "locg_slug", "site_link"
     ]
     
@@ -418,7 +418,7 @@ def apply_volume_update_in_db(db, volume_id: int, data: dict):
     
     allowed_fields = [
         "name", "name_uk", "name_native", "description", "synopsis", "synopsis_ua", "start_year", 
-        "status", "lang", "publisher", "cv_img", "cover_img",
+        "status", "lang", "publisher", "image", "cover_img",
         "cv_id", "cv_slug", "hikka_slug", "mal_id", "locg_id", "locg_slug", "site_link"
     ]
     

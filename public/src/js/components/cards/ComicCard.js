@@ -1,4 +1,4 @@
-import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
+import { normalizeImageUrl, escapeHtmlAttribute } from '../../helpers/image.js';
 
 const LIST_ICONS = {
     'Planned': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
@@ -38,7 +38,7 @@ export function createComicCard(item) {
     const year = item.start_year || (item.release_date ? item.release_date.split('-')[0] : '');
     const releaseDate = item.release_date ? item.release_date.split('-').reverse().join('.') : '';
     const lang = item.lang || '';
-    const coverUrl = comicVineImageUrl(item.cv_img || item.hikka_img || item.cover_img);
+    const coverUrl = normalizeImageUrl(item.image || item.cv_img || item.cover_img);
     const title = escapeHtmlAttribute(item.name || 'Без назви');
     const coverSrc = escapeHtmlAttribute(coverUrl);
 

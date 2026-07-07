@@ -1,6 +1,6 @@
 import { API } from '../helpers/api.js';
 import { LANG_MAP } from '../helpers/lang.js';
-import { comicVineImageUrl } from '../helpers/image.js';
+import { normalizeImageUrl } from '../helpers/image.js';
 
 // Local helper functions for rendering themes (identical to VolumeEditor / editorUtils)
 function buildThemeChipsHTML(selectedThemes) {
@@ -290,7 +290,7 @@ function inp(name, type = 'text', placeholder = '') {
   return `<input type="${type}" name="${name}" placeholder="${placeholder}" class="admin-input">`;
 }
 
-function imgField(name = 'cv_img', label = 'Обкладинка') {
+function imgField(name = 'image', label = 'Обкладинка') {
   return `
     <div class="admin-form-group admin-form-group--full">
       <label class="admin-label">${label}</label>
@@ -371,7 +371,7 @@ const FORMS = {
         ${fld('Номер випуску *', inp('issue_number'), '', true)}
         ${fld('Дата обкладинки', inp('cover_date', 'date'))}
         ${fld('Дата релізу', inp('release_date', 'date'))}
-        ${imgField()}
+        ${imgField('cv_img')}
     </div>
   `,
   'collection': () => `
@@ -381,7 +381,7 @@ const FORMS = {
         ${fld('Порядковий номер', inp('issue_number', 'text', '56 або AB.56'))}
         ${fld('Дата обкладинки', inp('cover_date', 'date'))}
         ${fld('Дата релізу', inp('release_date', 'date'))}
-        ${imgField()}
+        ${imgField('cv_img')}
     </div>
   `,
   'reading-order': () => `
@@ -480,7 +480,7 @@ function initImageHandlers(area) {
 
     const updatePreview = (src, isRemote = false) => {
         if (src) {
-            previewImg.src = isRemote ? comicVineImageUrl(src) : src;
+            previewImg.src = isRemote ? normalizeImageUrl(src) : src;
             previewImg.style.display = 'block';
             placeholder.style.display = 'none';
         } else {

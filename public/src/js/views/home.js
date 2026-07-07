@@ -1,6 +1,6 @@
 import { API } from '../helpers/api.js';
 import { t, getCurrentLanguage } from '../helpers/i18n.js';
-import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
+import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 
 /**
  * Renders the home page into the given container.
@@ -177,7 +177,7 @@ export async function renderHome(main) {
         <div class="popular-title">Топ видавництв:</div>
         <div class="popular-list">
           ${items.map(p => {
-            const img = comicVineImageUrl(p.image);
+            const img = normalizeImageUrl(p.image);
             return `
               <a href="#/catalog?publisher_ids=${p.id}" class="popular-item">
                 ${img ? `<img class="popular-item-img" src="${img}" alt="${escapeHtmlAttribute(p.name)}">` : `<span class="popular-icon" style="color: var(--accent);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg></span>`}
@@ -198,7 +198,7 @@ export async function renderHome(main) {
         <div class="popular-title">Топ манґа-серій (MAL):</div>
         <div class="popular-list">
           ${items.map(m => {
-            const img = comicVineImageUrl(m.hikka_img);
+            const img = normalizeImageUrl(m.image);
             const title = m.name_uk || m.name;
             return `
               <a href="#/volumes/${m.id}" class="popular-item">
@@ -220,7 +220,7 @@ export async function renderHome(main) {
         <div class="popular-title">Топ журналів:</div>
         <div class="popular-list">
           ${items.map(m => {
-            const img = comicVineImageUrl(m.image);
+            const img = normalizeImageUrl(m.image);
             return `
               <a href="#/magazines/${m.id}" class="popular-item">
                 ${img ? `<img class="popular-item-img" src="${img}" alt="${escapeHtmlAttribute(m.name)}">` : `<span class="popular-icon" style="color: var(--accent);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V15a2 2 0 0 1 2-2h14M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5a2.5 2.5 0 0 0 2.5 2.5H20M20 2v20H6.5A2.5 2.5 0 0 1 4 19.5"/></svg></span>`}
@@ -279,7 +279,7 @@ export async function renderHome(main) {
       if (weeklyMore) weeklyMore.style.display = 'none';
       if (volumesMore) {
         volumesMore.style.display = 'inline-block';
-        volumesMore.href = `#/catalog?content_type=manga-magazines`;
+        volumesMore.href = `#/manga-magazines`;
       }
       if (issuesMore) {
         issuesMore.style.display = 'none';
@@ -346,7 +346,7 @@ async function loadWeeklyReleases(start, end, contentType) {
   const formatDateYMD = (date) => date.toISOString().split('T')[0];
 
   try {
-    const { createComicCard } = await import('../components/ComicCard.js');
+    const { createComicCard } = await import('../components/cards/ComicCard.js');
     const data = await API.get('/catalog', { 
       page: 1, 
       limit: 10, 
@@ -385,7 +385,7 @@ async function loadRecentVolumes(contentType) {
         return;
       }
       items.forEach(item => {
-        const cover = comicVineImageUrl(item.image);
+        const cover = normalizeImageUrl(item.image);
         const title = item.name || 'Без назви';
         const series = item.series_count ? `${t('home_stats_volumes')}: ${item.series_count}` : t('no_series');
         const card = document.createElement('div');
@@ -405,7 +405,7 @@ async function loadRecentVolumes(contentType) {
       });
     } else {
       const today = new Date().toISOString().split('T')[0];
-      const { createComicCard } = await import('../components/ComicCard.js');
+      const { createComicCard } = await import('../components/cards/ComicCard.js');
       const data = await API.get('/catalog', { 
           page: 1, 
           limit: 8, 
@@ -443,7 +443,7 @@ async function loadRecentIssues(contentType) {
         return;
       }
       items.forEach(item => {
-        const cover = comicVineImageUrl(item.image);
+        const cover = normalizeImageUrl(item.image);
         const title = item.name || `${item.magazine_name} #${item.issue_number}`;
         const card = document.createElement('div');
         card.className = 'comic-card';
@@ -464,7 +464,7 @@ async function loadRecentIssues(contentType) {
       });
     } else {
       const today = new Date().toISOString().split('T')[0];
-      const { createComicCard } = await import('../components/ComicCard.js');
+      const { createComicCard } = await import('../components/cards/ComicCard.js');
       const data = await API.get('/catalog', { 
           page: 1, 
           limit: 8, 

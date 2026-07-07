@@ -1,5 +1,5 @@
 import { API } from '../helpers/api.js';
-import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
+import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { createPaginator } from '../components/Pagination.js';
@@ -112,7 +112,7 @@ export async function renderVolumeCharacters(container, params = {}) {
             const pageItems = filteredCharacters.slice((page - 1) * pageSize, page * pageSize);
 
             const buildCharCardHTML = (char) => {
-                const cover = char.image ? comicVineImageUrl(char.image) : '';
+                const cover = char.image ? normalizeImageUrl(char.image) : '';
                 const name = escapeHtmlAttribute(char.name_uk || char.name || 'Без назви');
                 const charLink = char.cv_slug ? `#/characters/${char.id}-${char.cv_slug}` : `#/characters/${char.id}`;
                 return `

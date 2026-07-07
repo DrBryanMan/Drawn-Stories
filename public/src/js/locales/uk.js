@@ -158,6 +158,7 @@ export const uk = {
   works_label: "Робіт",
   sort_founded: "За датою заснування",
   sort_volumes: "За кількістю видань",
+  sort_date_added: "За датою додавання на сайт",
   sort_date: "За датою релізу",
   empty_search_tip: "Спробуйте змінити запит пошуку",
   no_series: "Немає серій",

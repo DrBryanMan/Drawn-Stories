@@ -1,5 +1,5 @@
 import { API } from '../helpers/api.js';
-import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
+import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { createPaginator } from '../components/Pagination.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
@@ -94,7 +94,7 @@ async function fetchAndRenderEvents(filterBar) {
     }
 
     grid.innerHTML = events.map(event => {
-      const cover = comicVineImageUrl(event.cv_img || event.image);
+      const cover = normalizeImageUrl(event.cv_img || event.image);
       const title = escapeHtmlAttribute(event.name || 'Без назви');
       const years = event.start_year ? (event.end_year && event.start_year !== event.end_year ? `${event.start_year}–${event.end_year}` : event.start_year) : '';
       const issues = event.issue_count ? `${t('section_issues')}: ${event.issue_count}` : t('no_issues_recorded');

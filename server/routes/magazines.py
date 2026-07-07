@@ -220,7 +220,7 @@ async def list_magazines(
     for m in magazines:
         mag_dict = dict(m)
         popular = db.get_all("""
-            SELECT v.id, v.name, v.name_uk, v.cover_img, v.cv_img, v.hikka_img, v.mal_score
+            SELECT v.id, v.name, v.name_uk, v.cover_img, v.image, v.mal_score
             FROM volumes v
             JOIN magazine_volumes vm ON v.id = vm.volume_id
             WHERE vm.magazine_id = ?
@@ -276,7 +276,7 @@ async def get_magazine_issue_detail(issue_id: int):
     # Get chapters (horizontal cards info)
     chapters = db.get_all("""
         SELECT mic.order_num, mic.label,
-               v.name as manga_name, v.name_uk as manga_name_uk, COALESCE(v.cv_img, v.hikka_img) as manga_volume_cover, v.cover_img as manga_banner, v.id as manga_volume_id,
+               v.name as manga_name, v.name_uk as manga_name_uk, v.image as manga_volume_cover, v.cover_img as manga_banner, v.id as manga_volume_id,
                mc.id as chapter_id, mc.chapter_number, mc.name as chapter_name, mc.pages, mc.image as chapter_cover
         FROM magazine_issue_chapters mic
         JOIN volumes v ON mic.manga_id = v.id

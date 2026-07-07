@@ -22,6 +22,8 @@ import { renderMagazineDetail } from './views/magazineDetail.js';
 import { renderMagazineIssueDetail } from './views/magazineIssueDetail.js';
 import { renderMagazineAllItems } from './views/magazineAllItems.js';
 import { renderMangaChapterDetail } from './views/mangaChapterDetail.js';
+import { renderMangaMagazinesCatalog } from './views/mangaMagazinesCatalog.js';
+import { renderMangaChaptersCatalog } from './views/mangaChaptersCatalog.js';
 
 async function start() {
   const main = await initShell();
@@ -29,6 +31,8 @@ async function start() {
   router
     .on('/',              () => renderHome(main))
     .on('/catalog',       (_path, _params, query) => renderCatalog(main, query))
+    .on('/manga-magazines', (_path, _params, query) => renderMangaMagazinesCatalog(main, query))
+    .on('/manga-chapters', (_path, _params, query) => renderMangaChaptersCatalog(main, query))
     .on('/volumes/:id',   (_path, params, query) => renderVolumeDetail(main, params, query))
     .on('/volumes/:id/characters', (_path, params) => {
         router.navigate(`/volumes/${params.id}?tab=characters`);

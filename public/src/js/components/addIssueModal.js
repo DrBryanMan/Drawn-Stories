@@ -1,6 +1,6 @@
 /* public/src/js/components/addIssueModal.js */
 import { API } from '../helpers/api.js';
-import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
+import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 
 // ── Lucide SVG icons ──────────────────────────────
 const ICON = {
@@ -300,7 +300,7 @@ function renderResults(data) {
     resultsEl.innerHTML = data.map(issue => {
         const alreadyAdded = _config.alreadyIds?.has(issue.id);
         const selected = _selectedIssueIds.has(issue.id);
-        const img = comicVineImageUrl(issue.cv_img);
+        const img = normalizeImageUrl(issue.cv_img);
 
         return `
             <div class="aim-card${alreadyAdded ? ' added' : ''}${selected ? ' selected' : ''}" 

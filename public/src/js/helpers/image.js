@@ -2,12 +2,13 @@ const COMICVINE_UPLOADS_URL = 'https://comicvine.gamespot.com/a/uploads/';
 const COMICVINE_SMALL_URL = `${COMICVINE_UPLOADS_URL}scale_small/`;
 
 /**
- * Converts ComicVine or Fandom image shortcuts into full URLs.
+ * Normalizes various image URL formats (ComicVine shortcodes, Fandom/Wikia, relative paths)
+ * into a full, usable URL.
  * @param {string | null | undefined} value
- * @param {number} width Default width for thumbnails (e.g. Fandom)
+ * @param {number} width Default width for Fandom thumbnails
  * @returns {string}
  */
-export function comicVineImageUrl(value, width = 250) {
+export function normalizeImageUrl(value, width = 250) {
     if (!value) return '';
 
     const path = String(value).trim();
@@ -57,6 +58,9 @@ export function comicVineImageUrl(value, width = 250) {
 
     return `${COMICVINE_SMALL_URL}${cleanPath}`;
 }
+
+/** @deprecated Use normalizeImageUrl instead */
+export const comicVineImageUrl = normalizeImageUrl;
 
 /**
  * Escapes text for use inside HTML attributes.

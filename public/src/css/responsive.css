@@ -21,18 +21,8 @@
 
 @media (max-width: 1040px) {
   /* views/catalog.css */
-  .catalog-layout,
-  .catalog-layout.is-filters-open {
+  .catalog-layout {
     grid-template-columns: 1fr;
-  }
-
-  .catalog-layout.is-filters-open .comic-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .catalog-filter-sidebar {
-    position: static;
-    order: -1;
   }
 }
 

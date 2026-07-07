@@ -1,5 +1,5 @@
 import { API } from '../helpers/api.js';
-import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
+import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { createPaginator } from '../components/Pagination.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
@@ -7,9 +7,10 @@ import { t } from '../helpers/i18n.js';
 
 const paginator = createPaginator({ pageSize: 20 });
 const getSortOptions = () => [
-  { value: 'name', label: t('sort_name') },
-  { value: 'founded', label: t('sort_founded') },
-  { value: 'volumes', label: t('sort_volumes') },
+  { value: 'name',       label: t('sort_name') },
+  { value: 'founded',    label: t('sort_founded') },
+  { value: 'volumes',    label: t('sort_volumes') },
+  { value: 'date_added', label: t('sort_date_added') },
 ];
 let searchQuery = '';
 let sortField = 'volumes';
@@ -136,14 +137,14 @@ async function fetchAndRenderPublishers(filterBar) {
         : ['—'];
       
       const logoInitial = pub.name ? pub.name.charAt(0).toUpperCase() : '?';
-      const imageUrl = comicVineImageUrl(pub.image);
+      const imageUrl = normalizeImageUrl(pub.image);
       const logoHtml = imageUrl 
         ? `<img src="${escapeHtmlAttribute(imageUrl)}" alt="${escapeHtmlAttribute(pub.name)} logo" loading="lazy">` 
         : logoInitial;
 
       const releases = pub.latest_releases || [];
       const releasesHtml = releases.map(vol => {
-          const imgUrl = comicVineImageUrl(vol.cover_img || vol.cv_img);
+          const imgUrl = normalizeImageUrl(vol.cover_img || vol.image);
           const title = escapeHtmlAttribute(vol.name_uk || vol.name);
           const issueCount = vol.issue_count || 0;
           return `

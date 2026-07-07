@@ -1,5 +1,5 @@
 import { API } from '../helpers/api.js';
-import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
+import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { currentUser } from '../shell.js';
 import { Bookmarks } from '../helpers/bookmarks.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
@@ -93,7 +93,7 @@ function renderStaffGroups(personsList) {
     const featuredGroup   = groupStaffRoles(featuredPersons);
 
     const renderCard = (person) => {
-        const personImg = person.image ? comicVineImageUrl(person.image) : '';
+        const personImg = person.image ? normalizeImageUrl(person.image) : '';
         const imgHTML = personImg
             ? `<img class="issue-staff-avatar" src="${escapeHtmlAttribute(personImg)}" alt="${escapeHtmlAttribute(person.name)}">`
             : `<div class="issue-staff-avatar--empty">${ICON.smallImage}</div>`;
@@ -285,7 +285,7 @@ function contextIssueNavCard(issue, direction) {
         `;
     }
 
-    const cover = comicVineImageUrl(issue.cv_img);
+    const cover = normalizeImageUrl(issue.cv_img);
     const num = issue.issue_number ? `#${escapeHtmlAttribute(issue.issue_number)}` : '';
     const title = escapeHtmlAttribute(issue.name || t('no_title'));
 
@@ -306,7 +306,7 @@ function contextIssueNavCard(issue, direction) {
 
 function contextCardHTML(item, type) {
     const isEvent = type === 'event';
-    const image = comicVineImageUrl(item.cv_img);
+    const image = normalizeImageUrl(item.cv_img);
     const name = escapeHtmlAttribute(item.name || (isEvent ? t('event') : t('story_arc')));
     const typeLabel = isEvent ? t('event') : t('story_arc');
     const detailHref = isEvent ? `#/events/${item.id}` : null;
@@ -337,7 +337,7 @@ function contextCardHTML(item, type) {
 
 // ── Collection card HTML ──────────────────────────
 function collectionCardHTML(col) {
-    const cover = comicVineImageUrl(col.cv_img);
+    const cover = normalizeImageUrl(col.cv_img);
     const name = escapeHtmlAttribute(col.name || t('collection'));
     const volumeLabel = col.volume_name_uk || col.volume_name || '';
     const date = formatDate(col.release_date || col.cover_date);
@@ -422,7 +422,7 @@ export async function renderIssueDetail(container, params = {}) {
     const displayTitle = issueTitle || (issueNum ? `${t('issue')} ${issueNum}` : t('no_title'));
 
     const volumeName = issue.volume_name_uk || issue.volume_name || '';
-    const coverUrl = comicVineImageUrl(issue.cv_img);
+    const coverUrl = normalizeImageUrl(issue.cv_img);
     const coverDate = formatDate(issue.cover_date);
     const releaseDate = formatDate(issue.release_date);
     const cvUrl = issue.cv_slug
@@ -661,8 +661,8 @@ export async function renderIssueDetail(container, params = {}) {
                     
                     let imgHTML = '';
                     if (costumeImg && regularImg) {
-                        const defUrl = comicVineImageUrl(costumeImg);
-                        const hovUrl = comicVineImageUrl(regularImg);
+                        const defUrl = normalizeImageUrl(costumeImg);
+                        const hovUrl = normalizeImageUrl(regularImg);
                         imgHTML = `
                             <div class="story-appearance-avatar-wrap has-hover">
                                 <img class="story-appearance-avatar default-avatar" src="${escapeHtmlAttribute(defUrl)}" alt="${escapeHtmlAttribute(c.name)}">
@@ -673,7 +673,7 @@ export async function renderIssueDetail(container, params = {}) {
                         const singleImg = costumeImg || regularImg;
                         imgHTML = singleImg
                             ? `<div class="story-appearance-avatar-wrap">
-                                   <img class="story-appearance-avatar default-avatar" src="${escapeHtmlAttribute(comicVineImageUrl(singleImg))}" alt="${escapeHtmlAttribute(c.name)}">
+                                   <img class="story-appearance-avatar default-avatar" src="${escapeHtmlAttribute(normalizeImageUrl(singleImg))}" alt="${escapeHtmlAttribute(c.name)}">
                                </div>`
                             : `<div class="story-appearance-avatar--empty">${ICON.smallImage}</div>`;
                     }

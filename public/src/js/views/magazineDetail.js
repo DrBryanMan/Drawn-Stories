@@ -1,5 +1,5 @@
 import { API } from '../helpers/api.js';
-import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
+import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 
 // ── Lucide SVG icons ────────────────────────────────
@@ -44,7 +44,7 @@ export async function renderMagazineDetail(main, params = {}) {
         const { magazine, series = [] } = data;
         const allIssues = issuesData.items || [];
 
-        const coverUrl = comicVineImageUrl(magazine.image);
+        const coverUrl = normalizeImageUrl(magazine.image);
         const title = escapeHtmlAttribute(magazine.name);
         const nativeName = escapeHtmlAttribute(magazine.name_native || '');
         const publisherName = escapeHtmlAttribute(magazine.publisher_name || 'Невідомо');
@@ -170,7 +170,7 @@ export async function renderMagazineDetail(main, params = {}) {
                             </div>
                             <div class="issues-view-grid" id="magazine-ongoing-grid">
                                 ${series.map(ser => {
-                                    const serCover = comicVineImageUrl(ser.cv_img || ser.hikka_img);
+                                    const serCover = normalizeImageUrl(ser.image);
                                     return `
                                         <a class="issue-grid-card" href="#/volumes/${ser.id}">
                                             <div class="issue-grid-poster">
@@ -208,7 +208,7 @@ export async function renderMagazineDetail(main, params = {}) {
                     const grid = main.querySelector('#magazine-ongoing-grid');
                     if (grid) {
                         grid.innerHTML = allSeries.map(ser => {
-                            const serCover = comicVineImageUrl(ser.cv_img || ser.hikka_img);
+                            const serCover = normalizeImageUrl(ser.image);
                             return `
                                 <a class="issue-grid-card" href="#/volumes/${ser.id}">
                                     <div class="issue-grid-poster">
@@ -275,7 +275,7 @@ export async function renderMagazineDetail(main, params = {}) {
                 const end = start + issuesPerPage;
                 const pageItems = filteredIssues.slice(start, end);
                 listContainer.innerHTML = pageItems.map(iss => {
-                    const issCover = comicVineImageUrl(iss.image);
+                    const issCover = normalizeImageUrl(iss.image);
                     
                     let pagesCountStr = '';
                     if (iss.pages) {

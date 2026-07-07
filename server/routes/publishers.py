@@ -35,6 +35,8 @@ async def get_publishers(
         order_clause = f"p.name {order_dir.upper()}"
     elif sort == "founded":
         order_clause = f"p.founded_date {order_dir.upper()}, p.name ASC"
+    elif sort == "date_added":
+        order_clause = f"p.created_at {order_dir.upper()}, p.name ASC"
     else:
         # Default to volume_count
         order_clause = f"volume_count {order_dir.upper()}, p.name ASC"
@@ -67,7 +69,7 @@ async def get_publishers(
         for row in rows:
             row["latest_releases"] = db.get_all(
                 """
-                SELECT v.id, v.name, v.name_uk, v.cover_img, v.cv_img, v.lang,
+                SELECT v.id, v.name, v.name_uk, v.cover_img, v.image, v.lang,
                        (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id) as issue_count
                 FROM volumes v
                 WHERE v.publisher = ?

@@ -1,10 +1,10 @@
 import { API } from '../helpers/api.js';
 import { currentUser } from '../shell.js';
 import { Bookmarks } from '../helpers/bookmarks.js';
-import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
+import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { langDisplay, langName, formatDate } from '../helpers/lang.js';
 import { createPaginator } from '../components/Pagination.js';
-import { renderIssueGridCard } from '../components/IssueGridCard.js';
+import { renderIssueGridCard } from '../components/cards/IssueGridCard.js';
 import { VolumeEditor } from '/admin/js/VolumeEditor.js';
 import { VolumePicker } from '/admin/js/VolumePicker.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
@@ -155,7 +155,7 @@ function themeChipHTML(theme) {
 function relationCardHTML(item, { title, icon, isModerator, onRemove }) {
     if (!item?.id) return '';
 
-    const cover = comicVineImageUrl(item.cv_img || item.hikka_img || item.image);
+    const cover = normalizeImageUrl(item.image || item.cv_img || item.cover_img);
     const name = escapeHtmlAttribute(item.name_uk || item.name || 'Без назви');
     const originalName = item.name_uk && item.name_uk !== item.name ? item.name : '';
     const lang = langDisplay(item.lang);
@@ -223,7 +223,7 @@ function heroRelationsHTML({ translationParents, magazineParents, magazine, isMo
 
 function translationCardHTML(item, { isModerator, currentVolumeId }) {
     const isCurrent = item.id === currentVolumeId;
-    const cover = comicVineImageUrl(item.cv_img || item.hikka_img);
+    const cover = normalizeImageUrl(item.image || item.cv_img);
     const title = escapeHtmlAttribute(item.name_uk || item.name || 'Без назви');
     const originalTitle = item.name_uk && item.name_uk !== item.name ? item.name : '';
     const collectionsCount = Number(item.collections_count || 0);
@@ -392,7 +392,7 @@ function renderItems(container, items) {
                     </thead>
                     <tbody>
                         ${items.map(item => {
-                            const cover = comicVineImageUrl(item.cv_img || item.hikka_img || item.image);
+                            const cover = normalizeImageUrl(item.image || item.cv_img || item.cover_img);
                             const isCollection = item.type === 'collection' || item.is_collection;
                             const isVolume = item.type === 'volume';
                             const isMangaChapter = item.type === 'manga_chapter';
@@ -502,8 +502,8 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
             staff = [],
         } = data;
 
-        const coverUrl = comicVineImageUrl(volume.cv_img || volume.hikka_img);
-        const bannerUrl = comicVineImageUrl(volume.cover_img || coverUrl);
+        const coverUrl = normalizeImageUrl(volume.image || volume.cover_img);
+        const bannerUrl = normalizeImageUrl(volume.cover_img || volume.image);
         const heroBannerStyle = bannerUrl ? ` style="--volume-banner-url: url('${escapeHtmlAttribute(bannerUrl)}')"` : '';
         const heroBannerClass = bannerUrl ? ' volume-hero-band--banner' : '';
         const title = escapeHtmlAttribute(volume.name_uk || volume.name_en || volume.name);
@@ -563,7 +563,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
         });
 
         const authorCards = Array.from(groupedStaff.values()).map(person => {
-            const cover = person.image ? comicVineImageUrl(person.image) : '';
+            const cover = person.image ? normalizeImageUrl(person.image) : '';
             const name = escapeHtmlAttribute(person.name);
             const rolesLabel = person.roles.filter(Boolean).map(r => translateStaffRole(r)).join(', ');
             return `
@@ -603,7 +603,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                 </div>
                 <div class="characters-grid">
                     ${characters.slice(0, 8).map(char => {
-                        const cover = char.image ? comicVineImageUrl(char.image) : '';
+                        const cover = char.image ? normalizeImageUrl(char.image) : '';
                         const name = escapeHtmlAttribute(char.name_uk || char.name || 'Без назви');
                         const roleLabel = char.role === 'main' ? 'Основний' : 'Другорядний';
                         const roleClass = char.role === 'main' ? 'role-main' : 'role-supporting';
@@ -1316,7 +1316,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                             volumesMap.set(volId, {
                                 id: volId,
                                 name: item.volume_name_uk || item.volume_name || 'Без назви',
-                                cover: comicVineImageUrl(item.volume_cover_img || item.volume_cv_img),
+                                cover: normalizeImageUrl(item.volume_cover_img || item.volume_cv_img),
                                 numbers: []
                             });
                         }
@@ -1410,7 +1410,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
             const pageItems = filteredChars.slice((page - 1) * pageSize, page * pageSize);
 
             const buildCharCardHTML = (char) => {
-                const cover = char.image ? comicVineImageUrl(char.image) : '';
+                const cover = char.image ? normalizeImageUrl(char.image) : '';
                 const name = escapeHtmlAttribute(char.name_uk || char.name || 'Без назви');
                 const charLink = char.cv_slug ? `#/characters/${char.id}-${char.cv_slug}` : `#/characters/${char.id}`;
                 return `
@@ -1831,7 +1831,7 @@ async function openIssueMembershipModal(issueId, itemType = 'issue') {
             `;
         } else {
             listContainer.innerHTML = collections.map(col => {
-                const cover = comicVineImageUrl(col.cv_img);
+                const cover = normalizeImageUrl(col.cv_img);
                 return `
                     <div class="membership-item">
                         ${cover ? `<img src="${cover}" class="membership-item-cover">` : `<div class="membership-item-cover-empty"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg></div>`}
@@ -1887,7 +1887,7 @@ function renderCollectionsFromIssues(container, collections, options = {}) {
             </div>
             <div class="issues-view-grid">
                 ${group.items.map(col => {
-                    const cover = comicVineImageUrl(col.cv_img);
+                    const cover = normalizeImageUrl(col.cv_img);
                     const range = formatIssueRanges(col.volume_issue_numbers);
                     return `
                         <a class="issue-grid-card" href="#/collections/${col.id}">

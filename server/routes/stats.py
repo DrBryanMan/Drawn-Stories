@@ -44,7 +44,7 @@ async def get_popular_content():
     
     # 2. Top 5 manga series by MAL rating
     popular_manga = db.get_all(f"""
-        SELECT v.id, v.name, v.name_uk, v.cover_img, v.cv_img, v.hikka_img, v.mal_score, v.mal_scored_by
+        SELECT v.id, v.name, v.name_uk, v.cover_img, v.image, v.mal_score, v.mal_scored_by
         FROM volumes v
         JOIN volume_themes vt ON v.id = vt.volume_id
         WHERE vt.theme_id = {manga_theme_id} AND v.mal_score IS NOT NULL AND v.mal_score > 0

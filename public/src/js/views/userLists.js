@@ -1,5 +1,5 @@
 import { API } from '../helpers/api.js';
-import { createComicCard } from '../components/ComicCard.js';
+import { createComicCard } from '../components/cards/ComicCard.js';
 import { escapeHtmlAttribute } from '../helpers/image.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';

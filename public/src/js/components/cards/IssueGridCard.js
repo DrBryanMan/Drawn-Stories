@@ -1,7 +1,5 @@
-import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
-import { formatDate } from '../helpers/lang.js';
-
-
+import { normalizeImageUrl, escapeHtmlAttribute } from '../../helpers/image.js';
+import { formatDate } from '../../helpers/lang.js';
 
 const ICON = {
     layers: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>',
@@ -17,7 +15,7 @@ const ICON = {
  * @returns {string} HTML string
  */
 export function renderIssueGridCard(item, options = {}) {
-    const cover = comicVineImageUrl(item.cv_img || item.hikka_img || item.image);
+    const cover = normalizeImageUrl(item.image || item.cv_img || item.cover_img);
     const isCollection = item.type === 'collection' || item.is_collection;
     const isVolume = item.type === 'volume';
     const isMangaChapter = item.type === 'manga_chapter';

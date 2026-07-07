@@ -1,5 +1,5 @@
 import { API } from '../helpers/api.js';
-import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
+import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { currentUser } from '../shell.js';
 import { MagazineChapterAdder } from '/admin/js/MagazineChapterAdder.js';
@@ -47,7 +47,7 @@ export async function renderMagazineIssueDetail(main, params = {}) {
         const data = await API.get(`/magazines/issues/${issueId}`);
         const { issue, chapters = [], prev_issue, next_issue, all_issues = [] } = data;
 
-        const coverUrl = comicVineImageUrl(issue.image);
+        const coverUrl = normalizeImageUrl(issue.image);
         const title = escapeHtmlAttribute(issue.name || `Випуск #${issue.issue_number}`);
         const magazineName = escapeHtmlAttribute(issue.magazine_name || 'Журнал');
         const ukMonths = {
@@ -393,8 +393,8 @@ export async function renderMagazineIssueDetail(main, params = {}) {
                         ${chapters.length === 0 ? '<p>У цей випуск ще не було додано розділів.</p>' : `
                             <div class="magazine-chapters-list" id="magazine-chapters-grid" style="display: flex; flex-direction: column; gap: 6px;">
                                 ${chapters.map((ch, index) => {
-                                    const mangaBanner = comicVineImageUrl(ch.manga_banner || ch.manga_volume_cover);
-                                    const chapterCover = comicVineImageUrl(ch.chapter_cover || ch.manga_volume_cover);
+                                    const mangaBanner = normalizeImageUrl(ch.manga_banner || ch.manga_volume_cover);
+                                    const chapterCover = normalizeImageUrl(ch.chapter_cover || ch.manga_volume_cover);
                                     const mangaTitle = escapeHtmlAttribute(ch.manga_name_uk || ch.manga_name);
                                     const origTitle = ch.manga_name_uk && ch.manga_name_uk !== ch.manga_name ? ch.manga_name : '';
                                     const badges = [];
@@ -475,7 +475,7 @@ export async function renderMagazineIssueDetail(main, params = {}) {
             const end = start + issuesPerPage;
             const pageItems = filteredIssues.slice(start, end);
             listContainer.innerHTML = pageItems.map(iss => {
-                const issCover = comicVineImageUrl(iss.image);
+                const issCover = normalizeImageUrl(iss.image);
                 const isCurrent = iss.id === issueId;
                 
                 let pagesCountStr = '';

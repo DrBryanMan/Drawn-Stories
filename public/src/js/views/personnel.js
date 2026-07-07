@@ -1,5 +1,5 @@
 import { API } from '../helpers/api.js';
-import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
+import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { createPaginator } from '../components/Pagination.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
@@ -118,7 +118,7 @@ async function fetchAndRenderPersonnel(filterBar) {
     }
 
     grid.innerHTML = items.map(item => {
-      const cover = comicVineImageUrl(item.image);
+      const cover = normalizeImageUrl(item.image);
       const metaInfo = [item.occupation, item.country].filter(Boolean).join(', ');
 
       return `

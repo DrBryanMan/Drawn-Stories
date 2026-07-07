@@ -1,5 +1,5 @@
 import { API } from '../helpers/api.js';
-import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
+import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { currentUser } from '../shell.js';
 import { openAddIssueModal } from '../components/addIssueModal.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
@@ -73,7 +73,7 @@ function isModerator() {
 }
 
 function issueRowHTML(issue, index, total, canModerate) {
-    const cover = comicVineImageUrl(issue.cv_img);
+    const cover = normalizeImageUrl(issue.cv_img);
     const title = escapeHtmlAttribute(issue.name || t('no_title'));
     const number = issue.issue_number ? `#${escapeHtmlAttribute(issue.issue_number)}` : '#?';
     const volume = issue.volume_name_uk || issue.volume_name || '';
@@ -184,7 +184,7 @@ export async function renderEventDetail(container, params = {}) {
 
     const { event, issues } = state;
     const canModerate = isModerator();
-    const cover = comicVineImageUrl(event.cv_img);
+    const cover = normalizeImageUrl(event.cv_img);
     const years = eventYears(event);
     const existingIds = new Set(issues.map(issue => issue.id));
     document.title = `${event.name} | Drawn Stories`;

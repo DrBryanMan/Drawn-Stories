@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════
    COMIC GRID CARD
-══════════════════════════════════════════════════════ */
+   ══════════════════════════════════════════════════════ */
 .comic-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1em; }
 .comic-card {
   position: relative;

@@ -1,5 +1,5 @@
 import { API } from '../helpers/api.js';
-import { comicVineImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
+import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { createPaginator } from '../components/Pagination.js';
 
@@ -52,7 +52,7 @@ export async function renderMagazineAllItems(main, params = {}) {
                         <div class="issues-view-grid">
                             ${data.items.map(item => {
                                 if (activeTab === 'issues') {
-                                    const issCover = comicVineImageUrl(item.image);
+                                    const issCover = normalizeImageUrl(item.image);
                                     return `
                                         <a class="issue-grid-card" href="#/magazines/issues/${item.id}">
                                             <div class="issue-grid-poster">
@@ -66,7 +66,7 @@ export async function renderMagazineAllItems(main, params = {}) {
                                         </a>
                                     `;
                                 } else {
-                                    const serCover = comicVineImageUrl(item.cv_img || item.hikka_img);
+                                    const serCover = normalizeImageUrl(item.image);
                                     return `
                                         <a class="issue-grid-card" href="#/volumes/${item.id}">
                                             <div class="issue-grid-poster">

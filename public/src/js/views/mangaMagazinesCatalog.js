@@ -1,0 +1,235 @@
+import { API } from '../helpers/api.js';
+import { createPaginator } from '../components/Pagination.js';
+import { mountFilterBar } from '../components/FilterBar.js';
+import { router } from '../helpers/router.js';
+import { createBreadcrumbs } from '../components/Breadcrumbs.js';
+import { t } from '../helpers/i18n.js';
+import { renderMagazineCard } from '../components/cards/MagazineCard.js';
+
+const paginator = createPaginator({ pageSize: 20 });
+
+const DEFAULT_SORT_FIELD = 'series';
+const DEFAULT_SORT_ORDER = 'desc';
+
+const SORT_OPTIONS = [
+  { value: 'series', label: t('sort_series') || 'За кількістю серій' },
+  { value: 'name', label: t('sort_name') || 'За назвою' },
+  { value: 'recent', label: t('sort_recent') || 'За датою додавання' },
+  { value: 'date', label: t('sort_date') || 'За датою початку' },
+];
+
+const SORT_ORDER_ICONS = {
+  asc: '<path d="M5 6h6M5 12h10M5 18h14"/>',
+  desc: '<path d="M5 6h14M5 12h10M5 18h6"/>',
+};
+
+const SORT_ORDER_TITLES = {
+  name: {
+    asc: t('sort_order_name_asc') || 'За зростанням: від А до Я',
+    desc: t('sort_order_name_desc') || 'За спаданням: від Я до А',
+  },
+  recent: {
+    asc: t('sort_order_recent_asc') || 'За зростанням: старіші додані спочатку',
+    desc: t('sort_order_recent_desc') || 'За спаданням: новіші додані спочатку',
+  },
+  date: {
+    asc: t('sort_order_date_asc') || 'За зростанням: від старіших релізів до новіших',
+    desc: t('sort_order_date_desc') || 'За спаданням: від новіших релізів до старіших',
+  },
+  series: {
+    asc: t('sort_order_series_asc') || 'За зростанням: від меншої кількості до більшої',
+    desc: t('sort_order_series_desc') || 'За спаданням: від більшої кількості до меншої',
+  },
+};
+
+let searchQuery = '';
+let filterBar = null;
+
+// Filters state
+let currentSortField = DEFAULT_SORT_FIELD;
+let currentSortOrder = DEFAULT_SORT_ORDER;
+
+function syncUrl() {
+  const params = new URLSearchParams();
+  if (searchQuery) params.set('search', searchQuery);
+  if (currentSortField !== DEFAULT_SORT_FIELD) params.set('sort', currentSortField);
+  if (currentSortOrder !== DEFAULT_SORT_ORDER) params.set('order_dir', currentSortOrder);
+  
+  const page = paginator.getPage();
+  if (page > 1) params.set('page', page);
+
+  const queryString = params.toString();
+  const newHash = `#${router.currentPath}${queryString ? '?' + queryString : ''}`;
+  if (location.hash !== newHash) {
+    history.replaceState(null, '', newHash);
+  }
+}
+
+export async function renderMangaMagazinesCatalog(main, query = {}) {
+  paginator.reset();
+  if (query.page) {
+    paginator.setPage(Number(query.page));
+  }
+  searchQuery = query.search || '';
+  currentSortField = query.sort || DEFAULT_SORT_FIELD;
+  currentSortOrder = query.order_dir || DEFAULT_SORT_ORDER;
+
+  const breadcrumbItems = [
+    { label: t('catalog') || 'Каталог', href: '#/catalog' },
+    { label: t('manga_magazines') || 'Журнали', id: 'catalog-breadcrumb-current' }
+  ];
+
+  main.innerHTML = `
+    <div class="container">
+      <div class="page-header">
+        ${createBreadcrumbs(breadcrumbItems)}
+      </div>
+
+      <div class="catalog-top-row">
+        <div id="catalog-filter-bar-container"></div>
+      </div>
+
+      <div class="catalog-layout" id="catalog-layout">
+        <div class="catalog-main-column">
+          <main class="catalog-results">
+            <div class="comic-grid comic-grid--magazines" id="catalog-grid">
+              <div class="loader-container"><div class="loader"></div></div>
+            </div>
+            <div class="pagination-wrap" id="catalog-pagination"></div>
+          </main>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const updateSortControl = () => {
+    const selectedSort = SORT_OPTIONS.find((opt) => opt.value === currentSortField) || SORT_OPTIONS[0];
+    const sortOrderTitles = SORT_ORDER_TITLES;
+    const title = sortOrderTitles[currentSortField]?.[currentSortOrder] || `За спаданням`;
+    
+    if (filterBar) {
+      filterBar.setSortValue(currentSortField);
+      filterBar.setSortOrder(currentSortOrder);
+    }
+
+    const sortSelect = document.getElementById('sort-select');
+    const orderBtn = document.getElementById('sort-order-btn');
+    const orderIcon = document.getElementById('sort-order-icon');
+    const sortLabel = sortSelect?.querySelector('.select-label');
+
+    if (sortSelect) {
+      sortSelect.value = selectedSort.value;
+      sortSelect.title = selectedSort.label;
+    }
+    if (sortLabel) sortLabel.textContent = selectedSort.label;
+    if (orderIcon) orderIcon.innerHTML = SORT_ORDER_ICONS[currentSortOrder];
+    if (orderBtn) {
+      orderBtn.title = title;
+      orderBtn.setAttribute('aria-label', title);
+    }
+  };
+
+  const reloadCatalog = () => {
+    fetchAndRender();
+  };
+
+  document.title = `${t('manga_magazines') || 'Журнали'} — Drawn Stories`;
+
+  filterBar = mountFilterBar(main.querySelector('#catalog-filter-bar-container'), {
+    resultsCount: 0,
+    searchPlaceholder: t('search_magazines') || 'Пошук журналів...',
+    searchValue: searchQuery,
+    sortValue: currentSortField,
+    sortOptions: SORT_OPTIONS,
+    sortOrderValue: currentSortOrder,
+    showFiltersBtn: false,
+    filtersBtnActive: false,
+    onSearch: (val) => {
+      searchQuery = val;
+      paginator.reset();
+      reloadCatalog();
+    },
+    onSortChange: (val) => {
+      currentSortField = val;
+      updateSortControl();
+      paginator.reset();
+      reloadCatalog();
+    },
+    onSortOrderChange: (dir) => {
+      currentSortOrder = dir;
+      updateSortControl();
+      paginator.reset();
+      reloadCatalog();
+    }
+  });
+
+  updateSortControl();
+  reloadCatalog();
+}
+
+async function fetchAndRender() {
+  const grid = document.getElementById('catalog-grid');
+  const paginationWrap = document.getElementById('catalog-pagination');
+  if (!grid) return;
+
+  syncUrl();
+
+  const renderSkeletons = () => {
+    grid.innerHTML = '';
+    for (let i = 0; i < paginator.getPageSize(); i++) {
+      const skel = document.createElement('div');
+      skel.className = 'comic-card skeleton-card';
+      skel.innerHTML = `
+        <div class="skeleton" style="width: 100%; aspect-ratio: 2/3;"></div>
+        <div class="comic-body">
+          <div class="skeleton skeleton-text" style="width: 85%; height: 16px; margin-bottom: 8px;"></div>
+          <div class="skeleton skeleton-text" style="width: 45%; height: 12px; margin-bottom: 6px;"></div>
+          <div class="skeleton skeleton-text" style="width: 30%; height: 10px;"></div>
+        </div>
+      `;
+      grid.appendChild(skel);
+    }
+  };
+
+  renderSkeletons();
+
+  try {
+    const data = await API.get('/magazines', {
+      search: searchQuery || undefined,
+      limit: paginator.getPageSize(),
+      offset: (paginator.getPage() - 1) * paginator.getPageSize(),
+      sort: currentSortField,
+      order_dir: currentSortOrder
+    });
+
+    if (filterBar) filterBar.updateCount(data.total);
+
+    grid.innerHTML = '';
+    const items = data.items || [];
+    if (items.length === 0) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            <line x1="8" y1="11" x2="14" y2="11"/>
+          </svg>
+          <h3>${t('nothing_found') || 'Нічого не знайдено'}</h3>
+          <p>${t('empty_search_tip') || 'Спробуйте змінити параметри пошуку'}</p>
+        </div>`;
+    } else {
+      grid.innerHTML = items.map(mag => renderMagazineCard(mag)).join('');
+    }
+
+    paginationWrap.innerHTML = '';
+    const pages = data.pages || Math.ceil(data.total / paginator.getPageSize());
+    if (pages > 1) {
+      const nav = paginator.render(data.total, () => {
+        fetchAndRender();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      paginationWrap.appendChild(nav);
+    }
+  } catch (err) {
+    grid.innerHTML = `<div class="error-state">Помилка завантаження: ${err.message}</div>`;
+  }
+}

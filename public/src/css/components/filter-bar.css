@@ -98,8 +98,8 @@
 }
 
 /* ── Filters panel (Sort etc) ──────────────────────── */
-.filters-section:not(:has(.btn-filters-panel.is-active)) {
-  gap: 1em;
+.filters-section {
+  gap: .5em;
 }
 
 .filter-group {
@@ -113,7 +113,7 @@
 }
 
 .filter-btn-icon {
-  width: 40px;
+  width: 36px;
   aspect-ratio: 1/1;
   display: flex;
   align-items: center;
@@ -150,6 +150,7 @@
   background: #ffffff;
   border-color: var(--border-s);
   border-radius: var(--r-lg);
+  transform: rotate(-90deg);
 }
 
 .btn-filters-panel:hover {

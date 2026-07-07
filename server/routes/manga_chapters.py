@@ -219,7 +219,7 @@ async def list_chapters(
 
     chapters = db.get_all(f"""
         SELECT mc.*, v.name as volume_name, v.name_uk as volume_name_uk,
-               v.cv_img as volume_cv_img, v.hikka_img as volume_hikka_img, v.cover_img as volume_cover_img,
+               v.image as volume_cv_img, NULL as volume_hikka_img, v.cover_img as volume_cover_img,
                mm.id as magazine_id, mm.name as magazine_name
         {base_join}
         {where}
