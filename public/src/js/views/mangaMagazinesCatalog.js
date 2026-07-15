@@ -5,17 +5,21 @@ import { router } from '../helpers/router.js';
 import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { t } from '../helpers/i18n.js';
 import { renderMagazineCard } from '../components/cards/MagazineCard.js';
+import { renderMagazineIssueCard } from '../components/cards/MagazineIssueCard.js';
 
 const paginator = createPaginator({ pageSize: 20 });
 
-const DEFAULT_SORT_FIELD = 'series';
-const DEFAULT_SORT_ORDER = 'desc';
-
-const SORT_OPTIONS = [
+const MAGAZINE_SORT_OPTIONS = [
   { value: 'series', label: t('sort_series') || 'За кількістю серій' },
   { value: 'name', label: t('sort_name') || 'За назвою' },
   { value: 'recent', label: t('sort_recent') || 'За датою додавання' },
   { value: 'date', label: t('sort_date') || 'За датою початку' },
+];
+
+const ISSUE_SORT_OPTIONS = [
+  { value: 'recent', label: t('sort_recent') || 'За датою додавання' },
+  { value: 'date', label: t('sort_date') || 'За датою виходу' },
+  { value: 'name', label: t('sort_name') || 'За назвою журналу' },
 ];
 
 const SORT_ORDER_ICONS = {
@@ -23,7 +27,7 @@ const SORT_ORDER_ICONS = {
   desc: '<path d="M5 6h14M5 12h10M5 18h6"/>',
 };
 
-const SORT_ORDER_TITLES = {
+const MAGAZINE_SORT_ORDER_TITLES = {
   name: {
     asc: t('sort_order_name_asc') || 'За зростанням: від А до Я',
     desc: t('sort_order_name_desc') || 'За спаданням: від Я до А',
@@ -42,18 +46,37 @@ const SORT_ORDER_TITLES = {
   },
 };
 
+const ISSUE_SORT_ORDER_TITLES = {
+  name: {
+    asc: 'Від А до Я',
+    desc: 'Від Я до А',
+  },
+  recent: {
+    asc: 'Старіші додані спочатку',
+    desc: 'Новіші додані спочатку',
+  },
+  date: {
+    asc: 'Від старіших випусків до новіших',
+    desc: 'Від новіших випусків до старіших',
+  }
+};
+
 let searchQuery = '';
 let filterBar = null;
+let viewMode = 'magazines'; // 'magazines' or 'issues'
 
 // Filters state
-let currentSortField = DEFAULT_SORT_FIELD;
-let currentSortOrder = DEFAULT_SORT_ORDER;
+let currentSortField = 'series';
+let currentSortOrder = 'desc';
 
 function syncUrl() {
   const params = new URLSearchParams();
+  if (viewMode !== 'magazines') params.set('view', viewMode);
   if (searchQuery) params.set('search', searchQuery);
-  if (currentSortField !== DEFAULT_SORT_FIELD) params.set('sort', currentSortField);
-  if (currentSortOrder !== DEFAULT_SORT_ORDER) params.set('order_dir', currentSortOrder);
+  
+  const defaultSort = viewMode === 'issues' ? 'recent' : 'series';
+  if (currentSortField !== defaultSort) params.set('sort', currentSortField);
+  if (currentSortOrder !== 'desc') params.set('order_dir', currentSortOrder);
   
   const page = paginator.getPage();
   if (page > 1) params.set('page', page);
@@ -71,8 +94,11 @@ export async function renderMangaMagazinesCatalog(main, query = {}) {
     paginator.setPage(Number(query.page));
   }
   searchQuery = query.search || '';
-  currentSortField = query.sort || DEFAULT_SORT_FIELD;
-  currentSortOrder = query.order_dir || DEFAULT_SORT_ORDER;
+  viewMode = query.view === 'issues' ? 'issues' : 'magazines';
+  
+  const defaultSort = viewMode === 'issues' ? 'recent' : 'series';
+  currentSortField = query.sort || defaultSort;
+  currentSortOrder = query.order_dir || 'desc';
 
   const breadcrumbItems = [
     { label: t('catalog') || 'Каталог', href: '#/catalog' },
@@ -84,15 +110,19 @@ export async function renderMangaMagazinesCatalog(main, query = {}) {
       <div class="page-header">
         ${createBreadcrumbs(breadcrumbItems)}
       </div>
-
-      <div class="catalog-top-row">
-        <div id="catalog-filter-bar-container"></div>
+ 
+      <div class="catalog-top-row" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px;">
+        <div id="catalog-filter-bar-container" style="flex: 1; min-width: 300px;"></div>
+        <div class="catalog-segmented" id="magazine-view-segmented" role="group" aria-label="Режим перегляду">
+          <button class="catalog-segment ${viewMode === 'magazines' ? 'is-active' : ''}" type="button" data-view-mode="magazines">Журнали</button>
+          <button class="catalog-segment ${viewMode === 'issues' ? 'is-active' : ''}" type="button" data-view-mode="issues">Випуски</button>
+        </div>
       </div>
 
       <div class="catalog-layout" id="catalog-layout">
         <div class="catalog-main-column">
           <main class="catalog-results">
-            <div class="comic-grid comic-grid--magazines" id="catalog-grid">
+            <div class="comic-grid ${viewMode === 'issues' ? 'comic-grid--magazine-issues' : 'comic-grid--magazines'}" id="catalog-grid">
               <div class="loader-container"><div class="loader"></div></div>
             </div>
             <div class="pagination-wrap" id="catalog-pagination"></div>
@@ -103,8 +133,9 @@ export async function renderMangaMagazinesCatalog(main, query = {}) {
   `;
 
   const updateSortControl = () => {
-    const selectedSort = SORT_OPTIONS.find((opt) => opt.value === currentSortField) || SORT_OPTIONS[0];
-    const sortOrderTitles = SORT_ORDER_TITLES;
+    const sortOpts = viewMode === 'issues' ? ISSUE_SORT_OPTIONS : MAGAZINE_SORT_OPTIONS;
+    const selectedSort = sortOpts.find((opt) => opt.value === currentSortField) || sortOpts[0];
+    const sortOrderTitles = viewMode === 'issues' ? ISSUE_SORT_ORDER_TITLES : MAGAZINE_SORT_ORDER_TITLES;
     const title = sortOrderTitles[currentSortField]?.[currentSortOrder] || `За спаданням`;
     
     if (filterBar) {
@@ -133,37 +164,78 @@ export async function renderMangaMagazinesCatalog(main, query = {}) {
     fetchAndRender();
   };
 
+  const remountFilterBar = () => {
+    const container = main.querySelector('#catalog-filter-bar-container');
+    if (!container) return;
+    
+    const sortOpts = viewMode === 'issues' ? ISSUE_SORT_OPTIONS : MAGAZINE_SORT_OPTIONS;
+    const searchPlaceholder = viewMode === 'issues' 
+      ? 'Пошук випусків журналів...' 
+      : (t('search_magazines') || 'Пошук журналів...');
+
+    filterBar = mountFilterBar(container, {
+      resultsCount: 0,
+      searchPlaceholder: searchPlaceholder,
+      searchValue: searchQuery,
+      sortValue: currentSortField,
+      sortOptions: sortOpts,
+      sortOrderValue: currentSortOrder,
+      showFiltersBtn: false,
+      filtersBtnActive: false,
+      onSearch: (val) => {
+        searchQuery = val;
+        paginator.reset();
+        reloadCatalog();
+      },
+      onSortChange: (val) => {
+        currentSortField = val;
+        updateSortControl();
+        paginator.reset();
+        reloadCatalog();
+      },
+      onSortOrderChange: (dir) => {
+        currentSortOrder = dir;
+        updateSortControl();
+        paginator.reset();
+        reloadCatalog();
+      }
+    });
+    updateSortControl();
+  };
+
+  // Event listeners for view mode segmented control
+  const segmented = main.querySelector('#magazine-view-segmented');
+  if (segmented) {
+    segmented.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-view-mode]');
+      if (btn) {
+        const newMode = btn.dataset.viewMode;
+        if (newMode !== viewMode) {
+          viewMode = newMode;
+          currentSortField = viewMode === 'issues' ? 'recent' : 'series';
+          currentSortOrder = 'desc';
+          searchQuery = '';
+          paginator.reset();
+          
+          segmented.querySelectorAll('[data-view-mode]').forEach(b => {
+            b.classList.toggle('is-active', b.dataset.viewMode === viewMode);
+          });
+          
+          const grid = document.getElementById('catalog-grid');
+          if (grid) {
+            grid.className = `comic-grid ${viewMode === 'issues' ? 'comic-grid--magazine-issues' : 'comic-grid--magazines'}`;
+          }
+          
+          remountFilterBar();
+          reloadCatalog();
+        }
+      }
+    });
+  }
+
   document.title = `${t('manga_magazines') || 'Журнали'} — Drawn Stories`;
 
-  filterBar = mountFilterBar(main.querySelector('#catalog-filter-bar-container'), {
-    resultsCount: 0,
-    searchPlaceholder: t('search_magazines') || 'Пошук журналів...',
-    searchValue: searchQuery,
-    sortValue: currentSortField,
-    sortOptions: SORT_OPTIONS,
-    sortOrderValue: currentSortOrder,
-    showFiltersBtn: false,
-    filtersBtnActive: false,
-    onSearch: (val) => {
-      searchQuery = val;
-      paginator.reset();
-      reloadCatalog();
-    },
-    onSortChange: (val) => {
-      currentSortField = val;
-      updateSortControl();
-      paginator.reset();
-      reloadCatalog();
-    },
-    onSortOrderChange: (dir) => {
-      currentSortOrder = dir;
-      updateSortControl();
-      paginator.reset();
-      reloadCatalog();
-    }
-  });
-
-  updateSortControl();
+  remountFilterBar();
   reloadCatalog();
 }
 
@@ -194,13 +266,24 @@ async function fetchAndRender() {
   renderSkeletons();
 
   try {
-    const data = await API.get('/magazines', {
-      search: searchQuery || undefined,
-      limit: paginator.getPageSize(),
-      offset: (paginator.getPage() - 1) * paginator.getPageSize(),
-      sort: currentSortField,
-      order_dir: currentSortOrder
-    });
+    let data;
+    if (viewMode === 'issues') {
+      data = await API.get('/magazines/issues-catalog', {
+        search: searchQuery || undefined,
+        limit: paginator.getPageSize(),
+        offset: (paginator.getPage() - 1) * paginator.getPageSize(),
+        sort: currentSortField,
+        order_dir: currentSortOrder
+      });
+    } else {
+      data = await API.get('/magazines', {
+        search: searchQuery || undefined,
+        limit: paginator.getPageSize(),
+        offset: (paginator.getPage() - 1) * paginator.getPageSize(),
+        sort: currentSortField,
+        order_dir: currentSortOrder
+      });
+    }
 
     if (filterBar) filterBar.updateCount(data.total);
 
@@ -217,7 +300,11 @@ async function fetchAndRender() {
           <p>${t('empty_search_tip') || 'Спробуйте змінити параметри пошуку'}</p>
         </div>`;
     } else {
-      grid.innerHTML = items.map(mag => renderMagazineCard(mag)).join('');
+      if (viewMode === 'issues') {
+        grid.innerHTML = items.map(iss => renderMagazineIssueCard(iss)).join('');
+      } else {
+        grid.innerHTML = items.map(mag => renderMagazineCard(mag)).join('');
+      }
     }
 
     paginationWrap.innerHTML = '';

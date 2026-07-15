@@ -300,7 +300,7 @@ function renderResults(data) {
     resultsEl.innerHTML = data.map(issue => {
         const alreadyAdded = _config.alreadyIds?.has(issue.id);
         const selected = _selectedIssueIds.has(issue.id);
-        const img = normalizeImageUrl(issue.cv_img);
+        const img = normalizeImageUrl(issue.image);
 
         return `
             <div class="aim-card${alreadyAdded ? ' added' : ''}${selected ? ' selected' : ''}" 

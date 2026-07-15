@@ -131,6 +131,30 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/admin", StaticFiles(directory=os.path.join(BASE_DIR, "admin")), name="admin")
 app.mount("/images", StaticFiles(directory=os.path.join(SERVER_DIR, "images")), name="images")
 
+# ── Favicon & PWA icons ──────────────────────────────
+PUBLIC_DIR = os.path.join(BASE_DIR, "public")
+
+_STATIC_FILES = {
+    "favicon.ico":        "image/x-icon",
+    "apple-touch-icon.png": "image/png",
+    "icon-192.png":       "image/png",
+    "icon-512.png":       "image/png",
+    "logo.png":           "image/png",
+}
+
+@app.get("/favicon.ico", include_in_schema=False)
+@app.get("/apple-touch-icon.png", include_in_schema=False)
+@app.get("/icon-192.png", include_in_schema=False)
+@app.get("/icon-512.png", include_in_schema=False)
+@app.get("/logo.png", include_in_schema=False)
+async def serve_public_static(request: Request):
+    filename = request.url.path.lstrip("/")
+    media_type = _STATIC_FILES.get(filename, "application/octet-stream")
+    file_path = os.path.join(PUBLIC_DIR, filename)
+    if os.path.exists(file_path):
+        return FileResponse(file_path, media_type=media_type)
+    return Response(status_code=404)
+
 @app.get("/wanted")
 async def read_wanted(request: Request):
     # Serve the standalone wanted.html page

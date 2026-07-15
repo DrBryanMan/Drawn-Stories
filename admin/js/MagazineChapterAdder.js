@@ -148,6 +148,9 @@ export class MagazineChapterAdder {
         this._keydownHandler = (e) => {
             if (e.key === 'Escape') {
                 this.close();
+            } else if (e.code === 'NumpadAdd' && this.viewMode === 'select-chapter') {
+                e.preventDefault();
+                document.getElementById('btn-to-create-chapter')?.click();
             } else if (e.key === 'Enter') {
                 if (e.target.tagName === 'BUTTON') return;
                 
@@ -365,7 +368,7 @@ export class MagazineChapterAdder {
         }
 
         grid.innerHTML = items.map(item => {
-            const cover = comicVineImageUrl(item.cv_img || item.hikka_img || item.cover_img);
+            const image = comicVineImageUrl(item.image);
             const isAdded = this.addedVolumeIds.has(item.id);
             const title = escapeHtmlAttribute(item.name_uk || item.name || 'Без назви');
             const origTitle = item.name_uk && item.name_uk !== item.name ? item.name : '';
@@ -375,8 +378,8 @@ export class MagazineChapterAdder {
                      data-id="${item.id}"
                      style="display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border-s); border-radius: 8px; overflow: hidden; cursor: ${isAdded ? 'default' : 'pointer'}; position: relative; transition: border-color 0.2s; opacity: ${isAdded ? '0.4' : '1'};">
                     <div style="aspect-ratio: 2 / 3; position: relative; background: var(--bg-body); overflow: hidden; flex-shrink: 0;">
-                        ${cover 
-                            ? `<img src="${escapeHtmlAttribute(cover)}" alt="${title}" style="width: 100%; height: 100%; object-fit: cover;">`
+                        ${image 
+                            ? `<img src="${escapeHtmlAttribute(image)}" alt="${title}" style="width: 100%; height: 100%; object-fit: cover;">`
                             : '<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>'}
                         ${isAdded ? `
                             <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: bold; text-transform: uppercase; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">

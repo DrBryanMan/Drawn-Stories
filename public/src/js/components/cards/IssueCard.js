@@ -14,7 +14,7 @@ export function createIssueCard(issue) {
     const card = document.createElement('article');
     card.className = 'issue-card';
 
-    const coverUrl = normalizeImageUrl(issue.image || issue.cv_img);
+    const coverUrl = normalizeImageUrl(issue.image || issue.image);
     const coverSrc = escapeHtmlAttribute(coverUrl);
     const title = escapeHtmlAttribute(issue.name || `Випуск #${issue.issue_number || issue.id}`);
     const issueNumber = issue.issue_number ? escapeHtmlAttribute(issue.issue_number) : '—';

@@ -1,7 +1,6 @@
 /* Magazine Card Redesign */
 .comic-grid--magazines {
   grid-template-columns: repeat(3, 1fr) !important;
-  gap: 1.5rem !important;
 }
 
 .catalog-layout.is-filters-open .comic-grid--magazines {
@@ -13,18 +12,17 @@
   flex-direction: column;
   background: var(--bg-card);
   border: 1px solid var(--border-s);
-  border-radius: 16px;
+  border-radius: var(--r-lg);
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, .03);
   transition: transform var(--t), box-shadow var(--t), border-color var(--t);
   position: relative;
-  min-height: 420px;
 }
 
 .magazine-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-  border-color: var(--accent);
+  /* transform: translateY(-4px); */
+  box-shadow: none;
+  border-color: var(--pubColor);
 }
 
 .magazine-card-link-overlay {
@@ -47,18 +45,18 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 10px;
-  border-radius: 8px;
+  padding: 2px 8px;
+  border-radius: var(--r-s);
   font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  letter-spacing: .04em;
   text-transform: uppercase;
 }
 
 .magazine-card-publisher {
   font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-weight: 700;
+  letter-spacing: .08em;
   text-transform: uppercase;
 }
 
@@ -66,19 +64,15 @@
   padding: 0 20px 16px 20px;
   flex: 1;
   display: flex;
+  gap: 1em;
   flex-direction: column;
 }
 
-.magazine-card-title-group {
-  margin-bottom: 12px;
-}
-
 .magazine-card-title {
+  font-family: var(--font-monos);
   font-size: 20px;
-  font-weight: 800;
-  color: var(--text);
-  margin: 0 0 4px 0;
-  line-height: 1.2;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .magazine-card-native {
@@ -90,19 +84,16 @@
 
 .magazine-card-badges {
   display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: 5px;
 }
 
 .magazine-card-badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--r);
+  font-size: 10px;
   border: 1px solid var(--border-s);
-  background: var(--bg-body);
   color: var(--text-muted);
 }
 
@@ -111,9 +102,12 @@
   grid-template-columns: repeat(4, 1fr);
   border-top: 1px solid var(--border-s);
   border-bottom: 1px solid var(--border-s);
-  padding: 16px 0;
-  margin-bottom: 20px;
-  gap: 8px;
+  padding: .5em 0;
+  gap: .5em;
+}
+
+.magazine-card-stat:not(:last-child) {
+  border-right: 1px solid var(--border-s);
 }
 
 .magazine-card-stat {
@@ -123,8 +117,9 @@
 }
 
 .magazine-card-stat-value {
-  font-size: 18px;
-  font-weight: 800;
+  font-family: var(--font-monos);
+  font-size: 16px;
+  font-weight: 500;
   color: var(--text);
   line-height: 1.1;
   margin-bottom: 4px;
@@ -155,7 +150,7 @@
   font-size: 10px;
   font-weight: 800;
   color: var(--text-muted);
-  letter-spacing: 0.08em;
+  letter-spacing: .08em;
   text-transform: uppercase;
   margin-bottom: 12px;
 }

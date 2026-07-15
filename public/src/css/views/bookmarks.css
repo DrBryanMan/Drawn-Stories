@@ -68,24 +68,6 @@
     margin-bottom: 48px;
 }
 
-.section-header {
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-}
-
-.section-header h2 {
-    font-size: 22px;
-    font-weight: 700;
-}
-
-.section-header h2 span {
-    color: var(--text-muted);
-    font-size: 18px;
-    font-weight: 500;
-    margin-left: 8px;
-}
-
 .bookmarks-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));

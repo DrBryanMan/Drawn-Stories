@@ -285,7 +285,7 @@ function contextIssueNavCard(issue, direction) {
         `;
     }
 
-    const cover = normalizeImageUrl(issue.cv_img);
+    const cover = normalizeImageUrl(issue.image);
     const num = issue.issue_number ? `#${escapeHtmlAttribute(issue.issue_number)}` : '';
     const title = escapeHtmlAttribute(issue.name || t('no_title'));
 
@@ -306,7 +306,7 @@ function contextIssueNavCard(issue, direction) {
 
 function contextCardHTML(item, type) {
     const isEvent = type === 'event';
-    const image = normalizeImageUrl(item.cv_img);
+    const image = normalizeImageUrl(item.image);
     const name = escapeHtmlAttribute(item.name || (isEvent ? t('event') : t('story_arc')));
     const typeLabel = isEvent ? t('event') : t('story_arc');
     const detailHref = isEvent ? `#/events/${item.id}` : null;
@@ -337,7 +337,7 @@ function contextCardHTML(item, type) {
 
 // ── Collection card HTML ──────────────────────────
 function collectionCardHTML(col) {
-    const cover = normalizeImageUrl(col.cv_img);
+    const cover = normalizeImageUrl(col.image);
     const name = escapeHtmlAttribute(col.name || t('collection'));
     const volumeLabel = col.volume_name_uk || col.volume_name || '';
     const date = formatDate(col.release_date || col.cover_date);
@@ -422,7 +422,7 @@ export async function renderIssueDetail(container, params = {}) {
     const displayTitle = issueTitle || (issueNum ? `${t('issue')} ${issueNum}` : t('no_title'));
 
     const volumeName = issue.volume_name_uk || issue.volume_name || '';
-    const coverUrl = normalizeImageUrl(issue.cv_img);
+    const coverUrl = normalizeImageUrl(issue.image);
     const coverDate = formatDate(issue.cover_date);
     const releaseDate = formatDate(issue.release_date);
     const cvUrl = issue.cv_slug

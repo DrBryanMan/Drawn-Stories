@@ -15,7 +15,7 @@ const ICON = {
  * @returns {string} HTML string
  */
 export function renderIssueGridCard(item, options = {}) {
-    const cover = normalizeImageUrl(item.image || item.cv_img || item.cover_img);
+    const cover = normalizeImageUrl(item.image || item.image || item.cover_img);
     const isCollection = item.type === 'collection' || item.is_collection;
     const isVolume = item.type === 'volume';
     const isMangaChapter = item.type === 'manga_chapter';

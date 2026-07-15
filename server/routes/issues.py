@@ -10,7 +10,7 @@ def get_context_issue(db, issue_id):
         return None
     return db.get_one(
         """
-        SELECT id, issue_number, name, cv_img
+        SELECT id, issue_number, name, image
         FROM issues
         WHERE id = ?
         """,
@@ -132,7 +132,7 @@ async def get_issue_detail(issue_id: int):
                v.id          AS volume_id,
                v.name        AS volume_name,
                v.name_uk     AS volume_name_uk,
-               v.cv_img      AS volume_cv_img,
+               v.image       AS volume_cv_img,
                v.cv_slug     AS volume_cv_slug,
                v.hikka_slug  AS volume_hikka_slug,
                p.id          AS publisher_id,
@@ -154,7 +154,7 @@ async def get_issue_detail(issue_id: int):
     # Збірники які містять цей випуск
     collections = db.get_all(
         """
-        SELECT c.id, c.name, c.cv_img, c.cv_id, c.cv_slug,
+        SELECT c.id, c.name, c.image, c.cv_id, c.cv_slug,
                c.volume_id, c.release_date, c.cover_date,
                v.name AS volume_name, v.name_uk AS volume_name_uk
         FROM collection_issues ci
@@ -177,7 +177,7 @@ async def get_issue_detail(issue_id: int):
         # Усі випуски тому, відсортовані
         siblings = db.get_all(
             """
-            SELECT id, issue_number, name, cv_img
+            SELECT id, issue_number, name, image
             FROM issues
             WHERE volume_id = ?
             ORDER BY CAST(issue_number AS REAL) ASC, issue_number ASC
@@ -306,7 +306,7 @@ async def get_issue_detail(issue_id: int):
             
             o.name AS original_name,
             o.issue_number AS original_number,
-            o.cv_img AS original_cv_img,
+            o.image AS original_image,
             o.description AS original_description,
             vo.name AS original_volume_name,
             vo.name_uk AS original_volume_name_uk,
@@ -314,7 +314,7 @@ async def get_issue_detail(issue_id: int):
             
             r.name AS reprint_name,
             r.issue_number AS reprint_number,
-            r.cv_img AS reprint_cv_img,
+            r.image AS reprint_image,
             vr.name AS reprint_volume_name,
             vr.name_uk AS reprint_volume_name_uk,
             vr.lang AS reprint_volume_lang,
@@ -677,7 +677,7 @@ async def create_issue(data: dict):
     
     allowed_fields = [
         "name", "name_uk", "issue_number", "volume_id", "cv_id", "cv_slug", 
-        "cv_img", "cover_date", "release_date", "description"
+        "image", "cover_date", "release_date", "description"
     ]
     
     for key, value in data.items():
@@ -719,7 +719,7 @@ async def update_issue(issue_id: int, data: dict, request: Request):
     
     allowed_fields = [
         "name", "name_uk", "issue_number", "volume_id", "cv_id", "cv_slug", 
-        "cv_img", "cover_date", "release_date", "description", "pages"
+        "image", "cover_date", "release_date", "description", "pages"
     ]
     
     for key, value in data.items():

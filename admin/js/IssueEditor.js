@@ -941,7 +941,7 @@ export class IssueEditor {
                     issue_number: isOriginal ? r.reprint_number : r.original_number,
                     volume_name: isOriginal ? r.reprint_volume_name : r.original_volume_name,
                     volume_name_uk: isOriginal ? r.reprint_volume_name_uk : r.original_volume_name_uk,
-                    cv_img: isOriginal ? r.reprint_cv_img : r.original_cv_img
+                    image: isOriginal ? r.reprint_image : r.original_image
                 };
 
                 openAddReprintModal({
@@ -1252,7 +1252,7 @@ export class IssueEditor {
                                     <input type="text" name="pages" class="admin-input" value="${i.pages || ''}" placeholder="Наприклад, 32 стор.">
                                 </div>
 
-                                ${this._imgFieldHTML('cv_img', 'Обкладинка випуску', i.cv_img, ICON.image)}
+                                ${this._imgFieldHTML('image', 'Обкладинка випуску', i.image, ICON.image)}
 
                                 <div class="admin-form-group admin-form-group--full">
                                     <label class="admin-label">${ICON.alignLeft} Опис випуску</label>
@@ -1421,12 +1421,12 @@ export class IssueEditor {
         saveBtn.textContent = 'Збереження...';
 
         try {
-            const fileInput = form.querySelector('input[name="cv_img_file"]');
+            const fileInput = form.querySelector('input[name="image_file"]');
             if (fileInput && fileInput.files.length > 0) {
                 const uploadData = new FormData();
                 uploadData.append('file', fileInput.files[0]);
                 const uploadRes = await API.upload('/images/upload/issue', uploadData);
-                data['cv_img'] = uploadRes.url;
+                data['image'] = uploadRes.url;
             }
 
             await API.put(`/issues/${this.issue.id}`, data);

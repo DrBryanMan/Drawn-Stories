@@ -680,7 +680,7 @@ export class VolumeEditor {
                                     <input type="text" name="name_uk" class="admin-input" value="${v.name_uk || ''}">
                                 </div>
 
-                                ${this._imgFieldHTML('cv_img', 'Обкладинка', v.cv_img, ICON.image)}
+                                ${this._imgFieldHTML('image', 'Обкладинка', v.image, ICON.image)}
                                 ${this._imgFieldHTML('cover_img', 'Банер', v.cover_img, ICON.layout, true)}
 
                                 <div class="admin-form-group${groupClass}">
@@ -899,7 +899,7 @@ export class VolumeEditor {
 
         try {
             // Handle file uploads
-            const fileFields = ['cv_img', 'cover_img'];
+            const fileFields = ['image', 'cover_img'];
             for (const field of fileFields) {
                 const fileInput = form.querySelector(`input[name="${field}_file"]`);
                 if (fileInput && fileInput.files.length > 0) {

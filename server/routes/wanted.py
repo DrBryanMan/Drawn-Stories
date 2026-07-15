@@ -506,7 +506,7 @@ async def get_wanted_issues(
 
     offset = (page - 1) * limit
     items_raw = db.get_all(
-        f"""SELECT i.*, v.name as volume_name, v.cv_img as volume_img
+        f"""SELECT i.*, v.name as volume_name, v.image as volume_img
             FROM issues i
             LEFT JOIN volumes v ON i.volume_id = v.id
             {where}{order_clause} LIMIT ? OFFSET ?""",

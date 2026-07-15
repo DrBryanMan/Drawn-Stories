@@ -94,9 +94,8 @@ export async function initShell() {
     <header class="site-header">
       <div class="container">
         <a class="header-logo" href="#/">
-          <div>
-            <div class="logo-text">Drawn <span>Stories</span></div>
-          </div>
+          <img src="/logo.png" alt="Drawn Stories" class="logo-img">
+          <div class="logo-text">Drawn<br><span>Stories</span></div>
         </a>
 
         <nav class="header-nav" id="main-nav">

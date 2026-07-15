@@ -155,7 +155,7 @@ function themeChipHTML(theme) {
 function relationCardHTML(item, { title, icon, isModerator, onRemove }) {
     if (!item?.id) return '';
 
-    const cover = normalizeImageUrl(item.image || item.cv_img || item.cover_img);
+    const cover = normalizeImageUrl(item.image || item.image || item.cover_img);
     const name = escapeHtmlAttribute(item.name_uk || item.name || 'Без назви');
     const originalName = item.name_uk && item.name_uk !== item.name ? item.name : '';
     const lang = langDisplay(item.lang);
@@ -223,7 +223,7 @@ function heroRelationsHTML({ translationParents, magazineParents, magazine, isMo
 
 function translationCardHTML(item, { isModerator, currentVolumeId }) {
     const isCurrent = item.id === currentVolumeId;
-    const cover = normalizeImageUrl(item.image || item.cv_img);
+    const cover = normalizeImageUrl(item.image || item.image);
     const title = escapeHtmlAttribute(item.name_uk || item.name || 'Без назви');
     const originalTitle = item.name_uk && item.name_uk !== item.name ? item.name : '';
     const collectionsCount = Number(item.collections_count || 0);
@@ -255,8 +255,8 @@ function translationsSectionHTML(translations, { isModerator, currentVolumeId })
 
     return `
         <section class="volume-translations-section block">
-            <div class="volume-section-heading">
-                <div style="display: flex; align-items: center; gap: 12px;">
+            <div class="section-header">
+                <div class="section-title">
                     <h2>Збірні видання ${translations.length ? `(${translations.length})` : ''}</h2>
                     ${isModerator ? `<button class="btn-admin btn-admin--secondary" id="volume-add-translation-btn" title="Додати переклад" style="width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center;">${ICON.plus}</button>` : ''}
                 </div>
@@ -392,7 +392,7 @@ function renderItems(container, items) {
                     </thead>
                     <tbody>
                         ${items.map(item => {
-                            const cover = normalizeImageUrl(item.image || item.cv_img || item.cover_img);
+                            const cover = normalizeImageUrl(item.image || item.image || item.cover_img);
                             const isCollection = item.type === 'collection' || item.is_collection;
                             const isVolume = item.type === 'volume';
                             const isMangaChapter = item.type === 'manga_chapter';
@@ -592,10 +592,10 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
 
         const charactersHTML = characters.length > 0 ? `
             <section class="volume-characters-section block">
-                <div class="volume-section-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h2 class="synopsis-title" style="margin: 0;">Персонажі тома</h2>
+                <div class="section-header">
+                    <h2 class="section-title">Персонажі тома</h2>
                     ${characters.length > 8 ? `
-                        <a href="javascript:void(0)" id="btn-show-all-characters" class="volume-section-link" style="font-size: 0.85rem; font-weight: 700; color: var(--accent); text-decoration: none; display: flex; align-items: center; gap: 4px;">
+                        <a href="javascript:void(0)" id="btn-show-all-characters" class="section-link">
                             Всі персонажі (${characters.length})
                             ${ICON.chevronRight}
                         </a>
@@ -878,8 +878,8 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
 
                         ${isModerator && isCollection && data.direct_issues && data.direct_issues.length > 0 ? `
                             <section class="volume-direct-issues-section block" style="margin-top: 2rem; border-top: 1px solid var(--border-s); padding-top: 2rem;">
-                                <div class="volume-section-heading">
-                                    <h2>Прямі випуски тома (модерація)</h2>
+                                <div class="section-header">
+                                    <h2 class="section-title">Прямі випуски тома (модерація)</h2>
                                     <p class="text-muted" style="font-size: 0.9rem; margin-top: 4px;">Ці випуски належать безпосередньо цьому тому. Використовуйте кнопку конвертації, щоб перетворити їх у збірники.</p>
                                 </div>
                                 <div id="volume-direct-issues-container"></div>
@@ -910,8 +910,8 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                     <!-- Вкладка: Персонажі -->
                     <div class="volume-tab-pane" id="page-tab-pane-characters">
                         <section class="volume-characters-section block">
-                            <div class="volume-section-heading" style="margin-bottom: 1.5rem;">
-                                <h2 class="synopsis-title" style="margin: 0;">Всі персонажі тома</h2>
+                            <div class="section-header">
+                                <h2 class="section-title">Всі персонажі тома</h2>
                             </div>
                             <div class="catalog-top-row" style="margin-bottom: 1.5rem;">
                                 <div id="volume-characters-filter-bar-container"></div>
@@ -1831,7 +1831,7 @@ async function openIssueMembershipModal(issueId, itemType = 'issue') {
             `;
         } else {
             listContainer.innerHTML = collections.map(col => {
-                const cover = normalizeImageUrl(col.cv_img);
+                const cover = normalizeImageUrl(col.image);
                 return `
                     <div class="membership-item">
                         ${cover ? `<img src="${cover}" class="membership-item-cover">` : `<div class="membership-item-cover-empty"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg></div>`}
@@ -1887,7 +1887,7 @@ function renderCollectionsFromIssues(container, collections, options = {}) {
             </div>
             <div class="issues-view-grid">
                 ${group.items.map(col => {
-                    const cover = normalizeImageUrl(col.cv_img);
+                    const cover = normalizeImageUrl(col.image);
                     const range = formatIssueRanges(col.volume_issue_numbers);
                     return `
                         <a class="issue-grid-card" href="#/collections/${col.id}">

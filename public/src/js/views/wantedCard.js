@@ -33,14 +33,14 @@ function resolveCardMeta(item) {
     case 'collection':
       return {
         href:     `/#/collections/${item.id}`,
-        imageUrl: normalizeImageUrl(item.cv_img),
+        imageUrl: normalizeImageUrl(item.image),
         subtitle: item.publisher_name || null,
         placeholder: PLACEHOLDER_IMG,
       };
     case 'issue':
       return {
         href:     `/#/issues/${item.id}`,
-        imageUrl: normalizeImageUrl(item.cv_img || item.volume_img),
+        imageUrl: normalizeImageUrl(item.image || item.volume_img),
         subtitle: item.volume_name || null,
         placeholder: PLACEHOLDER_IMG,
       };

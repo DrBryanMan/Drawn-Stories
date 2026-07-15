@@ -38,7 +38,7 @@ export function createComicCard(item) {
     const year = item.start_year || (item.release_date ? item.release_date.split('-')[0] : '');
     const releaseDate = item.release_date ? item.release_date.split('-').reverse().join('.') : '';
     const lang = item.lang || '';
-    const coverUrl = normalizeImageUrl(item.image || item.cv_img || item.cover_img);
+    const coverUrl = normalizeImageUrl(item.image || item.image || item.cover_img);
     const title = escapeHtmlAttribute(item.name || 'Без назви');
     const coverSrc = escapeHtmlAttribute(coverUrl);
 

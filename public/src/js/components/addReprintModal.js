@@ -342,7 +342,7 @@ function renderResults() {
     
     resultsEl.innerHTML = _searchResults.map(issue => {
         const selected = _selectedIssue && _selectedIssue.id === issue.id;
-        const img = normalizeImageUrl(issue.cv_img);
+        const img = normalizeImageUrl(issue.image);
 
         return `
             <div class="arm-card${selected ? ' selected' : ''}" data-id="${issue.id}">

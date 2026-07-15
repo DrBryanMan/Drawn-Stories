@@ -236,7 +236,7 @@ export class CollectionEditor {
                                     </select>
                                 </div>
 
-                                ${this._imgFieldHTML('cv_img', 'Обкладинка', c.cv_img, ICON.image)}
+                                ${this._imgFieldHTML('image', 'Обкладинка', c.image, ICON.image)}
 
                                 <div class="admin-form-group admin-form-group--full">
                                     <label class="admin-label">${ICON.externalLink} Посилання на сайт джерела</label>
@@ -424,12 +424,12 @@ export class CollectionEditor {
         saveBtn.textContent = 'Збереження...';
 
         try {
-            const fileInput = form.querySelector('input[name="cv_img_file"]');
+            const fileInput = form.querySelector('input[name="image_file"]');
             if (fileInput && fileInput.files.length > 0) {
                 const uploadData = new FormData();
                 uploadData.append('file', fileInput.files[0]);
                 const uploadRes = await API.upload('/images/upload/issue', uploadData);
-                data.cv_img = uploadRes.url;
+                data.image = uploadRes.url;
             }
 
             await API.put(`/collections/${this.collection.id}`, data);

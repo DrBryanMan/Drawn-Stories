@@ -371,7 +371,7 @@ const FORMS = {
         ${fld('Номер випуску *', inp('issue_number'), '', true)}
         ${fld('Дата обкладинки', inp('cover_date', 'date'))}
         ${fld('Дата релізу', inp('release_date', 'date'))}
-        ${imgField('cv_img')}
+        ${imgField('image')}
     </div>
   `,
   'collection': () => `
@@ -381,7 +381,7 @@ const FORMS = {
         ${fld('Порядковий номер', inp('issue_number', 'text', '56 або AB.56'))}
         ${fld('Дата обкладинки', inp('cover_date', 'date'))}
         ${fld('Дата релізу', inp('release_date', 'date'))}
-        ${imgField('cv_img')}
+        ${imgField('image')}
     </div>
   `,
   'reading-order': () => `

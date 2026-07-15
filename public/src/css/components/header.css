@@ -55,16 +55,29 @@
   padding-top: 8px; padding-bottom: 8px;
 }
 
-.header-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-.logo-mark {
-  width: 34px; height: 34px; flex-shrink: 0;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%);
-  border-radius: var(--r-lg);
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-oswald); font-size: 16px; font-weight: 800; color: #fff;
-  box-shadow: 0 0 20px var(--accent-glow);
+.header-logo { 
+  display: inline-flex; 
+  align-items: center; 
+  gap: 12px; 
+  text-decoration: none;
+  width: fit-content;
+  justify-self: start;
 }
-.logo-text { font-family: var(--font-oswald); font-size: 20px; font-weight: 600; color: var(--text); line-height: 1.2; }
+.logo-img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: var(--r-s);
+}
+.logo-text { 
+  font-family: var(--font-oswald); 
+  font-size: 14px; 
+  font-weight: 800; 
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text); 
+  line-height: 1.1; 
+}
 .logo-text span { color: var(--accent); }
 
 .header-nav { display: flex; align-items: center; gap: 4px; justify-content: center;}

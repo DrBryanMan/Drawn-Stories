@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <!-- Background Brand Gradient -->
+    <linearGradient id="logo-bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8072f4" />
+      <stop offset="100%" stop-color="#6c5ce7" />
+    </linearGradient>
+    <!-- Ink Stroke Gradient -->
+    <linearGradient id="ink-stroke-logo" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#d1c4ff" />
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded Background -->
+  <rect x="5" y="5" width="90" height="90" rx="22" fill="url(#logo-bg-grad)" />
+
+  <!-- The "Drawn Stories" Concept: Comic Drawing Nib + D & S letters -->
+  
+  <!-- 1. Ink stroke for Letter S (Right side) -->
+  <path d="M 76 32 
+           C 62 26 56 44 68 49 
+           C 80 54 74 74 60 70" 
+        fill="none" 
+        stroke="url(#ink-stroke-logo)" 
+        stroke-width="9" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" />
+
+  <!-- 2. Ink stroke for Letter D's loop (Left side) -->
+  <path d="M 32 26 
+           C 54 26 54 74 32 74" 
+        fill="none" 
+        stroke="url(#ink-stroke-logo)" 
+        stroke-width="9" 
+        stroke-linecap="round" />
+
+  <!-- 3. Vertical Drawing Pen Nib (upholds the letter D) -->
+  <!-- Main metal body -->
+  <path d="M 28 36 L 36 36 L 36 71 L 28 71 Z" fill="#ffffff" />
+  <!-- Sharp point pointing upwards -->
+  <path d="M 32 21 L 28 36 L 36 36 Z" fill="#ffffff" />
+  
+  <!-- Slit of the Nib (cutout showing background) -->
+  <line x1="32" y1="21" x2="32" y2="44" stroke="#6c5ce7" stroke-width="2" />
+  <!-- Breather hole -->
+  <circle cx="32" cy="44" r="3" fill="#6c5ce7" />
+</svg>

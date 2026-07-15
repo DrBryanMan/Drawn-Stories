@@ -155,7 +155,7 @@ export async function renderCollectionDetail(main, params = {}) {
         const { collection, issues, themes = [], related_collections } = data;
 
         const title = escapeHtmlAttribute(collection.name || 'Збірник');
-        const coverUrl = normalizeImageUrl(collection.cv_img);
+        const coverUrl = normalizeImageUrl(collection.image);
         const publisherName = escapeHtmlAttribute(collection.publisher_name || 'Невідоме видавництво');
         const isOwned = collection.is_owned;
         const isWanted = collection.user_status === 'wanted';
@@ -581,7 +581,7 @@ export async function renderCollectionDetail(main, params = {}) {
                 return `
                     <a href="#/collections/${rc.id}" class="related-collection-card ${isCurrent ? 'is-active' : ''}" style="display: flex; flex-direction: column; text-decoration: none; color: inherit; transition: transform 0.2s; position: relative;">
                         <div style="aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; border: ${isCurrent ? '2px solid var(--accent)' : '1px solid var(--border-s)'}; background: var(--bg-card); box-shadow: ${isCurrent ? '0 0 0 3px var(--accent-glow)' : '0 4px 6px -1px rgba(0,0,0,0.1)'};">
-                            <img src="${normalizeImageUrl(rc.cv_img)}" style="width: 100%; height: 100%; object-fit: cover; opacity: ${isCurrent ? '1' : '0.85'};" alt="${escapeHtmlAttribute(rc.name)}">
+                            <img src="${normalizeImageUrl(rc.image)}" style="width: 100%; height: 100%; object-fit: cover; opacity: ${isCurrent ? '1' : '0.85'};" alt="${escapeHtmlAttribute(rc.name)}">
                         </div>
                         <div style="padding: 0 4px;">
                             <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; font-weight: 600;">#${escapeHtmlAttribute(rc.issue_number || '—')}</div>

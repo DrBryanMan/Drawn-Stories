@@ -264,7 +264,7 @@ export async function renderEdits(main) {
         const beforeData = patchObj.before || {};
         const afterData = patchObj.after || patchObj;
 
-        const volumeImg = normalizeImageUrl(e.volume_cv_img || afterData.cv_img || beforeData.cv_img || '');
+        const volumeImg = normalizeImageUrl(e.volume_cv_img || afterData.image || beforeData.image || '');
         const volumeImgHTML = `
             <div class="edit-entity-image-wrap">
                 ${volumeImg 
@@ -368,7 +368,7 @@ export async function renderEdits(main) {
             'description': 'Опис тома',
             'lang': 'Мова',
             'site_link': 'Джерело',
-            'cv_img': 'Обкладинка',
+            'image': 'Обкладинка',
             'cover_img': 'Банер'
         };
         
@@ -432,7 +432,7 @@ export async function renderEdits(main) {
             'description': { label: 'Опис тома', icon: ICON.message || '' },
             'lang': { label: 'Мова', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>' },
             'site_link': { label: 'Посилання на джерело', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>' },
-            'cv_img': { label: 'Обкладинка', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>' },
+            'image': { label: 'Обкладинка', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>' },
             'cover_img': { label: 'Банер', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>' }
         };
         
@@ -516,7 +516,7 @@ export async function renderEdits(main) {
         let beforeRendered = beforeVal ? escapeHtml(beforeVal) : '<em>порожньо</em>';
         let afterRendered = afterVal ? escapeHtml(afterVal) : '<em>видалено</em>';
         
-        if (key === 'cv_img' || key === 'cover_img') {
+        if (key === 'image' || key === 'cover_img') {
             const isBanner = key === 'cover_img';
             const imgClass = isBanner ? 'diff-image-preview diff-image-preview--banner' : 'diff-image-preview';
             const beforeUrl = normalizeImageUrl(beforeVal);

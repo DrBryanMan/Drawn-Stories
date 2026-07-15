@@ -45,7 +45,7 @@ export function renderMagazineCard(mag) {
         <div class="magazine-card-series-title">Відомі серії</div>
         <div class="magazine-card-series-list">
           ${popularList.map(ser => {
-            const serCover = normalizeImageUrl(ser.cover_img || ser.image);
+            const serCover = normalizeImageUrl(ser.image);
             const serTitle = escapeHtmlAttribute(ser.name_uk || ser.name || 'Без назви');
             const score = ser.mal_score ? Number(ser.mal_score).toFixed(2) : '—';
             return `
@@ -63,10 +63,10 @@ export function renderMagazineCard(mag) {
     : '';
 
   return `
-    <div class="magazine-card" style="border-top: 4px solid ${pubColor};">
+    <div class="magazine-card" style="--pubColor: ${pubColor}; border-top: 4px solid ${pubColor}; background: color-mix(in srgb, ${pubColor} 3%, #ffffff);">
       <a href="#/magazines/${mag.id}" class="magazine-card-link-overlay"></a>
       <div class="magazine-card-header">
-        <span class="magazine-card-label" style="border: 1px solid color-mix(in srgb, ${pubColor} 20%, var(--border-s)); background: color-mix(in srgb, ${pubColor} 6%, #ffffff); color: ${pubColor};">
+        <span class="magazine-card-label" style="border: 1px solid color-mix(in srgb, ${pubColor} 20%, var(--border-s)); background: color-mix(in srgb, ${pubColor} 10%, #ffffff); color: ${pubColor};">
           ${labelText}
         </span>
         <span class="magazine-card-publisher" style="color: ${pubColor};">${publisherName}</span>

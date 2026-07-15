@@ -100,7 +100,7 @@ function createSimpleCard(item, type) {
     const card = document.createElement('div');
     card.className = 'comic-card simple-card';
     
-    const coverUrl = normalizeImageUrl(item.image || item.cv_img);
+    const coverUrl = normalizeImageUrl(item.image || item.image);
     const title = escapeHtmlAttribute(item.name || 'Без назви');
     
     card.innerHTML = `

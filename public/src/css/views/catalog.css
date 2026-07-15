@@ -571,6 +571,28 @@
   gap: 1em;
 }
 
+#catalog-grid.comic-grid--magazine-issues {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+@media (max-width: 768px) {
+  #catalog-grid.comic-grid--magazine-issues {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  #catalog-grid.comic-grid--magazine-issues {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 400px) {
+  #catalog-grid.comic-grid--magazine-issues {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 .catalog-results {
   min-width: 0;
 }

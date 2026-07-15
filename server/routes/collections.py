@@ -39,7 +39,7 @@ async def get_collections(username: Optional[str] = None, content_type: str = "c
             c.id as collection_id,
             c.name as collection_name,
             c.issue_number,
-            c.cv_img,
+            c.image,
             uc.status as user_status,
             uc.barter as user_barter,
             uc.created_at as added_at
@@ -67,7 +67,7 @@ async def get_collections(username: Optional[str] = None, content_type: str = "c
             i.id as issue_id,
             i.name as issue_name,
             i.issue_number,
-            i.cv_img,
+            i.image,
             uc.status as user_status,
             uc.barter as user_barter,
             uc.created_at as added_at
@@ -104,7 +104,7 @@ async def get_collections(username: Optional[str] = None, content_type: str = "c
             "id": row['issue_id'] if content_type == 'issue' else row['collection_id'],
             "name": row['issue_name'] if content_type == 'issue' else row['collection_name'],
             "issue_number": row['issue_number'],
-            "cv_img": row['cv_img'],
+            "image": row['image'],
             "status": row['user_status'],
             "barter": bool(row['user_barter']),
             "added_at": row['added_at']
@@ -125,7 +125,7 @@ async def create_collection(data: dict):
     
     allowed_fields = [
         "name", "issue_number", "volume_id", "cv_vol_id", "cv_id", "cv_slug", 
-        "cv_img", "cover_date", "release_date", "description", "contents"
+        "image", "cover_date", "release_date", "description", "contents"
     ]
     
     for key, value in data.items():
@@ -384,7 +384,7 @@ async def update_collection(collection_id: int, data: dict):
     
     allowed_fields = [
         "name", "issue_number", "volume_id", "cv_vol_id", "cv_id", "cv_slug", 
-        "cv_img", "cover_date", "release_date", "description", "synopsis_ua",
+        "image", "cover_date", "release_date", "description", "synopsis_ua",
         "synopsis", "contents", "publisher", "isbn", "pages", "site_link",
         "verification_status"
     ]
@@ -510,7 +510,7 @@ async def get_collection_detail(collection_id: int, request: Request):
             CASE WHEN ci.manga_chapter_id IS NOT NULL THEN 'manga_chapter' ELSE 'issue' END as type,
             COALESCE(i.name, mc.name) as name,
             COALESCE(i.name_uk, mc.name_uk) as name_uk,
-            COALESCE(i.cv_img, mc.image) as cv_img,
+            COALESCE(i.image, mc.image) as image,
             COALESCE(i.issue_number, mc.chapter_number) as issue_number,
             COALESCE(i.release_date, mc.release_date) as release_date,
             COALESCE(i.description, mc.synopsis) as description,
@@ -557,7 +557,7 @@ async def get_collection_detail(collection_id: int, request: Request):
     if collection.get('volume_id'):
         related_collections = db.get_all(
             """
-            SELECT id, name, issue_number, cv_img
+            SELECT id, name, issue_number, image
             FROM collections
             WHERE volume_id = ?
             ORDER BY CAST(issue_number AS FLOAT) ASC, issue_number ASC
@@ -638,7 +638,7 @@ async def get_collection_candidates(
             i.id, 
             i.name, 
             i.name_uk, 
-            i.cv_img, 
+            i.image, 
             i.issue_number,
             i.volume_id,
             v.name as volume_name, 
@@ -707,7 +707,7 @@ async def get_collection_candidates(
                 mc.id, 
                 mc.name, 
                 mc.name_uk, 
-                mc.image as cv_img, 
+                mc.image, 
                 mc.chapter_number as issue_number,
                 mc.volume_id,
                 v.name as volume_name, 

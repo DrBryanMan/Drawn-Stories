@@ -34,6 +34,87 @@ async def get_recent_magazine_issues(limit: int = 8):
     """, [limit])
     return {"items": [dict(iss) for iss in issues]}
 
+@router.get("/weekly-chapters")
+async def get_weekly_chapters(date_min: str, date_max: str):
+    db = get_db()
+    chapters = db.get_all("""
+        SELECT 
+            mc.id as chapter_id,
+            mc.chapter_number,
+            mc.name as chapter_name,
+            v.id as manga_id,
+            v.name as manga_name,
+            v.name_uk as manga_name_uk,
+            v.image as manga_cover,
+            mi.id as issue_id,
+            mi.release_date as issue_release_date,
+            mm.id as magazine_id,
+            mm.name as magazine_name,
+            mm.label as magazine_label
+        FROM magazine_issue_chapters mic
+        JOIN magazine_issues mi ON mic.magazine_issue_id = mi.id
+        JOIN manga_magazines mm ON mi.magazine_id = mm.id
+        JOIN manga_chapters mc ON mic.manga_chapter_id = mc.id
+        JOIN volumes v ON mic.manga_id = v.id
+        WHERE mi.release_date >= ? AND mi.release_date <= ?
+        ORDER BY mi.release_date ASC, mic.order_num ASC
+    """, [date_min, date_max])
+    return {"items": [dict(c) for c in chapters]}
+
+@router.get("/issues-catalog")
+async def list_magazine_issues_catalog(
+    search: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+    sort: str = "recent",
+    order_dir: str = "desc"
+):
+    db = get_db()
+    conditions = []
+    params = []
+    
+    if search:
+        conditions.append("(mi.name LIKE ? OR mm.name LIKE ? OR mi.issue_number LIKE ?)")
+        params += [f"%{search}%", f"%{search}%", f"%{search}%"]
+        
+    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+    
+    SORT_COLUMNS = {
+        "recent": "mi.created_at",
+        "date": "mi.release_date",
+        "name": "mm.name",
+    }
+    sort_col = SORT_COLUMNS.get(sort, SORT_COLUMNS["recent"])
+    safe_dir = "DESC" if order_dir.lower() == "desc" else "ASC"
+    
+    order_by = f"ORDER BY {sort_col} {safe_dir}"
+    if sort == "name":
+         order_by += f", mi.issue_number {safe_dir}"
+    else:
+         order_by += ", mi.id DESC"
+         
+    issues = db.get_all(f"""
+        SELECT mi.*, mm.name as magazine_name
+        FROM magazine_issues mi
+        JOIN manga_magazines mm ON mi.magazine_id = mm.id
+        {where}
+        {order_by}
+        LIMIT ? OFFSET ?
+    """, params + [limit, offset])
+    
+    total_query = db.get_one(f"""
+        SELECT COUNT(*) as count
+        FROM magazine_issues mi
+        JOIN manga_magazines mm ON mi.magazine_id = mm.id
+        {where}
+    """, params)
+    total = total_query["count"] if total_query else 0
+    
+    return {"items": [dict(iss) for iss in issues], "total": total}
+
+
+
+
 @router.post("/convert-from-volume/{volume_id}")
 async def convert_from_volume(volume_id: int):
     db = get_db()
@@ -65,7 +146,7 @@ async def convert_from_volume(volume_id: int):
                 cv_id, cv_slug, image, name, name_native, publisher, start_year
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
         """, [
-            volume.get("cv_id"), volume.get("cv_slug"), volume.get("cv_img"),
+            volume.get("cv_id"), volume.get("cv_slug"), volume.get("image"),
             volume.get("name") or "Без назви", volume.get("name_native"),
             volume.get("publisher"), volume.get("start_year")
         ])
@@ -79,7 +160,7 @@ async def convert_from_volume(volume_id: int):
                     cv_id, cv_slug, image, release_date, cover_date, issue_number, name, magazine_id, pages
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, [
-                iss.get("cv_id"), iss.get("cv_slug"), iss.get("cv_img"),
+                iss.get("cv_id"), iss.get("cv_slug"), iss.get("image"),
                 iss.get("release_date"), iss.get("cover_date"), iss.get("issue_number"),
                 iss.get("name"), new_mag_id, iss.get("pages")
             ])

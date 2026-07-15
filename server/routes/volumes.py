@@ -516,13 +516,13 @@ async def convert_all_to_collections(volume_id: int):
             cursor = db.conn.execute(
                 """
                 INSERT INTO collections (
-                    cv_vol_id, volume_id, name, cv_img, site_link, cv_id, cv_slug, 
+                    cv_vol_id, volume_id, name, image, site_link, cv_id, cv_slug, 
                     publisher, issue_number, cover_date, release_date, description, pages
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     item_cv_vol_id, item.get("volume_id") or volume_id, item.get("name") or "Без назви",
-                    item.get("cv_img"), item.get("site_link"), item.get("cv_id"), item.get("cv_slug"),
+                    item.get("image"), item.get("site_link"), item.get("cv_id"), item.get("cv_slug"),
                     volume.get("publisher"), item.get("issue_number"), 
                     item.get("cover_date") or item.get("release_date"), item.get("release_date"), item.get("description"), item.get("pages")
                 ]
@@ -592,13 +592,13 @@ async def convert_all_collections_to_issues(volume_id: int):
             db.conn.execute(
                 """
                 INSERT INTO issues (
-                    cv_id, cv_slug, name, cv_img, cv_vol_id, volume_id, 
+                    cv_id, cv_slug, name, image, cv_vol_id, volume_id, 
                     issue_number, cover_date, release_date, site_link, description, pages
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     col.get("cv_id"), col.get("cv_slug"), col.get("name") or "Без назви",
-                    col.get("cv_img"), col.get("cv_vol_id") or volume.get("cv_id"), volume_id,
+                    col.get("image"), col.get("cv_vol_id") or volume.get("cv_id"), volume_id,
                     col.get("issue_number"), col.get("cover_date"), col.get("release_date"),
                     col.get("site_link"), col.get("description"), col.get("pages")
                 ]

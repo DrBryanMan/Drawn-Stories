@@ -253,8 +253,8 @@ function renderResults(main, isMyCollection = true) {
                             <div class="collection-item-wrapper ${isActiveInTab ? 'is-owned' : ''}">
                                 <div class="collection-item-thumb">
                                     <a href="${itemUrl}">
-                                        ${item.cv_img 
-                                            ? `<img src="${normalizeImageUrl(item.cv_img)}" alt="${escapeHtmlAttribute(item.name)}">` 
+                                        ${item.image 
+                                            ? `<img src="${normalizeImageUrl(item.image)}" alt="${escapeHtmlAttribute(item.name)}">` 
                                             : `<div class="empty-thumb">${icon(ICON.book, 24)}</div>`}
                                     </a>
                                     <div class="item-number">#${escapeHtmlAttribute(item.issue_number || '—')}</div>

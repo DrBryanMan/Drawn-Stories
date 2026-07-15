@@ -103,7 +103,7 @@ async def get_event_issues(event_id: int):
     items = db.get_all(
         """
         SELECT ei.id AS link_id, ei.order_num, ei.importance,
-               i.id, i.cv_id, i.cv_slug, i.name, i.cv_img,
+               i.id, i.cv_id, i.cv_slug, i.name, i.image,
                i.issue_number, i.cover_date, i.release_date,
                v.id AS volume_id,
                v.name AS volume_name,

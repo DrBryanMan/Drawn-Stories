@@ -73,7 +73,7 @@ function isModerator() {
 }
 
 function issueRowHTML(issue, index, total, canModerate) {
-    const cover = normalizeImageUrl(issue.cv_img);
+    const cover = normalizeImageUrl(issue.image);
     const title = escapeHtmlAttribute(issue.name || t('no_title'));
     const number = issue.issue_number ? `#${escapeHtmlAttribute(issue.issue_number)}` : '#?';
     const volume = issue.volume_name_uk || issue.volume_name || '';
