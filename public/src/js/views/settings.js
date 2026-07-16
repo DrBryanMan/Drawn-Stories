@@ -44,12 +44,43 @@ export async function renderSettings(main, user) {
 
         <div class="block">
           <h3>${icon('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>')} ${t('profile_info')}</h3>
-          <form id="profile-info-form" class="info-grid">
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Username/Login change -->
+            <form id="username-form" class="info-grid">
+              <div class="info-item">
+                <span class="info-label">${t('username')}</span>
+                <div class="input-with-button">
+                  <input type="text" id="username-input" class="settings-input" value="${user.username}" required maxlength="10" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ\\.]+$" title="Дозволено лише літери, цифри та крапку (макс. 10 симв.)">
+                  <button type="submit" class="save-btn" id="save-username-btn">${t('save')}</button>
+                </div>
+              </div>
+            </form>
+
+            <!-- Nickname change -->
+            <form id="nickname-form" class="info-grid">
+              <div class="info-item">
+                <span class="info-label">${t('nickname')}</span>
+                <div class="input-with-button">
+                  <input type="text" id="nickname-input" class="settings-input" value="${user.nickname || user.username}" required maxlength="10" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ\\.]+$" title="Дозволено лише літери, цифри та крапку (макс. 10 симв.)">
+                  <button type="submit" class="save-btn" id="save-nickname-btn">${t('save')}</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="block">
+          <h3>${icon('<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>')} ${t('change_password')}</h3>
+          <form id="password-form" class="info-grid">
+            <div class="info-item" style="margin-bottom: 12px;">
+              <span class="info-label">${t('old_password')}</span>
+              <input type="password" id="old-password-input" class="settings-input" style="width: 100%; max-width: 300px;" required>
+            </div>
             <div class="info-item">
-              <span class="info-label">${t('username')}</span>
+              <span class="info-label">${t('new_password')}</span>
               <div class="input-with-button">
-                <input type="text" id="username-input" class="settings-input" value="${user.username}" required>
-                <button type="submit" class="save-btn" id="save-username-btn">${t('save')}</button>
+                <input type="password" id="new-password-input" class="settings-input" style="width: 100%; max-width: 300px;" required>
+                <button type="submit" class="save-btn" id="save-password-btn">${t('save')}</button>
               </div>
             </div>
           </form>
@@ -73,9 +104,20 @@ export async function renderSettings(main, user) {
 
   const fileInput = document.getElementById('file-input');
   const selectBtn = document.getElementById('select-file-btn');
-  const profileForm = document.getElementById('profile-info-form');
+  
+  const usernameForm = document.getElementById('username-form');
   const usernameInput = document.getElementById('username-input');
   const saveUsernameBtn = document.getElementById('save-username-btn');
+  
+  const nicknameForm = document.getElementById('nickname-form');
+  const nicknameInput = document.getElementById('nickname-input');
+  const saveNicknameBtn = document.getElementById('save-nickname-btn');
+  
+  const passwordForm = document.getElementById('password-form');
+  const oldPasswordInput = document.getElementById('old-password-input');
+  const newPasswordInput = document.getElementById('new-password-input');
+  const savePasswordBtn = document.getElementById('save-password-btn');
+  
   const languageSelect = document.getElementById('language-select');
 
   // Language update
@@ -89,8 +131,8 @@ export async function renderSettings(main, user) {
     setLanguage(newLang);
   });
 
-  // Username update
-  profileForm.addEventListener('submit', async (e) => {
+  // Username (Login) update
+  usernameForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const newUsername = usernameInput.value.trim();
     if (!newUsername || newUsername === user.username) return;
@@ -108,19 +150,76 @@ export async function renderSettings(main, user) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || t('error_update'));
 
-      // Update local user object
       user.username = data.username;
-      
-      // Notify shell and update UI
       window.dispatchEvent(new CustomEvent('auth-changed', { detail: user }));
-      
       alert(t('success_username'));
     } catch (err) {
       alert(err.message);
-      usernameInput.value = user.username; // Revert
+      usernameInput.value = user.username;
     } finally {
       saveUsernameBtn.disabled = false;
       saveUsernameBtn.textContent = t('save');
+    }
+  });
+
+  // Nickname update
+  nicknameForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newNickname = nicknameInput.value.trim();
+    if (!newNickname || newNickname === user.nickname) return;
+
+    saveNicknameBtn.disabled = true;
+    saveNicknameBtn.textContent = t('saving');
+
+    try {
+      const response = await fetch('/api/auth/update-profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_nickname: newNickname })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || t('error_update'));
+
+      user.nickname = data.nickname;
+      window.dispatchEvent(new CustomEvent('auth-changed', { detail: user }));
+      alert(t('success_nickname'));
+    } catch (err) {
+      alert(err.message);
+      nicknameInput.value = user.nickname || user.username;
+    } finally {
+      saveNicknameBtn.disabled = false;
+      saveNicknameBtn.textContent = t('save');
+    }
+  });
+
+  // Password update
+  passwordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const oldPassword = oldPasswordInput.value;
+    const newPassword = newPasswordInput.value;
+
+    savePasswordBtn.disabled = true;
+    savePasswordBtn.textContent = t('saving');
+
+    try {
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || t('error_update'));
+
+      alert(t('success_password'));
+      oldPasswordInput.value = '';
+      newPasswordInput.value = '';
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      savePasswordBtn.disabled = false;
+      savePasswordBtn.textContent = t('save');
     }
   });
 

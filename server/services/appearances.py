@@ -5,7 +5,6 @@ import json
 import cloudscraper
 from bs4 import BeautifulSoup
 from fastapi import HTTPException
-import sqlite3
 
 # ── Cloudscraper instance creator ────────────────────
 def create_scraper_instance():

@@ -13,6 +13,27 @@ if __package__ in (None, ""):
 from server.db import init_db, close_db
 from server.routes import stats, catalog, volumes, publishers, themes, auth, user_readlist, favorites, collections, issues, events, reading_orders, images, characters, personnel, scrape, wanted, magazines, manga_chapters, parser, edits
 
+# Monkey patch Starlette Request to automatically decode URL-encoded username cookie
+import urllib.parse
+original_cookies_property = Request.cookies
+
+@property
+def patched_cookies(self) -> dict[str, str]:
+    if not hasattr(self, "_cookies"):
+        # Отримуємо оригінальний розпарсений словник кук
+        cookies_header = self.headers.get("cookie", "")
+        # Викликаємо оригінальний механізм парсингу
+        cookies_dict = original_cookies_property.__get__(self)
+        if cookies_dict and "username" in cookies_dict:
+            try:
+                cookies_dict["username"] = urllib.parse.unquote(cookies_dict["username"])
+            except Exception:
+                pass
+        self._cookies = cookies_dict
+    return self._cookies
+
+Request.cookies = patched_cookies
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Initialize DB and show status

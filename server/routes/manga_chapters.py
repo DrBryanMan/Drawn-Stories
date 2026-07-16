@@ -223,7 +223,6 @@ async def list_chapters(
                mm.id as magazine_id, mm.name as magazine_name
         {base_join}
         {where}
-        GROUP BY mc.id
         ORDER BY {sort_column} {sort_order}, mc.id {sort_order}
         LIMIT ? OFFSET ?
     """, params + [limit, offset])

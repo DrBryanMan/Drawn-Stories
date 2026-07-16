@@ -42,17 +42,20 @@ async def get_volume_detail(volume_id: int, request: Request):
 
     themes = db.get_all(
         """
-        SELECT DISTINCT t.id, t.cv_id, t.name, t.ua_name, COALESCE(t.type, 'theme') as type
-        FROM volume_themes vt
-        JOIN themes t ON t.id = vt.theme_id
-        WHERE vt.volume_id = ?
+        SELECT id, cv_id, name, ua_name, type
+        FROM (
+            SELECT DISTINCT t.id, t.cv_id, t.name, t.ua_name, COALESCE(t.type, 'theme') as type
+            FROM volume_themes vt
+            JOIN themes t ON t.id = vt.theme_id
+            WHERE vt.volume_id = ?
+        ) sub
         ORDER BY
-          CASE COALESCE(t.type, 'theme')
+          CASE type
             WHEN 'type' THEN 0
             WHEN 'genre' THEN 1
             ELSE 2
           END,
-          COALESCE(t.ua_name, t.name) ASC
+          COALESCE(ua_name, name) ASC
         """,
         [volume_id],
     )
@@ -88,15 +91,17 @@ async def get_volume_detail(volume_id: int, request: Request):
             """
             SELECT i.*, 'issue' as type, 
                    v.name as volume_name, v.name_uk as volume_name_uk,
-                    v.image as volume_cv_img, v.cover_img as volume_cover_img,
+                   v.image as volume_cv_img, v.cover_img as volume_cover_img,
                    v.id as volume_db_id, v.cv_id as volume_cv_id,
                    (SELECT COUNT(DISTINCT ci2.collection_id) FROM collection_issues ci2 WHERE ci2.issue_id = i.id) as collection_count
             FROM issues i
-            JOIN collection_issues ci ON i.id = ci.issue_id
-            JOIN collections c ON ci.collection_id = c.id
             LEFT JOIN volumes v ON i.volume_id = v.id
-            WHERE c.volume_id = ?
-            GROUP BY i.id
+            WHERE i.id IN (
+                SELECT ci.issue_id 
+                FROM collection_issues ci
+                JOIN collections c ON ci.collection_id = c.id
+                WHERE c.volume_id = ?
+            )
             """,
             [volume_id],
         )
@@ -116,7 +121,6 @@ async def get_volume_detail(volume_id: int, request: Request):
             SELECT i.*, 'issue' as type, (SELECT COUNT(*) FROM collection_issues ci WHERE ci.issue_id = i.id) as collection_count
             FROM issues i
             WHERE i.volume_id = ?
-            GROUP BY i.id
             """,
             [volume_id],
         )
@@ -828,18 +832,20 @@ async def get_volume_collections_from_issues(volume_id: int, request: Request):
     # Get collections linked directly or via issues
     collections = db.get_all(
         f"""
-        SELECT DISTINCT c.*, pv.id as parent_vol_id, pv.name as parent_vol_name, pv.lang as parent_vol_lang,
-               EXISTS(SELECT 1 FROM user_volumes_collection uc WHERE uc.collection_id = c.id AND uc.user_id = ?) as is_owned
-        FROM collections c
-        LEFT JOIN collection_issues ci ON c.id = ci.collection_id
-        LEFT JOIN issues i ON ci.issue_id = i.id
-        LEFT JOIN volumes pv ON c.volume_id = pv.id
-        WHERE (
-            c.volume_id IN ({placeholders})
-            OR i.volume_id IN ({placeholders})
-        )
-        { "AND (pv.lang = ? OR pv.lang IS NULL)" if vol_lang else "" }
-        ORDER BY pv.name ASC, CAST(c.issue_number AS REAL) ASC, c.name ASC
+        SELECT * FROM (
+            SELECT DISTINCT c.*, pv.id as parent_vol_id, pv.name as parent_vol_name, pv.lang as parent_vol_lang,
+                   EXISTS(SELECT 1 FROM user_volumes_collection uc WHERE uc.collection_id = c.id AND uc.user_id = ?) as is_owned
+            FROM collections c
+            LEFT JOIN collection_issues ci ON c.id = ci.collection_id
+            LEFT JOIN issues i ON ci.issue_id = i.id
+            LEFT JOIN volumes pv ON c.volume_id = pv.id
+            WHERE (
+                c.volume_id IN ({placeholders})
+                OR i.volume_id IN ({placeholders})
+            )
+            { "AND (pv.lang = ? OR pv.lang IS NULL)" if vol_lang else "" }
+        ) sub
+        ORDER BY parent_vol_name ASC, CAST(issue_number AS REAL) ASC, name ASC
         """,
         [user_id] + vol_ids + vol_ids + ([vol_lang] if vol_lang else [])
     )

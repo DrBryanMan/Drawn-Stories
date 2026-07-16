@@ -33,7 +33,7 @@ async def get_themes(
         FROM themes t
         LEFT JOIN volume_themes vt ON vt.theme_id = t.id
         {where_clause}
-        GROUP BY t.id
+        GROUP BY t.id, t.cv_id, t.name, t.ua_name, COALESCE(t.type, 'theme')
         ORDER BY
           CASE COALESCE(t.type, 'theme')
             WHEN 'type' THEN 0

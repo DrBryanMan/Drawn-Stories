@@ -37,7 +37,7 @@ async def get_popular_content():
         WHERE v.id NOT IN (
             SELECT volume_id FROM volume_themes WHERE theme_id = {manga_theme_id}
         )
-        GROUP BY p.id
+        GROUP BY p.id, p.name, p.image, p.cv_slug
         ORDER BY volume_count DESC, p.name ASC
         LIMIT 8
     """)
@@ -57,7 +57,7 @@ async def get_popular_content():
         SELECT mm.id, mm.name, mm.image, mm.cv_slug, COUNT(mv.volume_id) as series_count
         FROM manga_magazines mm
         LEFT JOIN magazine_volumes mv ON mm.id = mv.magazine_id
-        GROUP BY mm.id
+        GROUP BY mm.id, mm.name, mm.image, mm.cv_slug
         ORDER BY series_count DESC, mm.name ASC
         LIMIT 8
     """)
@@ -78,7 +78,7 @@ async def get_popular_content():
         FROM publishers p
         JOIN volumes v ON v.publisher = p.id
         WHERE v.lang = 'uk'
-        GROUP BY p.id
+        GROUP BY p.id, p.name, p.image, p.cv_slug
         ORDER BY volume_count DESC, p.name ASC
         LIMIT 8
     """)
@@ -102,14 +102,14 @@ async def get_ukrainian_tab_data(limit: int = 8):
                v.name as volume_name, v.name_uk as volume_name_uk, v.id as volume_id
         FROM collections c
         JOIN volumes v ON c.volume_id = v.id
-        WHERE v.lang = 'uk' AND c.release_date > DATE('now')
+        WHERE v.lang = 'uk' AND c.release_date > CURRENT_DATE::TEXT
     """)
     announcements_issues = db.get_all("""
         SELECT i.id, i.name, i.issue_number, i.release_date, i.image, 'issue' as type,
                v.name as volume_name, v.name_uk as volume_name_uk, v.id as volume_id
         FROM issues i
         JOIN volumes v ON i.volume_id = v.id
-        WHERE v.lang = 'uk' AND i.release_date > DATE('now')
+        WHERE v.lang = 'uk' AND i.release_date > CURRENT_DATE::TEXT
     """)
     announcements = [dict(r) for r in announcements_cols] + [dict(r) for r in announcements_issues]
     announcements.sort(key=lambda x: x.get("release_date") or "", reverse=False)
@@ -121,14 +121,14 @@ async def get_ukrainian_tab_data(limit: int = 8):
                v.name as volume_name, v.name_uk as volume_name_uk, v.id as volume_id, c.created_at
         FROM collections c
         JOIN volumes v ON c.volume_id = v.id
-        WHERE v.lang = 'uk' AND (c.release_date <= DATE('now') OR c.release_date IS NULL OR c.release_date = '')
+        WHERE v.lang = 'uk' AND (c.release_date <= CURRENT_DATE::TEXT OR c.release_date IS NULL OR c.release_date = '')
     """)
     new_releases_issues = db.get_all("""
         SELECT i.id, i.name, i.issue_number, i.release_date, i.image, 'issue' as type,
                v.name as volume_name, v.name_uk as volume_name_uk, v.id as volume_id, i.created_at
         FROM issues i
         JOIN volumes v ON i.volume_id = v.id
-        WHERE v.lang = 'uk' AND (i.release_date <= DATE('now') OR i.release_date IS NULL OR i.release_date = '')
+        WHERE v.lang = 'uk' AND (i.release_date <= CURRENT_DATE::TEXT OR i.release_date IS NULL OR i.release_date = '')
     """)
     new_releases = [dict(r) for r in new_releases_cols] + [dict(r) for r in new_releases_issues]
     new_releases.sort(key=lambda x: (x.get("release_date") or "", x.get("created_at") or ""), reverse=True)

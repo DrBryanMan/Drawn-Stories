@@ -26,9 +26,18 @@ export async function renderAuth(container) {
                             <label for="username">${t('username')}</label>
                             <div class="input-wrapper">
                                 ${icon('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>')}
-                                <input type="text" id="username" name="username" required placeholder="${t('auth_username_placeholder')}">
+                                <input type="text" id="username" name="username" required maxlength="10" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ\\.]+$" title="Дозволено лише літери, цифри та крапку (макс. 10 симв.)" placeholder="${t('auth_username_placeholder')}">
                             </div>
                         </div>
+                        ${mode === 'register' ? `
+                        <div class="form-group">
+                            <label for="nickname">${t('nickname')}</label>
+                            <div class="input-wrapper">
+                                ${icon('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>')}
+                                <input type="text" id="nickname" name="nickname" required maxlength="10" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ\\.]+$" title="Дозволено лише літери, цифри та крапку (макс. 10 симв.)" placeholder="${t('auth_nickname_placeholder')}">
+                            </div>
+                        </div>
+                        ` : ''}
                         <div class="form-group">
                             <label for="password">${t('auth_password')}</label>
                             <div class="input-wrapper">

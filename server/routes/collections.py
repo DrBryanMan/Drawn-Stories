@@ -514,7 +514,7 @@ async def get_collection_detail(collection_id: int, request: Request):
             COALESCE(i.issue_number, mc.chapter_number) as issue_number,
             COALESCE(i.release_date, mc.release_date) as release_date,
             COALESCE(i.description, mc.synopsis) as description,
-            COALESCE(i.pages, mc.pages) as pages,
+            COALESCE(i.pages, CAST(mc.pages AS TEXT)) as pages,
             COALESCE(i.volume_id, mc.volume_id) as volume_id,
             v.name as volume_name, 
             v.name_uk as volume_name_uk
@@ -531,17 +531,20 @@ async def get_collection_detail(collection_id: int, request: Request):
     # 3. Отримуємо теми збірника
     themes = db.get_all(
         """
-        SELECT DISTINCT t.id, t.cv_id, t.name, t.ua_name, COALESCE(t.type, 'theme') as type
-        FROM collection_themes ct
-        JOIN themes t ON t.id = ct.theme_id
-        WHERE ct.collection_id = ?
+        SELECT id, cv_id, name, ua_name, type
+        FROM (
+            SELECT DISTINCT t.id, t.cv_id, t.name, t.ua_name, COALESCE(t.type, 'theme') as type
+            FROM collection_themes ct
+            JOIN themes t ON t.id = ct.theme_id
+            WHERE ct.collection_id = ?
+        ) sub
         ORDER BY
-          CASE COALESCE(t.type, 'theme')
+          CASE type
             WHEN 'type' THEN 0
             WHEN 'genre' THEN 1
             ELSE 2
           END,
-          COALESCE(t.ua_name, t.name) ASC
+          COALESCE(ua_name, name) ASC
         """,
         [collection_id]
     )

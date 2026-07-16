@@ -89,7 +89,7 @@ async def update_character(character_id: int, data: dict, request: Request):
         UPDATE characters
         SET name = ?, name_uk = ?, name_ro = ?, real_name = ?, real_name_uk = ?, creators = ?, 
             image = ?, portret_img = ?, costume_img = ?, portret_costume_img = ?, 
-            date_last_updated = datetime('now', 'localtime')
+            date_last_updated = NOW()
         WHERE id = ?
         """,
         [name, name_uk, name_ro, real_name, real_name_uk, creators, image, portret_img, costume_img, portret_costume_img, character_id]

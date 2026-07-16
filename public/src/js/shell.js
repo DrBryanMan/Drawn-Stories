@@ -302,7 +302,7 @@ function updateAuthUI() {
           <div class="dropdown-info">
             ${getAvatarHtml(avatarUrl, 'header-avatar', 40)}
             <div class="user-details">
-                <div class="user-name">${currentUser.username}</div>
+                <div class="user-name">${currentUser.nickname || currentUser.username}</div>
                 <div class="user-role">${currentUser.role === 'admin' ? t('role_admin') : currentUser.role === 'moderator' ? t('role_moderator') : t('role_user')}</div>
             </div>
           </div>

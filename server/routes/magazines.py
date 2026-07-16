@@ -182,10 +182,9 @@ async def convert_from_volume(volume_id: int):
         # We copy this relationship into the updated structure:
         # magazine_id = new_mag_id (from manga_magazines), volume_id = old child_id (from volumes)
         db.conn.execute("""
-            INSERT OR IGNORE INTO magazine_volumes (magazine_id, volume_id)
-            SELECT ?, volume_id FROM (
-                SELECT volume_id FROM magazine_volumes WHERE magazine_id = ?
-            )
+            INSERT INTO magazine_volumes (magazine_id, volume_id)
+            SELECT %s, volume_id FROM magazine_volumes WHERE magazine_id = %s
+            ON CONFLICT DO NOTHING
         """, [new_mag_id, volume_id])
 
         # 5. Clean up old volume data
