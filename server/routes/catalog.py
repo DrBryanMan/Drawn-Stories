@@ -34,7 +34,7 @@ async def get_bookmarks_data(items: List[BookmarkItem]):
         if not ids:
             continue
             
-        placeholders = ",".join("?" for _ in ids)
+        placeholders = ",".join("%s" for _ in ids)
         
         if item_type == "volume":
             data = db.get_all(f"""
@@ -129,7 +129,7 @@ async def get_catalog(
             if words:
                 search_parts = []
                 for word in words:
-                    part = "(ULOWER(v.name) LIKE ? OR ULOWER(v.name_en) LIKE ? OR ULOWER(v.name_uk) LIKE ? OR ULOWER(v.name_native) LIKE ?)"
+                    part = "(ULOWER(v.name) LIKE %s OR ULOWER(v.name_en) LIKE %s OR ULOWER(v.name_uk) LIKE %s OR ULOWER(v.name_native) LIKE %s)"
                     search_parts.append(part)
                     filter_params.extend([f"%{word.lower()}%"] * 4)
                 filter_clauses.append(f"({' AND '.join(search_parts)})")
@@ -150,7 +150,7 @@ async def get_catalog(
                 if words:
                     search_parts = []
                     for word in words:
-                        part = "(ULOWER(i.name) LIKE ? OR ULOWER(v.name) LIKE ? OR ULOWER(v.name_en) LIKE ? OR ULOWER(v.name_uk) LIKE ? OR ULOWER(v.name_native) LIKE ?)"
+                        part = "(ULOWER(i.name) LIKE %s OR ULOWER(v.name) LIKE %s OR ULOWER(v.name_en) LIKE %s OR ULOWER(v.name_uk) LIKE %s OR ULOWER(v.name_native) LIKE %s)"
                         search_parts.append(part)
                         filter_params.extend([f"%{word.lower()}%"] * 5)
                     filter_clauses.append(f"({' AND '.join(search_parts)})")
@@ -169,7 +169,7 @@ async def get_catalog(
                 if words:
                     search_parts = []
                     for word in words:
-                        part = "(ULOWER(c.name) LIKE ? OR ULOWER(v.name) LIKE ? OR ULOWER(v.name_en) LIKE ? OR ULOWER(v.name_uk) LIKE ? OR ULOWER(v.name_native) LIKE ?)"
+                        part = "(ULOWER(c.name) LIKE %s OR ULOWER(v.name) LIKE %s OR ULOWER(v.name_en) LIKE %s OR ULOWER(v.name_uk) LIKE %s OR ULOWER(v.name_native) LIKE %s)"
                         search_parts.append(part)
                         filter_params.extend([f"%{word.lower()}%"] * 5)
                     filter_clauses.append(f"({' AND '.join(search_parts)})")
@@ -209,28 +209,28 @@ async def get_catalog(
 
     publisher_filter_ids = parse_id_list(publisher_ids)
     if publisher_filter_ids:
-        placeholders = ",".join("?" for _ in publisher_filter_ids)
+        placeholders = ",".join("%s" for _ in publisher_filter_ids)
         filter_clauses.append(f"v.publisher IN ({placeholders})")
         filter_params.extend(publisher_filter_ids)
 
     magazine_filter_ids = parse_id_list(magazine_ids)
     if magazine_filter_ids:
-        placeholders = ",".join("?" for _ in magazine_filter_ids)
+        placeholders = ",".join("%s" for _ in magazine_filter_ids)
         filter_clauses.append(f"v.id IN (SELECT volume_id FROM magazine_volumes WHERE magazine_id IN ({placeholders}))")
         filter_params.extend(magazine_filter_ids)
 
     if langs:
         lang_list = langs.split(',')
-        placeholders = ",".join("?" for _ in lang_list)
+        placeholders = ",".join("%s" for _ in lang_list)
         filter_clauses.append(f"v.lang IN ({placeholders})")
         filter_params.extend(lang_list)
 
     for theme_id in parse_id_list(theme_ids):
-        filter_clauses.append("EXISTS (SELECT 1 FROM volume_themes vt WHERE vt.theme_id = ? AND vt.volume_id = v.id)")
+        filter_clauses.append("EXISTS (SELECT 1 FROM volume_themes vt WHERE vt.theme_id = %s AND vt.volume_id = v.id)")
         filter_params.append(theme_id)
 
     for theme_id in parse_id_list(exclude_theme_ids):
-        filter_clauses.append("NOT EXISTS (SELECT 1 FROM volume_themes vt WHERE vt.theme_id = ? AND vt.volume_id = v.id)")
+        filter_clauses.append("NOT EXISTS (SELECT 1 FROM volume_themes vt WHERE vt.theme_id = %s AND vt.volume_id = v.id)")
         filter_params.append(theme_id)
 
     if date_min:
@@ -275,7 +275,7 @@ async def get_catalog(
     # rather than applying an offset from the original start.
     effective_offset = 0 if cursor and not search else (page - 1) * limit
     
-    items = db.get_all(f"SELECT {select_fields} {base}{items_where}{order_clause} LIMIT ? OFFSET ?", items_params + [limit + 1, effective_offset])
+    items = db.get_all(f"SELECT {select_fields} {base}{items_where}{order_clause} LIMIT %s OFFSET %s", items_params + [limit + 1, effective_offset])
     
     has_next = len(items) > limit
     if has_next:
@@ -328,7 +328,7 @@ async def search_volumes_for_picker(
     if ids:
         id_list = [int(x.strip()) for x in ids.split(",") if x.strip().isdigit()]
         if id_list:
-            placeholders = ",".join("?" for _ in id_list)
+            placeholders = ",".join("%s" for _ in id_list)
             clauses.append(f"v.id IN ({placeholders})")
             params.extend(id_list)
     if cv_id:
@@ -338,15 +338,15 @@ async def search_volumes_for_picker(
         clauses.append("v.mal_id = ?")
         params.append(mal_id)
     if hikka_slug:
-        clauses.append("ULOWER(v.hikka_slug) LIKE ?")
+        clauses.append("ULOWER(v.hikka_slug) LIKE %s")
         params.append(f"%{hikka_slug.lower()}%")
     if theme_id:
-        clauses.append("EXISTS (SELECT 1 FROM volume_themes vt WHERE vt.theme_id = ? AND vt.volume_id = v.id)")
+        clauses.append("EXISTS (SELECT 1 FROM volume_themes vt WHERE vt.theme_id = %s AND vt.volume_id = v.id)")
         params.append(theme_id)
     if has_mal:
         clauses.append("v.mal_id IS NOT NULL")
     if search:
-        clauses.append("(ULOWER(v.name) LIKE ? OR ULOWER(v.name_en) LIKE ? OR ULOWER(v.name_uk) LIKE ? OR ULOWER(v.name_native) LIKE ?)")
+        clauses.append("(ULOWER(v.name) LIKE %s OR ULOWER(v.name_en) LIKE %s OR ULOWER(v.name_uk) LIKE %s OR ULOWER(v.name_native) LIKE %s)")
         params.extend([f"%{search.lower()}%"] * 4)
 
     if not clauses:
@@ -359,7 +359,7 @@ async def search_volumes_for_picker(
         LEFT JOIN publishers p ON v.publisher = p.id
         {where}
         ORDER BY v.name ASC
-        LIMIT ?
+        LIMIT %s
     """
     items = db.get_all(query, params + [limit])
     return {"items": [dict(x) for x in items], "total": len(items)}
@@ -381,7 +381,7 @@ async def get_volume_suggestions(
             LEFT JOIN publishers p ON v.publisher = p.id
             WHERE vt.theme_id = 35
             ORDER BY children_count DESC, v.name ASC
-            LIMIT ?
+            LIMIT %s
         """
         items = db.get_all(query, [limit])
     else:
@@ -389,7 +389,7 @@ async def get_volume_suggestions(
         where = ""
         params = []
         if theme_id:
-            where = "JOIN volume_themes vt ON v.id = vt.volume_id WHERE vt.theme_id = ?"
+            where = "JOIN volume_themes vt ON v.id = vt.volume_id WHERE vt.theme_id = %s"
             params.append(theme_id)
             
         query = f"""
@@ -398,7 +398,7 @@ async def get_volume_suggestions(
             LEFT JOIN publishers p ON v.publisher = p.id
             {where}
             ORDER BY v.created_at DESC
-            LIMIT ?
+            LIMIT %s
         """
         items = db.get_all(query, params + [limit])
         

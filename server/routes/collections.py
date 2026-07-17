@@ -10,7 +10,7 @@ def get_current_user_id(request: Request):
     if not username:
         raise HTTPException(status_code=401, detail="Not logged in")
     db = get_db()
-    user = db.get_one("SELECT id FROM users WHERE username = ?", [username])
+    user = db.get_one("SELECT id FROM users WHERE username = %s", [username])
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
     return user['id']
@@ -21,7 +21,7 @@ async def get_collections(username: Optional[str] = None, content_type: str = "c
     
     target_user_id = user_id
     if username:
-        user = db.get_one("SELECT id FROM users WHERE username = ?", [username])
+        user = db.get_one("SELECT id FROM users WHERE username = %s", [username])
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         target_user_id = user['id']
@@ -46,13 +46,13 @@ async def get_collections(username: Optional[str] = None, content_type: str = "c
         FROM volumes v
         JOIN collections c ON c.volume_id = v.id
         LEFT JOIN publishers p ON v.publisher = p.id
-        LEFT JOIN user_volumes_collection uc ON uc.collection_id = c.id AND uc.user_id = ?
+        LEFT JOIN user_volumes_collection uc ON uc.collection_id = c.id AND uc.user_id = %s
         WHERE v.id IN (
             SELECT DISTINCT v2.id
             FROM volumes v2
             JOIN collections c2 ON c2.volume_id = v2.id
             JOIN user_volumes_collection uc2 ON uc2.collection_id = c2.id
-            WHERE uc2.user_id = ?
+            WHERE uc2.user_id = %s
         )
         ORDER BY uc.created_at DESC, c.issue_number DESC
         """
@@ -74,13 +74,13 @@ async def get_collections(username: Optional[str] = None, content_type: str = "c
         FROM volumes v
         JOIN issues i ON i.volume_id = v.id
         LEFT JOIN publishers p ON v.publisher = p.id
-        LEFT JOIN user_issues_collection uc ON uc.issue_id = i.id AND uc.user_id = ?
+        LEFT JOIN user_issues_collection uc ON uc.issue_id = i.id AND uc.user_id = %s
         WHERE v.id IN (
             SELECT DISTINCT v2.id
             FROM volumes v2
             JOIN issues i2 ON i2.volume_id = v2.id
             JOIN user_issues_collection uc2 ON uc2.issue_id = i2.id
-            WHERE uc2.user_id = ?
+            WHERE uc2.user_id = %s
         )
         ORDER BY uc.created_at DESC, CAST(i.issue_number AS REAL) DESC, i.issue_number DESC
         """
@@ -133,7 +133,7 @@ async def create_collection(data: dict):
             if value == "":
                 value = None
             columns.append(key)
-            placeholders.append("?")
+            placeholders.append("%s")
             params.append(value)
             
     if not columns:
@@ -159,52 +159,52 @@ class ToggleIssueCollectionRequest(BaseModel):
 async def toggle_collection(req: ToggleCollectionRequest, user_id: int = Depends(get_current_user_id)):
     db = get_db()
 
-    existing = db.get_one("SELECT status, barter FROM user_volumes_collection WHERE user_id = ? AND collection_id = ?", [user_id, req.collection_id])
+    existing = db.get_one("SELECT status, barter FROM user_volumes_collection WHERE user_id = %s AND collection_id = %s", [user_id, req.collection_id])
 
     if existing:
         if req.barter is not None:
             # Update barter status
-            db.execute("UPDATE user_volumes_collection SET barter = ? WHERE user_id = ? AND collection_id = ?", [int(req.barter), user_id, req.collection_id])
+            db.execute("UPDATE user_volumes_collection SET barter = %s WHERE user_id = %s AND collection_id = %s", [bool(req.barter), user_id, req.collection_id])
             return {"status": "updated", "barter": req.barter}
 
         if existing['status'] == req.status:
             # Remove if same status
-            db.execute("DELETE FROM user_volumes_collection WHERE user_id = ? AND collection_id = ?", [user_id, req.collection_id])
+            db.execute("DELETE FROM user_volumes_collection WHERE user_id = %s AND collection_id = %s", [user_id, req.collection_id])
             return {"status": "removed"}
         else:
             # Update status
-            db.execute("UPDATE user_volumes_collection SET status = ? WHERE user_id = ? AND collection_id = ?", [req.status, user_id, req.collection_id])
+            db.execute("UPDATE user_volumes_collection SET status = %s WHERE user_id = %s AND collection_id = %s", [req.status, user_id, req.collection_id])
             return {"status": "updated", "new_status": req.status}
     else:
         # Add new
-        db.execute("INSERT INTO user_volumes_collection (user_id, collection_id, status, barter) VALUES (?, ?, ?, ?)", 
-                   [user_id, req.collection_id, req.status, int(req.barter or False)])
+        db.execute("INSERT INTO user_volumes_collection (user_id, collection_id, status, barter) VALUES (%s, %s, %s, %s)", 
+                   [user_id, req.collection_id, req.status, bool(req.barter or False)])
         return {"status": "added", "new_status": req.status}
 
 @router.post("/issue/toggle")
 async def toggle_issue_collection(req: ToggleIssueCollectionRequest, user_id: int = Depends(get_current_user_id)):
     db = get_db()
 
-    existing = db.get_one("SELECT status, barter FROM user_issues_collection WHERE user_id = ? AND issue_id = ?", [user_id, req.issue_id])
+    existing = db.get_one("SELECT status, barter FROM user_issues_collection WHERE user_id = %s AND issue_id = %s", [user_id, req.issue_id])
 
     if existing:
         if req.barter is not None:
             # Update barter status
-            db.execute("UPDATE user_issues_collection SET barter = ? WHERE user_id = ? AND issue_id = ?", [int(req.barter), user_id, req.issue_id])
+            db.execute("UPDATE user_issues_collection SET barter = %s WHERE user_id = %s AND issue_id = %s", [bool(req.barter), user_id, req.issue_id])
             return {"status": "updated", "barter": req.barter}
 
         if existing['status'] == req.status:
             # Remove if same status
-            db.execute("DELETE FROM user_issues_collection WHERE user_id = ? AND issue_id = ?", [user_id, req.issue_id])
+            db.execute("DELETE FROM user_issues_collection WHERE user_id = %s AND issue_id = %s", [user_id, req.issue_id])
             return {"status": "removed"}
         else:
             # Update status
-            db.execute("UPDATE user_issues_collection SET status = ? WHERE user_id = ? AND issue_id = ?", [req.status, user_id, req.issue_id])
+            db.execute("UPDATE user_issues_collection SET status = %s WHERE user_id = %s AND issue_id = %s", [req.status, user_id, req.issue_id])
             return {"status": "updated", "new_status": req.status}
     else:
         # Add new
-        db.execute("INSERT INTO user_issues_collection (user_id, issue_id, status, barter) VALUES (?, ?, ?, ?)", 
-                   [user_id, req.issue_id, req.status, int(req.barter or False)])
+        db.execute("INSERT INTO user_issues_collection (user_id, issue_id, status, barter) VALUES (%s, %s, %s, %s)", 
+                   [user_id, req.issue_id, req.status, bool(req.barter or False)])
         return {"status": "added", "new_status": req.status}
 
 @router.post("/add-volume-all")
@@ -219,12 +219,12 @@ async def add_all_from_volume(req: AddVolumeAllRequest, user_id: int = Depends(g
     db = get_db()
     
     # Check if volume exists
-    volume = db.get_one("SELECT id FROM volumes WHERE id = ?", [req.volume_id])
+    volume = db.get_one("SELECT id FROM volumes WHERE id = %s", [req.volume_id])
     if not volume:
         raise HTTPException(status_code=404, detail="Volume not found")
 
     # Find all collections for this volume
-    collections = db.get_all("SELECT id FROM collections WHERE volume_id = ?", [req.volume_id])
+    collections = db.get_all("SELECT id FROM collections WHERE volume_id = %s", [req.volume_id])
     
     if not collections:
         return {"status": "ok", "added": 0}
@@ -234,7 +234,7 @@ async def add_all_from_volume(req: AddVolumeAllRequest, user_id: int = Depends(g
         try:
             # We use INSERT OR IGNORE to skip collections already in the user's collection
             # because of the UNIQUE constraint on (user_id, collection_id)
-            db.execute("INSERT OR IGNORE INTO user_volumes_collection (user_id, collection_id) VALUES (?, ?)", [user_id, col['id']])
+            db.execute("INSERT INTO user_volumes_collection (user_id, collection_id) VALUES (%s, %s) ON CONFLICT DO NOTHING", [user_id, col['id']])
             added_count += 1
         except Exception as e:
             print(f"Error adding collection {col['id']}: {e}")
@@ -246,12 +246,12 @@ async def add_all_issues_from_volume(req: AddVolumeAllRequest, user_id: int = De
     db = get_db()
     
     # Check if volume exists
-    volume = db.get_one("SELECT id FROM volumes WHERE id = ?", [req.volume_id])
+    volume = db.get_one("SELECT id FROM volumes WHERE id = %s", [req.volume_id])
     if not volume:
         raise HTTPException(status_code=404, detail="Volume not found")
 
     # Find all issues for this volume
-    issues = db.get_all("SELECT id FROM issues WHERE volume_id = ?", [req.volume_id])
+    issues = db.get_all("SELECT id FROM issues WHERE volume_id = %s", [req.volume_id])
     
     if not issues:
         return {"status": "ok", "added": 0}
@@ -261,7 +261,7 @@ async def add_all_issues_from_volume(req: AddVolumeAllRequest, user_id: int = De
         try:
             # We use INSERT OR IGNORE to skip issues already in the user's collection
             # because of the UNIQUE constraint on (user_id, issue_id)
-            db.execute("INSERT OR IGNORE INTO user_issues_collection (user_id, issue_id, status) VALUES (?, ?, 'get')", [user_id, issue['id']])
+            db.execute("INSERT INTO user_issues_collection (user_id, issue_id, status) VALUES (%s, %s, 'get') ON CONFLICT DO NOTHING", [user_id, issue['id']])
             added_count += 1
         except Exception as e:
             print(f"Error adding issue {issue['id']}: {e}")
@@ -285,25 +285,25 @@ async def add_issue_to_collection(collection_id: int, data: dict):
     
     # Check if already exists
     if issue_id:
-        existing = db.get_one("SELECT 1 FROM collection_issues WHERE collection_id = ? AND issue_id = ?", [collection_id, issue_id])
+        existing = db.get_one("SELECT 1 FROM collection_issues WHERE collection_id = %s AND issue_id = %s", [collection_id, issue_id])
     else:
-        existing = db.get_one("SELECT 1 FROM collection_issues WHERE collection_id = ? AND manga_chapter_id = ?", [collection_id, manga_chapter_id])
+        existing = db.get_one("SELECT 1 FROM collection_issues WHERE collection_id = %s AND manga_chapter_id = %s", [collection_id, manga_chapter_id])
         
     if existing:
         return {"message": "Випуск/розділ вже є у збірнику"}
     
     # Get next order_num
-    last_order = db.get_one("SELECT MAX(order_num) as max_order FROM collection_issues WHERE collection_id = ?", [collection_id])
+    last_order = db.get_one("SELECT MAX(order_num) as max_order FROM collection_issues WHERE collection_id = %s", [collection_id])
     next_order = (last_order['max_order'] or 0) + 1
     
     if issue_id:
         db.execute(
-            "INSERT INTO collection_issues (collection_id, issue_id, manga_chapter_id, order_num) VALUES (?, ?, NULL, ?)",
+            "INSERT INTO collection_issues (collection_id, issue_id, manga_chapter_id, order_num) VALUES (%s, %s, NULL, %s)",
             [collection_id, issue_id, next_order]
         )
     else:
         db.execute(
-            "INSERT INTO collection_issues (collection_id, issue_id, manga_chapter_id, order_num) VALUES (?, NULL, ?, ?)",
+            "INSERT INTO collection_issues (collection_id, issue_id, manga_chapter_id, order_num) VALUES (%s, NULL, %s, %s)",
             [collection_id, manga_chapter_id, next_order]
         )
     
@@ -324,12 +324,12 @@ async def reorder_collection_issues(collection_id: int, data: dict):
             item_type = item.get("type")
             if item_type == "manga_chapter":
                 db.execute(
-                    "UPDATE collection_issues SET order_num = ? WHERE collection_id = ? AND manga_chapter_id = ?",
+                    "UPDATE collection_issues SET order_num = %s WHERE collection_id = %s AND manga_chapter_id = %s",
                     [index + 1, collection_id, item_id]
                 )
             else:
                 db.execute(
-                    "UPDATE collection_issues SET order_num = ? WHERE collection_id = ? AND issue_id = ?",
+                    "UPDATE collection_issues SET order_num = %s WHERE collection_id = %s AND issue_id = %s",
                     [index + 1, collection_id, item_id]
                 )
     elif issue_ids is not None:
@@ -337,7 +337,7 @@ async def reorder_collection_issues(collection_id: int, data: dict):
             raise HTTPException(status_code=400, detail="issue_ids must be a list")
         for index, issue_id in enumerate(issue_ids):
             db.execute(
-                "UPDATE collection_issues SET order_num = ? WHERE collection_id = ? AND issue_id = ?",
+                "UPDATE collection_issues SET order_num = %s WHERE collection_id = %s AND issue_id = %s",
                 [index + 1, collection_id, issue_id]
             )
     else:
@@ -349,23 +349,23 @@ async def reorder_collection_issues(collection_id: int, data: dict):
 async def clear_collection_issues(collection_id: int):
     db = get_db()
 
-    collection = db.get_one("SELECT id FROM collections WHERE id = ?", [collection_id])
+    collection = db.get_one("SELECT id FROM collections WHERE id = %s", [collection_id])
     if not collection:
         raise HTTPException(status_code=404, detail="Збірник не знайдено")
 
-    count = db.get_one("SELECT COUNT(*) as cnt FROM collection_issues WHERE collection_id = ?", [collection_id])["cnt"]
-    db.execute("DELETE FROM collection_issues WHERE collection_id = ?", [collection_id])
+    count = db.get_one("SELECT COUNT(*) as cnt FROM collection_issues WHERE collection_id = %s", [collection_id])["cnt"]
+    db.execute("DELETE FROM collection_issues WHERE collection_id = %s", [collection_id])
 
     return {"message": f"Видалено {count} зв'язків", "deleted": count}
 
 def replace_collection_themes(db, collection_id, theme_ids):
     # Delete existing themes
-    db.execute("DELETE FROM collection_themes WHERE collection_id = ?", [collection_id])
+    db.execute("DELETE FROM collection_themes WHERE collection_id = %s", [collection_id])
         
     # Insert new themes
     for theme_id in theme_ids:
         db.execute(
-            "INSERT INTO collection_themes (collection_id, theme_id) VALUES (?, ?)",
+            "INSERT INTO collection_themes (collection_id, theme_id) VALUES (%s, %s)",
             [collection_id, theme_id]
         )
 
@@ -374,7 +374,7 @@ async def update_collection(collection_id: int, data: dict):
     db = get_db()
     
     # Check if collection exists
-    collection = db.get_one("SELECT id FROM collections WHERE id = ?", [collection_id])
+    collection = db.get_one("SELECT id FROM collections WHERE id = %s", [collection_id])
     if not collection:
         raise HTTPException(status_code=404, detail="Збірник не знайдено")
 
@@ -399,7 +399,7 @@ async def update_collection(collection_id: int, data: dict):
     if fields:
         params.append(collection_id)
         db.execute(
-            f"UPDATE collections SET {', '.join(fields)} WHERE id = ?",
+            f"UPDATE collections SET {', '.join(fields)} WHERE id = %s",
             params
         )
     
@@ -414,7 +414,7 @@ async def delete_collection(collection_id: int):
     db = get_db()
     
     # Check if collection exists
-    collection = db.get_one("SELECT * FROM collections WHERE id = ?", [collection_id])
+    collection = db.get_one("SELECT * FROM collections WHERE id = %s", [collection_id])
     if not collection:
         raise HTTPException(status_code=404, detail="Збірник не знайдено")
         
@@ -422,19 +422,19 @@ async def delete_collection(collection_id: int):
         db.conn.execute("BEGIN")
         
         # 1. Themes
-        db.conn.execute("DELETE FROM collection_themes WHERE collection_id = ?", [collection_id])
+        db.conn.execute("DELETE FROM collection_themes WHERE collection_id = %s", [collection_id])
             
         # 2. Issue links
-        db.conn.execute("DELETE FROM collection_issues WHERE collection_id = ?", [collection_id])
+        db.conn.execute("DELETE FROM collection_issues WHERE collection_id = %s", [collection_id])
         
         # 3. Series links
-        db.conn.execute("DELETE FROM series_collections WHERE collection_id = ?", [collection_id])
+        db.conn.execute("DELETE FROM series_collections WHERE collection_id = %s", [collection_id])
         
         # 4. User collections
-        db.conn.execute("DELETE FROM user_volumes_collection WHERE collection_id = ?", [collection_id])
+        db.conn.execute("DELETE FROM user_volumes_collection WHERE collection_id = %s", [collection_id])
 
         # 5. Finally delete the collection itself
-        db.conn.execute("DELETE FROM collections WHERE id = ?", [collection_id])
+        db.conn.execute("DELETE FROM collections WHERE id = %s", [collection_id])
         
         db.conn.commit()
     except Exception as e:
@@ -455,7 +455,7 @@ async def reorder_collection_issues(collection_id: int, data: dict):
         db.conn.execute("BEGIN")
         for index, issue_id in enumerate(issue_ids):
             db.execute(
-                "UPDATE collection_issues SET order_num = ? WHERE collection_id = ? AND issue_id = ?",
+                "UPDATE collection_issues SET order_num = %s WHERE collection_id = %s AND issue_id = %s",
                 [index + 1, collection_id, issue_id]
             )
         db.conn.commit()
@@ -473,7 +473,7 @@ async def get_collection_detail(collection_id: int, request: Request):
     user_id = None
     username = request.cookies.get("username")
     if username:
-        user = db.get_one("SELECT id FROM users WHERE username = ?", [username])
+        user = db.get_one("SELECT id FROM users WHERE username = %s", [username])
         if user:
             user_id = user['id']
 
@@ -486,12 +486,12 @@ async def get_collection_detail(collection_id: int, request: Request):
                p.name as publisher_name,
                uc.status as user_status,
                uc.barter as user_barter,
-               EXISTS(SELECT 1 FROM user_volumes_collection uc2 WHERE uc2.collection_id = c.id AND uc2.user_id = ? AND uc2.status = 'get') as is_owned
+               EXISTS(SELECT 1 FROM user_volumes_collection uc2 WHERE uc2.collection_id = c.id AND uc2.user_id = %s AND uc2.status = 'get') as is_owned
         FROM collections c
         LEFT JOIN volumes v ON c.volume_id = v.id
         LEFT JOIN publishers p ON c.publisher = p.id
-        LEFT JOIN user_volumes_collection uc ON uc.collection_id = c.id AND uc.user_id = ?
-        WHERE c.id = ?
+        LEFT JOIN user_volumes_collection uc ON uc.collection_id = c.id AND uc.user_id = %s
+        WHERE c.id = %s
         """,
         [user_id, user_id, collection_id]
     )
@@ -522,7 +522,7 @@ async def get_collection_detail(collection_id: int, request: Request):
         LEFT JOIN issues i ON ci.issue_id = i.id
         LEFT JOIN manga_chapters mc ON ci.manga_chapter_id = mc.id
         LEFT JOIN volumes v ON COALESCE(i.volume_id, mc.volume_id) = v.id
-        WHERE ci.collection_id = ?
+        WHERE ci.collection_id = %s
         ORDER BY ci.order_num
         """,
         [collection_id]
@@ -536,7 +536,7 @@ async def get_collection_detail(collection_id: int, request: Request):
             SELECT DISTINCT t.id, t.cv_id, t.name, t.ua_name, COALESCE(t.type, 'theme') as type
             FROM collection_themes ct
             JOIN themes t ON t.id = ct.theme_id
-            WHERE ct.collection_id = ?
+            WHERE ct.collection_id = %s
         ) sub
         ORDER BY
           CASE type
@@ -551,7 +551,7 @@ async def get_collection_detail(collection_id: int, request: Request):
 
     # 4. Пряма кількість зв'язків у collection_issues (незалежно від типу — issues або manga_chapters)
     raw_links_count = db.get_one(
-        "SELECT COUNT(*) as cnt FROM collection_issues WHERE collection_id = ?",
+        "SELECT COUNT(*) as cnt FROM collection_issues WHERE collection_id = %s",
         [collection_id]
     )["cnt"]
 
@@ -562,7 +562,7 @@ async def get_collection_detail(collection_id: int, request: Request):
             """
             SELECT id, name, issue_number, image
             FROM collections
-            WHERE volume_id = ?
+            WHERE volume_id = %s
             ORDER BY CAST(issue_number AS FLOAT) ASC, issue_number ASC
             """,
             [collection['volume_id']]
@@ -597,7 +597,7 @@ async def get_collection_candidates(
         clauses_issues.append("i.volume_id = ?")
         params_issues.append(volume_id)
     if hikka_slug:
-        clauses_issues.append("ULOWER(v.hikka_slug) LIKE ?")
+        clauses_issues.append("ULOWER(v.hikka_slug) LIKE %s")
         params_issues.append(f"%{hikka_slug.lower()}%")
     if cv_vol_id:
         clauses_issues.append("v.cv_id = ?")
@@ -612,7 +612,7 @@ async def get_collection_candidates(
             if words:
                 name_parts = []
                 for word in words:
-                    name_parts.append("(ULOWER(i.name) LIKE ? OR ULOWER(i.name_uk) LIKE ?)")
+                    name_parts.append("(ULOWER(i.name) LIKE %s OR ULOWER(i.name_uk) LIKE %s)")
                     params_issues.extend([f"%{word.lower()}%", f"%{word.lower()}%"])
                 clauses_issues.append(f"({' AND '.join(name_parts)})")
                 
@@ -625,7 +625,7 @@ async def get_collection_candidates(
             if words:
                 vol_parts = []
                 for word in words:
-                    vol_parts.append("(ULOWER(v.name) LIKE ? OR ULOWER(v.name_uk) LIKE ?)")
+                    vol_parts.append("(ULOWER(v.name) LIKE %s OR ULOWER(v.name_uk) LIKE %s)")
                     params_issues.extend([f"%{word.lower()}%", f"%{word.lower()}%"])
                 clauses_issues.append(f"({' AND '.join(vol_parts)})")
                 
@@ -650,7 +650,7 @@ async def get_collection_candidates(
         LEFT JOIN volumes v ON i.volume_id = v.id
         {where_issues}
         ORDER BY i.volume_id DESC, CAST(i.issue_number AS FLOAT) ASC, i.issue_number ASC
-        LIMIT ?
+        LIMIT %s
         """,
         params_issues + [limit]
     )
@@ -666,7 +666,7 @@ async def get_collection_candidates(
             clauses_manga.append("mc.volume_id = ?")
             params_manga.append(volume_id)
         if hikka_slug:
-            clauses_manga.append("ULOWER(v.hikka_slug) LIKE ?")
+            clauses_manga.append("ULOWER(v.hikka_slug) LIKE %s")
             params_manga.append(f"%{hikka_slug.lower()}%")
         if cv_vol_id:
             clauses_manga.append("v.cv_id = ?")
@@ -681,7 +681,7 @@ async def get_collection_candidates(
                 if words:
                     name_parts = []
                     for word in words:
-                        name_parts.append("(ULOWER(mc.name) LIKE ? OR ULOWER(mc.name_uk) LIKE ?)")
+                        name_parts.append("(ULOWER(mc.name) LIKE %s OR ULOWER(mc.name_uk) LIKE %s)")
                         params_manga.extend([f"%{word.lower()}%", f"%{word.lower()}%"])
                     clauses_manga.append(f"({' AND '.join(name_parts)})")
                     
@@ -694,7 +694,7 @@ async def get_collection_candidates(
                 if words:
                     vol_parts = []
                     for word in words:
-                        vol_parts.append("(ULOWER(v.name) LIKE ? OR ULOWER(v.name_uk) LIKE ?)")
+                        vol_parts.append("(ULOWER(v.name) LIKE %s OR ULOWER(v.name_uk) LIKE %s)")
                         params_manga.extend([f"%{word.lower()}%", f"%{word.lower()}%"])
                     clauses_manga.append(f"({' AND '.join(vol_parts)})")
                     
@@ -719,7 +719,7 @@ async def get_collection_candidates(
             LEFT JOIN volumes v ON mc.volume_id = v.id
             {where_manga}
             ORDER BY mc.volume_id DESC, CAST(mc.chapter_number AS FLOAT) ASC, mc.chapter_number ASC
-            LIMIT ?
+            LIMIT %s
             """,
             params_manga + [limit]
         )
@@ -729,4 +729,3 @@ async def get_collection_candidates(
         "is_manga": is_manga,
         "data": [dict(r) for r in results]
     }
-

@@ -62,7 +62,7 @@ async def update_profile(req: ProfileUpdateRequest, request: Request, response: 
         raise HTTPException(status_code=401, detail="Not logged in")
     
     db = get_db()
-    user = db.get_one("SELECT * FROM users WHERE username = ?", [old_username])
+    user = db.get_one("SELECT * FROM users WHERE username = %s", [old_username])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
@@ -77,11 +77,11 @@ async def update_profile(req: ProfileUpdateRequest, request: Request, response: 
             raise HTTPException(status_code=400, detail="Логін має бути до 10 символів і містити лише літери, цифри та крапку")
             
         if new_username != old_username:
-            existing = db.get_one("SELECT id FROM users WHERE username = ?", [new_username])
+            existing = db.get_one("SELECT id FROM users WHERE username = %s", [new_username])
             if existing:
                 raise HTTPException(status_code=400, detail="Користувач з таким логіном вже існує")
             
-            db.execute("UPDATE users SET username = ? WHERE id = ?", [new_username, user["id"]])
+            db.execute("UPDATE users SET username = %s WHERE id = %s", [new_username, user["id"]])
             updated_username = new_username
             
             # Перейменовуємо аватари
@@ -106,10 +106,10 @@ async def update_profile(req: ProfileUpdateRequest, request: Request, response: 
         if not validate_field(new_nickname):
             raise HTTPException(status_code=400, detail="Нікнейм має бути до 10 символів і містити лише літери, цифри та крапку")
             
-        db.execute("UPDATE users SET nickname = ? WHERE id = ?", [new_nickname, user["id"]])
+        db.execute("UPDATE users SET nickname = %s WHERE id = %s", [new_nickname, user["id"]])
 
     # Отримуємо свіжі дані
-    updated_user = db.get_one("SELECT username, nickname, role FROM users WHERE id = ?", [user["id"]])
+    updated_user = db.get_one("SELECT username, nickname, role FROM users WHERE id = %s", [user["id"]])
     return {"status": "ok", "username": updated_user["username"], "nickname": updated_user["nickname"]}
 
 class LoginRequest(BaseModel):
@@ -150,30 +150,30 @@ async def register(req: RegisterRequest):
         raise HTTPException(status_code=400, detail="Нікнейм має бути до 10 символів і містити лише літери, цифри та крапку")
         
     # Check if user exists
-    existing = db.get_one("SELECT id FROM users WHERE username = ?", [username])
+    existing = db.get_one("SELECT id FROM users WHERE username = %s", [username])
     if existing:
         raise HTTPException(status_code=400, detail="Користувач з таким ім'ям вже існує")
     
     pwd_hash = hash_password(req.password)
-    db.execute("INSERT INTO users (username, nickname, password_hash, role) VALUES (?, ?, ?, 'viewer')", [username, nickname, pwd_hash])
+    db.execute("INSERT INTO users (username, nickname, password_hash, role) VALUES (%s, %s, %s, 'viewer')", [username, nickname, pwd_hash])
     return {"status": "ok"}
 
 @router.post("/login")
 async def login(req: LoginRequest, response: Response):
     db = get_db()
-    user = db.get_one("SELECT * FROM users WHERE username = ?", [req.username])
+    user = db.get_one("SELECT * FROM users WHERE username = %s", [req.username])
     if not user or not verify_password(req.password, user['password_hash']):
         raise HTTPException(status_code=401, detail="Невірне ім'я користувача або пароль")
     
     # Update timestamps
-    db.execute("UPDATE users SET last_login = CURRENT_TIMESTAMP, last_activity = CURRENT_TIMESTAMP WHERE username = ?", [user['username']])
+    db.execute("UPDATE users SET last_login = CURRENT_TIMESTAMP, last_activity = CURRENT_TIMESTAMP WHERE username = %s", [user['username']])
     
     # Store in session
     import urllib.parse
     response.set_cookie(key="username", value=urllib.parse.quote(user['username']), httponly=True)
     response.set_cookie(key="role", value=user['role'], httponly=True)
     
-    pref = db.get_one("SELECT site_lang FROM user_preferences WHERE user_id = ?", [user['id']])
+    pref = db.get_one("SELECT site_lang FROM user_preferences WHERE user_id = %s", [user['id']])
     site_lang = pref['site_lang'] if pref else 'uk'
     
     return {
@@ -192,14 +192,14 @@ async def me(request: Request):
         return {"logged_in": False}
     
     db = get_db()
-    db.execute("UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE username = ?", [username])
+    db.execute("UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE username = %s", [username])
     
-    user = db.get_one("SELECT id, nickname FROM users WHERE username = ?", [username])
+    user = db.get_one("SELECT id, nickname FROM users WHERE username = %s", [username])
     site_lang = 'uk'
     nickname = username
     if user:
         nickname = user['nickname'] or username
-        pref = db.get_one("SELECT site_lang FROM user_preferences WHERE user_id = ?", [user['id']])
+        pref = db.get_one("SELECT site_lang FROM user_preferences WHERE user_id = %s", [user['id']])
         if pref:
             site_lang = pref['site_lang']
             
@@ -218,7 +218,7 @@ async def change_password(req: PasswordChangeRequest, request: Request):
         raise HTTPException(status_code=401, detail="Not logged in")
         
     db = get_db()
-    user = db.get_one("SELECT id, password_hash FROM users WHERE username = ?", [username])
+    user = db.get_one("SELECT id, password_hash FROM users WHERE username = %s", [username])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
@@ -226,7 +226,7 @@ async def change_password(req: PasswordChangeRequest, request: Request):
         raise HTTPException(status_code=400, detail="Невірний старий пароль")
         
     new_hash = hash_password(req.new_password)
-    db.execute("UPDATE users SET password_hash = ? WHERE id = ?", [new_hash, user["id"]])
+    db.execute("UPDATE users SET password_hash = %s WHERE id = %s", [new_hash, user["id"]])
     return {"status": "ok", "message": "Пароль успішно змінено"}
 
 @router.post("/logout")
@@ -245,11 +245,11 @@ async def get_preferences(request: Request):
         raise HTTPException(status_code=401, detail="Not logged in")
     
     db = get_db()
-    user = db.get_one("SELECT id FROM users WHERE username = ?", [username])
+    user = db.get_one("SELECT id FROM users WHERE username = %s", [username])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
-    pref = db.get_one("SELECT site_lang FROM user_preferences WHERE user_id = ?", [user["id"]])
+    pref = db.get_one("SELECT site_lang FROM user_preferences WHERE user_id = %s", [user["id"]])
     if not pref:
         return {"site_lang": "uk"}
     return {"site_lang": pref["site_lang"]}
@@ -264,13 +264,13 @@ async def update_preferences(req: PreferencesUpdateRequest, request: Request):
         raise HTTPException(status_code=400, detail="Invalid language")
         
     db = get_db()
-    user = db.get_one("SELECT id FROM users WHERE username = ?", [username])
+    user = db.get_one("SELECT id FROM users WHERE username = %s", [username])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
     db.execute("""
         INSERT INTO user_preferences (user_id, site_lang, updated_at)
-        VALUES (?, ?, CURRENT_TIMESTAMP)
+        VALUES (%s, %s, CURRENT_TIMESTAMP)
         ON CONFLICT(user_id) DO UPDATE SET
             site_lang = excluded.site_lang,
             updated_at = CURRENT_TIMESTAMP

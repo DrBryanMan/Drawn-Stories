@@ -15,13 +15,13 @@ async def get_themes(
     params = []
 
     if search:
-        where_parts.append("(ULOWER(t.name) LIKE ? OR ULOWER(t.ua_name) LIKE ?)")
+        where_parts.append("(ULOWER(t.name) LIKE %s OR ULOWER(t.ua_name) LIKE %s)")
         params.extend([f"%{search.lower()}%", f"%{search.lower()}%"])
 
     if ids:
         id_list = [id.strip() for id in ids.split(",") if id.strip().isdigit()]
         if id_list:
-            placeholders = ",".join(["?"] * len(id_list))
+            placeholders = ",".join(["%s"] * len(id_list))
             where_parts.append(f"t.id IN ({placeholders})")
             params.extend(id_list)
 
@@ -42,7 +42,7 @@ async def get_themes(
           END,
           volume_count DESC,
           COALESCE(t.ua_name, t.name) ASC
-        LIMIT ?
+        LIMIT %s
         """,
         params + [limit],
     )

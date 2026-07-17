@@ -7,7 +7,7 @@ router = APIRouter(prefix="/api/user/favorites", tags=["favorites"])
 async def get_user_favorites(username: str):
     db = get_db()
     
-    user = db.get_one("SELECT id FROM users WHERE username = ?", [username])
+    user = db.get_one("SELECT id FROM users WHERE username = %s", [username])
     if not user:
         raise HTTPException(status_code=404, detail="Користувача не знайдено")
     
@@ -17,7 +17,7 @@ async def get_user_favorites(username: str):
     favorites = db.get_all("""
         SELECT content_type, content_id 
         FROM user_favorites 
-        WHERE user_id = ? 
+        WHERE user_id = %s 
         ORDER BY created_at DESC
     """, [user_id])
     
@@ -40,7 +40,7 @@ async def get_user_favorites(username: str):
         if not ids:
             continue
             
-        placeholders = ",".join(["?"] * len(ids))
+        placeholders = ",".join(["%s"] * len(ids))
         
         if ctype == "volume":
             data = db.get_all(f"""

@@ -123,15 +123,15 @@ def parse_issue_html(html):
 
 # ── Database entity helpers ──────────────────────────
 def get_or_create_entity(db, table_name, cv_id, name, cv_slug):
-    row = db.get_one(f"SELECT id FROM {table_name} WHERE cv_id = ?", [cv_id])
+    row = db.get_one(f"SELECT id FROM {table_name} WHERE cv_id = %s", [cv_id])
     if row:
         return row['id']
     
     db.execute(
-        f"INSERT INTO {table_name} (cv_id, name, cv_slug) VALUES (?, ?, ?)",
+        f"INSERT INTO {table_name} (cv_id, name, cv_slug) VALUES (%s, %s, %s)",
         [cv_id, name, cv_slug]
     )
-    new_row = db.get_one(f"SELECT id FROM {table_name} WHERE cv_id = ?", [cv_id])
+    new_row = db.get_one(f"SELECT id FROM {table_name} WHERE cv_id = %s", [cv_id])
     return new_row['id']
 
 # ── API character parser helpers ─────────────────────
@@ -159,7 +159,7 @@ def normalize_aliases(raw):
     return json.dumps(lines, ensure_ascii=False) if lines else None
 
 def get_or_create_character(db, scraper, cv_id, default_name, default_cv_slug, log_callback):
-    row = db.get_one("SELECT id FROM characters WHERE cv_id = ?", [cv_id])
+    row = db.get_one("SELECT id FROM characters WHERE cv_id = %s", [cv_id])
     if row:
         return row['id']
         
@@ -194,12 +194,12 @@ def get_or_create_character(db, scraper, cv_id, default_name, default_cv_slug, l
                 if pub_data and pub_data.get("id"):
                     pub_cv_id = pub_data["id"]
                     pub_name = pub_data.get("name")
-                    pub_row = db.get_one("SELECT id FROM publishers WHERE cv_id = ?", [pub_cv_id])
+                    pub_row = db.get_one("SELECT id FROM publishers WHERE cv_id = %s", [pub_cv_id])
                     if pub_row:
                         publisher_id = pub_row["id"]
                     else:
-                        db.execute("INSERT INTO publishers (cv_id, name) VALUES (?, ?)", [pub_cv_id, pub_name])
-                        new_pub = db.get_one("SELECT id FROM publishers WHERE cv_id = ?", [pub_cv_id])
+                        db.execute("INSERT INTO publishers (cv_id, name) VALUES (%s, %s)", [pub_cv_id, pub_name])
+                        new_pub = db.get_one("SELECT id FROM publishers WHERE cv_id = %s", [pub_cv_id])
                         publisher_id = new_pub["id"]
                         log_callback(f"Створено видавництво для персонажа: {pub_name} (CV ID: {pub_cv_id})")
                 
@@ -208,7 +208,7 @@ def get_or_create_character(db, scraper, cv_id, default_name, default_cv_slug, l
                 first_app_data = res.get("first_appeared_in_issue")
                 if first_app_data and first_app_data.get("id"):
                     fa_cv_id = first_app_data["id"]
-                    issue_row = db.get_one("SELECT id FROM issues WHERE cv_id = ?", [fa_cv_id])
+                    issue_row = db.get_one("SELECT id FROM issues WHERE cv_id = %s", [fa_cv_id])
                     if issue_row:
                         first_app_id = issue_row["id"]
                 
@@ -216,14 +216,14 @@ def get_or_create_character(db, scraper, cv_id, default_name, default_cv_slug, l
                     """
                     INSERT INTO characters (
                         cv_id, name, real_name, cv_slug, image, aliases, birth, death, gender, origin, first_appearance, publisher
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """,
                     [
                         cv_id, char_name, real_name, cv_slug, image_path, aliases, birth, death, gender, origin, first_app_id, publisher_id
                     ]
                 )
                 
-                new_char = db.get_one("SELECT id FROM characters WHERE cv_id = ?", [cv_id])
+                new_char = db.get_one("SELECT id FROM characters WHERE cv_id = %s", [cv_id])
                 log_callback(f"Персонажа {char_name} успішно імпортовано з ComicVine API!")
                 return new_char["id"]
             else:
@@ -236,16 +236,16 @@ def get_or_create_character(db, scraper, cv_id, default_name, default_cv_slug, l
     # Fallback
     log_callback(f"Створюємо персонажа {default_name} за спрощеною схемою...")
     db.execute(
-        "INSERT INTO characters (cv_id, name, cv_slug) VALUES (?, ?, ?)",
+        "INSERT INTO characters (cv_id, name, cv_slug) VALUES (%s, %s, %s)",
         [cv_id, default_name, default_cv_slug]
     )
-    new_char = db.get_one("SELECT id FROM characters WHERE cv_id = ?", [cv_id])
+    new_char = db.get_one("SELECT id FROM characters WHERE cv_id = %s", [cv_id])
     return new_char["id"]
 
 # ── Scraper services ─────────────────────────────────
 def scrape_issue_appearances_logic(db, scraper, issue_id, log_callback):
     # 1. Get issue from DB
-    issue = db.get_one("SELECT cv_id, cv_slug, name, issue_number FROM issues WHERE id = ?", [issue_id])
+    issue = db.get_one("SELECT cv_id, cv_slug, name, issue_number FROM issues WHERE id = %s", [issue_id])
     if not issue:
         log_callback(f"Помилка: Випуск з ID {issue_id} не знайдено в БД.")
         return False
@@ -275,85 +275,85 @@ def scrape_issue_appearances_logic(db, scraper, issue_id, log_callback):
     if not appearances:
         log_callback("Попередження: Появ на сторінці не знайдено.")
         # Clean up existing relations since there are none now
-        db.execute("DELETE FROM issue_characters WHERE issue_id = ?", [issue_id])
-        db.execute("DELETE FROM issue_persons WHERE issue_id = ?", [issue_id])
-        db.execute("DELETE FROM issue_teams WHERE issue_id = ?", [issue_id])
-        db.execute("DELETE FROM issue_locations WHERE issue_id = ?", [issue_id])
-        db.execute("DELETE FROM issue_concepts WHERE issue_id = ?", [issue_id])
-        db.execute("DELETE FROM issue_objects WHERE issue_id = ?", [issue_id])
+        db.execute("DELETE FROM issue_characters WHERE issue_id = %s", [issue_id])
+        db.execute("DELETE FROM issue_persons WHERE issue_id = %s", [issue_id])
+        db.execute("DELETE FROM issue_teams WHERE issue_id = %s", [issue_id])
+        db.execute("DELETE FROM issue_locations WHERE issue_id = %s", [issue_id])
+        db.execute("DELETE FROM issue_concepts WHERE issue_id = %s", [issue_id])
+        db.execute("DELETE FROM issue_objects WHERE issue_id = %s", [issue_id])
         return True
 
     # 5. Process and insert each type
     totals = {}
     
     # Characters
-    db.execute("DELETE FROM issue_characters WHERE issue_id = ?", [issue_id])
+    db.execute("DELETE FROM issue_characters WHERE issue_id = %s", [issue_id])
     added_chars = 0
     for char in appearances['characters']:
         try:
             char_id = get_or_create_character(db, scraper, char['cv_id'], char['name'], char['cv_slug'], log_callback)
-            db.execute("INSERT OR IGNORE INTO issue_characters (issue_id, character_id, story_num) VALUES (?, ?, 0)", [issue_id, char_id])
+            db.execute("INSERT INTO issue_characters (issue_id, character_id, story_num) VALUES (%s, %s, 0) ON CONFLICT DO NOTHING", [issue_id, char_id])
             added_chars += 1
         except Exception as e:
             log_callback(f"Помилка збереження персонажа {char['name']}: {e}")
     totals['characters'] = added_chars
 
     # Creators (persons)
-    db.execute("DELETE FROM issue_persons WHERE issue_id = ?", [issue_id])
+    db.execute("DELETE FROM issue_persons WHERE issue_id = %s", [issue_id])
     added_persons = 0
     for creator in appearances['creators']:
         try:
             person_id = get_or_create_entity(db, 'persons', creator['cv_id'], creator['name'], creator['cv_slug'])
             for role in creator['roles']:
-                db.execute("INSERT OR IGNORE INTO issue_persons (issue_id, person_id, role) VALUES (?, ?, ?)", [issue_id, person_id, role])
+                db.execute("INSERT INTO issue_persons (issue_id, person_id, role) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING", [issue_id, person_id, role])
                 added_persons += 1
         except Exception as e:
             log_callback(f"Помилка збереження творця {creator['name']}: {e}")
     totals['creators'] = added_persons
 
     # Teams
-    db.execute("DELETE FROM issue_teams WHERE issue_id = ?", [issue_id])
+    db.execute("DELETE FROM issue_teams WHERE issue_id = %s", [issue_id])
     added_teams = 0
     for team in appearances['teams']:
         try:
             team_id = get_or_create_entity(db, 'teams', team['cv_id'], team['name'], team['cv_slug'])
-            db.execute("INSERT OR IGNORE INTO issue_teams (issue_id, team_id, story_num) VALUES (?, ?, 0)", [issue_id, team_id])
+            db.execute("INSERT INTO issue_teams (issue_id, team_id, story_num) VALUES (%s, %s, 0) ON CONFLICT DO NOTHING", [issue_id, team_id])
             added_teams += 1
         except Exception as e:
             log_callback(f"Помилка збереження команди {team['name']}: {e}")
     totals['teams'] = added_teams
 
     # Locations
-    db.execute("DELETE FROM issue_locations WHERE issue_id = ?", [issue_id])
+    db.execute("DELETE FROM issue_locations WHERE issue_id = %s", [issue_id])
     added_locations = 0
     for loc in appearances['locations']:
         try:
             loc_id = get_or_create_entity(db, 'locations', loc['cv_id'], loc['name'], loc['cv_slug'])
-            db.execute("INSERT OR IGNORE INTO issue_locations (issue_id, location_id, story_num) VALUES (?, ?, 0)", [issue_id, loc_id])
+            db.execute("INSERT INTO issue_locations (issue_id, location_id, story_num) VALUES (%s, %s, 0) ON CONFLICT DO NOTHING", [issue_id, loc_id])
             added_locations += 1
         except Exception as e:
             log_callback(f"Помилка збереження локації {loc['name']}: {e}")
     totals['locations'] = added_locations
 
     # Concepts
-    db.execute("DELETE FROM issue_concepts WHERE issue_id = ?", [issue_id])
+    db.execute("DELETE FROM issue_concepts WHERE issue_id = %s", [issue_id])
     added_concepts = 0
     for conc in appearances['concepts']:
         try:
             conc_id = get_or_create_entity(db, 'concepts', conc['cv_id'], conc['name'], conc['cv_slug'])
-            db.execute("INSERT OR IGNORE INTO issue_concepts (issue_id, concept_id, story_num) VALUES (?, ?, 0)", [issue_id, conc_id])
+            db.execute("INSERT INTO issue_concepts (issue_id, concept_id, story_num) VALUES (%s, %s, 0) ON CONFLICT DO NOTHING", [issue_id, conc_id])
             added_concepts += 1
         except Exception as e:
             log_callback(f"Помилка збереження концепту {conc['name']}: {e}")
     totals['concepts'] = added_concepts
 
     # Objects
-    db.execute("DELETE FROM issue_objects WHERE issue_id = ?", [issue_id])
+    db.execute("DELETE FROM issue_objects WHERE issue_id = %s", [issue_id])
     added_objects = 0
     for obj in appearances['objects']:
         try:
             obj_id = get_or_create_entity(db, 'objects', obj['cv_id'], obj['name'], obj['cv_slug'])
-            db.execute("INSERT OR IGNORE INTO issue_objects (issue_id, object_id, story_num) VALUES (?, ?, 0)", [issue_id, obj_id])
+            db.execute("INSERT INTO issue_objects (issue_id, object_id, story_num) VALUES (%s, %s, 0) ON CONFLICT DO NOTHING", [issue_id, obj_id])
             added_objects += 1
         except Exception as e:
             log_callback(f"Помилка збереження об'єкта {obj['name']}: {e}")
@@ -364,7 +364,7 @@ def scrape_issue_appearances_logic(db, scraper, issue_id, log_callback):
 
 def scrape_volume_appearances_logic(db, scraper, volume_id, log_callback):
     # 1. Get volume details
-    vol = db.get_one("SELECT name, name_uk FROM volumes WHERE id = ?", [volume_id])
+    vol = db.get_one("SELECT name, name_uk FROM volumes WHERE id = %s", [volume_id])
     if not vol:
         log_callback(f"Помилка: Том з ID {volume_id} не знайдено.")
         return False
@@ -374,7 +374,7 @@ def scrape_volume_appearances_logic(db, scraper, volume_id, log_callback):
     
     # 2. Get all issues of the volume
     issues = db.get_all(
-        "SELECT id, issue_number, name FROM issues WHERE volume_id = ? ORDER BY CAST(issue_number AS REAL) ASC, issue_number ASC",
+        "SELECT id, issue_number, name FROM issues WHERE volume_id = %s ORDER BY CAST(issue_number AS REAL) ASC, issue_number ASC",
         [volume_id]
     )
     
@@ -412,7 +412,7 @@ def scrape_manga_characters_logic(db, volume_id, log_callback):
     import time
 
     # 1. Отримуємо дані тому
-    vol = db.get_one("SELECT name, name_uk, mal_id FROM volumes WHERE id = ?", [volume_id])
+    vol = db.get_one("SELECT name, name_uk, mal_id FROM volumes WHERE id = %s", [volume_id])
     if not vol:
         log_callback(f"Помилка: Том з ID {volume_id} не знайдено.")
         return False
@@ -454,7 +454,7 @@ def scrape_manga_characters_logic(db, volume_id, log_callback):
     characters_list = res_data.get("data", [])
     if not characters_list:
         log_callback("Попередження: Не знайдено персонажів для цієї манґи в MAL.")
-        db.conn.execute("DELETE FROM volume_characters WHERE volume_id = ?", [volume_id])
+        db.conn.execute("DELETE FROM volume_characters WHERE volume_id = %s", [volume_id])
         db.conn.commit()
         return True
 
@@ -464,7 +464,7 @@ def scrape_manga_characters_logic(db, volume_id, log_callback):
         db.conn.execute("BEGIN TRANSACTION")
         
         # Видаляємо існуючі зв'язки для цього тому
-        db.conn.execute("DELETE FROM volume_characters WHERE volume_id = ?", [volume_id])
+        db.conn.execute("DELETE FROM volume_characters WHERE volume_id = %s", [volume_id])
         
         added_count = 0
         
@@ -518,7 +518,7 @@ def scrape_manga_characters_logic(db, volume_id, log_callback):
                     log_callback(f"Помилка запиту до Hikka API для MAL ID {mal_char_id}: {ex}")
 
             # Шукаємо персонажа в БД
-            char_row = db.get_one("SELECT id, name FROM characters WHERE mal_id = ? LIMIT 1", [mal_char_id])
+            char_row = db.get_one("SELECT id, name FROM characters WHERE mal_id = %s LIMIT 1", [mal_char_id])
             
             if char_row:
                 char_db_id = char_row["id"]
@@ -555,7 +555,7 @@ def scrape_manga_characters_logic(db, volume_id, log_callback):
                 if updates:
                     params.append(char_db_id)
                     db.conn.execute(
-                        f"UPDATE characters SET {', '.join(updates)} WHERE id = ?",
+                        f"UPDATE characters SET {', '.join(updates)} WHERE id = %s",
                         params
                     )
                     log_callback(f"Оновлено персонажа '{char_name}' в БД (ID: {char_db_id}).")
@@ -566,18 +566,19 @@ def scrape_manga_characters_logic(db, volume_id, log_callback):
                 cursor = db.conn.execute(
                     """
                     INSERT INTO characters (name, mal_id, image, hikka_slug, name_native, name_uk)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    RETURNING id
                     """,
                     [char_name, mal_char_id, image_url, hikka_slug, name_native, name_uk]
                 )
-                char_db_id = cursor.lastrowid
+                char_db_id = cursor.fetchone()["id"]
                 log_callback(f"Створено нового персонажа '{char_name}' (MAL ID: {mal_char_id}) в БД (ID: {char_db_id}).")
             
             # Зв'язуємо з томом
             db.conn.execute(
                 """
-                INSERT OR IGNORE INTO volume_characters (volume_id, character_id, role)
-                VALUES (?, ?, ?)
+                INSERT INTO volume_characters (volume_id, character_id, role)
+                VALUES (%s, %s, %s) ON CONFLICT DO NOTHING
                 """,
                 [volume_id, char_db_id, role]
             )

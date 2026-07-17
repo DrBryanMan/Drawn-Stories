@@ -67,6 +67,16 @@
   width: 100%;
 }
 
+.volume-published-uk-block .synopsis-title {
+  background: linear-gradient(to bottom, #0057b7 40%, #d1d800 60%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  font-weight: 900;
+  display: inline-block;
+}
+
 .volume-hero-aside .synopsis-header {
   border-bottom: 1px solid var(--border-s);
   margin-bottom: 12px;
@@ -434,11 +444,179 @@
 
 .volume-ratings {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
   border: 1px solid var(--border-s);
   background: var(--bg-card);
   padding: .2em;
   border-radius: var(--r);
+  margin-top: 12px;
+}
+
+/* User interaction rating widget & read progress */
+.user-interaction-block {
+  border: 1px solid var(--border-s);
+  border-radius: var(--r);
+  background: var(--bg-card);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 12px;
+  width: 100%;
+}
+
+.interactive-rating-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.interactive-rating-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.star-rating-widget {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.star-container {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.star-half {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  z-index: 2;
+}
+
+:root {
+  --gold: #f59e0b; /* Bright golden yellow */
+}
+
+.star-left {
+  left: 0;
+}
+
+.star-right {
+  right: 0;
+}
+
+.star-svg {
+  width: 100%;
+  height: 100%;
+  color: var(--border);
+  transition: all 0.2s ease;
+}
+
+.star-svg.filled {
+  color: #ffc107 !important; /* Bright yellow */
+  fill: #ffc107 !important;
+}
+
+.star-svg.half-filled {
+  color: #ffc107 !important;
+  fill: url(#half-fill-gradient) !important;
+}
+
+.star-rating-widget svg.half-filled {
+  /* Dynamic gradient styling via clip-path/inline SVG mask is handled by SVG rendering, 
+     but we can also use a beautiful background overlay or partial mask in CSS. 
+     Alternatively, a clean CSS linear-gradient fill on SVG works in modern browsers when using fill: url() */
+}
+
+.btn-clear-rating {
+  border: none;
+  background: none;
+  color: #ef4444;
+  font-size: 14px;
+  cursor: pointer;
+  margin-left: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  transition: opacity 0.2s;
+}
+
+.btn-clear-rating:hover {
+  opacity: 0.8;
+}
+
+/* Read progress section */
+.read-progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--border-s);
+  padding-top: 12px;
+}
+
+.progress-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.progress-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-input {
+  width: 60px;
+  height: 32px;
+  border: 1px solid var(--border-s);
+  border-radius: var(--r-s);
+  padding: 0 8px;
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  text-align: center;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.progress-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.progress-slash, .progress-total {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.progress-save-btn {
+  margin-left: auto;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border-s);
+  border-radius: var(--r-s);
+  background: var(--bg-card);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--t);
+}
+
+.progress-save-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+  color: var(--accent);
 }
 
 .rating-item {

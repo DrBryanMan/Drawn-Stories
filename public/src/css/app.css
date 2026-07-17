@@ -35,6 +35,7 @@
 @import url('views/event-detail.css');
 @import url('views/personnel.css');
 @import url('views/edits.css');
+@import url('views/editDetail.css');
 
 /* Адаптивність — усі @media блоки проєкту */
 @import url('responsive.css');

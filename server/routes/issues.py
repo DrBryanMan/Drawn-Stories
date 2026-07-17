@@ -12,7 +12,7 @@ def get_context_issue(db, issue_id):
         """
         SELECT id, issue_number, name, image
         FROM issues
-        WHERE id = ?
+        WHERE id = %s
         """,
         [issue_id],
     )
@@ -36,7 +36,7 @@ def get_issue_appearances(db, issue_id):
                ic.story_num, ic.status, ic.comment, ic.role, ic.team_id 
         FROM issue_characters ic 
         JOIN characters c ON ic.character_id = c.id 
-        WHERE ic.issue_id = ? 
+        WHERE ic.issue_id = %s 
         ORDER BY COALESCE(c.name_uk, c.name) ASC
         """,
         [issue_id]
@@ -46,7 +46,7 @@ def get_issue_appearances(db, issue_id):
         SELECT t.id, t.name, t.name_uk, t.cv_slug, it.story_num, it.status, it.comment 
         FROM issue_teams it 
         JOIN teams t ON it.team_id = t.id 
-        WHERE it.issue_id = ? 
+        WHERE it.issue_id = %s 
         ORDER BY COALESCE(t.name_uk, t.name) ASC
         """,
         [issue_id]
@@ -56,7 +56,7 @@ def get_issue_appearances(db, issue_id):
         SELECT l.id, l.name, l.name_uk, l.cv_slug, il.story_num, il.status, il.comment 
         FROM issue_locations il 
         JOIN locations l ON il.location_id = l.id 
-        WHERE il.issue_id = ? 
+        WHERE il.issue_id = %s 
         ORDER BY COALESCE(l.name_uk, l.name) ASC
         """,
         [issue_id]
@@ -66,7 +66,7 @@ def get_issue_appearances(db, issue_id):
         SELECT c.id, c.name, c.name_uk, c.cv_slug, ic.story_num, ic.status, ic.comment 
         FROM issue_concepts ic 
         JOIN concepts c ON ic.concept_id = c.id 
-        WHERE ic.issue_id = ? 
+        WHERE ic.issue_id = %s 
         ORDER BY COALESCE(c.name_uk, c.name) ASC
         """,
         [issue_id]
@@ -76,7 +76,7 @@ def get_issue_appearances(db, issue_id):
         SELECT o.id, o.name, o.name_uk, o.cv_slug, io.story_num, io.status, io.comment 
         FROM issue_objects io 
         JOIN objects o ON io.object_id = o.id 
-        WHERE io.issue_id = ? 
+        WHERE io.issue_id = %s 
         ORDER BY COALESCE(o.name_uk, o.name) ASC
         """,
         [issue_id]
@@ -103,7 +103,7 @@ async def search_appearance_entities(app_type: str, search: str = ""):
             SELECT id, name, real_name, name_uk, name_ro, real_name_uk, creators, cv_slug, image, 
                    portret_img, costume_img, portret_costume_img
             FROM characters 
-            WHERE name LIKE ? OR real_name LIKE ? OR name_uk LIKE ? OR name_ro LIKE ? OR real_name_uk LIKE ?
+            WHERE name LIKE %s OR real_name LIKE %s OR name_uk LIKE %s OR name_ro LIKE %s OR real_name_uk LIKE %s
             ORDER BY COALESCE(name_uk, name) ASC LIMIT 30
             """,
             [query, query, query, query, query]
@@ -113,7 +113,7 @@ async def search_appearance_entities(app_type: str, search: str = ""):
             f"""
             SELECT id, name, name_uk, cv_slug 
             FROM {app_type} 
-            WHERE name LIKE ? OR name_uk LIKE ?
+            WHERE name LIKE %s OR name_uk LIKE %s
             ORDER BY COALESCE(name_uk, name) ASC LIMIT 30
             """,
             [query, query]
@@ -141,7 +141,7 @@ async def get_issue_detail(issue_id: int):
         FROM issues i
         LEFT JOIN volumes v ON i.volume_id = v.id
         LEFT JOIN publishers p ON v.publisher = p.id
-        WHERE i.id = ?
+        WHERE i.id = %s
         """,
         [issue_id],
     )
@@ -160,7 +160,7 @@ async def get_issue_detail(issue_id: int):
         FROM collection_issues ci
         JOIN collections c ON ci.collection_id = c.id
         LEFT JOIN volumes v ON c.volume_id = v.id
-        WHERE ci.issue_id = ?
+        WHERE ci.issue_id = %s
         ORDER BY c.name ASC
         """,
         [issue_id],
@@ -179,7 +179,7 @@ async def get_issue_detail(issue_id: int):
             """
             SELECT id, issue_number, name, image
             FROM issues
-            WHERE volume_id = ?
+            WHERE volume_id = %s
             ORDER BY CAST(issue_number AS REAL) ASC, issue_number ASC
             """,
             [volume_id],
@@ -227,7 +227,7 @@ async def get_issue_detail(issue_id: int):
                ) AS next_issue_id
         FROM event_items ei
         JOIN events e ON e.id = ei.event_id
-        WHERE ei.item_id = ?
+        WHERE ei.item_id = %s
           AND ei.item_type = 'issue'
         ORDER BY ei.order_num ASC, e.name ASC
         """,
@@ -262,7 +262,7 @@ async def get_issue_detail(issue_id: int):
                ) AS next_issue_id
         FROM reading_order_issues roi
         JOIN reading_orders ro ON ro.id = roi.reading_order_id
-        WHERE roi.issue_id = ?
+        WHERE roi.issue_id = %s
         ORDER BY roi.order_num ASC, ro.name ASC
         """,
         [issue_id],
@@ -275,7 +275,7 @@ async def get_issue_detail(issue_id: int):
         """
         SELECT id, name_original, name_ua, plot, order_num
         FROM issue_stories
-        WHERE issue_id = ?
+        WHERE issue_id = %s
         ORDER BY order_num ASC, id ASC
         """,
         [issue_id],
@@ -288,7 +288,7 @@ async def get_issue_detail(issue_id: int):
                p.name, p.image, p.cv_slug
         FROM issue_persons ip
         JOIN persons p ON ip.person_id = p.id
-        WHERE ip.issue_id = ?
+        WHERE ip.issue_id = %s
         ORDER BY p.name ASC
         """,
         [issue_id],
@@ -327,7 +327,7 @@ async def get_issue_detail(issue_id: int):
         JOIN issues r ON ir.reprint_id = r.id
         JOIN volumes vr ON r.volume_id = vr.id
         LEFT JOIN issue_stories s ON s.issue_id = ir.original_id AND ir.story_num = s.order_num
-        WHERE ir.original_id = ? OR ir.reprint_id = ?
+        WHERE ir.original_id = %s OR ir.reprint_id = %s
         """,
         [issue_id, issue_id]
     )
@@ -351,7 +351,7 @@ async def get_issue_detail(issue_id: int):
             s = None
             if story_order > 0:
                 s = db.get_one(
-                    "SELECT id, name_original, name_ua, plot, order_num FROM issue_stories WHERE issue_id = ? AND order_num = ?",
+                    "SELECT id, name_original, name_ua, plot, order_num FROM issue_stories WHERE issue_id = %s AND order_num = %s",
                     [orig_id, story_order]
                 )
             
@@ -379,7 +379,7 @@ async def get_issue_detail(issue_id: int):
                            p.name, p.image, p.cv_slug
                     FROM issue_persons ip
                     JOIN persons p ON ip.person_id = p.id
-                    WHERE ip.issue_id = ? AND ip.story_id = ?
+                    WHERE ip.issue_id = %s AND ip.story_id = %s
                     """,
                     [orig_id, s["id"]]
                 )
@@ -421,7 +421,7 @@ async def get_issue_detail(issue_id: int):
                            p.name, p.image, p.cv_slug
                     FROM issue_persons ip
                     JOIN persons p ON ip.person_id = p.id
-                    WHERE ip.issue_id = ? AND ip.story_id IS NULL
+                    WHERE ip.issue_id = %s AND ip.story_id IS NULL
                     """,
                     [orig_id]
                 )
@@ -436,7 +436,7 @@ async def get_issue_detail(issue_id: int):
         else:
             # 2. Якщо історію взагалі не вказано (story_id IS NULL), завантажуємо всі історії та весь стаф оригіналу
             orig_stories = db.get_all(
-                "SELECT id, name_original, name_ua, plot, order_num FROM issue_stories WHERE issue_id = ? ORDER BY order_num ASC, id ASC",
+                "SELECT id, name_original, name_ua, plot, order_num FROM issue_stories WHERE issue_id = %s ORDER BY order_num ASC, id ASC",
                 [orig_id]
             )
             
@@ -463,7 +463,7 @@ async def get_issue_detail(issue_id: int):
                            p.name, p.image, p.cv_slug
                     FROM issue_persons ip
                     JOIN persons p ON ip.person_id = p.id
-                    WHERE ip.issue_id = ? AND ip.story_id IS NULL
+                    WHERE ip.issue_id = %s AND ip.story_id IS NULL
                     """,
                     [orig_id]
                 )
@@ -496,7 +496,7 @@ async def get_issue_detail(issue_id: int):
                                p.name, p.image, p.cv_slug
                         FROM issue_persons ip
                         JOIN persons p ON ip.person_id = p.id
-                        WHERE ip.issue_id = ? AND ip.story_id = ?
+                        WHERE ip.issue_id = %s AND ip.story_id = %s
                         """,
                         [orig_id, s["id"]]
                     )
@@ -515,7 +515,7 @@ async def get_issue_detail(issue_id: int):
                            p.name, p.image, p.cv_slug
                     FROM issue_persons ip
                     JOIN persons p ON ip.person_id = p.id
-                    WHERE ip.issue_id = ? AND ip.story_id IS NULL
+                    WHERE ip.issue_id = %s AND ip.story_id IS NULL
                     """,
                     [orig_id]
                 )
@@ -613,7 +613,7 @@ async def get_issues(
         clauses.append("i.volume_id = ?")
         params.append(volume_id)
     if hikka_slug:
-        clauses.append("ULOWER(v.hikka_slug) LIKE ?")
+        clauses.append("ULOWER(v.hikka_slug) LIKE %s")
         params.append(f"%{hikka_slug.lower()}%")
     if cv_vol_id:
         clauses.append("v.cv_id = ?")
@@ -628,7 +628,7 @@ async def get_issues(
             if words:
                 name_parts = []
                 for word in words:
-                    name_parts.append("ULOWER(i.name) LIKE ?")
+                    name_parts.append("ULOWER(i.name) LIKE %s")
                     params.append(f"%{word.lower()}%")
                 clauses.append(f"({' AND '.join(name_parts)})")
 
@@ -641,7 +641,7 @@ async def get_issues(
             if words:
                 vol_parts = []
                 for word in words:
-                    vol_parts.append("(ULOWER(v.name) LIKE ? OR ULOWER(v.name_uk) LIKE ?)")
+                    vol_parts.append("(ULOWER(v.name) LIKE %s OR ULOWER(v.name_uk) LIKE %s)")
                     params.extend([f"%{word.lower()}%", f"%{word.lower()}%"])
                 clauses.append(f"({' AND '.join(vol_parts)})")
 
@@ -659,7 +659,7 @@ async def get_issues(
         LEFT JOIN volumes v ON i.volume_id = v.id
         {where}
         ORDER BY COALESCE(v.name_uk, v.name) ASC, CAST(i.issue_number AS FLOAT) ASC, i.issue_number ASC
-        LIMIT ?
+        LIMIT %s
     """
     items = db.get_all(query, params + [limit])
     return {"data": items, "total": len(items)}
@@ -685,7 +685,7 @@ async def create_issue(data: dict):
             if value == "":
                 value = None
             columns.append(key)
-            placeholders.append("?")
+            placeholders.append("%s")
             params.append(value)
             
     if not columns:
@@ -710,7 +710,7 @@ async def update_issue(issue_id: int, data: dict, request: Request):
     db = get_db()
     
     # Check if issue exists
-    issue = db.get_one("SELECT id FROM issues WHERE id = ?", [issue_id])
+    issue = db.get_one("SELECT id FROM issues WHERE id = %s", [issue_id])
     if not issue:
         raise HTTPException(status_code=404, detail="Випуск не знайдено")
 
@@ -732,14 +732,14 @@ async def update_issue(issue_id: int, data: dict, request: Request):
     if fields:
         params.append(issue_id)
         db.execute(
-            f"UPDATE issues SET {', '.join(fields)} WHERE id = ?",
+            f"UPDATE issues SET {', '.join(fields)} WHERE id = %s",
             params
         )
         
     # Sync stories and staff if present in the payload
     if "stories" in data:
         incoming_stories = data["stories"]
-        current_stories = db.get_all("SELECT id FROM issue_stories WHERE issue_id = ?", [issue_id])
+        current_stories = db.get_all("SELECT id FROM issue_stories WHERE issue_id = %s", [issue_id])
         current_story_ids = {row["id"] for row in current_stories}
         
         incoming_story_ids = set()
@@ -770,8 +770,8 @@ async def update_issue(issue_id: int, data: dict, request: Request):
                 db.execute(
                     """
                     UPDATE issue_stories
-                    SET name_original = ?, name_ua = ?, order_num = ?
-                    WHERE id = ? AND issue_id = ?
+                    SET name_original = %s, name_ua = %s, order_num = %s
+                    WHERE id = %s AND issue_id = %s
                     """,
                     [name_orig, name_ua, order_num, s_id_int, issue_id]
                 )
@@ -781,7 +781,7 @@ async def update_issue(issue_id: int, data: dict, request: Request):
                 db.execute(
                     """
                     INSERT INTO issue_stories (issue_id, name_original, name_ua, order_num)
-                    VALUES (?, ?, ?, ?)
+                    VALUES (%s, %s, %s, %s)
                     """,
                     [issue_id, name_orig, name_ua, order_num]
                 )
@@ -790,16 +790,16 @@ async def update_issue(issue_id: int, data: dict, request: Request):
                 
         to_delete = current_story_ids - incoming_story_ids
         if to_delete:
-            placeholders = ",".join("?" for _ in to_delete)
+            placeholders = ",".join("%s" for _ in to_delete)
             db.execute(
-                f"DELETE FROM issue_stories WHERE issue_id = ? AND id IN ({placeholders})",
+                f"DELETE FROM issue_stories WHERE issue_id = %s AND id IN ({placeholders})",
                 [issue_id, *to_delete]
             )
 
         # Sync staff if present in the payload
         if "staff" in data:
             incoming_staff = data["staff"]
-            db.execute("DELETE FROM issue_persons WHERE issue_id = ?", [issue_id])
+            db.execute("DELETE FROM issue_persons WHERE issue_id = %s", [issue_id])
             for s in incoming_staff:
                 person_id = s.get("person_id")
                 role = s.get("role")
@@ -812,8 +812,8 @@ async def update_issue(issue_id: int, data: dict, request: Request):
                 if person_id and role:
                     db.execute(
                         """
-                        INSERT OR IGNORE INTO issue_persons (issue_id, person_id, role, story_id)
-                        VALUES (?, ?, ?, ?)
+                        INSERT INTO issue_persons (issue_id, person_id, role, story_id)
+                        VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING
                         """,
                         [issue_id, person_id, role, real_story_id]
                     )
@@ -827,7 +827,7 @@ async def update_issue(issue_id: int, data: dict, request: Request):
                 col_name = "character_id" if t == "characters" else f"{t[:-1]}_id"
                 
                 # Delete existing entries for this issue
-                db.execute(f"DELETE FROM {table_name} WHERE issue_id = ?", [issue_id])
+                db.execute(f"DELETE FROM {table_name} WHERE issue_id = %s", [issue_id])
                 
                 for item in incoming_list:
                     entity_id = item.get("id") or item.get(col_name)
@@ -843,16 +843,16 @@ async def update_issue(issue_id: int, data: dict, request: Request):
                         team_id = item.get("team_id")
                         db.execute(
                             f"""
-                            INSERT OR IGNORE INTO {table_name} (issue_id, character_id, story_num, status, comment, role, team_id)
-                            VALUES (?, ?, ?, ?, ?, ?, ?)
+                            INSERT INTO {table_name} (issue_id, character_id, story_num, status, comment, role, team_id)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING
                             """,
                             [issue_id, entity_id, story_num, status, comment, role, team_id]
                         )
                     else:
                         db.execute(
                             f"""
-                            INSERT OR IGNORE INTO {table_name} (issue_id, {col_name}, story_num, status, comment)
-                            VALUES (?, ?, ?, ?, ?)
+                            INSERT INTO {table_name} (issue_id, {col_name}, story_num, status, comment)
+                            VALUES (%s, %s, %s, %s, %s) ON CONFLICT DO NOTHING
                             """,
                             [issue_id, entity_id, story_num, status, comment]
                         )
@@ -866,12 +866,12 @@ async def delete_issue(issue_id: int, request: Request):
     db = get_db()
     
     # Check if issue exists
-    issue = db.get_one("SELECT id FROM issues WHERE id = ?", [issue_id])
+    issue = db.get_one("SELECT id FROM issues WHERE id = %s", [issue_id])
     if not issue:
         raise HTTPException(status_code=404, detail="Випуск не знайдено")
         
     # Delete issue
-    db.execute("DELETE FROM issues WHERE id = ?", [issue_id])
+    db.execute("DELETE FROM issues WHERE id = %s", [issue_id])
     
     return {"message": "Випуск успішно видалено"}
 
@@ -893,8 +893,8 @@ async def add_issue_reprint(issue_id: int, data: dict, request: Request):
         raise HTTPException(status_code=400, detail="Один з випусків має відповідати поточному випуску")
         
     # Перевіримо чи випуски існують
-    orig_issue = db.get_one("SELECT id FROM issues WHERE id = ?", [original_id])
-    repr_issue = db.get_one("SELECT id FROM issues WHERE id = ?", [reprint_id])
+    orig_issue = db.get_one("SELECT id FROM issues WHERE id = %s", [original_id])
+    repr_issue = db.get_one("SELECT id FROM issues WHERE id = %s", [reprint_id])
     if not orig_issue or not repr_issue:
         raise HTTPException(status_code=404, detail="Випуск не знайдено")
         
@@ -902,7 +902,7 @@ async def add_issue_reprint(issue_id: int, data: dict, request: Request):
     existing = db.get_one(
         """
         SELECT id FROM issue_reprints 
-        WHERE original_id = ? AND reprint_id = ? AND (story_num = ? OR (story_num IS NULL AND ? IS NULL))
+        WHERE original_id = %s AND reprint_id = %s AND (story_num = %s OR (story_num IS NULL AND %s IS NULL))
         """,
         [original_id, reprint_id, story_num, story_num]
     )
@@ -912,7 +912,7 @@ async def add_issue_reprint(issue_id: int, data: dict, request: Request):
     db.execute(
         """
         INSERT INTO issue_reprints (original_id, reprint_id, story_num, story_foreign_name)
-        VALUES (?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s)
         """,
         [original_id, reprint_id, story_num, story_foreign_name]
     )
@@ -933,13 +933,13 @@ async def update_issue_reprint(reprint_link_id: int, data: dict, request: Reques
         raise HTTPException(status_code=400, detail="original_id та reprint_id обов'язкові")
         
     # Перевіримо чи зв'язок існує
-    link = db.get_one("SELECT id FROM issue_reprints WHERE id = ?", [reprint_link_id])
+    link = db.get_one("SELECT id FROM issue_reprints WHERE id = %s", [reprint_link_id])
     if not link:
         raise HTTPException(status_code=404, detail="Зв'язок репринту не знайдено")
         
     # Перевіримо чи випуски існують
-    orig_issue = db.get_one("SELECT id FROM issues WHERE id = ?", [original_id])
-    repr_issue = db.get_one("SELECT id FROM issues WHERE id = ?", [reprint_id])
+    orig_issue = db.get_one("SELECT id FROM issues WHERE id = %s", [original_id])
+    repr_issue = db.get_one("SELECT id FROM issues WHERE id = %s", [reprint_id])
     if not orig_issue or not repr_issue:
         raise HTTPException(status_code=404, detail="Випуск не знайдено")
         
@@ -947,7 +947,7 @@ async def update_issue_reprint(reprint_link_id: int, data: dict, request: Reques
     existing = db.get_one(
         """
         SELECT id FROM issue_reprints 
-        WHERE original_id = ? AND reprint_id = ? AND (story_num = ? OR (story_num IS NULL AND ? IS NULL)) AND id != ?
+        WHERE original_id = %s AND reprint_id = %s AND (story_num = %s OR (story_num IS NULL AND %s IS NULL)) AND id != %s
         """,
         [original_id, reprint_id, story_num, story_num, reprint_link_id]
     )
@@ -957,8 +957,8 @@ async def update_issue_reprint(reprint_link_id: int, data: dict, request: Reques
     db.execute(
         """
         UPDATE issue_reprints
-        SET original_id = ?, reprint_id = ?, story_num = ?, story_foreign_name = ?
-        WHERE id = ?
+        SET original_id = %s, reprint_id = %s, story_num = %s, story_foreign_name = %s
+        WHERE id = %s
         """,
         [original_id, reprint_id, story_num, story_foreign_name, reprint_link_id]
     )
@@ -971,11 +971,11 @@ async def delete_issue_reprint(reprint_link_id: int, request: Request):
     db = get_db()
     
     # Перевіримо чи зв'язок існує
-    link = db.get_one("SELECT id FROM issue_reprints WHERE id = ?", [reprint_link_id])
+    link = db.get_one("SELECT id FROM issue_reprints WHERE id = %s", [reprint_link_id])
     if not link:
         raise HTTPException(status_code=404, detail="Зв'язок репринту не знайдено")
         
-    db.execute("DELETE FROM issue_reprints WHERE id = ?", [reprint_link_id])
+    db.execute("DELETE FROM issue_reprints WHERE id = %s", [reprint_link_id])
     return {"message": "Репринт успішно видалено"}
 
 
@@ -989,7 +989,7 @@ async def update_appearance_entity(app_type: str, entity_id: int, data: dict, re
         raise HTTPException(status_code=400, detail="Некоректний тип сутності")
         
     db = get_db()
-    entity = db.get_one(f"SELECT id FROM {app_type} WHERE id = ?", [entity_id])
+    entity = db.get_one(f"SELECT id FROM {app_type} WHERE id = %s", [entity_id])
     if not entity:
         raise HTTPException(status_code=404, detail="Сутність не знайдено")
         
@@ -1002,8 +1002,8 @@ async def update_appearance_entity(app_type: str, entity_id: int, data: dict, re
     db.execute(
         f"""
         UPDATE {app_type}
-        SET name = ?, name_uk = ?
-        WHERE id = ?
+        SET name = %s, name_uk = %s
+        WHERE id = %s
         """,
         [name, name_uk, entity_id]
     )

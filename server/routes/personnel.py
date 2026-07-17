@@ -18,13 +18,13 @@ async def get_personnel(
     params = []
 
     if search:
-        where_parts.append("ULOWER(p.name) LIKE ?")
+        where_parts.append("ULOWER(p.name) LIKE %s")
         params.append(f"%{search.lower()}%")
 
     if ids:
         id_list = [int(x.strip()) for x in ids.split(",") if x.strip().isdigit()]
         if id_list:
-            placeholders = ",".join("?" for _ in id_list)
+            placeholders = ",".join("%s" for _ in id_list)
             where_parts.append(f"p.id IN ({placeholders})")
             params.extend(id_list)
 
@@ -56,7 +56,7 @@ async def get_personnel(
         FROM persons p
         {where_clause}
         ORDER BY {order_clause}
-        LIMIT ? OFFSET ?
+        LIMIT %s OFFSET %s
         """,
         params + [limit, offset],
     )

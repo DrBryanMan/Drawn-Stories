@@ -1,7 +1,6 @@
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
-import re
 from typing import List, Optional, Any
 from dotenv import load_dotenv
 
@@ -14,56 +13,8 @@ class PostgresCursorWrapper:
     def __init__(self, cur, connection_wrapper=None):
         self.cur = cur
         self.connection_wrapper = connection_wrapper
-        self.lastrowid = None
-        self._mock_result = None
 
     def execute(self, sql: str, params: Any = None):
-        sql_lower = sql.strip().lower()
-        
-        # 0. Перехоплення SELECT last_insert_rowid()
-        if "last_insert_rowid()" in sql_lower:
-            last_id = None
-            if self.connection_wrapper is not None:
-                last_id = self.connection_wrapper.lastrowid
-            self._mock_result = {"id": last_id}
-            return self
-
-        # 1. Заміна placeholders ? на %s для psycopg2
-        sql = sql.replace('?', '%s')
-        
-        # 2. Заміна "INSERT OR IGNORE" на "INSERT INTO ... ON CONFLICT DO NOTHING"
-        is_insert = sql_lower.startswith("insert")
-        
-        if is_insert and "insert or ignore" in sql_lower:
-            sql = re.sub(r'\binsert\s+or\s+ignore\s+into\b', 'INSERT INTO', sql, flags=re.IGNORECASE)
-            sql = sql + " ON CONFLICT DO NOTHING"
-            sql_lower = sql.strip().lower()
-
-        # 3. Заміна SQLite CAST(expr AS REAL/FLOAT) на безпечний PostgreSQL-вираз.
-        # SQLite повертає 0 для нечислових рядків, PostgreSQL — кидає помилку.
-        def _safe_numeric_cast(match):
-            expr = match.group(1).strip()
-            return (
-                f"CASE WHEN ({expr}) ~ '^-?[0-9]+(\\.[0-9]+)?$'"
-                f" THEN ({expr})::NUMERIC"
-                f" ELSE NULL END"
-            )
-        sql = re.sub(
-            r'\bCAST\s*\(\s*(.+?)\s+AS\s+(?:REAL|FLOAT)\s*\)',
-            _safe_numeric_cast,
-            sql,
-            flags=re.IGNORECASE
-        )
-        sql_lower = sql.strip().lower()
-
-        # 4. Додаємо RETURNING id для отримання lastrowid
-        has_returning = "returning" in sql_lower
-        added_returning = False
-        if is_insert and not has_returning:
-            sql = sql + " RETURNING id"
-            added_returning = True
-
-        # 4. Виконуємо запит
         try:
             self.cur.execute(sql, params)
         except Exception as e:
@@ -72,27 +23,9 @@ class PostgresCursorWrapper:
             except Exception:
                 pass
             raise e
-
-        # 5. Отримуємо вставлений ID
-        if is_insert and added_returning:
-            try:
-                # Оскільки ми використовуємо RealDictCursor, row - це словник
-                row = self.cur.fetchone()
-                if row:
-                    val = row.get("id") or list(row.values())[0]
-                    self.lastrowid = val
-                    if self.connection_wrapper is not None:
-                        self.connection_wrapper.lastrowid = val
-            except Exception:
-                self.lastrowid = None
-                
         return self
 
     def fetchone(self):
-        if self._mock_result is not None:
-            res = self._mock_result
-            self._mock_result = None
-            return res
         return self.cur.fetchone()
 
     def fetchall(self):
@@ -112,10 +45,10 @@ class PostgresCursorWrapper:
     def __getattr__(self, name):
         return getattr(self.cur, name)
 
+
 class PostgresConnectionWrapper:
     def __init__(self, conn):
         self.conn = conn
-        self.lastrowid = None
 
     def execute(self, sql: str, params: Any = None):
         cur = self.cursor()
@@ -136,12 +69,9 @@ class PostgresConnectionWrapper:
     def close(self):
         self.conn.close()
 
-    def create_function(self, name, num_params, func):
-        # Заглушка для сумісності з SQLite
-        pass
-
     def __getattr__(self, name):
         return getattr(self.conn, name)
+
 
 class Database:
     def __init__(self):

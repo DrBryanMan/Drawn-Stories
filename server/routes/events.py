@@ -31,7 +31,7 @@ def get_event_or_404(db, event_id):
                      AND ei.item_type = 'issue'
                ) AS issue_count
         FROM events e
-        WHERE e.id = ?
+        WHERE e.id = %s
         """,
         [event_id],
     )
@@ -47,7 +47,7 @@ async def get_events(search: Optional[str] = None, limit: int = 50, offset: int 
     where = ""
 
     if search:
-        where = "WHERE ULOWER(e.name) LIKE ?"
+        where = "WHERE ULOWER(e.name) LIKE %s"
         params.append(f"%{search.lower()}%")
 
     events = db.get_all(
@@ -62,7 +62,7 @@ async def get_events(search: Optional[str] = None, limit: int = 50, offset: int 
         FROM events e
         {where}
         ORDER BY e.start_year DESC, e.created_at DESC
-        LIMIT ? OFFSET ?
+        LIMIT %s OFFSET %s
         """,
         [*params, limit, offset],
     )
@@ -81,7 +81,7 @@ async def create_event(data: dict, request: Request):
     db.execute(
         """
         INSERT INTO events (name, description, cv_img, start_year, end_year)
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s)
         """,
         [
             data.get("name"),
@@ -111,7 +111,7 @@ async def get_event_issues(event_id: int):
         FROM event_items ei
         JOIN issues i ON i.id = ei.item_id
         LEFT JOIN volumes v ON v.id = i.volume_id
-        WHERE ei.event_id = ?
+        WHERE ei.event_id = %s
           AND ei.item_type = 'issue'
         ORDER BY ei.order_num ASC, ei.id ASC
         """,
@@ -142,12 +142,12 @@ async def update_event(event_id: int, data: dict, request: Request):
     db.execute(
         """
         UPDATE events
-        SET name = ?,
-            description = ?,
-            cv_img = ?,
-            start_year = ?,
-            end_year = ?
-        WHERE id = ?
+        SET name = %s,
+            description = %s,
+            cv_img = %s,
+            start_year = %s,
+            end_year = %s
+        WHERE id = %s
         """,
         [
             name,
@@ -166,8 +166,8 @@ async def delete_event(event_id: int, request: Request):
     require_moderator(request)
     db = get_db()
     get_event_or_404(db, event_id)
-    db.conn.execute("DELETE FROM event_items WHERE event_id = ?", [event_id])
-    db.conn.execute("DELETE FROM events WHERE id = ?", [event_id])
+    db.conn.execute("DELETE FROM event_items WHERE event_id = %s", [event_id])
+    db.conn.execute("DELETE FROM events WHERE id = %s", [event_id])
     db.conn.commit()
     return {"message": "Подію видалено"}
 
@@ -187,7 +187,7 @@ async def add_issue_to_event(event_id: int, data: dict, request: Request):
         if not issue_id:
             raise HTTPException(status_code=400, detail="Некоректний формат issue_id")
 
-    issue = db.get_one("SELECT id FROM issues WHERE id = ?", [issue_id])
+    issue = db.get_one("SELECT id FROM issues WHERE id = %s", [issue_id])
     if not issue:
         raise HTTPException(status_code=404, detail="Випуск не знайдено")
 
@@ -195,7 +195,7 @@ async def add_issue_to_event(event_id: int, data: dict, request: Request):
         """
         SELECT COALESCE(MAX(order_num), 0) AS order_num
         FROM event_items
-        WHERE event_id = ?
+        WHERE event_id = %s
           AND item_type = 'issue'
         """,
         [event_id],
@@ -205,7 +205,7 @@ async def add_issue_to_event(event_id: int, data: dict, request: Request):
         db.execute(
             """
             INSERT INTO event_items (event_id, item_id, item_type, order_num, importance)
-            VALUES (?, ?, 'issue', ?, ?)
+            VALUES (%s, %s, 'issue', %s, %s)
             """,
             [
                 event_id,
@@ -227,7 +227,7 @@ async def update_event_item(event_id: int, link_id: int, data: dict, request: Re
     require_moderator(request)
     db = get_db()
     item = db.get_one(
-        "SELECT id FROM event_items WHERE id = ? AND event_id = ?",
+        "SELECT id FROM event_items WHERE id = %s AND event_id = %s",
         [link_id, event_id],
     )
     if not item:
@@ -245,7 +245,7 @@ async def update_event_item(event_id: int, link_id: int, data: dict, request: Re
         return {"message": "Немає змін"}
 
     db.execute(
-        f"UPDATE event_items SET {', '.join(fields)} WHERE id = ? AND event_id = ?",
+        f"UPDATE event_items SET {', '.join(fields)} WHERE id = %s AND event_id = %s",
         [*params, link_id, event_id],
     )
     return {"message": "Елемент події оновлено"}
@@ -260,7 +260,7 @@ async def reorder_event_item(event_id: int, link_id: int, data: dict, request: R
         raise HTTPException(status_code=400, detail="position обов'язковий")
 
     item = db.get_one(
-        "SELECT id, item_type FROM event_items WHERE id = ? AND event_id = ?",
+        "SELECT id, item_type FROM event_items WHERE id = %s AND event_id = %s",
         [link_id, event_id],
     )
     if not item:
@@ -270,8 +270,8 @@ async def reorder_event_item(event_id: int, link_id: int, data: dict, request: R
         """
         SELECT id
         FROM event_items
-        WHERE event_id = ?
-          AND item_type = ?
+        WHERE event_id = %s
+          AND item_type = %s
         ORDER BY order_num ASC, id ASC
         """,
         [event_id, item["item_type"]],
@@ -281,7 +281,7 @@ async def reorder_event_item(event_id: int, link_id: int, data: dict, request: R
     ordered.insert(target, link_id)
 
     for index, item_id in enumerate(ordered, start=1):
-        db.conn.execute("UPDATE event_items SET order_num = ? WHERE id = ?", [index, item_id])
+        db.conn.execute("UPDATE event_items SET order_num = %s WHERE id = %s", [index, item_id])
     db.conn.commit()
     return {"message": "Порядок оновлено"}
 
@@ -291,7 +291,7 @@ async def remove_event_item(event_id: int, link_id: int, request: Request):
     require_moderator(request)
     db = get_db()
     db.execute(
-        "DELETE FROM event_items WHERE id = ? AND event_id = ?",
+        "DELETE FROM event_items WHERE id = %s AND event_id = %s",
         [link_id, event_id],
     )
     return {"message": "Елемент видалено з події"}

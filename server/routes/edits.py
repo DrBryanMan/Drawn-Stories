@@ -20,7 +20,7 @@ def get_current_user(request: Request):
     if not username:
         return None
     db = get_db()
-    user = db.get_one("SELECT id, username, role FROM users WHERE username = ?", [username])
+    user = db.get_one("SELECT id, username, role FROM users WHERE username = %s", [username])
     return user
 
 @router.get("")
@@ -43,7 +43,7 @@ async def get_edit_requests(request: Request, status: Optional[str] = None):
     params = []
     
     if status:
-        query += " WHERE er.status = ?"
+        query += " WHERE er.status = %s"
         params.append(status)
         
     query += " ORDER BY er.created_at DESC"
@@ -62,7 +62,7 @@ async def get_edit_requests(request: Request, status: Optional[str] = None):
     return result
 
 def get_volume_current_state(db, volume_id: int):
-    vol = db.get_one("SELECT * FROM volumes WHERE id = ?", [volume_id])
+    vol = db.get_one("SELECT * FROM volumes WHERE id = %s", [volume_id])
     if not vol:
         return None
     
@@ -71,17 +71,17 @@ def get_volume_current_state(db, volume_id: int):
         SELECT t.id, COALESCE(t.ua_name, t.name) as name 
         FROM volume_themes vt
         JOIN themes t ON t.id = vt.theme_id
-        WHERE vt.volume_id = ?
+        WHERE vt.volume_id = %s
     """, [volume_id])
     theme_ids = [t["id"] for t in themes]
     themes_list = [{"id": t["id"], "name": t["name"]} for t in themes]
     
     # Персонал
-    staff = db.get_all("SELECT person_id, role FROM volume_persons WHERE volume_id = ?", [volume_id])
+    staff = db.get_all("SELECT person_id, role FROM volume_persons WHERE volume_id = %s", [volume_id])
     staff_list = [{"person_id": s["person_id"], "role": s["role"]} for s in staff]
     
     # Персонажі
-    chars = db.get_all("SELECT character_id, role FROM volume_characters WHERE volume_id = ?", [volume_id])
+    chars = db.get_all("SELECT character_id, role FROM volume_characters WHERE volume_id = %s", [volume_id])
     chars_list = [{"character_id": c["character_id"], "role": c["role"]} for c in chars]
     
     state = dict(vol)
@@ -105,7 +105,7 @@ async def create_edit_request(req: EditRequestSchema, request: Request):
     
     # Перевіримо, чи існує сутність
     if req.entity_type == "volume":
-        volume = db.get_one("SELECT id FROM volumes WHERE id = ?", [req.entity_id])
+        volume = db.get_one("SELECT id FROM volumes WHERE id = %s", [req.entity_id])
         if not volume:
             raise HTTPException(status_code=404, detail="Том не знайдено")
     else:
@@ -121,7 +121,7 @@ async def create_edit_request(req: EditRequestSchema, request: Request):
         theme_ids = req.patch_data["theme_ids"]
         after_themes = []
         if theme_ids:
-            placeholders = ",".join(["?"] * len(theme_ids))
+            placeholders = ",".join(["%s"] * len(theme_ids))
             themes_db = db.get_all(f"""
                 SELECT id, COALESCE(ua_name, name) as name 
                 FROM themes 
@@ -154,15 +154,16 @@ async def create_edit_request(req: EditRequestSchema, request: Request):
         INSERT INTO edit_requests (
             entity_type, entity_id, user_id, status, patch_data, comment, 
             moderated_at, moderator_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
         """,
         [
             req.entity_type, req.entity_id, user["id"], status, patch_data_json, 
             req.comment, moderated_at, moderator_id
         ]
     )
+    new_id = cursor.fetchone()["id"]
     db.conn.commit()
-    new_id = cursor.lastrowid
     
     # Якщо авто-затверджено, відразу застосовуємо зміни
     if status == "approved":
@@ -171,7 +172,7 @@ async def create_edit_request(req: EditRequestSchema, request: Request):
                 apply_volume_update_in_db(db, req.entity_id, req.patch_data)
         except Exception as e:
             # Якщо виникла помилка під час застосування, відкочуємо статус або видаляємо запит
-            db.execute("DELETE FROM edit_requests WHERE id = ?", [new_id])
+            db.execute("DELETE FROM edit_requests WHERE id = %s", [new_id])
             raise HTTPException(status_code=500, detail=f"Помилка при застосуванні змін: {str(e)}")
             
     return {
@@ -190,7 +191,7 @@ async def approve_edit_request(edit_id: int, req: Optional[ModerationActionSchem
         raise HTTPException(status_code=403, detail="Недостатньо прав для модерації")
         
     db = get_db()
-    edit_req = db.get_one("SELECT * FROM edit_requests WHERE id = ?", [edit_id])
+    edit_req = db.get_one("SELECT * FROM edit_requests WHERE id = %s", [edit_id])
     if not edit_req:
         raise HTTPException(status_code=404, detail="Запит на правку не знайдено")
         
@@ -214,8 +215,8 @@ async def approve_edit_request(edit_id: int, req: Optional[ModerationActionSchem
     db.execute(
         """
         UPDATE edit_requests 
-        SET status = 'approved', moderator_id = ?, moderated_at = ?, moderator_comment = ?
-        WHERE id = ?
+        SET status = 'approved', moderator_id = %s, moderated_at = %s, moderator_comment = %s
+        WHERE id = %s
         """,
         [user["id"], moderated_at, req.moderator_comment if req else None, edit_id]
     )
@@ -229,7 +230,7 @@ async def reject_edit_request(edit_id: int, req: Optional[ModerationActionSchema
         raise HTTPException(status_code=403, detail="Недостатньо прав для модерації")
         
     db = get_db()
-    edit_req = db.get_one("SELECT id, status FROM edit_requests WHERE id = ?", [edit_id])
+    edit_req = db.get_one("SELECT id, status FROM edit_requests WHERE id = %s", [edit_id])
     if not edit_req:
         raise HTTPException(status_code=404, detail="Запит на правку не знайдено")
         
@@ -240,8 +241,8 @@ async def reject_edit_request(edit_id: int, req: Optional[ModerationActionSchema
     db.execute(
         """
         UPDATE edit_requests 
-        SET status = 'rejected', moderator_id = ?, moderated_at = ?, moderator_comment = ?
-        WHERE id = ?
+        SET status = 'rejected', moderator_id = %s, moderated_at = %s, moderator_comment = %s
+        WHERE id = %s
         """,
         [user["id"], moderated_at, req.moderator_comment if req else None, edit_id]
     )

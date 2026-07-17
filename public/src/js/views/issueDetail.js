@@ -385,11 +385,12 @@ export async function renderIssueDetail(container, params = {}) {
 
     renderSkeleton(container);
 
-    let data, readlistStatus;
+    let data, readlistStatus, ratingData;
     try {
-        [data, readlistStatus] = await Promise.all([
+        [data, readlistStatus, ratingData] = await Promise.all([
             API.get(`/issues/${issueId}`),
-            API.get(`/user/readlist/issue/${issueId}`)
+            API.get(`/user/readlist/issue/${issueId}`),
+            API.get(`/ratings/issue/${issueId}`)
         ]);
     } catch (err) {
         container.innerHTML = `
@@ -972,6 +973,43 @@ export async function renderIssueDetail(container, params = {}) {
                     <div class="issue-cover-column">
                         ${coverHTML}
                         ${issueNum ? `<div class="issue-cover-number">${escapeHtmlAttribute(issueNum)}</div>` : ''}
+                        
+                        <div class="volume-ratings" style="margin-top: 12px; display: grid; grid-template-columns: 1fr; border: 1px solid var(--border-s); background: var(--bg-card); padding: .2em; border-radius: var(--r);">
+                            <div class="rating-item rating-main" title="Середня оцінка користувачів: ${ratingData.average || 0} (${ratingData.count} оцінок)">
+                                ${ICON.bookmark}
+                                <span class="rating-value" style="font-family: var(--font-mono); font-size: 16px; font-weight: 600; color: var(--accent);">${ratingData.average ? ratingData.average.toFixed(1) : '—'}</span>
+                            </div>
+                        </div>
+
+                        <div class="user-interaction-block" style="margin-top: 10px; width: 100%; border: 1px solid var(--border-s); border-radius: var(--r); background: var(--bg-card); padding: 12px;">
+                            <svg style="width:0; height:0; position:absolute;" aria-hidden="true" focusable="false">
+                                <linearGradient id="half-fill-gradient-issue" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="50%" stop-color="#ffc107" />
+                                    <stop offset="50%" stop-color="var(--border)" />
+                                </linearGradient>
+                            </svg>
+                            <div class="interactive-rating-section">
+                                <div class="interactive-rating-title" style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                                    <span>Ваша оцінка</span>
+                                    <span class="user-score-badge" style="font-family: var(--font-mono); font-weight: bold; color: #ffc107;"></span>
+                                </div>
+                                <div class="star-rating-widget" data-entity-type="issue" data-entity-id="${issueId}" style="display: flex; align-items: center; gap: 4px;">
+                                    ${[1, 2, 3, 4, 5].map(starIndex => {
+                                        return `
+                                            <div class="star-container" data-star-index="${starIndex}" style="position: relative; width: 24px; height: 24px; cursor: pointer;">
+                                                <div class="star-half star-left" style="position: absolute; left: 0; top: 0; width: 50%; height: 100%; z-index: 2;"></div>
+                                                <div class="star-half star-right" style="position: absolute; right: 0; top: 0; width: 50%; height: 100%; z-index: 2;"></div>
+                                                <svg class="star-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 100%; height: 100%; color: var(--border); transition: all 0.2s;">
+                                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                                </svg>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                    <button class="btn-clear-rating" title="Видалити оцінку" style="display: none; border: none; background: none; color: #ef4444; font-size: 14px; cursor: pointer; margin-left: 6px;">✕</button>
+                                </div>
+                            </div>
+                        </div>
+
                         ${readlistUIHTML()}
                         ${collectionUIHTML(readlistStatus.collection_status, readlistStatus.collection_barter)}
                         ${externalLinksHTML}
@@ -1193,6 +1231,115 @@ export async function renderIssueDetail(container, params = {}) {
                 syncReadlistButton();
             }
         });
+    }
+
+    // Initialize Star Rating Widget for Issue
+    const ratingWidget = container.querySelector('.star-rating-widget');
+    if (ratingWidget) {
+        let selectedRating = ratingData.user_rating || 0;
+        const clearBtn = ratingWidget.querySelector('.btn-clear-rating');
+
+        const highlightStars = (val) => {
+            const containers = ratingWidget.querySelectorAll('.star-container');
+            containers.forEach((container, idx) => {
+                const starIndex = idx + 1;
+                const svg = container.querySelector('.star-svg');
+                svg.classList.remove('filled', 'half-filled');
+                svg.style.color = 'var(--border)';
+                svg.style.fill = 'none';
+                
+                if (val >= starIndex * 2) {
+                    svg.classList.add('filled');
+                    svg.style.color = '#ffc107';
+                    svg.style.fill = '#ffc107';
+                } else if (val === (starIndex * 2) - 1) {
+                    svg.classList.add('half-filled');
+                    svg.style.color = '#ffc107';
+                    svg.style.fill = 'url(#half-fill-gradient-issue)';
+                }
+            });
+            
+            const scoreBadge = ratingWidget.closest('.interactive-rating-section')?.querySelector('.user-score-badge');
+            if (scoreBadge) {
+                scoreBadge.textContent = val > 0 ? `${val}/10` : '';
+            }
+            
+            if (clearBtn) {
+                clearBtn.style.display = val > 0 ? 'inline-block' : 'none';
+            }
+        };
+
+        highlightStars(selectedRating);
+
+        if (!currentUser) {
+            ratingWidget.style.opacity = '0.7';
+            ratingWidget.style.pointerEvents = 'none';
+        } else {
+            const containers = ratingWidget.querySelectorAll('.star-container');
+            containers.forEach(container => {
+                const starIndex = parseInt(container.dataset.starIndex, 10);
+                
+                container.querySelector('.star-left').addEventListener('mousemove', () => {
+                    highlightStars((starIndex * 2) - 1);
+                });
+                
+                container.querySelector('.star-right').addEventListener('mousemove', () => {
+                    highlightStars(starIndex * 2);
+                });
+
+                container.querySelector('.star-left').addEventListener('click', async () => {
+                    const val = (starIndex * 2) - 1;
+                    selectedRating = val;
+                    highlightStars(val);
+                    try {
+                        const res = await API.post('/ratings/update', {
+                            entity_type: 'issue',
+                            entity_id: issueId,
+                            rating: val
+                        });
+                        const avgVal = container.closest('.issue-cover-column').querySelector('.rating-main .rating-value');
+                        if (avgVal) avgVal.textContent = res.average ? res.average.toFixed(1) : '—';
+                    } catch (err) {
+                        console.error(err);
+                    }
+                });
+
+                container.querySelector('.star-right').addEventListener('click', async () => {
+                    const val = starIndex * 2;
+                    selectedRating = val;
+                    highlightStars(val);
+                    try {
+                        const res = await API.post('/ratings/update', {
+                            entity_type: 'issue',
+                            entity_id: issueId,
+                            rating: val
+                        });
+                        const avgVal = container.closest('.issue-cover-column').querySelector('.rating-main .rating-value');
+                        if (avgVal) avgVal.textContent = res.average ? res.average.toFixed(1) : '—';
+                    } catch (err) {
+                        console.error(err);
+                    }
+                });
+            });
+
+            ratingWidget.addEventListener('mouseleave', () => {
+                highlightStars(selectedRating);
+            });
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', async () => {
+                    selectedRating = 0;
+                    highlightStars(0);
+                    try {
+                        const res = await API.delete(`/ratings/issue/${issueId}`);
+                        const avgVal = ratingWidget.closest('.issue-cover-column').querySelector('.rating-main .rating-value');
+                        if (avgVal) avgVal.textContent = res.average ? res.average.toFixed(1) : '—';
+                    } catch (err) {
+                        console.error(err);
+                    }
+                });
+            }
+        }
     }
 
     if (favoriteBtn) {

@@ -9,7 +9,7 @@ def get_current_user_id(request: Request):
     if not username:
         return None
     db = get_db()
-    user = db.get_one("SELECT id FROM users WHERE username = ?", [username])
+    user = db.get_one("SELECT id FROM users WHERE username = %s", [username])
     return user['id'] if user else None
 
 def check_moderator(request: Request):
@@ -26,7 +26,7 @@ async def get_chapter_detail(chapter_id: int, request: Request):
         SELECT mc.*, v.name as volume_name, v.name_uk as volume_name_uk, 'manga_chapter' as type
         FROM manga_chapters mc
         JOIN volumes v ON mc.volume_id = v.id
-        WHERE mc.id = ?
+        WHERE mc.id = %s
         """,
         [chapter_id],
     )
@@ -39,7 +39,7 @@ async def get_chapter_detail(chapter_id: int, request: Request):
         SELECT c.id, c.name, c.real_name, c.name_uk, c.real_name_uk, c.image, mcc.role
         FROM manga_chapter_characters mcc
         JOIN characters c ON mcc.character_id = c.id
-        WHERE mcc.chapter_id = ?
+        WHERE mcc.chapter_id = %s
         ORDER BY COALESCE(c.name_uk, c.name) ASC
         """,
         [chapter_id]
@@ -66,9 +66,9 @@ async def update_chapter(chapter_id: int, request: Request):
     db.execute(
         """
         UPDATE manga_chapters
-        SET name = ?, name_native = ?, name_en = ?, name_uk = ?,
-            image = ?, chapter_number = ?, release_date = ?, synopsis = ?, pages = ?
-        WHERE id = ?
+        SET name = %s, name_native = %s, name_en = %s, name_uk = %s,
+            image = %s, chapter_number = %s, release_date = %s, synopsis = %s, pages = %s
+        WHERE id = %s
         """,
         [
             to_null(data.get("name")),
@@ -89,7 +89,7 @@ async def update_chapter(chapter_id: int, request: Request):
 async def delete_chapter(chapter_id: int, request: Request):
     check_moderator(request)
     db = get_db()
-    db.execute("DELETE FROM manga_chapters WHERE id = ?", [chapter_id])
+    db.execute("DELETE FROM manga_chapters WHERE id = %s", [chapter_id])
     return {"message": "Розділ успішно видалено"}
 
 @router.post("/{chapter_id}/appearances")
@@ -104,7 +104,7 @@ async def add_appearance(chapter_id: int, request: Request):
         raise HTTPException(status_code=400, detail="character_id обов'язковий")
         
     db.execute(
-        "INSERT OR IGNORE INTO manga_chapter_characters (chapter_id, character_id, role) VALUES (?, ?, ?)",
+        "INSERT INTO manga_chapter_characters (chapter_id, character_id, role) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
         [chapter_id, character_id, role]
     )
     return {"message": "Появу додано"}
@@ -114,7 +114,7 @@ async def remove_appearance(chapter_id: int, character_id: int, request: Request
     check_moderator(request)
     db = get_db()
     db.execute(
-        "DELETE FROM manga_chapter_characters WHERE chapter_id = ? AND character_id = ?",
+        "DELETE FROM manga_chapter_characters WHERE chapter_id = %s AND character_id = %s",
         [chapter_id, character_id]
     )
     return {"message": "Появу видалено"}
@@ -125,7 +125,7 @@ async def get_chapters_by_volume(volume_id: int):
     chapters = db.get_all("""
         SELECT mc.*, 'manga_chapter' as type
         FROM manga_chapters mc
-        WHERE mc.volume_id = ?
+        WHERE mc.volume_id = %s
         ORDER BY CAST(mc.chapter_number AS REAL) ASC, mc.chapter_number ASC
     """, [volume_id])
     return [dict(ch) for ch in chapters]
@@ -145,20 +145,20 @@ async def create_chapter(request: Request):
     if not volume_id or chapter_number is None:
         raise HTTPException(status_code=400, detail="volume_id та chapter_number обов'язкові")
         
-    volume_exists = db.get_one("SELECT 1 FROM volumes WHERE id = ?", [volume_id])
+    volume_exists = db.get_one("SELECT 1 FROM volumes WHERE id = %s", [volume_id])
     if not volume_exists:
         raise HTTPException(status_code=404, detail="Том не знайдено")
         
     cursor = db.conn.execute(
         """
         INSERT INTO manga_chapters (volume_id, chapter_number, name, release_date, pages)
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s)
+        RETURNING id
         """,
         [volume_id, str(chapter_number), name, release_date, pages]
     )
+    new_id = cursor.fetchone()["id"]
     db.conn.commit()
-    
-    new_id = cursor.lastrowid
     
     return {
         "message": "Розділ успішно створено",
@@ -194,8 +194,8 @@ async def list_chapters(
 
     if search:
         conditions.append("""(
-            mc.name LIKE ? OR mc.name_uk LIKE ? OR mc.name_en LIKE ? OR mc.name_native LIKE ?
-            OR v.name LIKE ? OR v.name_uk LIKE ? OR v.name_en LIKE ?
+            mc.name LIKE %s OR mc.name_uk LIKE %s OR mc.name_en LIKE %s OR mc.name_native LIKE %s
+            OR v.name LIKE %s OR v.name_uk LIKE %s OR v.name_en LIKE %s
         )""")
         s = f"%{search}%"
         params += [s, s, s, s, s, s, s]
@@ -224,7 +224,7 @@ async def list_chapters(
         {base_join}
         {where}
         ORDER BY {sort_column} {sort_order}, mc.id {sort_order}
-        LIMIT ? OFFSET ?
+        LIMIT %s OFFSET %s
     """, params + [limit, offset])
 
     total_query = db.get_one(f"""
@@ -238,4 +238,3 @@ async def list_chapters(
         "items": [dict(ch) for ch in chapters],
         "total": total
     }
-

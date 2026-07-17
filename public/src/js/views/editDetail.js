@@ -1,6 +1,5 @@
 import { API } from '../helpers/api.js';
 import { router } from '../helpers/router.js';
-import { createPaginator } from '../components/Pagination.js';
 import { updateEditsPendingCount, getAvatarHtml } from '../shell.js';
 import { langName } from '../helpers/lang.js';
 import { normalizeImageUrl } from '../helpers/image.js';
@@ -15,73 +14,26 @@ const ICON = {
     rejected: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="status-badge-icon" style="vertical-align: middle;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
 };
 
-export async function renderEdits(main) {
+export async function renderEditDetail(main, params) {
     main.innerHTML = `
         <div class="container container--main">
-            <div class="catalog-heading" style="margin-bottom: 1.5rem;">
-                <h1 class="catalog-title">Модерація правок</h1>
-                <p class="catalog-subtitle">Перегляд та опрацювання пропозицій редагування від користувачів</p>
-            </div>
-            
-            <div class="edits-filter-bar">
-                <div class="filter-section results-section">
-                    <div class="results-label">Правок</div>
-                    <div class="results-value" id="edits-count-value">—</div>
-                </div>
-                
-                <div class="filter-section search-section">
-                    <div class="search-inner">
-                        <span class="search-icon">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                        </span>
-                        <input type="text" id="edits-search-input" class="search-input-pill" placeholder="Пошук за назвою..." autocomplete="off">
-                    </div>
-                </div>
-
-                <div class="filter-section select-section" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <select id="filter-entity-type" class="filter-select">
-                        <option value="">Всі типи</option>
-                    </select>
-                    <select id="filter-proposer" class="filter-select">
-                        <option value="">Всі автори</option>
-                    </select>
-                    <select id="filter-moderator" class="filter-select">
-                        <option value="">Всі модератори</option>
-                    </select>
-                </div>
-                
-                <div class="filter-section tabs-section">
-                    <div class="wanted-ct-group" role="group" id="edits-status-tabs">
-                        <button class="wanted-ct-btn is-active" data-status="all">Всі</button>
-                        <button class="wanted-ct-btn" data-status="pending">Очікують</button>
-                        <button class="wanted-ct-btn" data-status="approved">Схвалені</button>
-                        <button class="wanted-ct-btn" data-status="rejected">Відхилені</button>
-                    </div>
-                </div>
+            <div class="back-link-wrap">
+                <a href="#/edits" class="back-to-edits-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                    Назад до списку правок
+                </a>
             </div>
 
-            <div class="loader-container" id="edits-loader"><div class="loader"></div></div>
-            <div id="edits-content" style="display: none;">
-                <div class="edits-list" id="edits-list"></div>
-                <div id="edits-pagination" class="pagination-wrap"></div>
-            </div>
+            <div class="loader-container" id="edit-detail-loader"><div class="loader"></div></div>
+            <div id="edit-detail-content" style="display: none;"></div>
         </div>
     `;
 
-    const loader = main.querySelector('#edits-loader');
-    const content = main.querySelector('#edits-content');
-    const listContainer = main.querySelector('#edits-list');
-    const paginator = createPaginator({ pageSize: 20 });
+    const loader = main.querySelector('#edit-detail-loader');
+    const content = main.querySelector('#edit-detail-content');
     
-    let allEdits = [];
+    let editData = null;
     let themesCache = [];
-    let state = {
-        status: 'all',
-        search: '',
-        entityType: '',
-        proposer: '',
-        moderator: ''
-    };
 
     async function loadThemes() {
         try {
@@ -92,183 +44,206 @@ export async function renderEdits(main) {
         }
     }
 
-    async function loadEdits() {
+    async function loadEditData() {
         try {
             loader.style.display = 'flex';
             content.style.display = 'none';
             
             await loadThemes();
-            allEdits = await API.get('/edits');
-            
-            populateFilters();
+            editData = await API.get(`/edits/${params.id}`);
             
             loader.style.display = 'none';
             content.style.display = 'block';
             
-            renderFilteredList();
+            renderDetails();
         } catch (err) {
             loader.style.display = 'none';
-            listContainer.innerHTML = `<div class="error-msg">Помилка завантаження правок: ${err.message}</div>`;
+            content.innerHTML = `<div class="error-msg">Помилка завантаження детальних даних правки: ${err.message}</div>`;
+            content.style.display = 'block';
         }
     }
 
-    function populateFilters() {
-        const proposers = new Set();
-        const moderators = new Set();
-        const entityTypes = new Set();
-        
-        allEdits.forEach(e => {
-            if (e.proposer_username) proposers.add(e.proposer_username);
-            if (e.moderator_username) moderators.add(e.moderator_username);
-            if (e.entity_type) entityTypes.add(e.entity_type);
-        });
-        
-        const proposerSelect = main.querySelector('#filter-proposer');
-        const moderatorSelect = main.querySelector('#filter-moderator');
-        const entityTypeSelect = main.querySelector('#filter-entity-type');
-        
-        if (proposerSelect) {
-            proposerSelect.innerHTML = '<option value="">Всі автори</option>' + 
-                Array.from(proposers).sort().map(p => `<option value="${p}">${p}</option>`).join('');
-            proposerSelect.value = state.proposer;
-        }
-        
-        if (moderatorSelect) {
-            moderatorSelect.innerHTML = '<option value="">Всі модератори</option>' + 
-                Array.from(moderators).sort().map(m => `<option value="${m}">${m}</option>`).join('');
-            moderatorSelect.value = state.moderator;
-        }
-
-        if (entityTypeSelect) {
-            entityTypeSelect.innerHTML = '<option value="">Всі типи</option>' + 
-                Array.from(entityTypes).sort().map(t => {
-                    const label = t === 'volume' ? 'Том' : t;
-                    return `<option value="${t}">${label}</option>`;
-                }).join('');
-            entityTypeSelect.value = state.entityType;
-        }
-    }
-
-    function renderFilteredList() {
-        const filtered = allEdits.filter(e => {
-            if (state.status !== 'all' && e.status !== state.status) return false;
-            if (state.entityType && e.entity_type !== state.entityType) return false;
-            if (state.proposer && e.proposer_username !== state.proposer) return false;
-            if (state.moderator && e.moderator_username !== state.moderator) return false;
-            
-            if (state.search) {
-                const title = (e.volume_name_uk || e.volume_name || '').toLowerCase();
-                if (!title.includes(state.search.toLowerCase())) return false;
-            }
-            return true;
-        });
-
-        // Оновимо кількість знайдених правок
-        const countVal = main.querySelector('#edits-count-value');
-        if (countVal) {
-            countVal.textContent = filtered.length;
-        }
-
-        const total = filtered.length;
-        const page = paginator.getPage();
-        const pageSize = paginator.getPageSize();
-        const pageItems = filtered.slice((page - 1) * pageSize, page * pageSize);
-
-        if (pageItems.length === 0) {
-            listContainer.innerHTML = `<div class="empty-msg">Немає запитів на правку, що відповідають фільтрам.</div>`;
-            const paginationWrap = main.querySelector('#edits-pagination');
-            if (paginationWrap) paginationWrap.innerHTML = '';
-            return;
-        }
-
-        listContainer.innerHTML = `
-            <div class="edits-table-container">
-                <table class="edits-table">
-                    <thead>
-                        <tr>
-                            <th>Правка</th>
-                            <th>Автор</th>
-                            <th>Контент</th>
-                            <th>Зміни</th>
-                            <th style="text-align: right;">Статус</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${pageItems.map(e => renderEditRow(e)).join('')}
-                    </tbody>
-                </table>
-            </div>
-        `;
-
-        // Рендер пагінатора
-        const paginationWrap = main.querySelector('#edits-pagination');
-        if (paginationWrap) {
-            paginationWrap.replaceChildren(
-                paginator.render(total, () => {
-                    renderFilteredList();
-                    listContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                })
-            );
-        }
-
-        attachCardEvents();
-    }
-
-    function attachCardEvents() {
-        listContainer.querySelectorAll('.edit-row').forEach(row => {
-            row.addEventListener('click', (event) => {
-                if (event.target.closest('a')) return;
-                const editId = row.dataset.id;
-                router.navigate(`/edits/${editId}`);
-            });
-        });
-    }
-
-    function renderEditRow(e) {
+    function renderDetails() {
+        const e = editData;
         const statusLabels = {
-            'pending': `<span class="edit-status-badge edit-status--pending" title="Очікує прийняття">${ICON.pending}</span>`,
-            'approved': `<span class="edit-status-badge edit-status--approved" title="Прийнята">${ICON.approved}</span>`,
-            'rejected': `<span class="edit-status-badge edit-status--rejected" title="Відхилена">${ICON.rejected}</span>`
+            'pending': `<span class="edit-status-badge edit-status--pending">${ICON.pending}</span>`,
+            'approved': `<span class="edit-status-badge edit-status--approved">${ICON.approved}</span>`,
+            'rejected': `<span class="edit-status-badge edit-status--rejected">${ICON.rejected}</span>`
         };
 
         const entityLabel = e.entity_type === 'volume' ? 'Том' : e.entity_type;
         const entityName = e.volume_name_uk || e.volume_name || `ID ${e.entity_id}`;
-        
+        const entityLink = e.entity_type === 'volume' ? `#/volumes/${e.entity_id}` : '#/';
+
         const patchObj = e.patch_data || {};
         const beforeData = patchObj.before || {};
         const afterData = patchObj.after || patchObj;
-        
-        const avatarUrl = `/api/auth/avatar/${e.proposer_username}`;
-        const proposerAvatarHtml = getAvatarHtml(avatarUrl, 'edit-row-avatar', 40);
 
-        return `
-            <tr class="edit-row" data-id="${e.id}">
-                <td class="col-id">
-                    <a href="#/edits/${e.id}" class="edit-row-link">#${e.id}</a>
-                </td>
-                <td class="col-author">
-                    <div class="edit-row-author-info">
-                        ${proposerAvatarHtml}
-                        <div class="edit-row-author-text">
-                            <span class="edit-row-author-name">${escapeHtml(e.proposer_username)}</span>
-                            <span class="edit-row-entity-badge">${entityLabel}</span>
+        const volumeImg = normalizeImageUrl(e.volume_cv_img || afterData.image || beforeData.image || '');
+        const volumeImgHTML = `
+            <div class="edit-entity-image-wrap">
+                ${volumeImg 
+                    ? `<img src="${volumeImg}" class="edit-entity-image" alt="Обкладинка" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` 
+                    : ''
+                }
+                <div class="edit-entity-image-placeholder" style="${volumeImg ? 'display:none;' : 'display:flex;'}">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                </div>
+            </div>
+        `;
+
+        const subtitleHTML = e.comment 
+            ? `<div class="edit-comment-block" style="margin-top: 8px;">
+                   <span class="comment-icon">${ICON.message}</span>
+                   <span class="comment-text"><strong>Коментар автора:</strong> ${escapeHtml(e.comment)}</span>
+               </div>`
+            : `<p class="edit-detail-subtitle">Перегляд змін, запропонованих користувачем, та прийняття рішення про їх затвердження.</p>`;
+
+        // Аватар автора пропозиції
+        const proposerAvatarUrl = `/api/auth/avatar/${e.proposer_username}`;
+        const proposerAvatarHtml = getAvatarHtml(proposerAvatarUrl, 'person-avatar-img', 44);
+
+        // Картка модератора
+        let moderatorCardHTML = '';
+        if (e.status !== 'pending') {
+            const moderatorAvatarUrl = `/api/auth/avatar/${e.moderator_username}`;
+            const moderatorAvatarHtml = getAvatarHtml(moderatorAvatarUrl, 'person-avatar-img', 44);
+            const modAction = e.status === 'approved' ? 'Схвалив правку' : 'Відхилив правку';
+            const modClass = e.status === 'approved' ? 'moderator-card--approved' : 'moderator-card--rejected';
+            const commentMod = e.moderator_comment ? `<div class="person-card-comment"><strong>Коментар:</strong> ${escapeHtml(e.moderator_comment)}</div>` : '';
+
+            moderatorCardHTML = `
+                <hr class="people-divider">
+                <div class="people-section">
+                    <span class="people-section-title">${modAction}</span>
+                    <div class="person-card moderator-card ${modClass}">
+                        <div class="person-card-avatar">
+                            ${moderatorAvatarHtml}
+                        </div>
+                        <div class="person-card-info">
+                            <span class="person-card-name">${escapeHtml(e.moderator_username || 'Модератор')}</span>
+                            <span class="person-card-date">${formatDate(e.moderated_at)}</span>
+                            ${commentMod}
                         </div>
                     </div>
-                </td>
-                <td class="col-content">
-                    <div class="edit-row-content-info">
-                        <a href="#/edits/${e.id}" class="edit-row-content-title">${escapeHtml(entityName)}</a>
-                        <span class="edit-row-date">${formatDate(e.created_at)}</span>
-                    </div>
-                </td>
-                <td class="col-changes">
-                    ${getChangedFieldsBadges(beforeData, afterData)}
-                </td>
-                <td class="col-status">
+                </div>
+            `;
+        }
+
+        // Кнопки дій модератора
+        let actionsHTML = '';
+        if (e.status === 'pending') {
+            actionsHTML = `
+                <div class="edit-details-actions-bar">
+                    <button class="btn-admin btn-admin--primary btn-approve-edit-detail" data-id="${e.id}">Схвалити правку</button>
+                    <button class="btn-admin btn-admin--danger btn-reject-edit-detail" data-id="${e.id}">Відхилити правку</button>
+                </div>
+            `;
+        }
+
+        content.innerHTML = `
+            <div class="edit-detail-header-block">
+                <div class="edit-detail-title-line">
+                    <h1 class="edit-detail-main-title">Правка #${e.id}</h1>
                     ${statusLabels[e.status]}
-                </td>
-            </tr>
+                </div>
+                ${subtitleHTML}
+            </div>
+
+            <div class="edit-details-grid">
+                <!-- Блок Контент -->
+                <div class="edit-detail-block edit-detail-block--content">
+                    <h2 class="edit-detail-block-title">
+                        <span>Контент</span>
+                        <div class="edit-detail-entity-line">
+                            <span class="edit-entity-badge">${entityLabel}</span>
+                        </div>
+                    </h2>
+                    <div class="edit-detail-content-card">
+                        ${volumeImgHTML}
+                        <div class="edit-detail-content-info">
+                            <a href="${entityLink}" class="edit-detail-entity-title">${escapeHtml(entityName)}</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Блок Автор/Модератор -->
+                <div class="edit-detail-block edit-detail-block--people">
+                    <h2 class="edit-detail-block-title">Автор / Модератор</h2>
+                    <div class="people-cards-column">
+                        <div class="people-section">
+                            <span class="people-section-title">Запропонував правку</span>
+                            <div class="person-card author-card">
+                                <div class="person-card-avatar">
+                                    ${proposerAvatarHtml}
+                                </div>
+                                <div class="person-card-info">
+                                    <span class="person-card-name">${escapeHtml(e.proposer_username)}</span>
+                                    <span class="person-card-date">${formatDate(e.created_at)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${moderatorCardHTML}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Блок Деталі зміни -->
+            <div class="edit-detail-block edit-detail-block--diff">
+                <h2 class="edit-detail-block-title">Деталі правки (зміни)</h2>
+                <div class="edit-diff-container-detail">
+                    ${generateDiffHTML(beforeData, afterData)}
+                </div>
+            </div>
+
+            ${actionsHTML}
         `;
+
+        attachEvents();
+    }
+
+    function attachEvents() {
+        const btnApprove = content.querySelector('.btn-approve-edit-detail');
+        if (btnApprove) {
+            btnApprove.addEventListener('click', async () => {
+                const editId = btnApprove.dataset.id;
+                if (confirm('Схвалити цю правку та застосувати зміни до тома?')) {
+                    try {
+                        btnApprove.disabled = true;
+                        btnApprove.textContent = 'Обробка...';
+                        await API.post(`/edits/${editId}/approve`);
+                        await updateEditsPendingCount();
+                        await loadEditData();
+                    } catch (err) {
+                        alert('Помилка затвердження: ' + err.message);
+                        btnApprove.disabled = false;
+                        btnApprove.textContent = 'Схвалити правку';
+                    }
+                }
+            });
+        }
+
+        const btnReject = content.querySelector('.btn-reject-edit-detail');
+        if (btnReject) {
+            btnReject.addEventListener('click', async () => {
+                const editId = btnReject.dataset.id;
+                const reason = prompt('Введіть причину відхилення правок (необов\'язково):');
+                if (reason !== null) {
+                    try {
+                        btnReject.disabled = true;
+                        btnReject.textContent = 'Обробка...';
+                        await API.post(`/edits/${editId}/reject`, { moderator_comment: reason });
+                        await updateEditsPendingCount();
+                        await loadEditData();
+                    } catch (err) {
+                        alert('Помилка відхилення: ' + err.message);
+                        btnReject.disabled = false;
+                        btnReject.textContent = 'Відхилити правку';
+                    }
+                }
+            });
+        }
     }
 
     function getChangedFieldsBadges(before, after) {
@@ -288,7 +263,6 @@ export async function renderEdits(main) {
         
         const badges = [];
         
-        // 1. Прості поля
         for (const [key, label] of Object.entries(fields)) {
             if (after[key] !== undefined && after[key] !== null) {
                 const beforeVal = String(before[key] || '').trim();
@@ -299,7 +273,6 @@ export async function renderEdits(main) {
             }
         }
         
-        // 2. Теми
         if (after.theme_ids !== undefined && after.theme_ids !== null) {
             const beforeIds = (before.theme_ids || []).map(id => Number(id)).sort();
             const afterIds = (after.theme_ids || []).map(id => Number(id)).sort();
@@ -308,7 +281,6 @@ export async function renderEdits(main) {
             }
         }
         
-        // 3. Персонал
         if (after.staff !== undefined && after.staff !== null) {
             const beforeStaffText = (before.staff || []).map(s => `ID: ${s.person_id} (${s.role})`).sort().join('\n');
             const afterStaffText = (after.staff || []).map(s => `ID: ${s.person_id} (${s.role})`).sort().join('\n');
@@ -317,7 +289,6 @@ export async function renderEdits(main) {
             }
         }
         
-        // 4. Персонажі
         if (after.characters !== undefined && after.characters !== null) {
             const beforeCharsText = (before.characters || []).map(c => `ID: ${c.character_id || c.id} (${c.role})`).sort().join('\n');
             const afterCharsText = (after.characters || []).map(c => `ID: ${c.character_id || c.id} (${c.role})`).sort().join('\n');
@@ -352,7 +323,6 @@ export async function renderEdits(main) {
         
         let hasChanges = false;
         
-        // 1. Порівнюємо прості поля
         for (const [key, info] of Object.entries(fields)) {
             if (after[key] !== undefined && after[key] !== null) {
                 const beforeVal = String(before[key] || '').trim();
@@ -371,7 +341,6 @@ export async function renderEdits(main) {
             }
         }
         
-        // 2. Порівнюємо Теми
         if (after.theme_ids !== undefined && after.theme_ids !== null) {
             const beforeIds = (before.theme_ids || []).map(id => Number(id)).sort();
             const afterIds = (after.theme_ids || []).map(id => Number(id)).sort();
@@ -396,7 +365,6 @@ export async function renderEdits(main) {
             }
         }
         
-        // 3. Порівнюємо персонал
         if (after.staff !== undefined && after.staff !== null) {
             const beforeStaffText = (before.staff || []).map(s => `ID автора: ${s.person_id} (${s.role})`).sort().join('\n') || '—';
             const afterStaffText = (after.staff || []).map(s => `ID автора: ${s.person_id} (${s.role})`).sort().join('\n') || '—';
@@ -407,7 +375,6 @@ export async function renderEdits(main) {
             }
         }
         
-        // 4. Порівнюємо персонажів
         if (after.characters !== undefined && after.characters !== null) {
             const beforeCharsText = (before.characters || []).map(c => `ID персонажа: ${c.character_id || c.id} (${c.role || 'cameo'})`).sort().join('\n') || '—';
             const afterCharsText = (after.characters || []).map(c => `ID персонажа: ${c.character_id || c.id} (${c.role || 'cameo'})`).sort().join('\n') || '—';
@@ -503,60 +470,5 @@ export async function renderEdits(main) {
         }
     }
 
-    // Обробка перемикання статусів
-    const statusTabs = main.querySelector('#edits-status-tabs');
-    if (statusTabs) {
-        const btns = statusTabs.querySelectorAll('.wanted-ct-btn');
-        btns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                btns.forEach(b => b.classList.remove('is-active'));
-                btn.classList.add('is-active');
-                state.status = btn.dataset.status;
-                paginator.reset();
-                renderFilteredList();
-            });
-        });
-    }
-
-    // Текстовий пошук
-    const searchInput = main.querySelector('#edits-search-input');
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            state.search = e.target.value.trim();
-            paginator.reset();
-            renderFilteredList();
-        });
-    }
-
-    // Селект типу контенту
-    const entityTypeSelect = main.querySelector('#filter-entity-type');
-    if (entityTypeSelect) {
-        entityTypeSelect.addEventListener('change', (e) => {
-            state.entityType = e.target.value;
-            paginator.reset();
-            renderFilteredList();
-        });
-    }
-
-    // Селект автора
-    const proposerSelect = main.querySelector('#filter-proposer');
-    if (proposerSelect) {
-        proposerSelect.addEventListener('change', (e) => {
-            state.proposer = e.target.value;
-            paginator.reset();
-            renderFilteredList();
-        });
-    }
-
-    // Селект модератора
-    const moderatorSelect = main.querySelector('#filter-moderator');
-    if (moderatorSelect) {
-        moderatorSelect.addEventListener('change', (e) => {
-            state.moderator = e.target.value;
-            paginator.reset();
-            renderFilteredList();
-        });
-    }
-
-    await loadEdits();
+    await loadEditData();
 }

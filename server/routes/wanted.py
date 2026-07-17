@@ -337,7 +337,7 @@ async def get_wanted_volumes(
             search_parts = []
             for word in words:
                 search_parts.append(
-                    "(ULOWER(v.name) LIKE ? OR ULOWER(v.name_en) LIKE ? OR ULOWER(v.name_uk) LIKE ?)"
+                    "(ULOWER(v.name) LIKE %s OR ULOWER(v.name_en) LIKE %s OR ULOWER(v.name_uk) LIKE %s)"
                 )
                 params.extend([f"%{word.lower()}%"] * 3)
             clauses.append(f"({' AND '.join(search_parts)})")
@@ -356,7 +356,7 @@ async def get_wanted_volumes(
         f"""SELECT v.*, p.name as publisher_name,
                (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id) as issue_count
             FROM volumes v LEFT JOIN publishers p ON v.publisher = p.id
-            {where}{order_clause} LIMIT ? OFFSET ?""",
+            {where}{order_clause} LIMIT %s OFFSET %s""",
         params + [limit, offset],
     )
 
@@ -422,7 +422,7 @@ async def get_wanted_collections(
         if words:
             parts = []
             for word in words:
-                parts.append("ULOWER(c.name) LIKE ?")
+                parts.append("ULOWER(c.name) LIKE %s")
                 params.append(f"%{word.lower()}%")
             clauses.append(f"({' AND '.join(parts)})")
 
@@ -437,7 +437,7 @@ async def get_wanted_collections(
         f"""SELECT c.*, p.name as publisher_name
             FROM collections c
             LEFT JOIN publishers p ON c.publisher = p.id
-            {where}{order_clause} LIMIT ? OFFSET ?""",
+            {where}{order_clause} LIMIT %s OFFSET %s""",
         params + [limit, offset],
     )
 
@@ -494,7 +494,7 @@ async def get_wanted_issues(
         if words:
             parts = []
             for word in words:
-                parts.append("(ULOWER(i.name) LIKE ? OR ULOWER(i.name_uk) LIKE ?)")
+                parts.append("(ULOWER(i.name) LIKE %s OR ULOWER(i.name_uk) LIKE %s)")
                 params.extend([f"%{word.lower()}%"] * 2)
             clauses.append(f"({' AND '.join(parts)})")
 
@@ -509,7 +509,7 @@ async def get_wanted_issues(
         f"""SELECT i.*, v.name as volume_name, v.image as volume_img
             FROM issues i
             LEFT JOIN volumes v ON i.volume_id = v.id
-            {where}{order_clause} LIMIT ? OFFSET ?""",
+            {where}{order_clause} LIMIT %s OFFSET %s""",
         params + [limit, offset],
     )
 
@@ -574,7 +574,7 @@ async def get_wanted_characters(
         if words:
             parts = []
             for word in words:
-                parts.append("(ULOWER(c.name) LIKE ? OR ULOWER(c.name_uk) LIKE ?)")
+                parts.append("(ULOWER(c.name) LIKE %s OR ULOWER(c.name_uk) LIKE %s)")
                 params.extend([f"%{word.lower()}%"] * 2)
             clauses.append(f"({' AND '.join(parts)})")
 
@@ -586,7 +586,7 @@ async def get_wanted_characters(
 
     offset = (page - 1) * limit
     items_raw = db.get_all(
-        f"SELECT c.* FROM characters c{where}{order_clause} LIMIT ? OFFSET ?",
+        f"SELECT c.* FROM characters c{where}{order_clause} LIMIT %s OFFSET %s",
         params + [limit, offset],
     )
 
@@ -636,7 +636,7 @@ async def get_wanted_personnel(
         if words:
             parts = []
             for word in words:
-                parts.append("(ULOWER(p.name) LIKE ? OR ULOWER(p.name_uk) LIKE ?)")
+                parts.append("(ULOWER(p.name) LIKE %s OR ULOWER(p.name_uk) LIKE %s)")
                 params.extend([f"%{word.lower()}%"] * 2)
             clauses.append(f"({' AND '.join(parts)})")
 
@@ -648,7 +648,7 @@ async def get_wanted_personnel(
 
     offset = (page - 1) * limit
     items_raw = db.get_all(
-        f"SELECT p.* FROM persons p{where}{order_clause} LIMIT ? OFFSET ?",
+        f"SELECT p.* FROM persons p{where}{order_clause} LIMIT %s OFFSET %s",
         params + [limit, offset],
     )
 
@@ -698,7 +698,7 @@ async def get_wanted_publishers(
         if words:
             parts = []
             for word in words:
-                parts.append("ULOWER(p.name) LIKE ?")
+                parts.append("ULOWER(p.name) LIKE %s")
                 params.append(f"%{word.lower()}%")
             clauses.append(f"({' AND '.join(parts)})")
 
@@ -710,7 +710,7 @@ async def get_wanted_publishers(
 
     offset = (page - 1) * limit
     items_raw = db.get_all(
-        f"SELECT p.* FROM publishers p{where}{order_clause} LIMIT ? OFFSET ?",
+        f"SELECT p.* FROM publishers p{where}{order_clause} LIMIT %s OFFSET %s",
         params + [limit, offset],
     )
 

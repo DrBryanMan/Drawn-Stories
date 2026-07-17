@@ -30,6 +30,156 @@
   gap: .5em;
 }
 
+/* Edits Table Styling */
+.edits-table-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border-s);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.edits-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.edits-table th {
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-s);
+}
+
+.edits-table td {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-s);
+    vertical-align: middle;
+    color: var(--text);
+}
+
+.edits-table tr:last-child td {
+    border-bottom: none;
+}
+
+.edits-table tr.edit-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.edits-table tr.edit-row:hover {
+    background: color-mix(in srgb, var(--text) 4%, var(--bg-card));
+}
+
+/* Columns */
+.col-id {
+    font-family: var(--font-monos);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    width: 80px;
+}
+
+.col-id a {
+    color: var(--text-muted);
+    text-decoration: none;
+}
+
+.col-id a:hover {
+    color: var(--accent);
+}
+
+.col-author {
+    width: 200px;
+}
+
+.edit-row-author-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.edit-row-avatar {
+    border-radius: var(--r);
+    object-fit: cover;
+    background: var(--bg-body);
+}
+
+.edit-row-author-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.edit-row-author-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.edit-row-entity-badge {
+    background: color-mix(in srgb, var(--accent) 10%, var(--bg-card));
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border-s));
+    color: var(--accent);
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    width: fit-content;
+    line-height: 1;
+}
+
+.col-content {
+    min-width: 200px;
+}
+
+.edit-row-content-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.edit-row-content-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.edit-row-content-title:hover {
+    color: var(--accent);
+}
+
+.edit-row-date {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.col-changes {
+    max-width: 300px;
+}
+
+.col-status {
+    text-align: right;
+}
+
+.edit-status-badge {
+    display: inline-grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--r);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
 /* Edits Page Filter Bar */
 .edits-filter-bar {
     display: flex;
@@ -259,20 +409,18 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.03em;
+    background: color-mix(in srgb, currentColor 10%, white);
 }
 
 .edit-status--pending {
-    background: #fef3c7;
-    color: #d97706;
+    color: #d99306;
 }
 
 .edit-status--approved {
-    background: #d1fae5;
-    color: #059669;
+    color: #039f4e;
 }
 
 .edit-status--rejected {
-    background: #fee2e2;
     color: #dc2626;
 }
 

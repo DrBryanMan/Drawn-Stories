@@ -2,6 +2,7 @@ import { router }        from './helpers/router.js';
 import { initShell, currentUser } from './shell.js';
 import { renderHome }    from './views/home.js';
 import { renderEdits }   from './views/edits.js';
+import { renderEditDetail } from './views/editDetail.js';
 import { renderCatalog } from './views/catalog.js';
 import { renderVolumeDetail } from './views/volumeDetail.js?v=3';
 import { renderVolumeCharacters } from './views/volumeCharacters.js';
@@ -66,6 +67,13 @@ async function start() {
             return;
         }
         renderEdits(main);
+    })
+    .on('/edits/:id',     (_path, params) => {
+        if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'moderator')) {
+            router.navigate('/');
+            return;
+        }
+        renderEditDetail(main, params);
     })
     .notFound(            () => renderHome(main))
     .listen();

@@ -17,7 +17,7 @@ async def get_characters(
     params = []
 
     if search:
-        where_parts.append("ULOWER(c.name) LIKE ?")
+        where_parts.append("ULOWER(c.name) LIKE %s")
         params.append(f"%{search.lower()}%")
 
     where_clause = "WHERE " + " AND ".join(where_parts) if where_parts else ""
@@ -48,7 +48,7 @@ async def get_characters(
         FROM characters c
         {where_clause}
         ORDER BY {order_clause}
-        LIMIT ? OFFSET ?
+        LIMIT %s OFFSET %s
         """,
         params + [limit, offset],
     )
@@ -63,7 +63,7 @@ async def update_character(character_id: int, data: dict, request: Request):
         raise HTTPException(status_code=403, detail="Потрібні права модератора")
     
     db = get_db()
-    char = db.get_one("SELECT id FROM characters WHERE id = ?", [character_id])
+    char = db.get_one("SELECT id FROM characters WHERE id = %s", [character_id])
     if not char:
         raise HTTPException(status_code=404, detail="Персонажа не знайдено")
         
@@ -87,10 +87,10 @@ async def update_character(character_id: int, data: dict, request: Request):
     db.execute(
         """
         UPDATE characters
-        SET name = ?, name_uk = ?, name_ro = ?, real_name = ?, real_name_uk = ?, creators = ?, 
-            image = ?, portret_img = ?, costume_img = ?, portret_costume_img = ?, 
+        SET name = %s, name_uk = %s, name_ro = %s, real_name = %s, real_name_uk = %s, creators = %s, 
+            image = %s, portret_img = %s, costume_img = %s, portret_costume_img = %s, 
             date_last_updated = NOW()
-        WHERE id = ?
+        WHERE id = %s
         """,
         [name, name_uk, name_ro, real_name, real_name_uk, creators, image, portret_img, costume_img, portret_costume_img, character_id]
     )
@@ -104,13 +104,13 @@ async def delete_character(character_id: int, request: Request):
         raise HTTPException(status_code=403, detail="Потрібні права модератора")
     
     db = get_db()
-    char = db.get_one("SELECT id FROM characters WHERE id = ?", [character_id])
+    char = db.get_one("SELECT id FROM characters WHERE id = %s", [character_id])
     if not char:
         raise HTTPException(status_code=404, detail="Персонажа не знайдено")
         
     # Видаляємо зв'язки з випусками та томами
-    db.execute("DELETE FROM issue_characters WHERE character_id = ?", [character_id])
-    db.execute("DELETE FROM volume_characters WHERE character_id = ?", [character_id])
+    db.execute("DELETE FROM issue_characters WHERE character_id = %s", [character_id])
+    db.execute("DELETE FROM volume_characters WHERE character_id = %s", [character_id])
     # Видаляємо самого персонажа
-    db.execute("DELETE FROM characters WHERE id = ?", [character_id])
+    db.execute("DELETE FROM characters WHERE id = %s", [character_id])
     return {"message": "Персонаж успішно видалений"}

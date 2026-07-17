@@ -484,9 +484,10 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
     renderSkeleton(main);
 
     try {
-        const [data, readlistStatus] = await Promise.all([
+        const [data, readlistStatus, ratingData] = await Promise.all([
             API.get(`/volumes/${volumeId}`),
-            API.get(`/user/readlist/${volumeId}`)
+            API.get(`/user/readlist/${volumeId}`),
+            API.get(`/ratings/volume/${volumeId}`)
         ]);
 
         const {
@@ -712,6 +713,50 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                                     </svg>
                                   </div>`}
                             ${readlistUIHTML(isCollection, stats)}
+                            
+                            ${translations.length > 0 ? `
+                                <svg style="width:0; height:0; position:absolute;" aria-hidden="true" focusable="false">
+                                    <linearGradient id="half-fill-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="50%" stop-color="#ffc107" />
+                                        <stop offset="50%" stop-color="var(--border)" />
+                                    </linearGradient>
+                                </svg>
+
+                                <div class="user-interaction-block">
+                                    <div class="interactive-rating-section">
+                                        <div class="interactive-rating-title" style="display: flex; justify-content: space-between; align-items: center;">
+                                            <span>Ваша оцінка</span>
+                                            <span class="user-score-badge" style="font-family: var(--font-mono); font-weight: bold; color: #ffc107;"></span>
+                                        </div>
+                                        <div class="star-rating-widget" data-entity-type="volume" data-entity-id="${volumeId}">
+                                            ${[1, 2, 3, 4, 5].map(starIndex => {
+                                                return `
+                                                    <div class="star-container" data-star-index="${starIndex}">
+                                                        <div class="star-half star-left"></div>
+                                                        <div class="star-half star-right"></div>
+                                                        <svg class="star-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                                        </svg>
+                                                    </div>
+                                                `;
+                                            }).join('')}
+                                            <button class="btn-clear-rating" title="Видалити оцінку" style="display: none;">✕</button>
+                                        </div>
+                                    </div>
+
+                                    ${currentUser ? `
+                                        <div class="read-progress-section">
+                                            <div class="progress-title">Прочитано випусків</div>
+                                            <div class="progress-controls">
+                                                <input type="number" min="0" max="${stats.issues || 0}" class="progress-input" id="read-issues-input" value="${readlistStatus.issues_count !== null ? readlistStatus.issues_count : ''}" placeholder="${readlistStatus.read_issues_count}">
+                                                <span class="progress-slash">/</span>
+                                                <span class="progress-total">${stats.issues || 0}</span>
+                                                <button class="progress-save-btn" id="save-progress-btn">Зберегти</button>
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            ` : ''}
                             ${externalLinksBlockHTML}
                         </div>
 
@@ -758,9 +803,9 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
 
                         <div class="volume-hero-aside">
                             <div class="volume-ratings">
-                                <div class="rating-item rating-main" title="Системний рейтинг (незабаром)">
+                                <div class="rating-item rating-main" title="Середня оцінка користувачів: ${ratingData.average || 0} (${ratingData.count} оцінок)">
                                     ${ICON.star}
-                                    <span class="rating-value">—</span>
+                                    <span class="rating-value">${ratingData.average ? ratingData.average.toFixed(1) : '—'}</span>
                                 </div>
                                 ${volume.hikka_score ? `
                                     <div class="rating-item rating--hikka" title="Голосів на Hikka: ${volume.hikka_scored_by || 0}">
@@ -777,6 +822,43 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                             </div>
                             ${authorsHTML}
                             ${heroRelations}
+                            ${(() => {
+                                // Find translations in uk language
+                                const ukTranslations = translations.filter(t => t.lang === 'uk');
+                                if (!ukTranslations.length) return '';
+                                
+                                return `
+                                    <div class="volume-hero-relations-block volume-published-uk-block">
+                                        <div class="synopsis-header">
+                                            <h3 class="synopsis-title">Видається українською</h3>
+                                        </div>
+                                        <div class="volume-hero-relations">
+                                            ${ukTranslations.map(item => {
+                                                const cover = normalizeImageUrl(item.image || item.cover_img);
+                                                const name = escapeHtmlAttribute(item.name_uk || item.name || 'Без назви');
+                                                const href = `#/volumes/${item.id}`;
+                                                const collectionsCount = Number(item.collections_count || 0);
+                                                const publisherStr = item.publisher_name ? `<span class="volume-relation-meta">${escapeHtmlAttribute(item.publisher_name)}</span>` : '';
+                                                
+                                                return `
+                                                    <a class="volume-relation-card" href="${href}">
+                                                        <span class="volume-relation-cover">
+                                                            ${cover
+                                                                ? `<img src="${escapeHtmlAttribute(cover)}" alt="${name}" loading="lazy">`
+                                                                : ICON.bookOpen}
+                                                        </span>
+                                                        <span class="volume-relation-content">
+                                                            <span class="volume-relation-title">${name}</span>
+                                                            ${publisherStr}
+                                                            <span class="volume-relation-meta">${collectionsCount.toLocaleString('uk-UA')} збір.</span>
+                                                        </span>
+                                                    </a>
+                                                `;
+                                            }).join('')}
+                                        </div>
+                                    </div>
+                                `;
+                            })()}
                         </div>
                     </div>
                     <div class="volume-hero-tabs-band">
@@ -1014,6 +1096,138 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
         if (readlistSelect) {
             readlistSelect.value = readlistStatus.list_name || '';
             syncReadlistButton();
+        }
+
+        // Initialize Star Rating Widget
+        const ratingWidget = main.querySelector('.star-rating-widget');
+        if (ratingWidget) {
+            let selectedRating = ratingData.user_rating || 0;
+            const clearBtn = ratingWidget.querySelector('.btn-clear-rating');
+
+            const highlightStars = (val) => {
+                const containers = ratingWidget.querySelectorAll('.star-container');
+                containers.forEach((container, idx) => {
+                    const starIndex = idx + 1;
+                    const svg = container.querySelector('.star-svg');
+                    svg.classList.remove('filled', 'half-filled');
+                    
+                    if (val >= starIndex * 2) {
+                        svg.classList.add('filled');
+                    } else if (val === (starIndex * 2) - 1) {
+                        svg.classList.add('half-filled');
+                    }
+                });
+                
+                const scoreBadge = ratingWidget.closest('.interactive-rating-section')?.querySelector('.user-score-badge');
+                if (scoreBadge) {
+                    scoreBadge.textContent = val > 0 ? `${val}/10` : '';
+                }
+                
+                if (clearBtn) {
+                    clearBtn.style.display = val > 0 ? 'inline-block' : 'none';
+                }
+            };
+
+            highlightStars(selectedRating);
+
+            if (!currentUser) {
+                // Readonly for guest users
+                ratingWidget.style.opacity = '0.7';
+                ratingWidget.style.pointerEvents = 'none';
+            } else {
+                const containers = ratingWidget.querySelectorAll('.star-container');
+                containers.forEach(container => {
+                    const starIndex = parseInt(container.dataset.starIndex, 10);
+                    
+                    // Left half (odd value, e.g. 1, 3, 5, 7, 9)
+                    container.querySelector('.star-left').addEventListener('mousemove', () => {
+                        highlightStars((starIndex * 2) - 1);
+                    });
+                    
+                    // Right half (even value, e.g. 2, 4, 6, 8, 10)
+                    container.querySelector('.star-right').addEventListener('mousemove', () => {
+                        highlightStars(starIndex * 2);
+                    });
+
+                    // Click left
+                    container.querySelector('.star-left').addEventListener('click', async () => {
+                        const val = (starIndex * 2) - 1;
+                        selectedRating = val;
+                        highlightStars(val);
+                        try {
+                            const res = await API.post('/ratings/update', {
+                                entity_type: 'volume',
+                                entity_id: volumeId,
+                                rating: val
+                            });
+                            // Update main average
+                            const avgVal = main.querySelector('.rating-main .rating-value');
+                            if (avgVal) avgVal.textContent = res.average ? res.average.toFixed(1) : '—';
+                        } catch (err) {
+                            console.error(err);
+                        }
+                    });
+
+                    // Click right
+                    container.querySelector('.star-right').addEventListener('click', async () => {
+                        const val = starIndex * 2;
+                        selectedRating = val;
+                        highlightStars(val);
+                        try {
+                            const res = await API.post('/ratings/update', {
+                                entity_type: 'volume',
+                                entity_id: volumeId,
+                                rating: val
+                            });
+                            const avgVal = main.querySelector('.rating-main .rating-value');
+                            if (avgVal) avgVal.textContent = res.average ? res.average.toFixed(1) : '—';
+                        } catch (err) {
+                            console.error(err);
+                        }
+                    });
+                });
+
+                // Mouseleave widget reverts to selectedRating
+                ratingWidget.addEventListener('mouseleave', () => {
+                    highlightStars(selectedRating);
+                });
+
+                if (clearBtn) {
+                    clearBtn.addEventListener('click', async () => {
+                        selectedRating = 0;
+                        highlightStars(0);
+                        try {
+                            const res = await API.delete(`/ratings/volume/${volumeId}`);
+                            const avgVal = main.querySelector('.rating-main .rating-value');
+                            if (avgVal) avgVal.textContent = res.average ? res.average.toFixed(1) : '—';
+                        } catch (err) {
+                            console.error(err);
+                        }
+                    });
+                }
+            }
+        }
+
+        // Save progress logic
+        const saveProgressBtn = main.querySelector('#save-progress-btn');
+        if (saveProgressBtn) {
+            saveProgressBtn.addEventListener('click', async () => {
+                const input = main.querySelector('#read-issues-input');
+                const val = input.value === '' ? null : parseInt(input.value, 10);
+                
+                try {
+                    await API.post('/user/readlist/update', {
+                        volume_id: volumeId,
+                        list_name: readlistSelect ? (readlistSelect.value || 'Planned') : 'Planned', // Keep current or plan
+                        issues_count: val
+                    });
+                    alert('Прогрес збережено!');
+                    renderVolumeDetail(main, params);
+                } catch (err) {
+                    console.error(err);
+                    alert('Помилка при збереженні.');
+                }
+            });
         }
         
         if (favoriteBtn) {

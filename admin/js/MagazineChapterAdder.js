@@ -35,18 +35,33 @@ export class MagazineChapterAdder {
         this.debounceTimer = null;
     }
 
-    _getRecentIds() {
+    _getRecentRaw() {
         try {
-            return JSON.parse(localStorage.getItem('magazine_recent_volumes') || '[]').map(Number).filter(Boolean);
+            const raw = JSON.parse(localStorage.getItem('magazine_recent_volumes') || '[]');
+            // Backward compat: old format was array of numbers, new format is array of {id, lastChapterNum}
+            return raw.map(entry => {
+                if (typeof entry === 'number') return { id: entry, lastChapterNum: null };
+                return entry;
+            }).filter(e => e && e.id);
         } catch (e) {
             return [];
         }
     }
 
-    _addToRecent(volumeId) {
+    _getRecentIds() {
+        return this._getRecentRaw().map(e => Number(e.id));
+    }
+
+    _getLastChapterNum(volumeId) {
+        const entry = this._getRecentRaw().find(e => Number(e.id) === Number(volumeId));
+        return entry?.lastChapterNum ?? null;
+    }
+
+    _addToRecent(volumeId, lastChapterNum = null) {
         try {
-            let recent = this._getRecentIds();
-            recent = [Number(volumeId), ...recent.filter(id => id !== Number(volumeId))].slice(0, 25);
+            const id = Number(volumeId);
+            let recent = this._getRecentRaw().filter(e => Number(e.id) !== id);
+            recent = [{ id, lastChapterNum }, ...recent].slice(0, 25);
             localStorage.setItem('magazine_recent_volumes', JSON.stringify(recent));
         } catch (e) {
             console.error('Failed to update recent list:', e);
@@ -592,15 +607,19 @@ export class MagazineChapterAdder {
     renderCreateChapterView(container) {
         const defaultDate = this.issue.release_date || this.issue.cover_date || '';
 
-        // Suggest the next chapter number based on the highest numerical chapter_number in the list
+        // Suggest the next chapter number:
+        // 1. Prefer the last chapter number added for this volume (stored in localStorage)
+        // 2. Fallback to max existing chapter number + 1
         let suggestedNum = '';
-        if (this.chaptersOfVolume.length > 0) {
+        const lastAdded = this.selectedVolume ? this._getLastChapterNum(this.selectedVolume.id) : null;
+        if (lastAdded !== null && !isNaN(parseFloat(lastAdded))) {
+            suggestedNum = String(parseFloat(lastAdded) + 1);
+        } else if (this.chaptersOfVolume.length > 0) {
             const numbers = this.chaptersOfVolume
                 .map(ch => parseFloat(ch.chapter_number))
                 .filter(num => !isNaN(num));
             if (numbers.length > 0) {
-                const maxNum = Math.max(...numbers);
-                suggestedNum = String(maxNum + 1);
+                suggestedNum = String(Math.max(...numbers) + 1);
             }
         }
 
@@ -709,8 +728,10 @@ export class MagazineChapterAdder {
                 label: label
             });
 
-            // Add volume to recent list
-            this._addToRecent(this.selectedVolume.id);
+            // Add volume to recent list and save last added chapter number
+            const addedChapter = this.chaptersOfVolume.find(c => c.id === chapterId);
+            const addedChapterNum = addedChapter?.chapter_number ?? null;
+            this._addToRecent(this.selectedVolume.id, addedChapterNum);
             
             // Mark as added locally so it shows as disabled if the user opens the same series again
             this.chapters.push({ 

@@ -74,10 +74,10 @@ export let currentUser = null;
 
 const DEFAULT_AVATAR_ICON = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
 
-function getAvatarHtml(avatarUrl, className, size = 20) {
+export function getAvatarHtml(avatarUrl, className, size = 20) {
     const iconSvg = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
     return `
-        <img src="${avatarUrl}" alt="Avatar" class="${className}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <img src="${avatarUrl}" alt="Avatar" class="${className}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width:${size}px; height:${size}px;">
         <div class="${className} avatar-fallback" style="display:none; width:${size}px; height:${size}px;">${iconSvg}</div>
     `;
 }

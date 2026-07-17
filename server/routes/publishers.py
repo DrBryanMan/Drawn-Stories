@@ -18,13 +18,13 @@ async def get_publishers(
     params = []
 
     if search:
-        where_parts.append("ULOWER(p.name) LIKE ?")
+        where_parts.append("ULOWER(p.name) LIKE %s")
         params.append(f"%{search.lower()}%")
     
     if ids:
         id_list = [id.strip() for id in ids.split(",") if id.strip().isdigit()]
         if id_list:
-            placeholders = ",".join(["?"] * len(id_list))
+            placeholders = ",".join(["%s"] * len(id_list))
             where_parts.append(f"p.id IN ({placeholders})")
             params.extend(id_list)
 
@@ -59,7 +59,7 @@ async def get_publishers(
         FROM publishers p
         {where_clause}
         ORDER BY {order_clause}
-        LIMIT ? OFFSET ?
+        LIMIT %s OFFSET %s
         """,
         params + [limit, offset],
     )
@@ -72,7 +72,7 @@ async def get_publishers(
                 SELECT v.id, v.name, v.name_uk, v.cover_img, v.image, v.lang,
                        (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id) as issue_count
                 FROM volumes v
-                WHERE v.publisher = ?
+                WHERE v.publisher = %s
                 ORDER BY v.created_at DESC, v.id DESC
                 LIMIT 3
                 """,
@@ -105,7 +105,7 @@ async def create_publisher(data: dict):
     for key, value in data.items():
         if key in allowed_fields and value is not None:
             columns.append(key)
-            placeholders.append("?")
+            placeholders.append("%s")
             params.append(value)
             
     if not columns:

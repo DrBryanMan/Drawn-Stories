@@ -19,7 +19,7 @@ async def create_reading_order(data: dict):
     for key, value in data.items():
         if key in allowed_fields and value is not None:
             columns.append(key)
-            placeholders.append("?")
+            placeholders.append("%s")
             params.append(value)
             
     sql = f"INSERT INTO reading_orders ({', '.join(columns)}) VALUES ({', '.join(placeholders)})"
