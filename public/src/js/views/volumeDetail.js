@@ -714,7 +714,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                                   </div>`}
                             ${readlistUIHTML(isCollection, stats)}
                             
-                            ${translations.length > 0 ? `
+                            ${translationParents.length === 0 ? `
                                 <svg style="width:0; height:0; position:absolute;" aria-hidden="true" focusable="false">
                                     <linearGradient id="half-fill-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
                                         <stop offset="50%" stop-color="#ffc107" />

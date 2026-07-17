@@ -95,6 +95,35 @@ def get_volume_current_state(db, volume_id: int):
     
     return state
 
+@router.get("/{edit_id}")
+async def get_edit_request(edit_id: int, request: Request):
+    user = get_current_user(request)
+    if not user or user["role"] not in ("admin", "moderator"):
+        raise HTTPException(status_code=403, detail="Недостатньо прав")
+
+    db = get_db()
+    query = """
+        SELECT er.*, u.username as proposer_username, m.username as moderator_username,
+               v.name as volume_name, v.name_uk as volume_name_uk,
+               v.image as volume_cv_img, NULL as volume_hikka_img
+        FROM edit_requests er
+        JOIN users u ON er.user_id = u.id
+        LEFT JOIN users m ON er.moderator_id = m.id
+        LEFT JOIN volumes v ON er.entity_type = 'volume' AND er.entity_id = v.id
+        WHERE er.id = %s
+    """
+    row = db.get_one(query, [edit_id])
+    if not row:
+        raise HTTPException(status_code=404, detail="Запит на правку не знайдено")
+
+    d = dict(row)
+    try:
+        d["patch_data"] = json.loads(d["patch_data"])
+    except Exception:
+        d["patch_data"] = {}
+
+    return d
+
 @router.post("")
 async def create_edit_request(req: EditRequestSchema, request: Request):
     user = get_current_user(request)
