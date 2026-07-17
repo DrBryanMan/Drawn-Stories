@@ -268,3 +268,39 @@
     border-radius: var(--r);
     padding: 20px;
 }
+
+/* ── Score history block ─────────────────────────────────────────────────── */
+.edit-detail-block--score {
+    margin-top: 20px;
+}
+
+.score-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.score-history-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 8px 12px;
+    background: var(--bg-body);
+    border: 1px solid var(--border-s);
+    border-radius: var(--r);
+}
+
+.score-history-user {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.score-history-reason {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+

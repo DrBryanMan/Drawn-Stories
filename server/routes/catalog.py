@@ -129,7 +129,7 @@ async def get_catalog(
             if words:
                 search_parts = []
                 for word in words:
-                    part = "(ULOWER(v.name) LIKE %s OR ULOWER(v.name_en) LIKE %s OR ULOWER(v.name_uk) LIKE %s OR ULOWER(v.name_native) LIKE %s)"
+                    part = "(LOWER(v.name) LIKE %s OR LOWER(v.name_en) LIKE %s OR LOWER(v.name_uk) LIKE %s OR LOWER(v.name_native) LIKE %s)"
                     search_parts.append(part)
                     filter_params.extend([f"%{word.lower()}%"] * 4)
                 filter_clauses.append(f"({' AND '.join(search_parts)})")
@@ -150,7 +150,7 @@ async def get_catalog(
                 if words:
                     search_parts = []
                     for word in words:
-                        part = "(ULOWER(i.name) LIKE %s OR ULOWER(v.name) LIKE %s OR ULOWER(v.name_en) LIKE %s OR ULOWER(v.name_uk) LIKE %s OR ULOWER(v.name_native) LIKE %s)"
+                        part = "(LOWER(i.name) LIKE %s OR LOWER(v.name) LIKE %s OR LOWER(v.name_en) LIKE %s OR LOWER(v.name_uk) LIKE %s OR LOWER(v.name_native) LIKE %s)"
                         search_parts.append(part)
                         filter_params.extend([f"%{word.lower()}%"] * 5)
                     filter_clauses.append(f"({' AND '.join(search_parts)})")
@@ -169,7 +169,7 @@ async def get_catalog(
                 if words:
                     search_parts = []
                     for word in words:
-                        part = "(ULOWER(c.name) LIKE %s OR ULOWER(v.name) LIKE %s OR ULOWER(v.name_en) LIKE %s OR ULOWER(v.name_uk) LIKE %s OR ULOWER(v.name_native) LIKE %s)"
+                        part = "(LOWER(c.name) LIKE %s OR LOWER(v.name) LIKE %s OR LOWER(v.name_en) LIKE %s OR LOWER(v.name_uk) LIKE %s OR LOWER(v.name_native) LIKE %s)"
                         search_parts.append(part)
                         filter_params.extend([f"%{word.lower()}%"] * 5)
                     filter_clauses.append(f"({' AND '.join(search_parts)})")
@@ -233,12 +233,40 @@ async def get_catalog(
         filter_clauses.append("NOT EXISTS (SELECT 1 FROM volume_themes vt WHERE vt.theme_id = %s AND vt.volume_id = v.id)")
         filter_params.append(theme_id)
 
-    if date_min:
-        filter_clauses.append(f"CAST({primary_sort} AS DATE) >= CAST(? AS DATE)")
-        filter_params.append(date_min)
-    if date_max:
-        filter_clauses.append(f"CAST({primary_sort} AS DATE) <= CAST(? AS DATE)")
-        filter_params.append(date_max)
+    if date_min or date_max:
+        if sort == "recent":
+            # created_at — timestamp, каст безпечний
+            if date_min:
+                filter_clauses.append(f"({primary_sort})::date >= %s::date")
+                filter_params.append(date_min)
+            if date_max:
+                filter_clauses.append(f"({primary_sort})::date <= %s::date")
+                filter_params.append(date_max)
+        elif sort == "date":
+            if view_type == "series":
+                # v.start_year — INTEGER, порівнюємо тільки рік
+                try:
+                    if date_min:
+                        filter_clauses.append("v.start_year >= %s")
+                        filter_params.append(int(date_min[:4]))
+                    if date_max:
+                        filter_clauses.append("v.start_year <= %s")
+                        filter_params.append(int(date_max[:4]))
+                except (ValueError, IndexError):
+                    pass
+            else:
+                # release_date/cover_date — TEXT у форматі YYYY-MM-DD.
+                # НЕ кастуємо в DATE, бо деякі записи мають невалідні значення
+                # на зразок "1972-07-00" (день = 0 з Comic Vine). Текстове
+                # порівняння ISO-рядків дає правильний лексикографічний результат.
+                date_col = "COALESCE(i.release_date, i.cover_date)" if not collection \
+                    else "COALESCE(c.release_date, c.cover_date)"
+                if date_min:
+                    filter_clauses.append(f"{date_col} >= %s")
+                    filter_params.append(date_min)
+                if date_max:
+                    filter_clauses.append(f"{date_col} <= %s")
+                    filter_params.append(date_max)
 
     # 1. Total count uses ONLY filters
     total_where = f" WHERE {' AND '.join(filter_clauses)}" if filter_clauses else ""
@@ -262,7 +290,7 @@ async def get_catalog(
                 cursor_val = cursor_parts[0]
                 cursor_id = cursor_parts[1]
                 op = ">" if order_dir == "asc" else "<"
-                items_clauses.append(f"({primary_sort}, {unique_key}) {op} (?, ?)")
+                items_clauses.append(f"({primary_sort}, {unique_key}) {op} (%s, %s)")
                 items_params.extend([cursor_val, int(cursor_id)])
         except Exception as e:
             print(f"Cursor error: {e}")
@@ -323,7 +351,7 @@ async def search_volumes_for_picker(
     params = []
 
     if id:
-        clauses.append("v.id = ?")
+        clauses.append("v.id = %s")
         params.append(id)
     if ids:
         id_list = [int(x.strip()) for x in ids.split(",") if x.strip().isdigit()]
@@ -332,13 +360,13 @@ async def search_volumes_for_picker(
             clauses.append(f"v.id IN ({placeholders})")
             params.extend(id_list)
     if cv_id:
-        clauses.append("v.cv_id = ?")
+        clauses.append("v.cv_id = %s")
         params.append(cv_id)
     if mal_id:
-        clauses.append("v.mal_id = ?")
+        clauses.append("v.mal_id = %s")
         params.append(mal_id)
     if hikka_slug:
-        clauses.append("ULOWER(v.hikka_slug) LIKE %s")
+        clauses.append("LOWER(v.hikka_slug) LIKE %s")
         params.append(f"%{hikka_slug.lower()}%")
     if theme_id:
         clauses.append("EXISTS (SELECT 1 FROM volume_themes vt WHERE vt.theme_id = %s AND vt.volume_id = v.id)")
@@ -346,7 +374,7 @@ async def search_volumes_for_picker(
     if has_mal:
         clauses.append("v.mal_id IS NOT NULL")
     if search:
-        clauses.append("(ULOWER(v.name) LIKE %s OR ULOWER(v.name_en) LIKE %s OR ULOWER(v.name_uk) LIKE %s OR ULOWER(v.name_native) LIKE %s)")
+        clauses.append("(LOWER(v.name) LIKE %s OR LOWER(v.name_en) LIKE %s OR LOWER(v.name_uk) LIKE %s OR LOWER(v.name_native) LIKE %s)")
         params.extend([f"%{search.lower()}%"] * 4)
 
     if not clauses:

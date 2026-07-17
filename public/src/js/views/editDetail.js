@@ -197,10 +197,42 @@ export async function renderEditDetail(main, params) {
                 </div>
             </div>
 
+            ${renderScoreHistoryBlock(e)}
+
             ${actionsHTML}
         `;
 
         attachEvents();
+    }
+
+    function renderScoreHistoryBlock(e) {
+        const history = e.score_history || [];
+        if (history.length === 0) return '';
+
+        const rows = history.map(row => {
+            const delta = row.delta;
+            const isPositive = delta > 0;
+            const chipClass = isPositive ? 'score-chip--positive' : 'score-chip--negative';
+            const sign = isPositive ? '+' : '';
+            return `
+                <div class="score-history-row">
+                    <span class="score-chip ${chipClass}">${sign}${delta} б.</span>
+                    <span class="score-history-user">${escapeHtml(row.username)}</span>
+                    <span class="score-history-reason">${escapeHtml(row.reason)}</span>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="edit-detail-block edit-detail-block--score">
+                <h2 class="edit-detail-block-title">
+                    <span>Нараховані бали</span>
+                </h2>
+                <div class="score-history-list">
+                    ${rows}
+                </div>
+            </div>
+        `;
     }
 
     function attachEvents() {

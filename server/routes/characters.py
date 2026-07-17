@@ -17,7 +17,7 @@ async def get_characters(
     params = []
 
     if search:
-        where_parts.append("ULOWER(c.name) LIKE %s")
+        where_parts.append("LOWER(c.name) LIKE %s")
         params.append(f"%{search.lower()}%")
 
     where_clause = "WHERE " + " AND ".join(where_parts) if where_parts else ""

@@ -430,7 +430,7 @@ def apply_volume_update_in_db(db, volume_id: int, data: dict):
         if key in allowed_fields:
             if value == "":
                 value = None
-            fields.append(f"{key} = ?")
+            fields.append(f"{key} = %s")
             params.append(value)
             
     if fields:

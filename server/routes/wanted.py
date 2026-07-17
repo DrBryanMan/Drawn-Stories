@@ -337,7 +337,7 @@ async def get_wanted_volumes(
             search_parts = []
             for word in words:
                 search_parts.append(
-                    "(ULOWER(v.name) LIKE %s OR ULOWER(v.name_en) LIKE %s OR ULOWER(v.name_uk) LIKE %s)"
+                    "(LOWER(v.name) LIKE %s OR LOWER(v.name_en) LIKE %s OR LOWER(v.name_uk) LIKE %s)"
                 )
                 params.extend([f"%{word.lower()}%"] * 3)
             clauses.append(f"({' AND '.join(search_parts)})")
@@ -422,7 +422,7 @@ async def get_wanted_collections(
         if words:
             parts = []
             for word in words:
-                parts.append("ULOWER(c.name) LIKE %s")
+                parts.append("LOWER(c.name) LIKE %s")
                 params.append(f"%{word.lower()}%")
             clauses.append(f"({' AND '.join(parts)})")
 
@@ -494,7 +494,7 @@ async def get_wanted_issues(
         if words:
             parts = []
             for word in words:
-                parts.append("(ULOWER(i.name) LIKE %s OR ULOWER(i.name_uk) LIKE %s)")
+                parts.append("(LOWER(i.name) LIKE %s OR LOWER(i.name_uk) LIKE %s)")
                 params.extend([f"%{word.lower()}%"] * 2)
             clauses.append(f"({' AND '.join(parts)})")
 
@@ -574,7 +574,7 @@ async def get_wanted_characters(
         if words:
             parts = []
             for word in words:
-                parts.append("(ULOWER(c.name) LIKE %s OR ULOWER(c.name_uk) LIKE %s)")
+                parts.append("(LOWER(c.name) LIKE %s OR LOWER(c.name_uk) LIKE %s)")
                 params.extend([f"%{word.lower()}%"] * 2)
             clauses.append(f"({' AND '.join(parts)})")
 
@@ -636,7 +636,7 @@ async def get_wanted_personnel(
         if words:
             parts = []
             for word in words:
-                parts.append("(ULOWER(p.name) LIKE %s OR ULOWER(p.name_uk) LIKE %s)")
+                parts.append("(LOWER(p.name) LIKE %s OR LOWER(p.name_uk) LIKE %s)")
                 params.extend([f"%{word.lower()}%"] * 2)
             clauses.append(f"({' AND '.join(parts)})")
 
@@ -698,7 +698,7 @@ async def get_wanted_publishers(
         if words:
             parts = []
             for word in words:
-                parts.append("ULOWER(p.name) LIKE %s")
+                parts.append("LOWER(p.name) LIKE %s")
                 params.append(f"%{word.lower()}%")
             clauses.append(f"({' AND '.join(parts)})")
 

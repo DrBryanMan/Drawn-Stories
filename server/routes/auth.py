@@ -6,6 +6,7 @@ import os
 import shutil
 from server.db import get_db
 from fastapi.responses import FileResponse
+from server.helpers.scores import get_level_for_score, get_level_title
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -175,13 +176,19 @@ async def login(req: LoginRequest, response: Response):
     
     pref = db.get_one("SELECT site_lang FROM user_preferences WHERE user_id = %s", [user['id']])
     site_lang = pref['site_lang'] if pref else 'uk'
-    
+
+    score = user.get('score', 0) or 0
+    level = user.get('level', 1) or 1
+
     return {
-        "logged_in": True, 
-        "username": user['username'], 
-        "nickname": user['nickname'] or user['username'], 
-        "role": user['role'], 
-        "site_lang": site_lang
+        "logged_in": True,
+        "username": user['username'],
+        "nickname": user['nickname'] or user['username'],
+        "role": user['role'],
+        "site_lang": site_lang,
+        "score": score,
+        "level": level,
+        "level_title": get_level_title(level),
     }
 
 @router.get("/me")
@@ -193,22 +200,29 @@ async def me(request: Request):
     
     db = get_db()
     db.execute("UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE username = %s", [username])
-    
-    user = db.get_one("SELECT id, nickname FROM users WHERE username = %s", [username])
+
+    user = db.get_one("SELECT id, nickname, score, level FROM users WHERE username = %s", [username])
     site_lang = 'uk'
     nickname = username
+    score = 0
+    level = 1
     if user:
         nickname = user['nickname'] or username
+        score = user.get('score', 0) or 0
+        level = user.get('level', 1) or 1
         pref = db.get_one("SELECT site_lang FROM user_preferences WHERE user_id = %s", [user['id']])
         if pref:
             site_lang = pref['site_lang']
-            
+
     return {
-        "logged_in": True, 
-        "username": username, 
-        "nickname": nickname, 
-        "role": role, 
-        "site_lang": site_lang
+        "logged_in": True,
+        "username": username,
+        "nickname": nickname,
+        "role": role,
+        "site_lang": site_lang,
+        "score": score,
+        "level": level,
+        "level_title": get_level_title(level),
     }
 
 @router.post("/change-password")

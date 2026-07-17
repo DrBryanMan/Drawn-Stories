@@ -393,7 +393,7 @@ async def update_collection(collection_id: int, data: dict):
         if key in allowed_fields:
             if value == "":
                 value = None
-            fields.append(f"{key} = ?")
+            fields.append(f"{key} = %s")
             params.append(value)
             
     if fields:
@@ -594,43 +594,43 @@ async def get_collection_candidates(
     params_issues = []
     
     if volume_id:
-        clauses_issues.append("i.volume_id = ?")
+        clauses_issues.append("i.volume_id = %s")
         params_issues.append(volume_id)
     if hikka_slug:
-        clauses_issues.append("ULOWER(v.hikka_slug) LIKE %s")
+        clauses_issues.append("LOWER(v.hikka_slug) LIKE %s")
         params_issues.append(f"%{hikka_slug.lower()}%")
     if cv_vol_id:
-        clauses_issues.append("v.cv_id = ?")
+        clauses_issues.append("v.cv_id = %s")
         params_issues.append(cv_vol_id)
         
     if name:
         if exact:
-            clauses_issues.append("ULOWER(i.name) = ?")
+            clauses_issues.append("LOWER(i.name) = %s")
             params_issues.append(name.lower())
         else:
             words = [w.strip() for w in name.split() if w.strip()]
             if words:
                 name_parts = []
                 for word in words:
-                    name_parts.append("(ULOWER(i.name) LIKE %s OR ULOWER(i.name_uk) LIKE %s)")
+                    name_parts.append("(LOWER(i.name) LIKE %s OR LOWER(i.name_uk) LIKE %s)")
                     params_issues.extend([f"%{word.lower()}%", f"%{word.lower()}%"])
                 clauses_issues.append(f"({' AND '.join(name_parts)})")
                 
     if volume_name:
         if exact:
-            clauses_issues.append("(ULOWER(v.name) = ? OR ULOWER(v.name_uk) = ?)")
+            clauses_issues.append("(LOWER(v.name) = %s OR LOWER(v.name_uk) = %s)")
             params_issues.extend([volume_name.lower(), volume_name.lower()])
         else:
             words = [w.strip() for w in volume_name.split() if w.strip()]
             if words:
                 vol_parts = []
                 for word in words:
-                    vol_parts.append("(ULOWER(v.name) LIKE %s OR ULOWER(v.name_uk) LIKE %s)")
+                    vol_parts.append("(LOWER(v.name) LIKE %s OR LOWER(v.name_uk) LIKE %s)")
                     params_issues.extend([f"%{word.lower()}%", f"%{word.lower()}%"])
                 clauses_issues.append(f"({' AND '.join(vol_parts)})")
                 
     if issue_number:
-        clauses_issues.append("i.issue_number = ?")
+        clauses_issues.append("i.issue_number = %s")
         params_issues.append(issue_number)
         
     where_issues = f" WHERE {' AND '.join(clauses_issues)}" if clauses_issues else ""
@@ -663,43 +663,43 @@ async def get_collection_candidates(
         params_manga = []
         
         if volume_id:
-            clauses_manga.append("mc.volume_id = ?")
+            clauses_manga.append("mc.volume_id = %s")
             params_manga.append(volume_id)
         if hikka_slug:
-            clauses_manga.append("ULOWER(v.hikka_slug) LIKE %s")
+            clauses_manga.append("LOWER(v.hikka_slug) LIKE %s")
             params_manga.append(f"%{hikka_slug.lower()}%")
         if cv_vol_id:
-            clauses_manga.append("v.cv_id = ?")
+            clauses_manga.append("v.cv_id = %s")
             params_manga.append(cv_vol_id)
             
         if name:
             if exact:
-                clauses_manga.append("ULOWER(mc.name) = ?")
+                clauses_manga.append("LOWER(mc.name) = %s")
                 params_manga.append(name.lower())
             else:
                 words = [w.strip() for w in name.split() if w.strip()]
                 if words:
                     name_parts = []
                     for word in words:
-                        name_parts.append("(ULOWER(mc.name) LIKE %s OR ULOWER(mc.name_uk) LIKE %s)")
+                        name_parts.append("(LOWER(mc.name) LIKE %s OR LOWER(mc.name_uk) LIKE %s)")
                         params_manga.extend([f"%{word.lower()}%", f"%{word.lower()}%"])
                     clauses_manga.append(f"({' AND '.join(name_parts)})")
                     
         if volume_name:
             if exact:
-                clauses_manga.append("(ULOWER(v.name) = ? OR ULOWER(v.name_uk) = ?)")
+                clauses_manga.append("(LOWER(v.name) = %s OR LOWER(v.name_uk) = %s)")
                 params_manga.extend([volume_name.lower(), volume_name.lower()])
             else:
                 words = [w.strip() for w in volume_name.split() if w.strip()]
                 if words:
                     vol_parts = []
                     for word in words:
-                        vol_parts.append("(ULOWER(v.name) LIKE %s OR ULOWER(v.name_uk) LIKE %s)")
+                        vol_parts.append("(LOWER(v.name) LIKE %s OR LOWER(v.name_uk) LIKE %s)")
                         params_manga.extend([f"%{word.lower()}%", f"%{word.lower()}%"])
                     clauses_manga.append(f"({' AND '.join(vol_parts)})")
                     
         if issue_number:
-            clauses_manga.append("mc.chapter_number = ?")
+            clauses_manga.append("mc.chapter_number = %s")
             params_manga.append(issue_number)
             
         where_manga = f" WHERE {' AND '.join(clauses_manga)}" if clauses_manga else ""

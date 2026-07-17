@@ -5,6 +5,11 @@ import json
 from datetime import datetime
 from server.db import get_db
 from server.routes.volumes import apply_volume_update_in_db
+from server.helpers.scores import (
+    calculate_edit_score,
+    build_reason_string,
+    get_level_for_score,
+)
 
 router = APIRouter(prefix="/api/edits", tags=["edits"])
 
@@ -34,7 +39,12 @@ async def get_edit_requests(request: Request, status: Optional[str] = None):
     query = """
         SELECT er.*, u.username as proposer_username, m.username as moderator_username,
                v.name as volume_name, v.name_uk as volume_name_uk,
-               v.image as volume_cv_img, NULL as volume_hikka_img
+               v.image as volume_cv_img, NULL as volume_hikka_img,
+               COALESCE((
+                   SELECT SUM(sh.delta)
+                   FROM score_history sh
+                   WHERE sh.edit_id = er.id AND sh.user_id = er.user_id
+               ), 0) AS score_awarded
         FROM edit_requests er
         JOIN users u ON er.user_id = u.id
         LEFT JOIN users m ON er.moderator_id = m.id
@@ -65,35 +75,64 @@ def get_volume_current_state(db, volume_id: int):
     vol = db.get_one("SELECT * FROM volumes WHERE id = %s", [volume_id])
     if not vol:
         return None
-    
+
     # Теми з назвами
     themes = db.get_all("""
-        SELECT t.id, COALESCE(t.ua_name, t.name) as name 
+        SELECT t.id, COALESCE(t.ua_name, t.name) as name
         FROM volume_themes vt
         JOIN themes t ON t.id = vt.theme_id
         WHERE vt.volume_id = %s
     """, [volume_id])
     theme_ids = [t["id"] for t in themes]
     themes_list = [{"id": t["id"], "name": t["name"]} for t in themes]
-    
+
     # Персонал
     staff = db.get_all("SELECT person_id, role FROM volume_persons WHERE volume_id = %s", [volume_id])
     staff_list = [{"person_id": s["person_id"], "role": s["role"]} for s in staff]
-    
+
     # Персонажі
     chars = db.get_all("SELECT character_id, role FROM volume_characters WHERE volume_id = %s", [volume_id])
     chars_list = [{"character_id": c["character_id"], "role": c["role"]} for c in chars]
-    
+
     state = dict(vol)
     for key in ["id", "created_at", "updated_at"]:
         state.pop(key, None)
-        
+
     state["theme_ids"] = theme_ids
     state["themes"] = themes_list
     state["staff"] = staff_list
     state["characters"] = chars_list
-    
+
     return state
+
+
+def _apply_score(
+    db,
+    user_id: int,
+    delta: int,
+    reason: str,
+    edit_id: int | None = None,
+) -> None:
+    """Нараховує/знімає бали, оновлює рівень та записує в score_history."""
+    if delta == 0:
+        return
+
+    db.execute(
+        "UPDATE users SET score = GREATEST(0, score + %s) WHERE id = %s",
+        [delta, user_id],
+    )
+    row = db.get_one("SELECT score FROM users WHERE id = %s", [user_id])
+    new_score = row["score"] if row else 0
+    new_level = get_level_for_score(new_score)
+    db.execute("UPDATE users SET level = %s WHERE id = %s", [new_level, user_id])
+
+    db.execute(
+        """
+        INSERT INTO score_history (user_id, delta, reason, edit_id)
+        VALUES (%s, %s, %s, %s)
+        """,
+        [user_id, delta, reason, edit_id],
+    )
 
 @router.get("/{edit_id}")
 async def get_edit_request(edit_id: int, request: Request):
@@ -121,6 +160,16 @@ async def get_edit_request(edit_id: int, request: Request):
         d["patch_data"] = json.loads(d["patch_data"])
     except Exception:
         d["patch_data"] = {}
+
+    # Підвантажуємо записи балів пов'язані з цією правкою
+    score_rows = db.get_all("""
+        SELECT sh.delta, sh.reason, sh.created_at, u.username
+        FROM score_history sh
+        JOIN users u ON u.id = sh.user_id
+        WHERE sh.edit_id = %s
+        ORDER BY sh.created_at
+    """, [edit_id])
+    d["score_history"] = [dict(r) for r in score_rows]
 
     return d
 
@@ -200,10 +249,23 @@ async def create_edit_request(req: EditRequestSchema, request: Request):
             if req.entity_type == "volume":
                 apply_volume_update_in_db(db, req.entity_id, req.patch_data)
         except Exception as e:
-            # Якщо виникла помилка під час застосування, відкочуємо статус або видаляємо запит
             db.execute("DELETE FROM edit_requests WHERE id = %s", [new_id])
             raise HTTPException(status_code=500, detail=f"Помилка при застосуванні змін: {str(e)}")
-            
+
+        # Нараховуємо бали автору за авто-затверджену правку
+        themes_before = before_state.get("theme_ids", []) if before_state else []
+        themes_after = req.patch_data.get("theme_ids", themes_before)
+        pts, parts = calculate_edit_score(
+            before_state or {},
+            req.patch_data,
+            themes_before,
+            themes_after,
+        )
+        if pts > 0:
+            reason = build_reason_string(req.entity_type, req.entity_id, parts, pts)
+            _apply_score(db, user["id"], pts, reason, new_id)
+            db.conn.commit()
+
     return {
         "message": "Правку успішно створено" if status == "pending" else "Правку успішно застосовано",
         "id": new_id,
@@ -243,13 +305,33 @@ async def approve_edit_request(edit_id: int, req: Optional[ModerationActionSchem
     moderated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     db.execute(
         """
-        UPDATE edit_requests 
+        UPDATE edit_requests
         SET status = 'approved', moderator_id = %s, moderated_at = %s, moderator_comment = %s
         WHERE id = %s
         """,
-        [user["id"], moderated_at, req.moderator_comment if req else None, edit_id]
+        [user["id"], moderated_at, req.moderator_comment if req else None, edit_id],
     )
-    
+
+    # Нараховуємо бали автору правки
+    patch_obj_full = json.loads(edit_req["patch_data"])
+    before_state = patch_obj_full.get("before") or {}
+    themes_before = before_state.get("theme_ids", [])
+    themes_after = patch_data.get("theme_ids", themes_before)
+    pts, parts = calculate_edit_score(before_state, patch_data, themes_before, themes_after)
+    if pts > 0:
+        reason = build_reason_string(entity_type, entity_id, parts, pts)
+        _apply_score(db, edit_req["user_id"], pts, reason, edit_id)
+
+    # Бонус модератору за розгляд
+    _apply_score(
+        db,
+        user["id"],
+        2,
+        f"Розглянуто та схвалено правку #{edit_id} (+2 б.)",
+        edit_id,
+    )
+    db.conn.commit()
+
     return {"message": "Правку успішно схвалено та застосовано"}
 
 @router.post("/{edit_id}/reject")
@@ -259,21 +341,40 @@ async def reject_edit_request(edit_id: int, req: Optional[ModerationActionSchema
         raise HTTPException(status_code=403, detail="Недостатньо прав для модерації")
         
     db = get_db()
-    edit_req = db.get_one("SELECT id, status FROM edit_requests WHERE id = %s", [edit_id])
+    edit_req = db.get_one("SELECT id, status, user_id FROM edit_requests WHERE id = %s", [edit_id])
     if not edit_req:
         raise HTTPException(status_code=404, detail="Запит на правку не знайдено")
-        
+
     if edit_req["status"] != "pending":
         raise HTTPException(status_code=400, detail="Цей запит вже оброблений")
-        
+
     moderated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     db.execute(
         """
-        UPDATE edit_requests 
+        UPDATE edit_requests
         SET status = 'rejected', moderator_id = %s, moderated_at = %s, moderator_comment = %s
         WHERE id = %s
         """,
-        [user["id"], moderated_at, req.moderator_comment if req else None, edit_id]
+        [user["id"], moderated_at, req.moderator_comment if req else None, edit_id],
     )
-    
+
+    # Штраф автору за відхилену правку
+    _apply_score(
+        db,
+        edit_req["user_id"],
+        -10,
+        f"Відхилено правку #{edit_id} (-10 б.)",
+        edit_id,
+    )
+
+    # Бонус модератору за розгляд
+    _apply_score(
+        db,
+        user["id"],
+        2,
+        f"Розглянуто та відхилено правку #{edit_id} (+2 б.)",
+        edit_id,
+    )
+    db.conn.commit()
+
     return {"message": "Правку відхилено"}

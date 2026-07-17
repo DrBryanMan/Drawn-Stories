@@ -190,6 +190,7 @@ export async function renderEdits(main) {
                             <th>Автор</th>
                             <th>Контент</th>
                             <th>Зміни</th>
+                            <th>Бали</th>
                             <th style="text-align: right;">Статус</th>
                         </tr>
                     </thead>
@@ -264,11 +265,28 @@ export async function renderEdits(main) {
                 <td class="col-changes">
                     ${getChangedFieldsBadges(beforeData, afterData)}
                 </td>
+                <td class="col-score">
+                    ${renderScoreChip(e)}
+                </td>
                 <td class="col-status">
                     ${statusLabels[e.status]}
                 </td>
             </tr>
         `;
+    }
+
+    function renderScoreChip(e) {
+        const pts = e.score_awarded ?? 0;
+        if (e.status === 'pending') {
+            return '<span class="score-chip score-chip--pending">—</span>';
+        }
+        if (e.status === 'rejected') {
+            return '<span class="score-chip score-chip--negative">−10</span>';
+        }
+        if (pts === 0) {
+            return '<span class="score-chip score-chip--zero">0 б.</span>';
+        }
+        return `<span class="score-chip score-chip--positive">+${pts} б.</span>`;
     }
 
     function getChangedFieldsBadges(before, after) {

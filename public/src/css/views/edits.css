@@ -849,3 +849,48 @@
     box-shadow: none !important;
     outline: none !important;
 }
+
+/* ── Score column & chip ─────────────────────────────────────────────────── */
+.col-score {
+    width: 90px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.score-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: var(--font-monos);
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.score-chip--positive {
+    background: color-mix(in srgb, #22c55e 12%, transparent);
+    border-color: color-mix(in srgb, #22c55e 30%, transparent);
+    color: #22c55e;
+}
+
+.score-chip--negative {
+    background: color-mix(in srgb, #ef4444 12%, transparent);
+    border-color: color-mix(in srgb, #ef4444 30%, transparent);
+    color: #ef4444;
+}
+
+.score-chip--zero {
+    background: var(--bg-body);
+    border-color: var(--border-s);
+    color: var(--text-muted);
+}
+
+.score-chip--pending {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text-muted);
+    font-style: italic;
+}

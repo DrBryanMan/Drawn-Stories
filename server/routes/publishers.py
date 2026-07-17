@@ -18,7 +18,7 @@ async def get_publishers(
     params = []
 
     if search:
-        where_parts.append("ULOWER(p.name) LIKE %s")
+        where_parts.append("LOWER(p.name) LIKE %s")
         params.append(f"%{search.lower()}%")
     
     if ids:

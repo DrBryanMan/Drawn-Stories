@@ -607,46 +607,46 @@ async def get_issues(
     params = []
 
     if ds_id:
-        clauses.append("i.id = ?")
+        clauses.append("i.id = %s")
         params.append(ds_id)
     if volume_id:
-        clauses.append("i.volume_id = ?")
+        clauses.append("i.volume_id = %s")
         params.append(volume_id)
     if hikka_slug:
-        clauses.append("ULOWER(v.hikka_slug) LIKE %s")
+        clauses.append("LOWER(v.hikka_slug) LIKE %s")
         params.append(f"%{hikka_slug.lower()}%")
     if cv_vol_id:
-        clauses.append("v.cv_id = ?")
+        clauses.append("v.cv_id = %s")
         params.append(cv_vol_id)
     
     if name:
         if exact:
-            clauses.append("ULOWER(i.name) = ?")
+            clauses.append("LOWER(i.name) = %s")
             params.append(name.lower())
         else:
             words = [w.strip() for w in name.split() if w.strip()]
             if words:
                 name_parts = []
                 for word in words:
-                    name_parts.append("ULOWER(i.name) LIKE %s")
+                    name_parts.append("LOWER(i.name) LIKE %s")
                     params.append(f"%{word.lower()}%")
                 clauses.append(f"({' AND '.join(name_parts)})")
 
     if volume_name:
         if exact:
-            clauses.append("(ULOWER(v.name) = ? OR ULOWER(v.name_uk) = ?)")
+            clauses.append("(LOWER(v.name) = %s OR LOWER(v.name_uk) = %s)")
             params.extend([volume_name.lower(), volume_name.lower()])
         else:
             words = [w.strip() for w in volume_name.split() if w.strip()]
             if words:
                 vol_parts = []
                 for word in words:
-                    vol_parts.append("(ULOWER(v.name) LIKE %s OR ULOWER(v.name_uk) LIKE %s)")
+                    vol_parts.append("(LOWER(v.name) LIKE %s OR LOWER(v.name_uk) LIKE %s)")
                     params.extend([f"%{word.lower()}%", f"%{word.lower()}%"])
                 clauses.append(f"({' AND '.join(vol_parts)})")
 
     if issue_number:
-        clauses.append("i.issue_number = ?")
+        clauses.append("i.issue_number = %s")
         params.append(issue_number)
 
     if not clauses:
@@ -726,7 +726,7 @@ async def update_issue(issue_id: int, data: dict, request: Request):
         if key in allowed_fields:
             if value == "":
                 value = None
-            fields.append(f"{key} = ?")
+            fields.append(f"{key} = %s")
             params.append(value)
             
     if fields:

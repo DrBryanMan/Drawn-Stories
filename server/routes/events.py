@@ -47,7 +47,7 @@ async def get_events(search: Optional[str] = None, limit: int = 50, offset: int 
     where = ""
 
     if search:
-        where = "WHERE ULOWER(e.name) LIKE %s"
+        where = "WHERE LOWER(e.name) LIKE %s"
         params.append(f"%{search.lower()}%")
 
     events = db.get_all(
