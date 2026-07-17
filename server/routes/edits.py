@@ -106,6 +106,63 @@ def get_volume_current_state(db, volume_id: int):
     return state
 
 
+def filter_patch_data(before_state: dict | None, after_data: dict) -> tuple[dict, dict]:
+    # 1. Видаляємо службові/допоміжні поля фронтенду
+    for key in ["image_file", "cover_img_file"]:
+        after_data.pop(key, None)
+
+    if not before_state:
+        filtered_after = {k: v for k, v in after_data.items() if v not in (None, "", [], {})}
+        return {}, filtered_after
+
+    filtered_before = {}
+    filtered_after = {}
+
+    for key, after_val in after_data.items():
+        before_val = before_state.get(key)
+
+        is_equal = False
+
+        # Порівняння списків (наприклад, theme_ids, staff, characters, themes)
+        if isinstance(after_val, list) or isinstance(before_val, list):
+            def get_norm_list(val):
+                if not val:
+                    return []
+                if isinstance(val, list):
+                    if val and isinstance(val[0], (int, float)):
+                        return sorted([int(x) for x in val])
+                    norm = []
+                    for item in val:
+                        if isinstance(item, dict):
+                            norm.append(tuple(sorted((str(k), str(v)) for k, v in item.items() if v not in (None, ""))))
+                        else:
+                            norm.append(str(item))
+                    return sorted(norm)
+                return [str(val)]
+
+            is_equal = get_norm_list(before_val) == get_norm_list(after_val)
+
+        # Порівняння словників
+        elif isinstance(after_val, dict) or isinstance(before_val, dict):
+            def get_norm_dict(val):
+                if not val:
+                    return {}
+                return {str(k): str(v) for k, v in val.items() if v not in (None, "")}
+            is_equal = get_norm_dict(before_val) == get_norm_dict(after_val)
+
+        # Порівняння простих полів (рядки, числа, None)
+        else:
+            norm_before = str(before_val).strip() if before_val is not None else ""
+            norm_after = str(after_val).strip() if after_val is not None else ""
+            is_equal = norm_before == norm_after
+
+        if not is_equal:
+            filtered_before[key] = before_val
+            filtered_after[key] = after_val
+
+    return filtered_before, filtered_after
+
+
 def _apply_score(
     db,
     user_id: int,
@@ -220,10 +277,17 @@ async def create_edit_request(req: EditRequestSchema, request: Request):
         moderator_id = user["id"]
         moderated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
+    # Зберігаємо оригінальні theme_ids для розрахунку балів
+    themes_before = before_state.get("theme_ids", []) if before_state else []
+    themes_after = req.patch_data.get("theme_ids", themes_before)
+
+    # Фільтруємо patch_data, залишаючи тільки змінені поля
+    filtered_before, filtered_after = filter_patch_data(before_state, req.patch_data)
+
     # Зберігаємо запит у базу даних разом із знімком "before"
     full_patch = {
-        "before": before_state,
-        "after": req.patch_data
+        "before": filtered_before,
+        "after": filtered_after
     }
     patch_data_json = json.dumps(full_patch, ensure_ascii=False)
     
@@ -247,17 +311,15 @@ async def create_edit_request(req: EditRequestSchema, request: Request):
     if status == "approved":
         try:
             if req.entity_type == "volume":
-                apply_volume_update_in_db(db, req.entity_id, req.patch_data)
+                apply_volume_update_in_db(db, req.entity_id, filtered_after)
         except Exception as e:
             db.execute("DELETE FROM edit_requests WHERE id = %s", [new_id])
             raise HTTPException(status_code=500, detail=f"Помилка при застосуванні змін: {str(e)}")
 
         # Нараховуємо бали автору за авто-затверджену правку
-        themes_before = before_state.get("theme_ids", []) if before_state else []
-        themes_after = req.patch_data.get("theme_ids", themes_before)
         pts, parts = calculate_edit_score(
-            before_state or {},
-            req.patch_data,
+            filtered_before,
+            filtered_after,
             themes_before,
             themes_after,
         )
