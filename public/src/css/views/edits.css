@@ -1,8 +1,8 @@
 /* Suggest Edit Button */
 .suggest-edit-btn {
-  position: absolute;
-  top: 16px;
-  left: 100%;
+  /* position: absolute; */
+  /* top: 16px; */
+  /* left: 100%; */
   display: flex;
   align-items: center;
   gap: 6px;
@@ -171,8 +171,8 @@
 .edit-status-badge {
     display: inline-grid;
     place-items: center;
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     border-radius: var(--r);
     font-size: 11px;
     font-weight: 700;
@@ -871,20 +871,14 @@
 }
 
 .score-chip--positive {
-    background: color-mix(in srgb, #22c55e 12%, transparent);
-    border-color: color-mix(in srgb, #22c55e 30%, transparent);
     color: #22c55e;
 }
 
 .score-chip--negative {
-    background: color-mix(in srgb, #ef4444 12%, transparent);
-    border-color: color-mix(in srgb, #ef4444 30%, transparent);
     color: #ef4444;
 }
 
 .score-chip--zero {
-    background: var(--bg-body);
-    border-color: var(--border-s);
     color: var(--text-muted);
 }
 
@@ -893,4 +887,120 @@
     border-color: transparent;
     color: var(--text-muted);
     font-style: italic;
-}
+}
+
+/* ── Contributors Section ── */
+.contributors-carousel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.contributor-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-s);
+    border-radius: var(--r-lg);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    position: relative;
+    min-width: 220px;
+    flex: 1;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.contributor-avatar-wrap {
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.contributor-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--r);
+    object-fit: cover;
+    background: var(--bg-body);
+}
+
+.contributor-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.contributor-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.contributor-stats {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.stat-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.stat-dot--green {
+    background-color: #22c55e;
+}
+
+.stat-dot--red {
+    background-color: #ef4444;
+}
+
+.stat-dot--grey {
+    background-color: #94a3b8;
+}
+
+.stat-dot--orange {
+    background-color: #f97316;
+}
+
+.contributor-rank-star {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+}
+
+.rank-star {
+    font-size: 16px;
+}
+
+.rank-star--gold {
+    color: #f59e0b;
+}
+
+.rank-star--silver {
+    color: #94a3b8;
+}
+
+.rank-star--bronze {
+    color: #b45309;
+}
+
+.rank-star--other {
+    color: var(--border-s);
+}
+
+/* ── Closed status styling ── */
+.edit-status--closed {
+    color: var(--text-muted);
+    background: color-mix(in srgb, var(--text-muted) 10%, white);
+}
+

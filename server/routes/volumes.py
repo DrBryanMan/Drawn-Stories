@@ -895,3 +895,32 @@ async def get_volume_characters(volume_id: int):
         [volume_id]
     )
     return {"volume": volume, "items": rows}
+
+
+@router.get("/{volume_id}/edit-history")
+async def get_volume_edit_history(volume_id: int):
+    db = get_db()
+    volume = db.get_one("SELECT id FROM volumes WHERE id = %s", [volume_id])
+    if not volume:
+        raise HTTPException(status_code=404, detail="Том не знайдено")
+        
+    query = """
+        SELECT er.*, u.username as proposer_username, m.username as moderator_username
+        FROM edit_requests er
+        JOIN users u ON er.user_id = u.id
+        LEFT JOIN users m ON er.moderator_id = m.id
+        WHERE er.entity_type = 'volume' AND er.entity_id = %s
+        ORDER BY er.created_at DESC
+    """
+    rows = db.get_all(query, [volume_id])
+    
+    result = []
+    for r in rows:
+        d = dict(r)
+        try:
+            d["patch_data"] = json.loads(d["patch_data"])
+        except Exception:
+            d["patch_data"] = {}
+        result.append(d)
+        
+    return {"data": result}

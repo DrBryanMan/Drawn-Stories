@@ -270,10 +270,6 @@ function updateAuthUI() {
 
   const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'moderator');
   const addBtnHTML = isAdmin ? `
-    <a href="#/edits" class="bookmarks-trigger" id="edits-list-btn" title="${t('edit_list')}" style="display: inline-flex; align-items: center; justify-content: center; margin-right: 2px; position: relative;">
-      ${icon('<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>', 20)}
-      <span class="bookmarks-count edits-pending-badge" id="edits-pending-count"></span>
-    </a>
     <a href="/wanted" class="bookmarks-trigger" id="wanted-btn" title="Wanted Content" style="display: inline-flex; align-items: center; justify-content: center; margin-right: 2px;">
       ${icon('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>', 20)}
     </a>
@@ -282,18 +278,28 @@ function updateAuthUI() {
     </button>
   ` : '';
 
-  const bookmarksHTML = `
-    ${addBtnHTML}
+  const bookmarksGuestHTML = `
     <a href="#/bookmarks" class="bookmarks-trigger" id="bookmarks-btn" title="${t('bookmarks')}">
       ${icon(ICON_BOOKMARK)}
       <span class="bookmarks-count ${Bookmarks.count() > 0 ? 'is-visible' : ''}" id="bookmarks-count">${Bookmarks.count()}</span>
     </a>
   `;
 
+  const headerControlsHTML = `
+    ${addBtnHTML}
+    <a href="#/edits" class="bookmarks-trigger" id="edits-list-btn" title="${t('edit_list')}" style="display: inline-flex; align-items: center; justify-content: center; margin-right: 2px; position: relative;">
+      ${icon('<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>', 20)}
+      <span class="bookmarks-count edits-pending-badge" id="edits-pending-count"></span>
+    </a>
+  `;
+
   if (currentUser) {
     const avatarUrl = `/api/auth/avatar/${currentUser.username}?t=${new Date().getTime()}`;
+    const score = currentUser.score || 0;
+    const prog = getLevelProgress(score);
+
     container.innerHTML = `
-      ${bookmarksHTML}
+      ${headerControlsHTML}
       <div class="nav-dropdown">
         <button class="nav-link nav-dropdown-trigger auth-user-btn">
           ${getAvatarHtml(avatarUrl, 'header-avatar', 38)}
@@ -303,7 +309,13 @@ function updateAuthUI() {
             ${getAvatarHtml(avatarUrl, 'header-avatar', 40)}
             <div class="user-details">
                 <div class="user-name">${currentUser.nickname || currentUser.username}</div>
-                <div class="user-role">${currentUser.role === 'admin' ? t('role_admin') : currentUser.role === 'moderator' ? t('role_moderator') : t('role_user')}</div>
+                <div class="user-level-info">Рівень ${prog.levelNum}: ${prog.title}</div>
+                <div class="user-score-info">Бали: ${score}${prog.nextThreshold ? ` / ${prog.nextThreshold}` : ''}</div>
+                ${prog.nextThreshold ? `
+                    <div class="user-level-progress-bar-wrap" title="До наступного рівня: ${prog.remaining} б.">
+                        <div class="user-level-progress-bar" style="width: ${prog.percent}%;"></div>
+                    </div>
+                ` : '<div class="user-level-max">Максимальний рівень!</div>'}
             </div>
           </div>
           <div class="dropdown-divider"></div>
@@ -312,6 +324,11 @@ function updateAuthUI() {
           <a class="nav-dropdown-link" href="#/user/${currentUser.username}/lists" data-route="/user/${currentUser.username}/lists">
             ${icon('<path d="M8 6h10"/><path d="M8 12h10"/><path d="M8 18h7"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>')}
             <span>${t('my_lists')}</span>
+          </a>
+          <a class="nav-dropdown-link" href="#/bookmarks" id="bookmarks-dropdown-link">
+            ${icon(ICON_BOOKMARK)}
+            <span>${t('bookmarks')}</span>
+            <span class="bookmarks-count ${Bookmarks.count() > 0 ? 'is-visible' : ''}" id="bookmarks-count" style="margin-left: auto;">${Bookmarks.count()}</span>
           </a>
           <a class="nav-dropdown-link" href="#/user/${currentUser.username}/collection" data-route="/user/${currentUser.username}/collection">
             ${icon('<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>')}
@@ -360,7 +377,7 @@ function updateAuthUI() {
     }
   } else {
     container.innerHTML = `
-      ${bookmarksHTML}
+      ${bookmarksGuestHTML}
       <a href="${authHref}" class="auth-trigger" id="auth-btn">
         ${icon('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>')}
         <span>${t('login')}</span>
@@ -414,4 +431,56 @@ function syncActiveNav(path, query) {
     const hasActiveChild = dropdown.querySelector('.nav-dropdown-link.active');
     trigger.classList.toggle('active', !!hasActiveChild);
   });
+}
+
+function getLevelProgress(score) {
+  const LEVELS = [
+    { threshold: 0, title: "Новачок" },
+    { threshold: 50, title: "Учень" },
+    { threshold: 150, title: "Редактор" },
+    { threshold: 350, title: "Досвідчений" },
+    { threshold: 700, title: "Провідний" },
+    { threshold: 1200, title: "Експерт" },
+    { threshold: 2000, title: "Майстер" },
+    { threshold: 3500, title: "Гросмейстер" }
+  ];
+
+  let currentIdx = 0;
+  for (let i = 0; i < LEVELS.length; i++) {
+    if (score >= LEVELS[i].threshold) {
+      currentIdx = i;
+    } else {
+      break;
+    }
+  }
+
+  const currentLevel = LEVELS[currentIdx];
+  const nextLevel = LEVELS[currentIdx + 1];
+
+  if (!nextLevel) {
+    return {
+      levelNum: currentIdx + 1,
+      title: currentLevel.title,
+      score: score,
+      nextThreshold: null,
+      remaining: 0,
+      percent: 100
+    };
+  }
+
+  const currentMin = currentLevel.threshold;
+  const nextMin = nextLevel.threshold;
+  const totalForLevel = nextMin - currentMin;
+  const earnedInLevel = score - currentMin;
+  const percent = Math.min(100, Math.max(0, Math.round((earnedInLevel / totalForLevel) * 100)));
+  const remaining = nextMin - score;
+
+  return {
+    levelNum: currentIdx + 1,
+    title: currentLevel.title,
+    score: score,
+    nextThreshold: nextMin,
+    remaining: remaining,
+    percent: percent
+  };
 }

@@ -2077,3 +2077,239 @@
     flex: 0 0 auto;
   }
 }
+
+/* ── Volume Edit History & Editors CSS ────────────────── */
+.breadcrumbs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.volume-editors-history-block {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.volume-editors-list {
+  display: flex;
+  align-items: center;
+}
+
+.volume-editors-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-right: 8px;
+}
+
+.volume-editors-avatars {
+  display: flex;
+  align-items: center;
+}
+
+.volume-editor-avatar-link {
+  display: inline-block;
+  margin-left: -8px;
+  position: relative;
+  transition: transform var(--t);
+  z-index: 1;
+}
+
+.volume-editor-avatar-link:first-child {
+  margin-left: 0;
+}
+
+.volume-editor-avatar-link:hover {
+  transform: translateY(-2px);
+  z-index: 5;
+}
+
+.volume-editor-avatar-img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-card);
+  object-fit: cover;
+}
+
+.btn-history-trigger {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border-s);
+  color: var(--text-2);
+  padding: 6px 8px;
+  border-radius: var(--r);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all var(--t);
+}
+
+.btn-history-trigger:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-history-trigger .badge-pending-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 10px;
+  height: 10px;
+  background-color: #ff9800;
+  border-radius: 50%;
+  border: 2px solid var(--bg-body);
+  box-shadow: 0 0 0 1px #ff9800;
+}
+
+.edit-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.edit-history-item {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-s);
+  border-radius: var(--r-lg);
+  padding: 16px;
+  text-decoration: none;
+  color: inherit;
+  transition: all var(--t);
+  cursor: pointer;
+  width: 100%;
+}
+
+.edit-history-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+}
+
+.edit-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.edit-history-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.edit-history-avatar-wrap .contributor-avatar,
+.edit-history-avatar-wrap .header-avatar,
+.edit-history-avatar-wrap img {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.edit-history-avatar-wrap .avatar-placeholder {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--bg-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.edit-history-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.edit-history-username {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.edit-history-date {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.edit-history-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: var(--r-lg);
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.edit-history-status-badge--approved {
+  background: #e6fcf5;
+  border-color: #c3fae8;
+  color: #0c8558;
+}
+
+.edit-history-status-badge--pending {
+  background: #fff9db;
+  border-color: #ffe066;
+  color: #d99306;
+}
+
+.edit-history-status-badge--rejected {
+  background: #fff5f5;
+  border-color: #ffc9c9;
+  color: #c92a2a;
+}
+
+.edit-history-status-badge--closed {
+  background: #f1f3f5;
+  border-color: #dee2e6;
+  color: #495057;
+}
+
+.edit-history-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 20px;
+  border-left: 2px solid var(--border-s);
+  margin-left: 22px;
+}
+
+.edit-history-badges-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.edit-history-field-badge {
+  background: var(--bg-body);
+  border: 1px solid var(--border-s);
+  color: var(--text-2);
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.edit-history-comment {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 4px;
+}

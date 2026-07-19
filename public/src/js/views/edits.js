@@ -12,7 +12,8 @@ const ICON = {
     eye: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
     pending: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="status-badge-icon" style="vertical-align: middle;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
     approved: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="status-badge-icon" style="vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg>',
-    rejected: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="status-badge-icon" style="vertical-align: middle;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+    rejected: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="status-badge-icon" style="vertical-align: middle;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+    closed: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="status-badge-icon" style="vertical-align: middle;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
 };
 
 export async function renderEdits(main) {
@@ -56,9 +57,12 @@ export async function renderEdits(main) {
                         <button class="wanted-ct-btn" data-status="pending">Очікують</button>
                         <button class="wanted-ct-btn" data-status="approved">Схвалені</button>
                         <button class="wanted-ct-btn" data-status="rejected">Відхилені</button>
+                        <button class="wanted-ct-btn" data-status="closed">Закриті</button>
                     </div>
                 </div>
             </div>
+            
+            <div id="contributors-container" class="contributors-carousel" style="display: none; margin-bottom: 24px;"></div>
 
             <div class="loader-container" id="edits-loader"><div class="loader"></div></div>
             <div id="edits-content" style="display: none;">
@@ -101,6 +105,7 @@ export async function renderEdits(main) {
             allEdits = await API.get('/edits');
             
             populateFilters();
+            renderContributors();
             
             loader.style.display = 'none';
             content.style.display = 'block';
@@ -110,6 +115,93 @@ export async function renderEdits(main) {
             loader.style.display = 'none';
             listContainer.innerHTML = `<div class="error-msg">Помилка завантаження правок: ${err.message}</div>`;
         }
+    }
+
+    function renderContributors() {
+        const container = main.querySelector('#contributors-container');
+        if (!container) return;
+
+        // Group edits by proposer_username
+        const userStats = {};
+        allEdits.forEach(e => {
+            const username = e.proposer_username;
+            if (!username) return;
+
+            if (!userStats[username]) {
+                userStats[username] = {
+                    username: username,
+                    approved: 0,
+                    rejected: 0,
+                    pending: 0,
+                    closed: 0
+                };
+            }
+            if (e.status === 'approved') userStats[username].approved++;
+            else if (e.status === 'rejected') userStats[username].rejected++;
+            else if (e.status === 'pending') userStats[username].pending++;
+            else if (e.status === 'closed') userStats[username].closed++;
+        });
+
+        // Convert to array and sort by approved desc, then pending desc, then rejected asc
+        const sorted = Object.values(userStats).sort((a, b) => {
+            if (b.approved !== a.approved) return b.approved - a.approved;
+            if (b.pending !== a.pending) return b.pending - a.pending;
+            return a.rejected - b.rejected;
+        });
+
+        // Take top 5
+        const topContributors = sorted.slice(0, 5);
+
+        if (topContributors.length === 0) {
+            container.innerHTML = '';
+            container.style.display = 'none';
+            return;
+        }
+
+        container.style.display = 'flex';
+        container.innerHTML = topContributors.map((c, index) => {
+            // Rank star logic
+            let starHtml = '';
+            if (index === 0) starHtml = `<span class="rank-star rank-star--gold" title="1 місце">★</span>`;
+            else if (index === 1) starHtml = `<span class="rank-star rank-star--silver" title="2 місце">★</span>`;
+            else if (index === 2) starHtml = `<span class="rank-star rank-star--bronze" title="3 місце">★</span>`;
+            else starHtml = `<span class="rank-star rank-star--other" title="${index + 1} місце">★</span>`;
+
+            const avatarUrl = `/api/auth/avatar/${c.username}`;
+            const avatarHtml = getAvatarHtml(avatarUrl, 'contributor-avatar', 44);
+
+            return `
+                <div class="contributor-card">
+                    <div class="contributor-avatar-wrap">
+                        ${avatarHtml}
+                    </div>
+                    <div class="contributor-info">
+                        <span class="contributor-name">${escapeHtml(c.username)}</span>
+                        <div class="contributor-stats">
+                            <div class="stat-item" title="Схвалено">
+                                <span class="stat-dot stat-dot--green"></span>
+                                <span>${c.approved}</span>
+                            </div>
+                            <div class="stat-item" title="Відхилено">
+                                <span class="stat-dot stat-dot--red"></span>
+                                <span>${c.rejected}</span>
+                            </div>
+                            <div class="stat-item" title="В очікуванні">
+                                <span class="stat-dot stat-dot--orange"></span>
+                                <span>${c.pending}</span>
+                            </div>
+                            <div class="stat-item" title="Закрито">
+                                <span class="stat-dot stat-dot--grey"></span>
+                                <span>${c.closed}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="contributor-rank-star">
+                        ${starHtml}
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 
     function populateFilters() {
@@ -229,7 +321,8 @@ export async function renderEdits(main) {
         const statusLabels = {
             'pending': `<span class="edit-status-badge edit-status--pending" title="Очікує прийняття">${ICON.pending}</span>`,
             'approved': `<span class="edit-status-badge edit-status--approved" title="Прийнята">${ICON.approved}</span>`,
-            'rejected': `<span class="edit-status-badge edit-status--rejected" title="Відхилена">${ICON.rejected}</span>`
+            'rejected': `<span class="edit-status-badge edit-status--rejected" title="Відхилена">${ICON.rejected}</span>`,
+            'closed': `<span class="edit-status-badge edit-status--closed" title="Закрита">${ICON.closed}</span>`
         };
 
         const entityLabel = e.entity_type === 'volume' ? 'Том' : e.entity_type;

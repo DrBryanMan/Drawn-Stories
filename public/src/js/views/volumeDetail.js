@@ -1,5 +1,5 @@
 import { API } from '../helpers/api.js';
-import { currentUser } from '../shell.js';
+import { currentUser, getAvatarHtml } from '../shell.js';
 import { Bookmarks } from '../helpers/bookmarks.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { langDisplay, langName, formatDate } from '../helpers/lang.js';
@@ -484,11 +484,14 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
     renderSkeleton(main);
 
     try {
-        const [data, readlistStatus, ratingData] = await Promise.all([
+        const [data, readlistStatus, ratingData, editsRes] = await Promise.all([
             API.get(`/volumes/${volumeId}`),
             API.get(`/user/readlist/${volumeId}`),
-            API.get(`/ratings/volume/${volumeId}`)
+            API.get(`/ratings/volume/${volumeId}`),
+            API.get(`/volumes/${volumeId}/edit-history`)
         ]);
+
+        const edits = editsRes.data || [];
 
         const {
             volume,
@@ -693,13 +696,68 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                </div>`
             : '';
 
+        const editors = [];
+        const seenEditors = new Set();
+        edits.forEach(e => {
+            const username = e.proposer_username;
+            if (username && !seenEditors.has(username)) {
+                seenEditors.add(username);
+                editors.push({
+                    username: username,
+                    avatarUrl: `/api/auth/avatar/${username}`
+                });
+            }
+        });
+
+        let editorsListHTML = '';
+        if (editors.length > 0) {
+            editorsListHTML = `
+                <div class="volume-editors-list">
+                    <span class="volume-editors-label">Редактори:</span>
+                    <div class="volume-editors-avatars">
+                        ${editors.slice(0, 5).map(ed => `
+                            <a href="#/user/${ed.username}" class="volume-editor-avatar-link" title="${escapeHtmlAttribute(ed.username)}">
+                                ${getAvatarHtml(ed.avatarUrl, 'volume-editor-avatar-img', 28)}
+                            </a>
+                        `).join('')}
+                        ${editors.length > 5 ? `<span style="font-size: 12px; margin-left: 6px; color: var(--text-muted);">+${editors.length - 5}</span>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        const hasPendingEdits = edits.some(e => e.status === 'pending');
+        const orangeIndicatorHTML = hasPendingEdits ? `<span class="badge-pending-dot"></span>` : '';
+
+        const editButtonHTML = currentUser ? `
+            <button class="btn-history-trigger" id="volume-edit-btn" title="${isModerator ? 'Редагувати' : t('suggest_edit')}">
+                <i class="bi bi-pencil-square"></i>
+            </button>
+        ` : '';
+
+        const historyButtonHTML = `
+            <button class="btn-history-trigger" id="volume-history-btn" title="Історія змін">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                ${orangeIndicatorHTML}
+            </button>
+        `;
+
+        const editorsHistoryBlockHTML = `
+            <div class="volume-editors-history-block">
+                ${editorsListHTML}
+                ${editButtonHTML}
+                ${historyButtonHTML}
+            </div>
+        `;
+
         main.innerHTML = `
             <div class="volume-detail">
-                <div class="container">
+                <div class="container breadcrumbs-header">
                     ${createBreadcrumbs([
                         { label: 'Каталог', href: '#/catalog' },
                         { label: title }
                     ], 'breadcrumbs volume-breadcrumbs')}
+                    ${editorsHistoryBlockHTML}
                 </div>
 
                 <section class="volume-hero-band${heroBannerClass}"${heroBannerStyle}>
@@ -1009,9 +1067,6 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
 
             ${isModerator ? `
                 <div class="volume-hero-admin-actions">
-                    <button class="btn-admin btn-admin--secondary" id="volume-edit-btn" title="Редагувати">
-                        <i class="bi bi-pencil-square"></i>
-                    </button>
                     <button class="btn-admin btn-admin--danger" id="volume-delete-btn" title="Видалити том">
                         <i class="bi bi-trash"></i>
                     </button>
@@ -1296,6 +1351,13 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                 } catch (err) {
                     alert('Помилка видалення: ' + err.message);
                 }
+            });
+        }
+
+        const historyBtn = main.querySelector('#volume-history-btn');
+        if (historyBtn) {
+            historyBtn.addEventListener('click', () => {
+                openEditHistoryModal(edits);
             });
         }
 
@@ -1921,6 +1983,172 @@ window.removeMagazineChild = async (magazineId, childId) => {
         alert('Помилка: ' + err.message);
     }
 };
+
+function openEditHistoryModal(edits) {
+    if (document.querySelector('.ds-modal-overlay')) return;
+    const modal = document.createElement('div');
+    modal.className = 'ds-modal-overlay';
+
+    const escapeHtml = (str) => {
+        if (!str) return '';
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    };
+
+    const formatEditDate = (dateStr) => {
+        if (!dateStr) return '—';
+        const date = new Date(dateStr);
+        const months = ['січ.', 'лют.', 'берез.', 'квіт.', 'трав.', 'черв.', 'лип.', 'серп.', 'верес.', 'жовт.', 'лист.', 'груд.'];
+        const day = date.getDate();
+        const month = months[date.getMonth()];
+        const year = date.getFullYear();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${day} ${month} ${year} ${hours}:${minutes}`;
+    };
+
+    const getStatusBadge = (status) => {
+        if (status === 'approved') {
+            return `
+                <span class="edit-history-status-badge edit-history-status-badge--approved">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    Прийнято
+                </span>
+            `;
+        }
+        if (status === 'pending') {
+            return `
+                <span class="edit-history-status-badge edit-history-status-badge--pending">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    Очікує
+                </span>
+            `;
+        }
+        if (status === 'rejected') {
+            return `
+                <span class="edit-history-status-badge edit-history-status-badge--rejected">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    Відхилено
+                </span>
+            `;
+        }
+        if (status === 'closed') {
+            return `
+                <span class="edit-history-status-badge edit-history-status-badge--closed">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                    Закрито
+                </span>
+            `;
+        }
+        return status;
+    };
+
+    const getFieldBadge = (fieldKey) => {
+        const fieldMapping = {
+            'name_uk': 'Назва UA',
+            'name_en': 'Назва EN',
+            'name': 'Оригінальна назва',
+            'name_native': 'Рідна назва',
+            'start_year': 'Рік початку',
+            'synopsis_ua': 'Опис UA',
+            'synopsis': 'Опис EN',
+            'description': 'Опис тома',
+            'lang': 'Мова',
+            'site_link': 'Джерело',
+            'image': 'Обкладинка',
+            'cover_img': 'Банер',
+            'theme_ids': 'Теми',
+            'staff': 'Творці',
+            'characters': 'Персонажі'
+        };
+        return fieldMapping[fieldKey] || fieldKey;
+    };
+
+    const renderEditsList = () => {
+        if (edits.length === 0) {
+            return `
+                <div class="ds-empty-state">
+                    <h3>Нічого не знайдено</h3>
+                    <p>До цієї сторінки ще не було запропоновано жодної правки.</p>
+                </div>
+            `;
+        }
+        return `
+            <div class="edit-history-list">
+                ${edits.map(e => {
+                    const avatarUrl = `/api/auth/avatar/${e.proposer_username}`;
+                    const avatarHtml = getAvatarHtml(avatarUrl, 'contributor-avatar', 44);
+                    const after = e.patch_data?.after || {};
+                    const changedFields = Object.keys(after).filter(k => k !== 'image_file' && k !== 'cover_img_file');
+                    const badgesHtml = changedFields.map(f => `<span class="edit-history-field-badge">${getFieldBadge(f)}</span>`).join('');
+                    
+                    return `
+                        <a href="#/edits/${e.id}" class="edit-history-item">
+                            <div class="edit-history-header">
+                                <div class="edit-history-user">
+                                    <div class="edit-history-avatar-wrap">
+                                        ${avatarHtml}
+                                    </div>
+                                    <div class="edit-history-meta">
+                                        <span class="edit-history-username">${escapeHtml(e.proposer_username)}</span>
+                                        <span class="edit-history-date">${formatEditDate(e.created_at)}</span>
+                                    </div>
+                                </div>
+                                <div class="edit-history-status">
+                                    ${getStatusBadge(e.status)}
+                                </div>
+                            </div>
+                            <div class="edit-history-body">
+                                <div class="edit-history-badges-wrap">
+                                    ${badgesHtml || '<span class="edit-history-field-badge">Без змін</span>'}
+                                </div>
+                                ${e.comment ? `<div class="edit-history-comment">${escapeHtml(e.comment)}</div>` : ''}
+                            </div>
+                        </a>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    };
+
+    modal.innerHTML = `
+        <div class="ds-modal">
+            <div class="ds-modal-header">
+                <div class="ds-modal-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    Історія змін
+                </div>
+                <button class="ds-modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="ds-modal-body">
+                ${renderEditsList()}
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+
+    const close = () => {
+        document.removeEventListener('keydown', handleEsc);
+        modal.remove();
+        document.body.style.overflow = '';
+    };
+
+    const handleEsc = (e) => {
+        if (e.key === 'Escape') close();
+    };
+    document.addEventListener('keydown', handleEsc);
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal || e.target.closest('.edit-history-item')) close();
+    });
+    modal.querySelector('#modal-close').addEventListener('click', close);
+}
 
 function openSynonymsModal(volume) {
     if (document.querySelector('.ds-modal-overlay')) return;

@@ -1,6 +1,6 @@
 import { API } from '../helpers/api.js';
 import { router } from '../helpers/router.js';
-import { updateEditsPendingCount, getAvatarHtml } from '../shell.js';
+import { updateEditsPendingCount, getAvatarHtml, currentUser } from '../shell.js';
 import { langName } from '../helpers/lang.js';
 import { normalizeImageUrl } from '../helpers/image.js';
 
@@ -11,7 +11,8 @@ const ICON = {
     eye: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
     pending: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="status-badge-icon" style="vertical-align: middle;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
     approved: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="status-badge-icon" style="vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg>',
-    rejected: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="status-badge-icon" style="vertical-align: middle;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+    rejected: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="status-badge-icon" style="vertical-align: middle;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+    closed: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="status-badge-icon" style="vertical-align: middle;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
 };
 
 export async function renderEditDetail(main, params) {
@@ -68,7 +69,8 @@ export async function renderEditDetail(main, params) {
         const statusLabels = {
             'pending': `<span class="edit-status-badge edit-status--pending">${ICON.pending}</span>`,
             'approved': `<span class="edit-status-badge edit-status--approved">${ICON.approved}</span>`,
-            'rejected': `<span class="edit-status-badge edit-status--rejected">${ICON.rejected}</span>`
+            'rejected': `<span class="edit-status-badge edit-status--rejected">${ICON.rejected}</span>`,
+            'closed': `<span class="edit-status-badge edit-status--closed">${ICON.closed}</span>`
         };
 
         const entityLabel = e.entity_type === 'volume' ? 'Том' : e.entity_type;
@@ -105,7 +107,7 @@ export async function renderEditDetail(main, params) {
 
         // Картка модератора
         let moderatorCardHTML = '';
-        if (e.status !== 'pending') {
+        if (e.status !== 'pending' && e.status !== 'closed') {
             const moderatorAvatarUrl = `/api/auth/avatar/${e.moderator_username}`;
             const moderatorAvatarHtml = getAvatarHtml(moderatorAvatarUrl, 'person-avatar-img', 44);
             const modAction = e.status === 'approved' ? 'Схвалив правку' : 'Відхилив правку';
@@ -133,12 +135,25 @@ export async function renderEditDetail(main, params) {
         // Кнопки дій модератора
         let actionsHTML = '';
         if (e.status === 'pending') {
-            actionsHTML = `
-                <div class="edit-details-actions-bar">
+            const isOwner = currentUser && currentUser.username === e.proposer_username;
+            const isPrivileged = currentUser && (currentUser.role === 'admin' || currentUser.role === 'moderator');
+
+            actionsHTML = `<div class="edit-details-actions-bar">`;
+
+            if (isPrivileged) {
+                actionsHTML += `
                     <button class="btn-admin btn-admin--primary btn-approve-edit-detail" data-id="${e.id}">Схвалити правку</button>
                     <button class="btn-admin btn-admin--danger btn-reject-edit-detail" data-id="${e.id}">Відхилити правку</button>
-                </div>
-            `;
+                `;
+            }
+
+            if (isOwner || isPrivileged) {
+                actionsHTML += `
+                    <button class="btn-admin btn-admin--secondary btn-close-edit-detail" data-id="${e.id}">Закрити правку</button>
+                `;
+            }
+
+            actionsHTML += `</div>`;
         }
 
         content.innerHTML = `
@@ -272,6 +287,26 @@ export async function renderEditDetail(main, params) {
                         alert('Помилка відхилення: ' + err.message);
                         btnReject.disabled = false;
                         btnReject.textContent = 'Відхилити правку';
+                    }
+                }
+            });
+        }
+
+        const btnClose = content.querySelector('.btn-close-edit-detail');
+        if (btnClose) {
+            btnClose.addEventListener('click', async () => {
+                const editId = btnClose.dataset.id;
+                if (confirm('Ви впевнені, що хочете закрити та скасувати цю пропозицію правки?')) {
+                    try {
+                        btnClose.disabled = true;
+                        btnClose.textContent = 'Обробка...';
+                        await API.post(`/edits/${editId}/close`);
+                        await updateEditsPendingCount();
+                        await loadEditData();
+                    } catch (err) {
+                        alert('Помилка закриття: ' + err.message);
+                        btnClose.disabled = false;
+                        btnClose.textContent = 'Закрити правку';
                     }
                 }
             });

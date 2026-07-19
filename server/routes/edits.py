@@ -440,3 +440,27 @@ async def reject_edit_request(edit_id: int, req: Optional[ModerationActionSchema
     db.conn.commit()
 
     return {"message": "Правку відхилено"}
+
+@router.post("/{edit_id}/close")
+async def close_edit_request(edit_id: int, request: Request):
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Необхідна авторизація")
+        
+    db = get_db()
+    edit_req = db.get_one("SELECT * FROM edit_requests WHERE id = %s", [edit_id])
+    if not edit_req:
+        raise HTTPException(status_code=404, detail="Запит на правку не знайдено")
+        
+    if edit_req["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Можна закрити тільки ті правки, що перебувають в очікуванні")
+        
+    # Дозволяємо закрити лише автору правки (або адміну/модератору)
+    if edit_req["user_id"] != user["id"] and user["role"] not in ("admin", "moderator"):
+        raise HTTPException(status_code=403, detail="Недостатньо прав для закриття цієї правки")
+        
+    db.execute(
+        "UPDATE edit_requests SET status = 'closed' WHERE id = %s",
+        [edit_id]
+    )
+    return {"message": "Правку успішно закрито"}
