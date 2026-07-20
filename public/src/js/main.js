@@ -52,6 +52,7 @@ async function start() {
     .on('/publishers',    (_path, _params, query) => renderPublishers(main, query))
     .on('/publishers/:id', (_path, params) => renderPublisherDetail(main, params))
     .on('/characters',    (_path, _params, query) => renderCharacters(main, query))
+    .on('/characters/:id/persona/:personaIdx', (_path, params) => renderCharacterDetail(main, params))
     .on('/characters/:id', (_path, params) => renderCharacterDetail(main, params))
     .on('/personnel',     (_path, _params, query) => renderPersonnel(main, query))
     .on('/personnel/:id', (_path, params) => renderPersonnelDetail(main, params))

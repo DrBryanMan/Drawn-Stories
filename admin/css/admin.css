@@ -20,10 +20,12 @@
     max-height: 90vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .ds-modal--large {
-    max-width: 800px;
+    max-width: 960px;
+    width: 100%;
 }
 
 .ds-modal-header {
@@ -32,6 +34,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-shrink: 0;
 }
 
 .ds-modal-title {
@@ -53,8 +56,9 @@
 
 .ds-modal-body {
     display: flex;
-    flex: 1;
-    /* align-items: flex-start; */
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
     gap: 1em;
     padding: 20px;
     overflow-y: auto;

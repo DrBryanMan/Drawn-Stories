@@ -139,10 +139,8 @@ async def create_collection(data: dict):
     if not columns:
         raise HTTPException(status_code=400, detail="Немає даних для збереження")
 
-    sql = f"INSERT INTO collections ({', '.join(columns)}) VALUES ({', '.join(placeholders)})"
-    db.execute(sql, params)
-    
-    new_id = db.get_one("SELECT last_insert_rowid() as id")["id"]
+    sql = f"INSERT INTO collections ({', '.join(columns)}) VALUES ({', '.join(placeholders)}) RETURNING id"
+    new_id = db.get_one(sql, params)["id"]
     return {"message": "Збірник успішно створено", "id": new_id}
 
 class ToggleCollectionRequest(BaseModel):

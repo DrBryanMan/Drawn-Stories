@@ -80,14 +80,14 @@ function volumeReleaseCardHTML(vol) {
   const issueCount = vol.issue_count || 0;
   const coverHtml = imgUrl
     ? `<img src="${escapeHtmlAttribute(imgUrl)}" alt="${title}" loading="lazy">`
-    : `<div class="pub-detail-release-cover-empty">${ICON.image}</div>`;
+    : `<div class="entity-release-cover-empty">${ICON.image}</div>`;
 
   return `
-    <a href="#/volumes/${vol.id}" class="pub-detail-release-card">
-      <div class="pub-detail-release-cover">${coverHtml}</div>
-      <div class="pub-detail-release-body">
-        <div class="pub-detail-release-title" title="${title}">${title}</div>
-        <div class="pub-detail-release-sub">${issueCount} вип.</div>
+    <a href="#/volumes/${vol.id}" class="entity-release-card">
+      <div class="entity-release-cover">${coverHtml}</div>
+      <div class="entity-release-body">
+        <div class="entity-release-title" title="${title}">${title}</div>
+        <div class="entity-release-sub">${issueCount} вип.</div>
       </div>
     </a>
   `;
@@ -101,14 +101,14 @@ function issueReleaseCardHTML(issue) {
   const displayTitle = numText ? `${volName} ${numText}` : volName;
   const coverHtml = imgUrl
     ? `<img src="${escapeHtmlAttribute(imgUrl)}" alt="${title}" loading="lazy">`
-    : `<div class="pub-detail-release-cover-empty">${ICON.image}</div>`;
+    : `<div class="entity-release-cover-empty">${ICON.image}</div>`;
 
   return `
-    <a href="#/issues/${issue.id}" class="pub-detail-release-card">
-      <div class="pub-detail-release-cover">${coverHtml}</div>
-      <div class="pub-detail-release-body">
-        <div class="pub-detail-release-title" title="${displayTitle}">${displayTitle}</div>
-        <div class="pub-detail-release-sub">${title}</div>
+    <a href="#/issues/${issue.id}" class="entity-release-card">
+      <div class="entity-release-cover">${coverHtml}</div>
+      <div class="entity-release-body">
+        <div class="entity-release-title" title="${displayTitle}">${displayTitle}</div>
+        <div class="entity-release-sub">${title}</div>
       </div>
     </a>
   `;
@@ -122,14 +122,14 @@ function collectionReleaseCardHTML(coll) {
   const displayTitle = numText ? `${volName} ${numText}` : volName;
   const coverHtml = imgUrl
     ? `<img src="${escapeHtmlAttribute(imgUrl)}" alt="${title}" loading="lazy">`
-    : `<div class="pub-detail-release-cover-empty">${ICON.image}</div>`;
+    : `<div class="entity-release-cover-empty">${ICON.image}</div>`;
 
   return `
-    <a href="#/collections/${coll.id}" class="pub-detail-release-card">
-      <div class="pub-detail-release-cover">${coverHtml}</div>
-      <div class="pub-detail-release-body">
-        <div class="pub-detail-release-title" title="${displayTitle}">${displayTitle}</div>
-        <div class="pub-detail-release-sub">${title}</div>
+    <a href="#/collections/${coll.id}" class="entity-release-card">
+      <div class="entity-release-cover">${coverHtml}</div>
+      <div class="entity-release-body">
+        <div class="entity-release-title" title="${displayTitle}">${displayTitle}</div>
+        <div class="entity-release-sub">${title}</div>
       </div>
     </a>
   `;
@@ -137,12 +137,21 @@ function collectionReleaseCardHTML(coll) {
 
 function openModal(id) {
   const el = document.getElementById(id);
-  if (el) el.style.display = 'flex';
+  if (el) {
+    el.style.display = 'flex';
+    document.body.classList.add('modal-open');
+  }
 }
 
 function closeModal(id) {
   const el = document.getElementById(id);
-  if (el) el.style.display = 'none';
+  if (el) {
+    el.style.display = 'none';
+    const openModals = document.querySelectorAll('.ds-modal-overlay[style*="display: flex"], .ds-modal-overlay[style*="display: block"]');
+    if (openModals.length === 0) {
+      document.body.classList.remove('modal-open');
+    }
+  }
 }
 
 function editModalHTML(pub) {
@@ -165,7 +174,7 @@ function editModalHTML(pub) {
           <button class="ds-modal-close" type="button" data-close-modal="pub-edit-modal">&times;</button>
         </div>
         <form id="pub-edit-form">
-          <div class="ds-modal-body" style="display: block;">
+          <div class="ds-modal-body">
             <div class="admin-form-grid">
               <div class="admin-form-group admin-form-group--full">
                 <label class="admin-label">Назва</label>
@@ -437,46 +446,46 @@ function buildDetailHTML(pub) {
             </aside>
 
             <!-- Recent releases column (3 blocks) -->
-            <div class="pub-detail-recent-col">
+            <div class="entity-recent-col">
               <!-- New Series -->
-              <div class="pub-detail-recent-section">
-                <div class="pub-detail-section-header">
-                  <span class="pub-detail-section-title">Нові серії</span>
-                  <a href="#/catalog?publisher_ids=${pub.id}" class="pub-detail-section-link">
+              <div class="entity-recent-section">
+                <div class="entity-section-header">
+                  <span class="entity-section-title">Нові серії</span>
+                  <a href="#/catalog?publisher_ids=${pub.id}" class="entity-section-link">
                     Всі серії ${ICON.chevronRight}
                   </a>
                 </div>
                 ${latestVolumes.length > 0
-                  ? `<div class="pub-detail-releases-grid">${latestVolumes.map(volumeReleaseCardHTML).join('')}</div>`
-                  : `<div class="pub-detail-releases-empty">Серій поки немає</div>`
+                  ? `<div class="entity-releases-grid">${latestVolumes.map(volumeReleaseCardHTML).join('')}</div>`
+                  : `<div class="entity-releases-empty">Серій поки немає</div>`
                 }
               </div>
 
               <!-- Latest Issues -->
-              <div class="pub-detail-recent-section">
-                <div class="pub-detail-section-header">
-                  <span class="pub-detail-section-title">Крайні випуски</span>
-                  <a href="#/catalog?publisher_ids=${pub.id}&mode=issues" class="pub-detail-section-link">
+              <div class="entity-recent-section">
+                <div class="entity-section-header">
+                  <span class="entity-section-title">Крайні випуски</span>
+                  <a href="#/catalog?publisher_ids=${pub.id}&mode=issues" class="entity-section-link">
                     Всі випуски ${ICON.chevronRight}
                   </a>
                 </div>
                 ${latestIssues.length > 0
-                  ? `<div class="pub-detail-releases-grid">${latestIssues.map(issueReleaseCardHTML).join('')}</div>`
-                  : `<div class="pub-detail-releases-empty">Випусків поки немає</div>`
+                  ? `<div class="entity-releases-grid">${latestIssues.map(issueReleaseCardHTML).join('')}</div>`
+                  : `<div class="entity-releases-empty">Випусків поки немає</div>`
                 }
               </div>
 
               <!-- New Collections -->
-              <div class="pub-detail-recent-section">
-                <div class="pub-detail-section-header">
-                  <span class="pub-detail-section-title">Нові збірники</span>
-                  <a href="#/catalog?publisher_ids=${pub.id}&mode=collections" class="pub-detail-section-link">
+              <div class="entity-recent-section">
+                <div class="entity-section-header">
+                  <span class="entity-section-title">Нові збірники</span>
+                  <a href="#/catalog?publisher_ids=${pub.id}&mode=collections" class="entity-section-link">
                     Всі збірники ${ICON.chevronRight}
                   </a>
                 </div>
                 ${latestCollections.length > 0
-                  ? `<div class="pub-detail-releases-grid">${latestCollections.map(collectionReleaseCardHTML).join('')}</div>`
-                  : `<div class="pub-detail-releases-empty">Збірників поки немає</div>`
+                  ? `<div class="entity-releases-grid">${latestCollections.map(collectionReleaseCardHTML).join('')}</div>`
+                  : `<div class="entity-releases-empty">Збірників поки немає</div>`
                 }
               </div>
             </div>

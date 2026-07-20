@@ -78,10 +78,11 @@ async def create_event(data: dict, request: Request):
     if not data.get("name"):
         raise HTTPException(status_code=400, detail="Назва події обов'язкова")
 
-    db.execute(
+    res = db.get_one(
         """
         INSERT INTO events (name, description, cv_img, start_year, end_year)
         VALUES (%s, %s, %s, %s, %s)
+        RETURNING id
         """,
         [
             data.get("name"),
@@ -91,7 +92,7 @@ async def create_event(data: dict, request: Request):
             data.get("end_year"),
         ],
     )
-    new_id = db.get_one("SELECT last_insert_rowid() AS id")["id"]
+    new_id = res["id"]
     return {"message": "Подію створено", "id": new_id}
 
 

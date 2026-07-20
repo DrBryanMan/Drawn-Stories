@@ -78,6 +78,10 @@ function renderModalLayout(layout = 'vertical') {
     const filtersHtml = `
         <div class="aim-filters ${filterClass}">
             <div class="aim-filter-group">
+                <label class="aim-label">БД ID випуску</label>
+                <input type="number" id="aim-issue-id" class="aim-input" placeholder="ID...">
+            </div>
+            <div class="aim-filter-group">
                 <label class="aim-label">Номер</label>
                 <input type="text" id="aim-number" class="aim-input" placeholder="#...">
             </div>
@@ -133,7 +137,7 @@ function renderModalLayout(layout = 'vertical') {
         body.innerHTML = `${filtersHtml}${mainHtml}`;
     }
 
-    const inputs = ['aim-name', 'aim-volume', 'aim-number', 'aim-volume-id', 'aim-cv-vol-id', 'aim-hikka-slug'];
+    const inputs = ['aim-issue-id', 'aim-name', 'aim-volume', 'aim-number', 'aim-volume-id', 'aim-cv-vol-id', 'aim-hikka-slug'];
     inputs.forEach(id => {
         document.getElementById(id).oninput = () => {
             updateCheckboxesState();
@@ -225,6 +229,7 @@ function setEmptyState(text, isError = false) {
 async function runSearch() {
     if (!_config) return;
 
+    const issueId = document.getElementById('aim-issue-id').value.trim();
     const name = document.getElementById('aim-name').value.trim();
     const volume = document.getElementById('aim-volume').value.trim();
     const number = document.getElementById('aim-number').value.trim();
@@ -233,7 +238,7 @@ async function runSearch() {
     const hikkaSlug = document.getElementById('aim-hikka-slug').value.trim();
     const exact = document.getElementById('aim-exact-checkbox').checked;
 
-    if (!name && !volume && !number && !volId && !cvVolId && !hikkaSlug) {
+    if (!issueId && !name && !volume && !number && !volId && !cvVolId && !hikkaSlug) {
         _currentSearchResults = [];
         updateCheckboxesState();
         if (_selectedIssueIds.size > 0) {
@@ -252,6 +257,7 @@ async function runSearch() {
 
     try {
         const params = { limit: 50 };
+        if (issueId) params.ds_id = issueId;
         if (name) params.name = name;
         if (volume) params.volume_name = volume;
         if (number) params.issue_number = number;

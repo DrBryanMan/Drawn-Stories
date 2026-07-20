@@ -22,8 +22,6 @@ async def create_reading_order(data: dict):
             placeholders.append("%s")
             params.append(value)
             
-    sql = f"INSERT INTO reading_orders ({', '.join(columns)}) VALUES ({', '.join(placeholders)})"
-    db.execute(sql, params)
-    
-    new_id = db.get_one("SELECT last_insert_rowid() as id")["id"]
+    sql = f"INSERT INTO reading_orders ({', '.join(columns)}) VALUES ({', '.join(placeholders)}) RETURNING id"
+    new_id = db.get_one(sql, params)["id"]
     return {"message": "Порядок читання створено", "id": new_id}

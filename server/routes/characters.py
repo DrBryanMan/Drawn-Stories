@@ -113,7 +113,7 @@ async def get_character(character_id: int):
     # Issues where character appears
     char["issues"] = db.get_all(
         """
-        SELECT i.id, i.name, i.issue_number, i.image, i.release_date, i.cover_date, ic.role, ic.story_num, ic.comment,
+        SELECT i.id, i.name, i.issue_number, i.image, i.release_date, i.cover_date, ic.role, ic.story_num, ic.comment, ic.persona_idx,
                v.id as volume_id, v.name_uk as volume_name_uk, v.name as volume_name
         FROM issue_characters ic
         JOIN issues i ON ic.issue_id = i.id
@@ -151,9 +151,47 @@ async def get_character(character_id: int):
         """,
         [character_id]
     )
+    # Ensure personas is parsed list and hydrate issue details for first_appearance
+    raw_personas = char.get("personas")
+    if isinstance(raw_personas, str):
+        try:
+            personas_list = json.loads(raw_personas)
+        except Exception:
+            personas_list = []
+    elif isinstance(raw_personas, list):
+        personas_list = raw_personas
+    else:
+        personas_list = []
+
+    for p in personas_list:
+        if isinstance(p, dict) and p.get("issue_id"):
+            try:
+                iss_id = int(p["issue_id"])
+                iss = db.get_one(
+                    """
+                    SELECT i.id, i.issue_number, i.name, i.image, v.name as volume_name, v.name_uk as volume_name_uk
+                    FROM issues i
+                    JOIN volumes v ON i.volume_id = v.id
+                    WHERE i.id = %s
+                    """,
+                    [iss_id]
+                )
+                if iss:
+                    vol_title = iss.get("volume_name_uk") or iss.get("volume_name") or ""
+                    num_str = f"#{iss['issue_number']}" if iss.get("issue_number") else ""
+                    title = f"{vol_title} {num_str}".strip()
+                    if title:
+                        p["first_appearance"] = title
+                    p["issue_info"] = iss
+            except Exception:
+                pass
+
+    char["personas"] = personas_list
 
     return char
 
+
+import json
 
 @router.put("/{character_id}")
 async def update_character(character_id: int, data: dict, request: Request):
@@ -175,11 +213,26 @@ async def update_character(character_id: int, data: dict, request: Request):
     real_name = to_null(data.get("real_name"))
     real_name_uk = to_null(data.get("real_name_uk"))
     creators = to_null(data.get("creators"))
+    franchise = to_null(data.get("franchise"))
+    earth = to_null(data.get("earth"))
     image = to_null(data.get("image"))
     portret_img = to_null(data.get("portret_img"))
     costume_img = to_null(data.get("costume_img"))
     portret_costume_img = to_null(data.get("portret_costume_img"))
     
+    personas_raw = data.get("personas")
+    if isinstance(personas_raw, str):
+        try:
+            personas = json.loads(personas_raw)
+        except Exception:
+            personas = []
+    elif isinstance(personas_raw, list):
+        personas = personas_raw
+    else:
+        personas = []
+
+    personas_json = json.dumps(personas, ensure_ascii=False)
+
     if not name:
         raise HTTPException(status_code=400, detail="Оригінальне ім'я обов'язкове")
         
@@ -187,11 +240,11 @@ async def update_character(character_id: int, data: dict, request: Request):
         """
         UPDATE characters
         SET name = %s, name_uk = %s, name_ro = %s, real_name = %s, real_name_uk = %s, creators = %s, 
-            image = %s, portret_img = %s, costume_img = %s, portret_costume_img = %s, 
-            date_last_updated = NOW()
+            franchise = %s, earth = %s, image = %s, portret_img = %s, costume_img = %s, portret_costume_img = %s,
+            personas = %s::jsonb, date_last_updated = NOW()
         WHERE id = %s
         """,
-        [name, name_uk, name_ro, real_name, real_name_uk, creators, image, portret_img, costume_img, portret_costume_img, character_id]
+        [name, name_uk, name_ro, real_name, real_name_uk, creators, franchise, earth, image, portret_img, costume_img, portret_costume_img, personas_json, character_id]
     )
     return {"message": "Персонаж успішно оновлений"}
 

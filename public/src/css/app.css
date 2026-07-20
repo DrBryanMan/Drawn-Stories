@@ -17,6 +17,7 @@
 @import url('components/add-issue-modal.css');
 @import url('components/add-reprint-modal.css');
 @import url('components/scrape-progress-modal.css');
+@import url('components/entity-releases.css');
 
 /* Сторінки */
 @import url('views/volumeCharacters.css');

@@ -396,11 +396,8 @@ async def create_volume(data: dict):
     if not columns:
         raise HTTPException(status_code=400, detail="Немає даних для збереження")
 
-    sql = f"INSERT INTO volumes ({', '.join(columns)}) VALUES ({', '.join(placeholders)})"
-    db.execute(sql, params)
-    
-    # Get the last inserted ID
-    new_id = db.get_one("SELECT last_insert_rowid() as id")["id"]
+    sql = f"INSERT INTO volumes ({', '.join(columns)}) VALUES ({', '.join(placeholders)}) RETURNING id"
+    new_id = db.get_one(sql, params)["id"]
     
     # Update themes if provided
     if "theme_ids" in data and isinstance(data["theme_ids"], list):

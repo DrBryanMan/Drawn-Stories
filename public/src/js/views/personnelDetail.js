@@ -64,14 +64,14 @@ function volumeReleaseCardHTML(vol) {
   const issueCount = vol.issue_count || 0;
   const coverHtml = imgUrl
     ? `<img src="${escapeHtmlAttribute(imgUrl)}" alt="${title}" loading="lazy">`
-    : `<div class="personnel-detail-release-cover-empty">${ICON.image}</div>`;
+    : `<div class="entity-release-cover-empty">${ICON.image}</div>`;
 
   return `
-    <a href="#/volumes/${vol.id}" class="personnel-detail-release-card">
-      <div class="personnel-detail-release-cover">${coverHtml}</div>
-      <div class="personnel-detail-release-body">
-        <div class="personnel-detail-release-title" title="${title}">${title}</div>
-        <div class="personnel-detail-release-sub">${issueCount} вип.</div>
+    <a href="#/volumes/${vol.id}" class="entity-release-card">
+      <div class="entity-release-cover">${coverHtml}</div>
+      <div class="entity-release-body">
+        <div class="entity-release-title" title="${title}">${title}</div>
+        <div class="entity-release-sub">${issueCount} вип.</div>
       </div>
     </a>
   `;
@@ -85,14 +85,14 @@ function issueReleaseCardHTML(issue) {
   const displayTitle = numText ? `${volName} ${numText}` : volName;
   const coverHtml = imgUrl
     ? `<img src="${escapeHtmlAttribute(imgUrl)}" alt="${title}" loading="lazy">`
-    : `<div class="personnel-detail-release-cover-empty">${ICON.image}</div>`;
+    : `<div class="entity-release-cover-empty">${ICON.image}</div>`;
 
   return `
-    <a href="#/issues/${issue.id}" class="personnel-detail-release-card">
-      <div class="personnel-detail-release-cover">${coverHtml}</div>
-      <div class="personnel-detail-release-body">
-        <div class="personnel-detail-release-title" title="${displayTitle}">${displayTitle}</div>
-        <div class="personnel-detail-release-sub">${title}</div>
+    <a href="#/issues/${issue.id}" class="entity-release-card">
+      <div class="entity-release-cover">${coverHtml}</div>
+      <div class="entity-release-body">
+        <div class="entity-release-title" title="${displayTitle}">${displayTitle}</div>
+        <div class="entity-release-sub">${title}</div>
       </div>
     </a>
   `;
@@ -100,12 +100,21 @@ function issueReleaseCardHTML(issue) {
 
 function openModal(id) {
   const el = document.getElementById(id);
-  if (el) el.style.display = 'flex';
+  if (el) {
+    el.style.display = 'flex';
+    document.body.classList.add('modal-open');
+  }
 }
 
 function closeModal(id) {
   const el = document.getElementById(id);
-  if (el) el.style.display = 'none';
+  if (el) {
+    el.style.display = 'none';
+    const openModals = document.querySelectorAll('.ds-modal-overlay[style*="display: flex"], .ds-modal-overlay[style*="display: block"]');
+    if (openModals.length === 0) {
+      document.body.classList.remove('modal-open');
+    }
+  }
 }
 
 function editModalHTML(person) {
@@ -123,7 +132,7 @@ function editModalHTML(person) {
           <button class="ds-modal-close" type="button" data-close-modal="person-edit-modal">&times;</button>
         </div>
         <form id="person-edit-form">
-          <div class="ds-modal-body" style="display: block;">
+          <div class="ds-modal-body">
             <div class="admin-form-grid">
               <div class="admin-form-group admin-form-group--full">
                 <label class="admin-label">Ім'я (англійською / оригінал)</label>
@@ -419,26 +428,26 @@ function buildDetailHTML(person) {
             </aside>
 
             <!-- Recent works column -->
-            <div class="personnel-detail-recent-col">
+            <div class="entity-recent-col">
               <!-- Recent Volumes -->
-              <div class="personnel-detail-recent-section">
-                <div class="personnel-detail-section-header">
-                  <span class="personnel-detail-section-title">Нові серії</span>
+              <div class="entity-recent-section">
+                <div class="entity-section-header">
+                  <span class="entity-section-title">Нові серії</span>
                 </div>
                 ${latestVolumes.length > 0
-                  ? `<div class="personnel-detail-releases-grid">${latestVolumes.map(volumeReleaseCardHTML).join('')}</div>`
-                  : `<div class="personnel-detail-releases-empty">Серій поки немає</div>`
+                  ? `<div class="entity-releases-grid">${latestVolumes.map(volumeReleaseCardHTML).join('')}</div>`
+                  : `<div class="entity-releases-empty">Серій поки немає</div>`
                 }
               </div>
 
               <!-- Recent Issues -->
-              <div class="personnel-detail-recent-section">
-                <div class="personnel-detail-section-header">
-                  <span class="personnel-detail-section-title">Крайні випуски</span>
+              <div class="entity-recent-section">
+                <div class="entity-section-header">
+                  <span class="entity-section-title">Крайні випуски</span>
                 </div>
                 ${latestIssues.length > 0
-                  ? `<div class="personnel-detail-releases-grid">${latestIssues.map(issueReleaseCardHTML).join('')}</div>`
-                  : `<div class="personnel-detail-releases-empty">Випусків поки немає</div>`
+                  ? `<div class="entity-releases-grid">${latestIssues.map(issueReleaseCardHTML).join('')}</div>`
+                  : `<div class="entity-releases-empty">Випусків поки немає</div>`
                 }
               </div>
             </div>

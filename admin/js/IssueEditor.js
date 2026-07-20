@@ -16,6 +16,18 @@ const ICON = {
     book: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>'
 };
 
+function parsePersonas(raw) {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'object') return [raw];
+    try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+        if (typeof parsed === 'object') return [parsed];
+    } catch (e) {}
+    return [];
+}
+
 export class IssueEditor {
     constructor(issue, stories, persons, reprints, appearances, onSave) {
         this.issue = issue;
@@ -78,6 +90,8 @@ export class IssueEditor {
                 portret_img: c.portret_img || null,
                 costume_img: c.costume_img || null,
                 portret_costume_img: c.portret_costume_img || null,
+                personas: c.personas || [],
+                persona_idx: (c.persona_idx !== undefined && c.persona_idx !== null && c.persona_idx !== '') ? parseInt(c.persona_idx, 10) : null,
                 cv_slug: c.cv_slug,
                 story_num: c.story_num || 0,
                 status: c.status || '',
@@ -286,8 +300,11 @@ export class IssueEditor {
     }
 
     renderAppearancesForStory(storyNum) {
-        const container = this.modal.querySelector('#appearances-by-story-container');
+        const container = this.modal ? this.modal.querySelector('#appearances-by-story-container') : null;
         if (!container) return;
+
+        const modalBody = this.modal ? this.modal.querySelector('.ds-modal-body') : null;
+        const prevScrollTop = modalBody ? modalBody.scrollTop : 0;
 
         const types = [
             { key: 'characters', title: 'Персонажі' },
@@ -315,9 +332,11 @@ export class IssueEditor {
                             
                             let roleSelectHTML = '';
                             let teamSelectHTML = '';
+                            let personaSelectHTML = '';
+
                             if (type.key === 'characters') {
                                 roleSelectHTML = `
-                                    <select class="admin-input appearance-item-role" data-type="${type.key}" data-index="${globalIdx}" style="width: 100px; height: 32px; font-size: 12px; padding: 2px 8px; margin-bottom: 0;">
+                                    <select class="admin-input appearance-item-role" data-type="${type.key}" data-index="${globalIdx}" style="width: 100%; height: 32px; font-size: 12px; padding: 2px 8px; margin-bottom: 0;">
                                         <option value="main" ${item.role === 'main' ? 'selected' : ''}>Основний</option>
                                         <option value="supporting" ${item.role === 'supporting' ? 'selected' : ''}>Другорядний</option>
                                         <option value="minor" ${item.role === 'minor' ? 'selected' : ''}>Інші</option>
@@ -330,9 +349,21 @@ export class IssueEditor {
                                 `).join('');
                                 
                                 teamSelectHTML = `
-                                    <select class="admin-input appearance-item-team" data-type="${type.key}" data-index="${globalIdx}" style="width: 120px; height: 32px; font-size: 12px; padding: 2px 8px; margin-bottom: 0;">
+                                    <select class="admin-input appearance-item-team" data-type="${type.key}" data-index="${globalIdx}" style="width: 100%; height: 32px; font-size: 12px; padding: 2px 8px; margin-bottom: 0;">
                                         <option value="">-- Без команди --</option>
                                         ${teamOptions}
+                                    </select>
+                                `;
+
+                                const charPersonas = parsePersonas(item.personas);
+                                const personaOptions = charPersonas.map((p, pIdx) => `
+                                    <option value="${pIdx}" ${item.persona_idx === pIdx ? 'selected' : ''}>${escapeHtmlAttribute(p.name_uk || p.name)}</option>
+                                `).join('');
+
+                                personaSelectHTML = `
+                                    <select class="admin-input appearance-item-persona" data-type="${type.key}" data-index="${globalIdx}" style="width: 100%; height: 32px; font-size: 12px; padding: 2px 8px; margin-bottom: 0;">
+                                        <option value="">-- Без особистості --</option>
+                                        ${personaOptions}
                                     </select>
                                 `;
                             }
@@ -358,21 +389,60 @@ export class IssueEditor {
                                 `;
                             }
 
-                            const gridTemplate = type.key === 'characters'
-                                ? '1.5fr 120px 120px 125px 1.2fr 100px 32px 32px'
-                                : '1.5fr 150px 125px 1.2fr 32px 32px';
+                            if (type.key === 'characters') {
+                                return `
+                                    <div class="appearance-editor-card appearance-character-card" style="
+                                        display: flex; flex-direction: column; gap: 8px; padding: 8px 12px; background: var(--bg-card);
+                                        border: 1px solid var(--border-s); border-radius: var(--r, 6px);
+                                    ">
+                                        <!-- Header Row: Character Name & Edit/Delete Buttons -->
+                                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                                            <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                                                ${item.image ? `<img src="${escapeHtmlAttribute(comicVineImageUrl(item.image))}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex-shrink: 0;">` : ''}
+                                                ${nameHTML}
+                                            </div>
+                                            <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                                                <button type="button" class="btn-admin btn-admin--secondary btn-edit-character-modal" data-index="${globalIdx}" style="padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; margin-bottom: 0;" title="Редагувати профіль персонажа">
+                                                    ${ICON.edit}
+                                                </button>
+                                                <button type="button" class="btn-admin btn-admin--danger btn-delete-appearance-item" data-type="${type.key}" data-index="${globalIdx}" style="padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; margin-bottom: 0;" title="Видалити появу">
+                                                    ${ICON.trash}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Controls Row: Story, Persona, Team, Status, Role, Comment -->
+                                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; align-items: center;">
+                                            <div>${this._buildAppearanceStorySelect(item.story_num, type.key, globalIdx)}</div>
+                                            <div>${personaSelectHTML}</div>
+                                            <div>${teamSelectHTML}</div>
+                                            <div>
+                                                <select class="admin-input appearance-item-status" data-type="${type.key}" data-index="${globalIdx}" style="height: 32px; font-size: 12px; padding: 2px 8px; margin-bottom: 0; width: 100%;">
+                                                    <option value="" ${!item.status ? 'selected' : ''}>-- Статус --</option>
+                                                    <option value="flashback" ${item.status === 'flashback' ? 'selected' : ''}>Flashback</option>
+                                                    <option value="first appear" ${item.status === 'first appear' ? 'selected' : ''}>First appear</option>
+                                                    <option value="death" ${item.status === 'death' ? 'selected' : ''}>Death</option>
+                                                    <option value="cameo" ${item.status === 'cameo' ? 'selected' : ''}>Cameo</option>
+                                                </select>
+                                            </div>
+                                            <div>${roleSelectHTML}</div>
+                                            <div>
+                                                <input type="text" class="admin-input appearance-item-comment" data-type="${type.key}" data-index="${globalIdx}" value="${escapeHtmlAttribute(item.comment || '')}" placeholder="Коментар..." style="height: 32px; font-size: 12px; padding: 2px 8px; margin-bottom: 0; width: 100%;">
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }
 
                             return `
                                 <div class="appearance-editor-card" style="
-                                    display: grid; grid-template-columns: ${gridTemplate};
+                                    display: grid; grid-template-columns: 1.5fr 150px 125px 1.2fr 32px 32px;
                                     align-items: center; gap: 8px; padding: 6px 10px; background: var(--bg-card);
                                     border: 1px solid var(--border-s); border-radius: var(--r);
                                 ">
                                     ${nameHTML}
                                     
                                     ${this._buildAppearanceStorySelect(item.story_num, type.key, globalIdx)}
-                                    
-                                    ${teamSelectHTML}
                                     
                                     <select class="admin-input appearance-item-status" data-type="${type.key}" data-index="${globalIdx}" style="height: 32px; font-size: 12px; padding: 2px 8px; margin-bottom: 0;">
                                         <option value="" ${!item.status ? 'selected' : ''}>-- Статус --</option>
@@ -384,17 +454,9 @@ export class IssueEditor {
                                     
                                     <input type="text" class="admin-input appearance-item-comment" data-type="${type.key}" data-index="${globalIdx}" value="${escapeHtmlAttribute(item.comment || '')}" placeholder="Коментар" style="height: 32px; font-size: 12px; padding: 2px 8px; margin-bottom: 0;">
                                     
-                                    ${roleSelectHTML}
-                                    
-                                    ${type.key === 'characters' ? `
-                                        <button type="button" class="btn-admin btn-admin--secondary btn-edit-character-modal" data-index="${globalIdx}" style="padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 0;" title="Редагувати профіль персонажа">
-                                            ${ICON.edit}
-                                        </button>
-                                    ` : `
-                                        <button type="button" class="btn-admin btn-admin--secondary btn-edit-entity-modal" data-type="${type.key}" data-index="${globalIdx}" style="padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 0;" title="Редагувати назву">
-                                            ${ICON.edit}
-                                        </button>
-                                    `}
+                                    <button type="button" class="btn-admin btn-admin--secondary btn-edit-entity-modal" data-type="${type.key}" data-index="${globalIdx}" style="padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 0;" title="Редагувати назву">
+                                        ${ICON.edit}
+                                    </button>
                                     
                                     <button type="button" class="btn-admin btn-admin--danger btn-delete-appearance-item" data-type="${type.key}" data-index="${globalIdx}" style="padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 0;">
                                         ${ICON.trash}
@@ -421,6 +483,16 @@ export class IssueEditor {
         });
 
         container.innerHTML = html;
+
+        // Listeners for inputs
+        container.querySelectorAll('.appearance-item-persona').forEach(select => {
+            select.addEventListener('change', (e) => {
+                const type = e.target.dataset.type;
+                const idx = parseInt(e.target.dataset.index);
+                const val = e.target.value;
+                this.appearances[type][idx].persona_idx = (val !== "" && val !== null && val !== undefined) ? parseInt(val, 10) : null;
+            });
+        });
 
         // Listeners for inputs
         container.querySelectorAll('.appearance-item-status').forEach(select => {
@@ -526,6 +598,10 @@ export class IssueEditor {
         types.forEach(type => {
             this.initAppearanceSearch(type.key, `btn-add-appearance-${type.key}`, `appearance-search-wrap-${type.key}`, storyNum);
         });
+
+        if (modalBody) {
+            modalBody.scrollTop = prevScrollTop;
+        }
     }
 
     initAppearanceSearch(typeKey, btnId, containerId, targetStoryNum) {
@@ -600,6 +676,7 @@ export class IssueEditor {
                                     data-creators="${escapeHtmlAttribute(item.creators || '')}"
                                     data-slug="${escapeHtmlAttribute(item.cv_slug || '')}" 
                                     data-image="${escapeHtmlAttribute(item.image || '')}" 
+                                    data-personas="${escapeHtmlAttribute(typeof item.personas === 'string' ? item.personas : JSON.stringify(item.personas || []))}"
                                     style="
                                         display: flex; align-items: center; gap: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px;
                                         border-bottom: 1px solid var(--border-s); transition: background var(--t);
@@ -637,6 +714,8 @@ export class IssueEditor {
                                         baseObj.real_name = el.dataset.realName || null;
                                         baseObj.real_name_uk = el.dataset.realNameUk || null;
                                         baseObj.creators = el.dataset.creators || null;
+                                        baseObj.personas = el.dataset.personas ? parsePersonas(el.dataset.personas) : [];
+                                        baseObj.persona_idx = null;
                                     } else {
                                         baseObj.name_uk = el.dataset.nameUk || null;
                                     }
@@ -1206,7 +1285,7 @@ export class IssueEditor {
                     </div>
                     <button class="ds-modal-close">&times;</button>
                 </div>
-                <div class="ds-modal-body">
+                <div class="ds-modal-body" style="display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 20px;">
                     <div class="editor-tabs-segmented">
                         <button class="editor-tab-btn is-active" data-tab="info">Основна інформація</button>
                         <button class="editor-tab-btn" data-tab="stories">Історії</button>
@@ -1347,6 +1426,7 @@ export class IssueEditor {
 
         this.modal = modal;
         document.body.appendChild(modal);
+        document.body.style.overflow = 'hidden';
 
 
 
@@ -1384,6 +1464,7 @@ export class IssueEditor {
     close() {
         if (this.modal) {
             document.removeEventListener('keydown', this._handleEsc);
+            document.body.style.overflow = '';
             this.modal.remove();
             this.modal = null;
         }

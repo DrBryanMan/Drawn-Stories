@@ -10,8 +10,21 @@ import { translateStaffRole, getRoleSortIndex } from '../helpers/staff.js';
 import { t } from '../helpers/i18n.js';
 
 
+function parsePersonas(raw) {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'object') return [raw];
+    try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+        if (typeof parsed === 'object') return [parsed];
+    } catch (e) {}
+    return [];
+}
+
 // ── Lucide SVG icons ──────────────────────────────
 const ICON = {
+    user:         '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
     chevronRight: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
     chevronLeft:  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>',
     building:     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>',
@@ -701,6 +714,20 @@ export async function renderIssueDetail(container, params = {}) {
                     const roleKey = (c.role || 'minor').toLowerCase();
                     const roleLabel = roleTranslations[roleKey] || roleKey.toUpperCase();
                     
+                    let personaBadgeHTML = '';
+                    if (c.persona_idx !== null && c.persona_idx !== undefined && c.personas) {
+                        const charPersonas = parsePersonas(c.personas);
+                        const p = charPersonas[c.persona_idx];
+                        if (p) {
+                            const pName = p.name_uk || p.name;
+                            personaBadgeHTML = `
+                                <a href="#/characters/${c.id}/persona/${c.persona_idx}" class="story-appearance-persona-link" style="font-size: 11px; color: var(--accent); font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; margin-top: 2px;" title="Особистість: ${escapeHtmlAttribute(pName)}">
+                                    ${ICON.user || ''} ${escapeHtmlAttribute(pName)}
+                                </a>
+                            `;
+                        }
+                    }
+
                     return `
                         <div class="story-appearance-card character">
                             <span class="character-card-role ${roleKey}">${roleLabel}</span>
@@ -708,6 +735,7 @@ export async function renderIssueDetail(container, params = {}) {
                             <div class="story-appearance-info">
                                 <span class="story-appearance-name">${escapeHtmlAttribute(primaryName)}</span>
                                 ${realNameHTML}
+                                ${personaBadgeHTML}
                                 ${detailsText ? `<span class="story-appearance-details" title="${escapeHtmlAttribute(detailsText)}">${escapeHtmlAttribute(detailsText)}</span>` : ''}
                             </div>
                         </div>

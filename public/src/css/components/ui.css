@@ -98,3 +98,63 @@
   color: var(--red);
   font-size: 14px;
 }
+
+/* ── Modal Global Scroll & Lock ──────────────────────── */
+body.modal-open {
+  overflow: hidden !important;
+}
+
+.ds-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow: hidden;
+}
+
+.ds-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 680px;
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-s);
+  border-radius: var(--r-xl, 16px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.ds-modal--large {
+  max-width: 840px;
+}
+
+.ds-modal form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ds-modal-header {
+  flex-shrink: 0;
+}
+
+.ds-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto !important;
+  padding: 24px;
+}
+
+.ds-modal-footer {
+  flex-shrink: 0;
+}
+

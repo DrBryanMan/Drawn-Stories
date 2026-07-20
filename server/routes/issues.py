@@ -32,8 +32,8 @@ def get_issue_appearances(db, issue_id):
     characters = db.get_all(
         """
         SELECT c.id, c.name, c.real_name, c.name_uk, c.name_ro, c.real_name_uk, c.creators, c.cv_slug, c.image, 
-               c.portret_img, c.costume_img, c.portret_costume_img,
-               ic.story_num, ic.status, ic.comment, ic.role, ic.team_id 
+               c.portret_img, c.costume_img, c.portret_costume_img, c.personas,
+               ic.story_num, ic.status, ic.comment, ic.role, ic.team_id, ic.persona_idx 
         FROM issue_characters ic 
         JOIN characters c ON ic.character_id = c.id 
         WHERE ic.issue_id = %s 
@@ -101,7 +101,7 @@ async def search_appearance_entities(app_type: str, search: str = ""):
         rows = db.get_all(
             """
             SELECT id, name, real_name, name_uk, name_ro, real_name_uk, creators, cv_slug, image, 
-                   portret_img, costume_img, portret_costume_img
+                   portret_img, costume_img, portret_costume_img, personas
             FROM characters 
             WHERE name LIKE %s OR real_name LIKE %s OR name_uk LIKE %s OR name_ro LIKE %s OR real_name_uk LIKE %s
             ORDER BY COALESCE(name_uk, name) ASC LIMIT 30
@@ -592,6 +592,7 @@ async def get_issue_detail(issue_id: int):
 
 @router.get("")
 async def get_issues(
+    search: Optional[str] = None,
     name: Optional[str] = None,
     volume_name: Optional[str] = None,
     issue_number: Optional[str] = None,
@@ -605,6 +606,11 @@ async def get_issues(
     db = get_db()
     clauses = []
     params = []
+
+    if search:
+        search_term = f"%{search.lower()}%"
+        clauses.append("(LOWER(v.name) LIKE %s OR LOWER(v.name_uk) LIKE %s OR LOWER(i.name) LIKE %s OR CAST(i.issue_number AS TEXT) LIKE %s)")
+        params.extend([search_term, search_term, search_term, search_term])
 
     if ds_id:
         clauses.append("i.id = %s")
@@ -691,10 +697,8 @@ async def create_issue(data: dict):
     if not columns:
         raise HTTPException(status_code=400, detail="Немає даних для збереження")
 
-    sql = f"INSERT INTO issues ({', '.join(columns)}) VALUES ({', '.join(placeholders)})"
-    db.execute(sql, params)
-    
-    new_id = db.get_one("SELECT last_insert_rowid() as id")["id"]
+    sql = f"INSERT INTO issues ({', '.join(columns)}) VALUES ({', '.join(placeholders)}) RETURNING id"
+    new_id = db.get_one(sql, params)["id"]
     return {"message": "Випуск успішно створено", "id": new_id}
 
 
@@ -778,14 +782,15 @@ async def update_issue(issue_id: int, data: dict, request: Request):
                 incoming_story_ids.add(s_id_int)
                 story_ids_by_index[idx] = s_id_int
             else:
-                db.execute(
+                row = db.get_one(
                     """
                     INSERT INTO issue_stories (issue_id, name_original, name_ua, order_num)
                     VALUES (%s, %s, %s, %s)
+                    RETURNING id
                     """,
                     [issue_id, name_orig, name_ua, order_num]
                 )
-                new_id = db.get_one("SELECT last_insert_rowid() as id")["id"]
+                new_id = row["id"]
                 story_ids_by_index[idx] = new_id
                 
         to_delete = current_story_ids - incoming_story_ids
@@ -841,12 +846,21 @@ async def update_issue(issue_id: int, data: dict, request: Request):
                     if t == "characters":
                         role = item.get("role")
                         team_id = item.get("team_id")
+                        persona_idx = item.get("persona_idx")
+                        if persona_idx is not None and persona_idx != "":
+                            try:
+                                persona_idx = int(persona_idx)
+                            except Exception:
+                                persona_idx = None
+                        else:
+                            persona_idx = None
+
                         db.execute(
                             f"""
-                            INSERT INTO {table_name} (issue_id, character_id, story_num, status, comment, role, team_id)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING
+                            INSERT INTO {table_name} (issue_id, character_id, story_num, status, comment, role, team_id, persona_idx)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING
                             """,
-                            [issue_id, entity_id, story_num, status, comment, role, team_id]
+                            [issue_id, entity_id, story_num, status, comment, role, team_id, persona_idx]
                         )
                     else:
                         db.execute(
