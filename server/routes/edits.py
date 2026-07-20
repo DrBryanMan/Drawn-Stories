@@ -37,7 +37,7 @@ async def get_edit_requests(request: Request, status: Optional[str] = None):
     db = get_db()
     
     query = """
-        SELECT er.*, u.username as proposer_username, m.username as moderator_username,
+        SELECT er.*, u.username as proposer_username, u.score as proposer_score, m.username as moderator_username,
                v.name as volume_name, v.name_uk as volume_name_uk,
                v.image as volume_cv_img, NULL as volume_hikka_img,
                COALESCE((

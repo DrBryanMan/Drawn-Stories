@@ -4,6 +4,7 @@ import { createPaginator } from '../components/Pagination.js';
 import { updateEditsPendingCount, getAvatarHtml } from '../shell.js';
 import { langName } from '../helpers/lang.js';
 import { normalizeImageUrl } from '../helpers/image.js';
+import { createSearchableUserSelect } from '../components/SearchableUserSelect.js';
 
 const ICON = {
     user: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
@@ -39,26 +40,11 @@ export async function renderEdits(main) {
                     </div>
                 </div>
 
-                <div class="filter-section select-section" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <select id="filter-entity-type" class="filter-select">
-                        <option value="">Всі типи</option>
-                    </select>
-                    <select id="filter-proposer" class="filter-select">
-                        <option value="">Всі автори</option>
-                    </select>
-                    <select id="filter-moderator" class="filter-select">
-                        <option value="">Всі модератори</option>
-                    </select>
-                </div>
-                
-                <div class="filter-section tabs-section">
-                    <div class="wanted-ct-group" role="group" id="edits-status-tabs">
-                        <button class="wanted-ct-btn is-active" data-status="all">Всі</button>
-                        <button class="wanted-ct-btn" data-status="pending">Очікують</button>
-                        <button class="wanted-ct-btn" data-status="approved">Схвалені</button>
-                        <button class="wanted-ct-btn" data-status="rejected">Відхилені</button>
-                        <button class="wanted-ct-btn" data-status="closed">Закриті</button>
-                    </div>
+                <div class="filter-section select-section" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                    <div id="filter-entity-type-container"></div>
+                    <div id="filter-status-container"></div>
+                    <div id="filter-proposer-container"></div>
+                    <div id="filter-moderator-container"></div>
                 </div>
             </div>
             
@@ -117,6 +103,11 @@ export async function renderEdits(main) {
         }
     }
 
+    let entityTypeSelectComp = null;
+    let statusSelectComp = null;
+    let proposerSelectComp = null;
+    let moderatorSelectComp = null;
+
     function renderContributors() {
         const container = main.querySelector('#contributors-container');
         if (!container) return;
@@ -130,22 +121,27 @@ export async function renderEdits(main) {
             if (!userStats[username]) {
                 userStats[username] = {
                     username: username,
+                    totalScore: 0,
                     approved: 0,
                     rejected: 0,
                     pending: 0,
                     closed: 0
                 };
             }
+            
+            const pts = Number(e.score_awarded) || 0;
+            userStats[username].totalScore += pts;
+
             if (e.status === 'approved') userStats[username].approved++;
             else if (e.status === 'rejected') userStats[username].rejected++;
             else if (e.status === 'pending') userStats[username].pending++;
             else if (e.status === 'closed') userStats[username].closed++;
         });
 
-        // Convert to array and sort by approved desc, then pending desc, then rejected asc
+        // Convert to array and sort by totalScore desc, then approved desc, then rejected asc
         const sorted = Object.values(userStats).sort((a, b) => {
+            if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
             if (b.approved !== a.approved) return b.approved - a.approved;
-            if (b.pending !== a.pending) return b.pending - a.pending;
             return a.rejected - b.rejected;
         });
 
@@ -158,14 +154,18 @@ export async function renderEdits(main) {
             return;
         }
 
+        const starSvg = (className) => `
+            <svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="rank-star-svg ${className}">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+        `;
+
         container.style.display = 'flex';
         container.innerHTML = topContributors.map((c, index) => {
-            // Rank star logic
             let starHtml = '';
-            if (index === 0) starHtml = `<span class="rank-star rank-star--gold" title="1 місце">★</span>`;
-            else if (index === 1) starHtml = `<span class="rank-star rank-star--silver" title="2 місце">★</span>`;
-            else if (index === 2) starHtml = `<span class="rank-star rank-star--bronze" title="3 місце">★</span>`;
-            else starHtml = `<span class="rank-star rank-star--other" title="${index + 1} місце">★</span>`;
+            if (index === 0) starHtml = starSvg('rank-star--gold');
+            else if (index === 1) starHtml = starSvg('rank-star--silver');
+            else if (index === 2) starHtml = starSvg('rank-star--bronze');
 
             const avatarUrl = `/api/auth/avatar/${c.username}`;
             const avatarHtml = getAvatarHtml(avatarUrl, 'contributor-avatar', 44);
@@ -186,10 +186,6 @@ export async function renderEdits(main) {
                                 <span class="stat-dot stat-dot--red"></span>
                                 <span>${c.rejected}</span>
                             </div>
-                            <div class="stat-item" title="В очікуванні">
-                                <span class="stat-dot stat-dot--orange"></span>
-                                <span>${c.pending}</span>
-                            </div>
                             <div class="stat-item" title="Закрито">
                                 <span class="stat-dot stat-dot--grey"></span>
                                 <span>${c.closed}</span>
@@ -199,6 +195,7 @@ export async function renderEdits(main) {
                     <div class="contributor-rank-star">
                         ${starHtml}
                     </div>
+                    <div class="contributor-score-badge" title="Загальна кількість балів з правок">${c.totalScore} б.</div>
                 </div>
             `;
         }).join('');
@@ -214,30 +211,82 @@ export async function renderEdits(main) {
             if (e.moderator_username) moderators.add(e.moderator_username);
             if (e.entity_type) entityTypes.add(e.entity_type);
         });
-        
-        const proposerSelect = main.querySelector('#filter-proposer');
-        const moderatorSelect = main.querySelector('#filter-moderator');
-        const entityTypeSelect = main.querySelector('#filter-entity-type');
-        
-        if (proposerSelect) {
-            proposerSelect.innerHTML = '<option value="">Всі автори</option>' + 
-                Array.from(proposers).sort().map(p => `<option value="${p}">${p}</option>`).join('');
-            proposerSelect.value = state.proposer;
-        }
-        
-        if (moderatorSelect) {
-            moderatorSelect.innerHTML = '<option value="">Всі модератори</option>' + 
-                Array.from(moderators).sort().map(m => `<option value="${m}">${m}</option>`).join('');
-            moderatorSelect.value = state.moderator;
+
+        const entityTypeContainer = main.querySelector('#filter-entity-type-container');
+        if (entityTypeContainer) {
+            if (entityTypeSelectComp) entityTypeSelectComp.destroy();
+            const entityOpts = Array.from(entityTypes).sort().map(t => ({
+                value: t,
+                label: t === 'volume' ? 'Том' : t
+            }));
+            entityTypeSelectComp = createSearchableUserSelect({
+                container: entityTypeContainer,
+                placeholder: 'Всі типи',
+                searchable: false,
+                options: entityOpts,
+                value: state.entityType,
+                onChange: (val) => {
+                    state.entityType = val;
+                    paginator.reset();
+                    renderFilteredList();
+                }
+            });
         }
 
-        if (entityTypeSelect) {
-            entityTypeSelect.innerHTML = '<option value="">Всі типи</option>' + 
-                Array.from(entityTypes).sort().map(t => {
-                    const label = t === 'volume' ? 'Том' : t;
-                    return `<option value="${t}">${label}</option>`;
-                }).join('');
-            entityTypeSelect.value = state.entityType;
+        const statusContainer = main.querySelector('#filter-status-container');
+        if (statusContainer) {
+            if (statusSelectComp) statusSelectComp.destroy();
+            statusSelectComp = createSearchableUserSelect({
+                container: statusContainer,
+                placeholder: 'Всі статуси',
+                searchable: false,
+                options: [
+                    { value: 'pending',  label: 'Очікують' },
+                    { value: 'approved', label: 'Схвалені' },
+                    { value: 'rejected', label: 'Відхилені' },
+                    { value: 'closed',   label: 'Закриті' }
+                ],
+                value: state.status === 'all' ? '' : state.status,
+                onChange: (val) => {
+                    state.status = val || 'all';
+                    paginator.reset();
+                    renderFilteredList();
+                }
+            });
+        }
+
+        const proposerContainer = main.querySelector('#filter-proposer-container');
+        if (proposerContainer) {
+            if (proposerSelectComp) proposerSelectComp.destroy();
+            proposerSelectComp = createSearchableUserSelect({
+                container: proposerContainer,
+                placeholder: 'Всі автори',
+                searchPlaceholder: "Ім'я користувача...",
+                options: Array.from(proposers).sort(),
+                value: state.proposer,
+                onChange: (val) => {
+                    state.proposer = val;
+                    paginator.reset();
+                    renderFilteredList();
+                }
+            });
+        }
+
+        const moderatorContainer = main.querySelector('#filter-moderator-container');
+        if (moderatorContainer) {
+            if (moderatorSelectComp) moderatorSelectComp.destroy();
+            moderatorSelectComp = createSearchableUserSelect({
+                container: moderatorContainer,
+                placeholder: 'Всі модератори',
+                searchPlaceholder: "Ім'я користувача...",
+                options: Array.from(moderators).sort(),
+                value: state.moderator,
+                onChange: (val) => {
+                    state.moderator = val;
+                    paginator.reset();
+                    renderFilteredList();
+                }
+            });
         }
     }
 
@@ -345,14 +394,14 @@ export async function renderEdits(main) {
                         ${proposerAvatarHtml}
                         <div class="edit-row-author-text">
                             <span class="edit-row-author-name">${escapeHtml(e.proposer_username)}</span>
-                            <span class="edit-row-entity-badge">${entityLabel}</span>
+                            <span class="edit-row-date">${formatDate(e.created_at)}</span>
                         </div>
                     </div>
                 </td>
                 <td class="col-content">
                     <div class="edit-row-content-info">
                         <a href="#/edits/${e.id}" class="edit-row-content-title">${escapeHtml(entityName)}</a>
-                        <span class="edit-row-date">${formatDate(e.created_at)}</span>
+                        <span class="edit-row-entity-badge">${entityLabel}</span>
                     </div>
                 </td>
                 <td class="col-changes">
@@ -614,56 +663,11 @@ export async function renderEdits(main) {
         }
     }
 
-    // Обробка перемикання статусів
-    const statusTabs = main.querySelector('#edits-status-tabs');
-    if (statusTabs) {
-        const btns = statusTabs.querySelectorAll('.wanted-ct-btn');
-        btns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                btns.forEach(b => b.classList.remove('is-active'));
-                btn.classList.add('is-active');
-                state.status = btn.dataset.status;
-                paginator.reset();
-                renderFilteredList();
-            });
-        });
-    }
-
     // Текстовий пошук
     const searchInput = main.querySelector('#edits-search-input');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             state.search = e.target.value.trim();
-            paginator.reset();
-            renderFilteredList();
-        });
-    }
-
-    // Селект типу контенту
-    const entityTypeSelect = main.querySelector('#filter-entity-type');
-    if (entityTypeSelect) {
-        entityTypeSelect.addEventListener('change', (e) => {
-            state.entityType = e.target.value;
-            paginator.reset();
-            renderFilteredList();
-        });
-    }
-
-    // Селект автора
-    const proposerSelect = main.querySelector('#filter-proposer');
-    if (proposerSelect) {
-        proposerSelect.addEventListener('change', (e) => {
-            state.proposer = e.target.value;
-            paginator.reset();
-            renderFilteredList();
-        });
-    }
-
-    // Селект модератора
-    const moderatorSelect = main.querySelector('#filter-moderator');
-    if (moderatorSelect) {
-        moderatorSelect.addEventListener('change', (e) => {
-            state.moderator = e.target.value;
             paginator.reset();
             renderFilteredList();
         });

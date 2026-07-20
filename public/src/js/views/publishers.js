@@ -170,10 +170,10 @@ async function fetchAndRenderPublishers(filterBar) {
       return `
         <div class="publisher-card">
           <div class="pub-header">
-            <div class="pub-logo">${logoHtml}</div>
+            <a href="#/publishers/${pub.id}" class="pub-logo">${logoHtml}</a>
             <div class="pub-meta">
               <div class="pub-title-row">
-                <h3 class="pub-name">${escapeHtmlAttribute(pub.name)}</h3>
+                <h3 class="pub-name"><a href="#/publishers/${pub.id}" style="color:inherit;text-decoration:none;">${escapeHtmlAttribute(pub.name)}</a></h3>
                 <span class="pub-status ${isActive ? 'active' : ''}">${statusText}</span>
               </div>
               <div class="pub-badges">
@@ -191,7 +191,10 @@ async function fetchAndRenderPublishers(filterBar) {
 
           <div class="pub-footer">
             <div class="pub-total">${t('total_published')}: <strong>${pub.volume_count || 0}</strong></div>
-            <a href="#/catalog?publisher=${pub.id}" class="pub-btn">${t('go_to_publisher')}</a>
+            <div style="display:flex;gap:6px;">
+              <a href="#/publishers/${pub.id}" class="pub-btn">Детальніше</a>
+              <a href="#/catalog?publisher_ids=${pub.id}" class="pub-btn">${t('go_to_publisher')}</a>
+            </div>
           </div>
         </div>
       `;
@@ -200,7 +203,7 @@ async function fetchAndRenderPublishers(filterBar) {
     paginationWrap.innerHTML = '';
     paginationWrap.appendChild(paginator.render(data.total, () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      fetchAndRenderPublishers();
+      fetchAndRenderPublishers(filterBar);
     }));
 
   } catch (err) {

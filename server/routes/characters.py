@@ -56,6 +56,105 @@ async def get_characters(
     return { "items": rows, "total": total, "page": page, "limit": limit }
 
 
+@router.get("/{character_id}")
+async def get_character(character_id: int):
+    db = get_db()
+    char = db.get_one(
+        """
+        SELECT c.*,
+               (SELECT COUNT(DISTINCT ic.issue_id) FROM issue_characters ic WHERE ic.character_id = c.id) as issue_count,
+               (SELECT COUNT(DISTINCT i.volume_id) FROM issue_characters ic JOIN issues i ON ic.issue_id = i.id WHERE ic.character_id = c.id) as volume_count
+        FROM characters c
+        WHERE c.id = %s
+        """,
+        [character_id]
+    )
+
+    if not char:
+        raise HTTPException(status_code=404, detail="Персонажа не знайдено")
+
+    # Publisher info
+    if char.get("publisher"):
+        char["publisher_info"] = db.get_one(
+            "SELECT id, name, image FROM publishers WHERE id = %s", [char["publisher"]]
+        )
+
+    # First appearance issue info
+    if char.get("first_appearance"):
+        char["first_appearance_info"] = db.get_one(
+            """
+            SELECT i.id, i.name, i.issue_number, i.image, i.release_date, i.cover_date,
+                   v.id AS volume_id, v.name_uk AS volume_name_uk, v.name AS volume_name
+            FROM issues i
+            JOIN volumes v ON i.volume_id = v.id
+            WHERE i.id = %s
+            """,
+            [char["first_appearance"]]
+        )
+
+    # Volumes where character appears
+    char["volumes"] = db.get_all(
+        """
+        SELECT v.id, v.name, v.name_uk, v.cover_img, v.image, v.lang,
+               (SELECT COUNT(*) FROM issues i2 WHERE i2.volume_id = v.id) AS issue_count,
+               (SELECT COUNT(*) FROM issue_characters ic2 JOIN issues i3 ON ic2.issue_id = i3.id WHERE ic2.character_id = %s AND i3.volume_id = v.id) AS char_issue_count
+        FROM volumes v
+        WHERE v.id IN (
+            SELECT volume_id FROM volume_characters WHERE character_id = %s
+            UNION
+            SELECT i.volume_id FROM issue_characters ic JOIN issues i ON ic.issue_id = i.id WHERE ic.character_id = %s
+        )
+        ORDER BY char_issue_count DESC, v.name_uk ASC, v.name ASC
+        LIMIT 40
+        """,
+        [character_id, character_id, character_id]
+    )
+
+    # Issues where character appears
+    char["issues"] = db.get_all(
+        """
+        SELECT i.id, i.name, i.issue_number, i.image, i.release_date, i.cover_date, ic.role, ic.story_num, ic.comment,
+               v.id as volume_id, v.name_uk as volume_name_uk, v.name as volume_name
+        FROM issue_characters ic
+        JOIN issues i ON ic.issue_id = i.id
+        JOIN volumes v ON i.volume_id = v.id
+        WHERE ic.character_id = %s
+        ORDER BY i.created_at DESC, i.id DESC
+        LIMIT 60
+        """,
+        [character_id]
+    )
+
+    # Manga chapters where character appears
+    char["manga_chapters"] = db.get_all(
+        """
+        SELECT mc.id, mc.chapter_number, mc.name AS title, mcc.role,
+               v.id AS volume_id, v.name_uk AS volume_name_uk, v.name AS volume_name
+        FROM manga_chapter_characters mcc
+        JOIN manga_chapters mc ON mcc.chapter_id = mc.id
+        LEFT JOIN volumes v ON mc.volume_id = v.id
+        WHERE mcc.character_id = %s
+        ORDER BY mc.chapter_number ASC
+        LIMIT 50
+        """,
+        [character_id]
+    )
+
+    # Teams associated with character
+    char["teams"] = db.get_all(
+        """
+        SELECT DISTINCT t.id, t.name, t.name_uk, t.cv_slug
+        FROM teams t
+        WHERE t.id IN (
+            SELECT team_id FROM issue_characters WHERE character_id = %s AND team_id IS NOT NULL
+        )
+        """,
+        [character_id]
+    )
+
+    return char
+
+
 @router.put("/{character_id}")
 async def update_character(character_id: int, data: dict, request: Request):
     role = request.cookies.get("role")

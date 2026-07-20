@@ -89,6 +89,8 @@ async def get_catalog(
     view_type: str = Query("series", pattern="^(series|issues)$"),
     collection: bool = False,
     publisher_ids: Optional[str] = None,
+    person_ids: Optional[str] = None,
+    mode: Optional[str] = None,
     theme_ids: Optional[str] = None,
     exclude_theme_ids: Optional[str] = None,
     magazine_ids: Optional[str] = None,
@@ -98,6 +100,11 @@ async def get_catalog(
     date_min: Optional[str] = None,
     date_max: Optional[str] = None,
 ) -> dict:
+    if mode == "volumes":
+        view_type = "series"
+    elif mode == "issues":
+        view_type = "issues"
+
     db = get_db()
     manga_theme_id = 36
     
@@ -212,6 +219,15 @@ async def get_catalog(
         placeholders = ",".join("%s" for _ in publisher_filter_ids)
         filter_clauses.append(f"v.publisher IN ({placeholders})")
         filter_params.extend(publisher_filter_ids)
+
+    person_filter_ids = parse_id_list(person_ids)
+    if person_filter_ids:
+        placeholders = ",".join("%s" for _ in person_filter_ids)
+        if view_type == "series":
+            filter_clauses.append(f"v.id IN (SELECT volume_id FROM volume_persons WHERE person_id IN ({placeholders}))")
+        else:
+            filter_clauses.append(f"i.id IN (SELECT issue_id FROM issue_persons WHERE person_id IN ({placeholders}))")
+        filter_params.extend(person_filter_ids)
 
     magazine_filter_ids = parse_id_list(magazine_ids)
     if magazine_filter_ids:

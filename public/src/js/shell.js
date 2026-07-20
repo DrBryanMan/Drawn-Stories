@@ -328,7 +328,6 @@ function updateAuthUI() {
           <a class="nav-dropdown-link" href="#/bookmarks" id="bookmarks-dropdown-link">
             ${icon(ICON_BOOKMARK)}
             <span>${t('bookmarks')}</span>
-            <span class="bookmarks-count ${Bookmarks.count() > 0 ? 'is-visible' : ''}" id="bookmarks-count" style="margin-left: auto;">${Bookmarks.count()}</span>
           </a>
           <a class="nav-dropdown-link" href="#/user/${currentUser.username}/collection" data-route="/user/${currentUser.username}/collection">
             ${icon('<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>')}

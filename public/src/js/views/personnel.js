@@ -123,14 +123,16 @@ async function fetchAndRenderPersonnel(filterBar) {
 
       return `
         <div class="personnel-card">
-          <div class="person-cover-wrap">
+          <a href="#/personnel/${item.id}" class="person-cover-wrap">
             ${cover
               ? `<img class="person-cover" src="${escapeHtmlAttribute(cover)}" loading="lazy">`
               : `<div class="person-cover-empty"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>`
             }
-          </div>
+          </a>
           <div class="person-info">
-            <h3 class="person-name" title="${escapeHtmlAttribute(item.name)}">${escapeHtmlAttribute(item.name)}</h3>
+            <h3 class="person-name" title="${escapeHtmlAttribute(item.name)}">
+              <a href="#/personnel/${item.id}" style="color:inherit;text-decoration:none;">${escapeHtmlAttribute(item.name)}</a>
+            </h3>
             ${metaInfo ? `<p class="person-meta" title="${escapeHtmlAttribute(metaInfo)}">${escapeHtmlAttribute(metaInfo)}</p>` : ''}
             <div class="person-stats">
               <span class="person-stat-label">${t('works_label')}:</span>

@@ -1,0 +1,588 @@
+/* ══════════════════════════════════════════════════════
+   PERSONNEL DETAIL
+   Consistent with project design system (Manga Pulse Light)
+══════════════════════════════════════════════════════ */
+
+.personnel-detail {
+  padding-bottom: 80px;
+}
+
+/* ── Hero Band ────────────────────────────────────── */
+.personnel-detail-hero-band {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border-s);
+}
+
+.personnel-detail-hero-band::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 55% 130% at 5% 85%, rgba(108, 92, 231, 0.06), transparent),
+    radial-gradient(ellipse 45% 90% at 90% 15%, rgba(124, 58, 237, 0.04), transparent);
+}
+
+.personnel-detail-hero {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 36px;
+  padding: 28px 0 40px;
+}
+
+/* ── Avatar Column ────────────────────────────────── */
+.personnel-detail-avatar-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.personnel-detail-avatar {
+  width: 200px;
+  height: 200px;
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  border: 2px solid var(--border-s);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 5rem;
+  font-weight: 800;
+  font-family: var(--font-oswald);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.personnel-detail-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+/* ── Info Column ─────────────────────────────────── */
+.personnel-detail-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  gap: 14px;
+}
+
+.personnel-detail-kicker {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-family: var(--font-oswald);
+}
+
+.personnel-detail-info h1 {
+  margin: 0;
+  font-family: var(--font-oswald);
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.personnel-detail-subname {
+  font-size: 14px;
+  color: var(--text-2);
+  margin-top: -8px;
+}
+
+.personnel-detail-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.personnel-detail-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--bg);
+  border: 1px solid var(--border-s);
+  color: var(--text-2);
+}
+
+.personnel-detail-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.personnel-detail-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.personnel-detail-meta-item svg {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.personnel-detail-stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding: 14px 18px;
+  background: var(--bg);
+  border: 1px solid var(--border-s);
+  border-radius: var(--r-lg);
+  margin-top: 4px;
+}
+
+.personnel-detail-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.personnel-detail-stat-value {
+  font-size: 22px;
+  font-weight: 800;
+  font-family: var(--font-oswald);
+  color: var(--text);
+  line-height: 1;
+}
+
+.personnel-detail-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.personnel-detail-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.personnel-detail-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 16px;
+  border-radius: var(--r);
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--t), border-color var(--t), color var(--t);
+}
+
+.personnel-detail-action-btn:hover {
+  background: var(--bg-card-h);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.personnel-detail-action-btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.personnel-detail-action-btn--primary:hover {
+  background: var(--accent-h);
+  border-color: var(--accent-h);
+  color: #fff;
+}
+
+/* ── Tabs Band ────────────────────────────────────── */
+.personnel-detail-tabs-band {
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border-s);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.personnel-detail-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.personnel-detail-tabs::-webkit-scrollbar { display: none; }
+
+.personnel-detail-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-oswald);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border: none;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: color var(--t), border-color var(--t);
+}
+
+.personnel-detail-tab-btn:hover {
+  color: var(--text);
+}
+
+.personnel-detail-tab-btn.is-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.personnel-detail-tab-btn .tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  background: var(--bg);
+  border: 1px solid var(--border-s);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text-2);
+  line-height: 1.4;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.personnel-detail-tab-btn.is-active .tab-count {
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg));
+  border-color: color-mix(in srgb, var(--accent) 20%, var(--border-s));
+  color: var(--accent);
+}
+
+/* ── Tab Panes ────────────────────────────────────── */
+.personnel-detail-pane {
+  display: none;
+  animation: fadeIn .18s ease;
+}
+
+.personnel-detail-pane.is-active {
+  display: block;
+}
+
+/* ── Overview Layout ──────────────────────────────── */
+.personnel-detail-overview {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 28px;
+  padding-top: 28px;
+}
+
+/* ── Info Block ───────────────────────────────────── */
+.personnel-detail-info-block {
+  background: var(--bg-card);
+  border: 1px solid var(--border-s);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.personnel-detail-info-block-title {
+  padding: 12px 16px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-family: var(--font-oswald);
+  border-bottom: 1px solid var(--border-s);
+}
+
+.personnel-detail-fact-list {
+  list-style: none;
+}
+
+.personnel-detail-fact-item {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-s);
+  font-size: 13px;
+}
+
+.personnel-detail-fact-item:last-child {
+  border-bottom: none;
+}
+
+.personnel-detail-fact-label {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 100px;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.personnel-detail-fact-value {
+  color: var(--text);
+  word-break: break-word;
+}
+
+.personnel-detail-fact-value a {
+  color: var(--accent);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.personnel-detail-fact-value a:hover {
+  color: var(--accent-h);
+  text-decoration: underline;
+}
+
+/* ── Recent Releases/Works Column ──────────────────── */
+.personnel-detail-recent-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.personnel-detail-recent-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-s);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.personnel-detail-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-s);
+}
+
+.personnel-detail-section-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-family: var(--font-oswald);
+}
+
+.personnel-detail-section-link {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: color var(--t);
+}
+
+.personnel-detail-section-link:hover {
+  color: var(--accent-h);
+}
+
+.personnel-detail-releases-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+}
+
+.personnel-detail-release-card {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: var(--text);
+  border-right: 1px solid var(--border-s);
+  transition: background var(--t);
+}
+
+.personnel-detail-release-card:last-child {
+  border-right: none;
+}
+
+.personnel-detail-release-card:hover {
+  background: var(--bg-card-h);
+}
+
+.personnel-detail-release-cover {
+  aspect-ratio: 2 / 3;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.personnel-detail-release-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--t-slow);
+}
+
+.personnel-detail-release-card:hover .personnel-detail-release-cover img {
+  transform: scale(1.04);
+}
+
+.personnel-detail-release-cover-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.personnel-detail-release-body {
+  padding: 8px 10px 10px;
+  text-align: center;
+}
+
+.personnel-detail-release-title {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+
+.personnel-detail-release-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.personnel-detail-releases-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ── Works Pane ───────────────────────────────────── */
+.personnel-detail-works-pane {
+  padding-top: 24px;
+}
+
+.personnel-detail-works-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+/* ── Empty / Error ────────────────────────────────── */
+.personnel-detail-empty {
+  padding: 56px 24px;
+  text-align: center;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.personnel-detail-empty svg {
+  color: var(--border);
+}
+
+.personnel-detail-empty h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-2);
+  margin: 0;
+}
+
+.personnel-detail-empty p {
+  font-size: 14px;
+  margin: 0;
+}
+
+/* ── Responsive ───────────────────────────────────── */
+@media (max-width: 900px) {
+  .personnel-detail-hero {
+    grid-template-columns: 160px minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .personnel-detail-avatar {
+    width: 160px;
+    height: 160px;
+    font-size: 4rem;
+  }
+
+  .personnel-detail-info h1 {
+    font-size: 26px;
+  }
+
+  .personnel-detail-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .personnel-detail-releases-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .personnel-detail-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .personnel-detail-avatar-col {
+    align-items: center;
+  }
+
+  .personnel-detail-avatar {
+    width: 130px;
+    height: 130px;
+    font-size: 3.5rem;
+  }
+
+  .personnel-detail-info {
+    align-items: center;
+    text-align: center;
+  }
+
+  .personnel-detail-meta-row,
+  .personnel-detail-badges-row,
+  .personnel-detail-actions {
+    justify-content: center;
+  }
+
+  .personnel-detail-stats-row {
+    justify-content: center;
+  }
+
+  .personnel-detail-releases-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

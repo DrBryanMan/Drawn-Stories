@@ -1,8 +1,120 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, HTTPException, Request
 from typing import Optional
 from ..db import get_db
 
 router = APIRouter(prefix="/api/personnel", tags=["personnel"])
+
+def require_moderator(request: Request):
+    role = request.cookies.get("role")
+    if role not in {"moderator", "admin"}:
+        raise HTTPException(status_code=403, detail="Потрібні права модератора")
+
+@router.get("/{person_id}")
+async def get_person_detail(person_id: int):
+    db = get_db()
+
+    person = db.get_one(
+        """
+        SELECT p.id, p.cv_id, p.name, p.name_uk, p.pseudo, p.cv_slug, p.image,
+               p.aliases, p.birth, p.death, p.country, p.gender, p.hometown,
+               p.website, p.occupation, p.created_at,
+               (SELECT COUNT(DISTINCT vp.volume_id) FROM volume_persons vp WHERE vp.person_id = p.id) as volume_count,
+               (SELECT COUNT(DISTINCT ip.issue_id) FROM issue_persons ip WHERE ip.person_id = p.id) as issue_count
+        FROM persons p
+        WHERE p.id = %s
+        """,
+        [person_id]
+    )
+
+    if not person:
+        raise HTTPException(status_code=404, detail="Особу не знайдено")
+
+    # Latest volumes contributed to
+    person["latest_volumes"] = db.get_all(
+        """
+        SELECT DISTINCT v.id, v.name, v.name_uk, v.cover_img, v.image, v.lang, v.created_at,
+               (SELECT COUNT(*) FROM issues i WHERE i.volume_id = v.id) as issue_count
+        FROM volumes v
+        JOIN volume_persons vp ON vp.volume_id = v.id
+        WHERE vp.person_id = %s
+        ORDER BY v.created_at DESC, v.id DESC
+        LIMIT 5
+        """,
+        [person_id]
+    )
+
+    # Latest issues contributed to
+    person["latest_issues"] = db.get_all(
+        """
+        SELECT DISTINCT i.id, i.name, i.image, i.issue_number, i.release_date, i.cover_date, i.created_at,
+               v.id as volume_id, v.name_uk as volume_name_uk, v.name as volume_name
+        FROM issues i
+        JOIN issue_persons ip ON ip.issue_id = i.id
+        JOIN volumes v ON i.volume_id = v.id
+        WHERE ip.person_id = %s
+        ORDER BY i.created_at DESC, i.id DESC
+        LIMIT 5
+        """,
+        [person_id]
+    )
+
+    return person
+
+@router.put("/{person_id}")
+async def update_person(person_id: int, data: dict, request: Request):
+    require_moderator(request)
+    db = get_db()
+
+    person = db.get_one("SELECT id FROM persons WHERE id = %s", [person_id])
+    if not person:
+        raise HTTPException(status_code=404, detail="Особу не знайдено")
+
+    def to_null(val):
+        return None if val == "" else val
+
+    name = to_null(data.get("name"))
+    if not name:
+        raise HTTPException(status_code=400, detail="Ім'я особи обов'язкове")
+
+    db.execute(
+        """
+        UPDATE persons
+        SET name = %s,
+            name_uk = %s,
+            pseudo = %s,
+            cv_id = %s,
+            cv_slug = %s,
+            image = %s,
+            aliases = %s,
+            birth = %s,
+            death = %s,
+            country = %s,
+            gender = %s,
+            hometown = %s,
+            website = %s,
+            occupation = %s
+        WHERE id = %s
+        """,
+        [
+            name,
+            to_null(data.get("name_uk")),
+            to_null(data.get("pseudo")),
+            to_null(data.get("cv_id")),
+            to_null(data.get("cv_slug")),
+            to_null(data.get("image")),
+            to_null(data.get("aliases")),
+            to_null(data.get("birth")),
+            to_null(data.get("death")),
+            to_null(data.get("country")),
+            to_null(data.get("gender")),
+            to_null(data.get("hometown")),
+            to_null(data.get("website")),
+            to_null(data.get("occupation")),
+            person_id,
+        ],
+    )
+
+    return {"message": "Дані особи успішно оновлено"}
 
 @router.get("")
 async def get_personnel(

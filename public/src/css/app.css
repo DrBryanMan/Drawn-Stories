@@ -26,6 +26,7 @@
 @import url('views/catalog.css');
 @import url('views/volume-detail.css');
 @import url('views/publishers.css');
+@import url('views/publisher-detail.css');
 @import url('views/auth.css');
 @import url('views/bookmarks.css');
 @import url('views/settings.css');
@@ -34,6 +35,8 @@
 @import url('views/issue-detail.css');
 @import url('views/event-detail.css');
 @import url('views/personnel.css');
+@import url('views/personnel-detail.css');
+@import url('views/character-detail.css');
 @import url('views/edits.css');
 @import url('views/editDetail.css');
 

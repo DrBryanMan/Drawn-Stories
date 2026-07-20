@@ -80,3 +80,25 @@ export function formatDate(dateStr, fallback = null) {
     return formatted;
 }
 
+export function parseAliases(aliases) {
+    if (!aliases) return [];
+    if (Array.isArray(aliases)) return aliases.map(a => String(a).trim()).filter(Boolean);
+
+    const str = String(aliases).trim();
+    if (!str) return [];
+
+    if (str.startsWith('[') && str.endsWith(']')) {
+        try {
+            const parsed = JSON.parse(str);
+            if (Array.isArray(parsed)) {
+                return parsed.map(item => String(item).trim()).filter(Boolean);
+            }
+        } catch (e) {
+            // Ignore JSON parse error and fallback
+        }
+    }
+
+    return str.split(/[,;]/).map(item => item.replace(/^[\["'\s]+|[\]"'\s]+$/g, '').trim()).filter(Boolean);
+}
+
+

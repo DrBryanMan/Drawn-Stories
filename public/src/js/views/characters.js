@@ -129,7 +129,7 @@ async function fetchAndRenderCharacters(filterBar) {
       }
 
       return `
-        <div class="character-card">
+        <a href="#/characters/${item.id}" class="character-card" style="text-decoration: none; color: inherit;">
           <div class="char-cover-wrap">
             ${cover
               ? `<img class="char-cover" src="${escapeHtmlAttribute(cover)}" loading="lazy">`
@@ -138,14 +138,14 @@ async function fetchAndRenderCharacters(filterBar) {
             ${genderIcon}
           </div>
           <div class="char-info">
-            <h3 class="char-name" title="${escapeHtmlAttribute(item.name)}">${escapeHtmlAttribute(item.name)}</h3>
+            <h3 class="char-name" title="${escapeHtmlAttribute(item.name_uk || item.name)}">${escapeHtmlAttribute(item.name_uk || item.name)}</h3>
             ${item.real_name ? `<p class="char-real-name" title="${escapeHtmlAttribute(item.real_name)}">${escapeHtmlAttribute(item.real_name)}</p>` : ''}
             <div class="char-stats">
               <span class="char-stat-label">${t('section_issues')}:</span>
               <strong class="char-stat-value">${item.issue_count}</strong>
             </div>
           </div>
-        </div>
+        </a>
       `;
     }).join('');
 

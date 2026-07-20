@@ -7,6 +7,7 @@ import { renderCatalog } from './views/catalog.js';
 import { renderVolumeDetail } from './views/volumeDetail.js?v=3';
 import { renderVolumeCharacters } from './views/volumeCharacters.js';
 import { renderPublishers } from './views/publishers.js';
+import { renderPublisherDetail } from './views/publisherDetail.js';
 import { renderAuth } from './views/auth.js';
 import { renderBookmarks } from './views/bookmarks.js';
 import { renderFavorites } from './views/favorites.js';
@@ -18,7 +19,9 @@ import { renderIssueDetail } from './views/issueDetail.js';
 import { renderEventDetail } from './views/eventDetail.js';
 import { renderEvents } from './views/events.js';
 import { renderCharacters } from './views/characters.js';
+import { renderCharacterDetail } from './views/characterDetail.js';
 import { renderPersonnel } from './views/personnel.js';
+import { renderPersonnelDetail } from './views/personnelDetail.js';
 import { renderMagazineDetail } from './views/magazineDetail.js';
 import { renderMagazineIssueDetail } from './views/magazineIssueDetail.js';
 import { renderMagazineAllItems } from './views/magazineAllItems.js';
@@ -47,8 +50,11 @@ async function start() {
     .on('/events',        (_path, _params, query) => renderEvents(main, query))
     .on('/events/:id',    (_path, params) => renderEventDetail(main, params))
     .on('/publishers',    (_path, _params, query) => renderPublishers(main, query))
+    .on('/publishers/:id', (_path, params) => renderPublisherDetail(main, params))
     .on('/characters',    (_path, _params, query) => renderCharacters(main, query))
+    .on('/characters/:id', (_path, params) => renderCharacterDetail(main, params))
     .on('/personnel',     (_path, _params, query) => renderPersonnel(main, query))
+    .on('/personnel/:id', (_path, params) => renderPersonnelDetail(main, params))
     .on('/auth',          () => renderAuth(main))
     .on('/bookmarks',     () => renderBookmarks(main))
     .on('/settings',      () => {
