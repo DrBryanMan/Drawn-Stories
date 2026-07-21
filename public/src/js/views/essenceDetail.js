@@ -326,12 +326,6 @@ function renderCategorySections(essence, isModerator) {
             `;
           }).join('')}
         </div>
-
-        ${isModerator ? `
-          <button class="essence-version-add-btn" id="btn-add-version" title="Додати запис">
-            ${ICON.plus}
-          </button>
-        ` : ''}
       </div>
 
       <div class="essence-versions-tab-content" id="essence-versions-tab-content">
