@@ -255,6 +255,22 @@ async def get_character(character_id: int):
     if char.get("essence"):
         char["essence_info"] = db.get_one("SELECT * FROM essences WHERE slug = %s", [char["essence"]])
 
+    # Creators / Personnel info
+    if char.get("creators"):
+        creator_names = [c.strip() for c in str(char["creators"]).replace(";", ",").split(",") if c.strip()]
+        if creator_names:
+            placeholders = ", ".join(["%s"] * len(creator_names))
+            params = []
+            for name in creator_names:
+                params.extend([name.lower(), name.lower()])
+            
+            # Match personnel by name or name_uk from `persons` table
+            where_clauses = " OR ".join(["LOWER(name) = %s OR LOWER(name_uk) = %s" for _ in creator_names])
+            char["creators_info"] = db.get_all(
+                f"SELECT id, name, name_uk, image FROM persons WHERE {where_clauses}",
+                params
+            )
+
     return char
 
 

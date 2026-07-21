@@ -110,6 +110,12 @@ function renderCharacterContent(container, char, params) {
   const pubInfo = char.publisher_info;
   const firstApp = char.first_appearance_info;
 
+  // Essence details
+  const essSlug = char.essence;
+  const essName = char.essence_info ? (char.essence_info.essence_name_uk || char.essence_info.essence_name || essSlug) : essSlug;
+  const essLinkHTML = essSlug ? `<a href="#/essences/${escapeHtmlAttribute(essSlug)}">${escapeHtmlAttribute(essName)}</a>` : '';
+  const charEssenceFact = essSlug ? factItemHTML(ICON.sparkles, "Сутність", essLinkHTML) : '';
+
   const volumes = char.volumes || [];
   const issues = char.issues || [];
   const mangaChapters = char.manga_chapters || [];
@@ -225,8 +231,9 @@ function renderCharacterContent(container, char, params) {
           <div class="character-detail-info">
             <!-- Over title simple metadata -->
             <div class="character-detail-over-title" style="display: flex; gap: 12px; font-size: 13px; font-weight: 500; color: var(--text-2); margin-bottom: 8px;">
+              ${char.essence ? `<span style="display: inline-flex; align-items: center; gap: 4px;">${ICON.sparkles} ${essLinkHTML}</span> • ` : ''}
               ${char.franchise ? `<span style="display: inline-flex; align-items: center; gap: 4px;">${ICON.book} ${escapeHtmlAttribute(char.franchise)}</span>` : ''}
-              ${char.earth ? `<span style="display: inline-flex; align-items: center; gap: 4px;">${ICON.globe} ${escapeHtmlAttribute(char.earth)}</span>` : ''}
+              ${char.earth ? ` • <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">${ICON.globe} ${escapeHtmlAttribute(char.earth)}</span>` : ''}
             </div>
 
             <h1>${escapeHtmlAttribute(displayName)}</h1>
@@ -310,8 +317,37 @@ function renderCharacterContent(container, char, params) {
               <div class="character-detail-info-block">
                 <div class="character-detail-info-block-title">${ICON.user} Відомості</div>
                 <ul class="character-detail-fact-list">
-                  ${factItemHTML(ICON.sparkles, "Сутність", escapeHtmlAttribute(char.essence))}
-                  ${factItemHTML(ICON.user, "Творці", escapeHtmlAttribute(char.creators))}
+                  ${charEssenceFact}
+                  ${(() => {
+                    const creatorsStr = char.creators;
+                    if (!creatorsStr) return '';
+                    const creatorsInfoList = char.creators_info || [];
+                    const creatorNames = creatorsStr.replace(/;/g, ',').split(',').map(c => c.trim()).filter(Boolean);
+
+                    const cardsHTML = creatorNames.map(name => {
+                      const found = creatorsInfoList.find(p => p.name.toLowerCase() === name.toLowerCase() || (p.name_uk && p.name_uk.toLowerCase() === name.toLowerCase()));
+                      const pId = found ? found.id : null;
+                      const pImg = found && found.image ? normalizeImageUrl(found.image) : null;
+                      const pDisplayName = found ? (found.name_uk || found.name) : name;
+                      const tag = pId ? 'a' : 'div';
+                      const hrefAttr = pId ? `href="#/personnel/${pId}"` : '';
+
+                      return `
+                        <${tag} ${hrefAttr} style="margin-top: 5px; display: flex; align-items: center; gap: .5em;">
+                          <span class="volume-staff-avatar" style="width: 32px;">
+                            ${pImg 
+                              ? `<img src="${escapeHtmlAttribute(pImg)}" alt="${escapeHtmlAttribute(pDisplayName)}" loading="lazy">` 
+                              : `<div class="volume-staff-avatar-empty" style="font-size: 11px;">${ICON.user}</div>`}
+                          </span>
+                          <span class="volume-staff-content">
+                            <span class="volume-staff-name" style="font-size: 13px; font-weight: 700;">${escapeHtmlAttribute(pDisplayName)}</span>
+                          </span>
+                        </${tag}>
+                      `;
+                    }).join('');
+
+                    return factItemHTML(ICON.user, "Творці", `${cardsHTML}`);
+                  })()}
                   ${factItemHTML(char.gender === 1 ? ICON.male : ICON.female, "Стать", genderText(char.gender))}
                   ${factItemHTML(ICON.building, "Видавництво", pubInfo ? `<a href="#/publishers/${pubInfo.id}">${escapeHtmlAttribute(pubInfo.name)}</a>` : null)}
                   ${factItemHTML(ICON.tag, "Походження", escapeHtmlAttribute(translateOrigin(char.origin)))}
