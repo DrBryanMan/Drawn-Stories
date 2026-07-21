@@ -78,6 +78,14 @@ export function openEditCharacterModal(char, onUpdate) {
             <!-- Категорія: Інше -->
             <div style="display: flex; flex-direction: column; gap: 8px;">
                 <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--accent); letter-spacing: 0.05em; border-bottom: 1px solid var(--border-s); padding-bottom: 4px; display: block;">Інше</span>
+                
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Сутність (Essence)</label>
+                    <select id="edit-char-essence" class="admin-select" style="margin-bottom: 0;">
+                        <option value="">-- Не обрано --</option>
+                    </select>
+                </div>
+
                 <div style="display: flex; flex-direction: column; gap: 4px;">
                     <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Автори</label>
                     <div style="display: flex; gap: 8px; position: relative; width: 100%;">
@@ -145,6 +153,23 @@ export function openEditCharacterModal(char, onUpdate) {
             })
             .catch(err => console.error('Error loading character creators:', err));
     }
+
+    // Load essences and preselect
+    const essenceSelect = modal.querySelector('#edit-char-essence');
+    API.get('/essences', { limit: 200 })
+        .then(res => {
+            const list = res.items || [];
+            list.forEach(es => {
+                const opt = document.createElement('option');
+                opt.value = es.slug;
+                opt.textContent = `${es.essence_name_uk || es.essence_name} (${es.slug})`;
+                if (char.essence === es.slug) {
+                    opt.selected = true;
+                }
+                essenceSelect.appendChild(opt);
+            });
+        })
+        .catch(err => console.error('Error loading essences list for edit character modal:', err));
     
     // Setup drop-down search rendering helper
     const renderSearchResults = (items) => {
@@ -255,6 +280,7 @@ export function openEditCharacterModal(char, onUpdate) {
             name_ro: modal.querySelector('#edit-char-name-ro').value.trim() || null,
             real_name: modal.querySelector('#edit-char-real-name').value.trim() || null,
             real_name_uk: modal.querySelector('#edit-char-real-name-uk').value.trim() || null,
+            essence: modal.querySelector('#edit-char-essence').value || null,
             creators: creatorsList,
             image: modal.querySelector('#edit-char-image').value.trim() || null,
             portret_img: modal.querySelector('#edit-char-portret-img').value.trim() || null,
