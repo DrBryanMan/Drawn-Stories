@@ -1,0 +1,337 @@
+/* Блок картки з табами у стилі сторінки тома */
+.essence-versions-card-block {
+  background: var(--bg-card, #ffffff);
+  border-radius: 14px;
+  border: 1px solid var(--border-s, #e2e8f0);
+  padding: 24px;
+  margin-top: 32px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+}
+
+.essence-versions-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Таби перемикання у стилі сторінки тома */
+.essence-versions-tabs-segmented {
+  display: inline-flex;
+  background: var(--bg-body, #f8fafc);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border-s, #e2e8f0);
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.essence-version-tab-btn {
+  border: none;
+  background: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-family: var(--font-mono, inherit);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted, #64748b);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.essence-version-tab-btn:hover {
+  color: var(--text-primary, #1e293b);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.essence-version-tab-btn.is-active {
+  background: var(--accent, #6366f1) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+}
+
+/* Картка додавання версії + у сітці */
+.essence-version-add-card-wrap {
+  cursor: pointer;
+  display: block;
+}
+
+.essence-version-add-card-wrap .essence-version-card-item {
+  cursor: pointer;
+}
+
+.essence-version-add-img-wrap {
+  border: 2px dashed var(--accent, #6366f1) !important;
+  background: var(--bg-body, #f8fafc) !important;
+  border-radius: 8px;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease-in-out;
+}
+
+.essence-version-add-card-wrap:hover .essence-version-add-img-wrap {
+  border-color: #4f46e5 !important;
+  background: var(--bg-hover, #f1f5f9) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+}
+
+.essence-version-add-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--accent, #6366f1);
+  transition: transform 0.2s ease;
+}
+
+.essence-version-add-icon-box svg {
+  width: 42px !important;
+  height: 42px !important;
+  stroke-width: 1.6px !important;
+}
+
+.essence-version-add-card-wrap:hover .essence-version-add-icon-box {
+  transform: scale(1.1);
+  color: #4f46e5;
+}
+
+.essence-version-add-title {
+  color: var(--accent, #6366f1) !important;
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-top: 8px;
+  transition: color 0.2s ease;
+}
+
+.essence-version-add-card-wrap:hover .essence-version-add-title {
+  color: #4f46e5 !important;
+}
+
+.essence-versions-section {
+  margin-top: 12px;
+}
+
+.essence-versions-section-header {
+  margin-bottom: 16px;
+}
+
+.essence-versions-section-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.essence-versions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 24px 28px;
+  padding-right: 16px;
+}
+
+.essence-versions-empty {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  border-radius: 12px;
+  border: 1px dashed var(--border-s);
+  margin-top: 16px;
+}
+
+/* Card item */
+.essence-version-card-wrap {
+  position: relative;
+}
+
+.essence-version-card-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+  width: 100%;
+  transition: transform 0.2s ease;
+}
+
+.essence-version-card-img-wrap {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border-s, #cbd5e1);
+  background: var(--bg-card, #f8fafc);
+  margin-bottom: 8px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s;
+
+  &:hover {
+    border-color: var(--accent);
+  }
+}
+
+.essence-version-card-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+.essence-version-fallback-icon {
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-hover, #f1f5f9);
+  color: var(--text-muted, #64748b);
+}
+
+.essence-version-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent, #0284c7);
+  line-height: 1.25;
+  margin-bottom: 2px;
+  word-break: break-word;
+}
+
+.essence-version-card-earth-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--accent, #0284c7);
+  margin-top: 2px;
+}
+
+.essence-version-card-earth-code {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent, #0284c7);
+  margin-top: 1px;
+}
+
+.essence-version-card-franchise {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* Card Actions Overlay (Справа від карти, вертикально, плавність) */
+.essence-version-card-wrap {
+  position: relative;
+  overflow: visible;
+}
+
+.essence-version-card-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: .5em;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 10;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-4px);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.essence-version-card-wrap:hover .essence-version-card-actions {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.essence-version-action-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  min-height: 30px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  cursor: pointer !important;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.essence-version-action-btn svg {
+  width: 14px !important;
+  height: 14px !important;
+  display: block !important;
+  stroke-width: 2.2px;
+}
+
+.essence-version-action-btn--edit {
+  background: #ffffff !important;
+  color: var(--text-primary, #334155) !important;
+}
+
+.essence-version-action-btn--edit:hover {
+  background: #f8fafc !important;
+  color: var(--accent, #0284c7) !important;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.essence-version-action-btn--delete {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+.essence-version-action-btn--delete:hover {
+  background: #dc2626 !important;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.35);
+}
+
+.essence-slug-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Missing Entity Link (Червоне посилання / картка для неіснуючих сторінок) */
+.ds-link-missing {
+  color: #ef4444 !important;
+  text-decoration: underline dotted #ef4444 !important;
+  cursor: pointer;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.ds-link-missing:hover {
+  opacity: 0.85;
+  color: #dc2626 !important;
+  text-decoration: underline #dc2626 !important;
+}
+
+.ds-link-missing .essence-version-card-title {
+  color: #ef4444 !important;
+  text-decoration: underline dotted #ef4444 !important;
+}
+
+.ds-link-missing:hover .essence-version-card-title {
+  color: #dc2626 !important;
+}
+
+.ds-link-missing .essence-version-card-img-wrap {
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}

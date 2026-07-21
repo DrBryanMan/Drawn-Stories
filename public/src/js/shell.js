@@ -53,6 +53,13 @@ const getNav = () => [
             route: '/characters'
           },
           {
+            label: 'Сутності',
+            desc: 'Базові особистості та альтернативні версії',
+            icon: '<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3z"/>',
+            href: '#/essences',
+            route: '/essences'
+          },
+          {
             label: t('personnel'),
             desc: t('personnel_desc'),
             icon: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',

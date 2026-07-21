@@ -1275,9 +1275,10 @@ export class IssueEditor {
         const i = this.issue;
         const modal = document.createElement('div');
         modal.className = 'ds-modal-overlay';
+        modal.id = 'issue-editor-overlay';
 
         modal.innerHTML = `
-            <div class="ds-modal ds-modal--large">
+            <div class="ds-modal ds-modal--large" id="issue-editor-modal">
                 <div class="ds-modal-header">
                     <div class="ds-modal-title">
                         ${ICON.edit}
@@ -1285,7 +1286,7 @@ export class IssueEditor {
                     </div>
                     <button class="ds-modal-close">&times;</button>
                 </div>
-                <div class="ds-modal-body" style="display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 20px;">
+                <div class="ds-modal-body">
                     <div class="editor-tabs-segmented">
                         <button class="editor-tab-btn is-active" data-tab="info">Основна інформація</button>
                         <button class="editor-tab-btn" data-tab="stories">Історії</button>
@@ -1465,6 +1466,7 @@ export class IssueEditor {
         if (this.modal) {
             document.removeEventListener('keydown', this._handleEsc);
             document.body.style.overflow = '';
+            document.body.classList.remove('modal-open');
             this.modal.remove();
             this.modal = null;
         }

@@ -140,13 +140,13 @@ export class MagazineChapterAdder {
                     cursor: default;
                 }
             </style>
-            <div class="ds-modal-overlay" id="chapter-adder-overlay" style="display: flex; z-index: 1000;">
-                <div class="ds-modal ds-modal--large" style="max-width: 900px; width: 90%; display: flex; flex-direction: column; max-height: 85vh;">
-                    <div class="ds-modal-header" style="flex-shrink: 0;">
+            <div class="ds-modal-overlay" id="chapter-adder-overlay">
+                <div class="ds-modal ds-modal--large" id="chapter-adder-modal">
+                    <div class="ds-modal-header">
                         <div class="ds-modal-title" id="chapter-adder-title">${ICON.plus} Додати серії</div>
                         <button class="ds-modal-close" id="chapter-adder-close">${ICON.x}</button>
                     </div>
-                    <div class="ds-modal-body" id="chapter-adder-body" style="flex-grow: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; width: 100%; box-sizing: border-box; align-items: stretch;">
+                    <div class="ds-modal-body" id="chapter-adder-body">
                         <!-- Content will be rendered dynamically here -->
                     </div>
                 </div>

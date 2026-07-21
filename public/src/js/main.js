@@ -1,5 +1,8 @@
 import { router }        from './helpers/router.js';
 import { initShell, currentUser } from './shell.js';
+import { initGlobalModalListeners } from './helpers/modalManager.js';
+
+initGlobalModalListeners();
 import { renderHome }    from './views/home.js';
 import { renderEdits }   from './views/edits.js';
 import { renderEditDetail } from './views/editDetail.js';
@@ -20,6 +23,8 @@ import { renderEventDetail } from './views/eventDetail.js';
 import { renderEvents } from './views/events.js';
 import { renderCharacters } from './views/characters.js';
 import { renderCharacterDetail } from './views/characterDetail.js';
+import { renderEssences } from './views/essences.js';
+import { renderEssenceDetail } from './views/essenceDetail.js';
 import { renderPersonnel } from './views/personnel.js';
 import { renderPersonnelDetail } from './views/personnelDetail.js';
 import { renderMagazineDetail } from './views/magazineDetail.js';
@@ -54,6 +59,8 @@ async function start() {
     .on('/characters',    (_path, _params, query) => renderCharacters(main, query))
     .on('/characters/:id/persona/:personaIdx', (_path, params) => renderCharacterDetail(main, params))
     .on('/characters/:id', (_path, params) => renderCharacterDetail(main, params))
+    .on('/essences',      (_path, _params, query) => renderEssences(main, query))
+    .on('/essences/:slug', (_path, params) => renderEssenceDetail(main, params))
     .on('/personnel',     (_path, _params, query) => renderPersonnel(main, query))
     .on('/personnel/:id', (_path, params) => renderPersonnelDetail(main, params))
     .on('/auth',          () => renderAuth(main))

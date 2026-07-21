@@ -23,6 +23,7 @@ export class VolumePicker {
     render() {
         const modal = document.createElement('div');
         modal.className = 'ds-modal-overlay';
+        modal.id = 'volume-picker-overlay';
 
         const searchFields = this.mode === 'magazine'
             ? `
@@ -61,7 +62,7 @@ export class VolumePicker {
                 </div>`;
 
         modal.innerHTML = `
-            <div class="ds-modal ds-modal--large">
+            <div class="ds-modal ds-modal--large" id="volume-picker-modal">
                 <div class="ds-modal-header">
                     <div class="ds-modal-title">
                         ${ICON.search}
@@ -117,6 +118,7 @@ export class VolumePicker {
 
         this.modal = modal;
         document.body.appendChild(modal);
+        document.body.classList.add('modal-open');
         modal.querySelector('#vp-search-name').focus();
         this.showHint();
     }
@@ -321,6 +323,7 @@ export class VolumePicker {
     close() {
         if (this.modal) {
             document.removeEventListener('keydown', this._handleEsc);
+            document.body.classList.remove('modal-open');
             this.modal.remove();
             this.modal = null;
         }

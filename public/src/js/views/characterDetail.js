@@ -573,7 +573,7 @@ function renderEditModalHTML(char) {
 
   return `
     <div class="ds-modal-overlay" id="char-edit-modal" style="display: none;">
-      <div class="ds-modal ds-modal--large">
+      <div class="ds-modal ds-modal--large" id="char-edit-modal-box">
         <div class="ds-modal-header">
           <div class="ds-modal-title">${ICON.edit} Редагувати дані персонажа</div>
           <button class="ds-modal-close" type="button" data-close-modal="char-edit-modal">&times;</button>
@@ -730,12 +730,6 @@ function setupEventListeners(container, char, volumes, issues, mangaChapters) {
 
     container.querySelectorAll('[data-close-modal]').forEach(btn => {
       btn.addEventListener('click', () => closeModal(btn.dataset.closeModal));
-    });
-
-    container.querySelectorAll('.ds-modal-overlay').forEach(overlay => {
-      overlay.addEventListener('click', e => {
-        if (e.target === overlay) closeModal(overlay.id);
-      });
     });
 
     // Creators Selector Logic

@@ -147,6 +147,7 @@ export class CollectionEditor {
         const c = this.collection;
         const modal = document.createElement('div');
         modal.className = 'ds-modal-overlay';
+        modal.id = 'collection-editor-overlay';
         
         window._emRemoveThemeCol = (themeId) => {
             const cb = modal.querySelector(`#themes-list input[value="${themeId}"]`);
@@ -173,7 +174,7 @@ export class CollectionEditor {
         }
 
         modal.innerHTML = `
-            <div class="ds-modal ds-modal--large">
+            <div class="ds-modal ds-modal--large" id="collection-editor-modal">
                 <div class="ds-modal-header">
                     <div class="ds-modal-title">
                         ${ICON.edit}
@@ -299,6 +300,7 @@ export class CollectionEditor {
 
         this.modal = modal;
         document.body.appendChild(modal);
+        document.body.classList.add('modal-open');
 
         this.initImageHandlers(modal);
         this._renderContentsEditor(modal);
@@ -404,6 +406,7 @@ export class CollectionEditor {
             document.removeEventListener('keydown', this._handleEsc);
             this.modal.remove();
             this.modal = null;
+            document.body.classList.remove('modal-open');
         }
     }
 

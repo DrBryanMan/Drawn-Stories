@@ -75,13 +75,13 @@ export class MagazineChapterEditor {
                     border-color: #0284c7 !important;
                 }
             </style>
-            <div class="ds-modal-overlay" id="chapter-editor-overlay" style="display: flex; z-index: 1000;">
-                <div class="ds-modal ds-modal--large" style="max-width: 600px; width: 90%; display: flex; flex-direction: column; max-height: 90vh;">
-                    <div class="ds-modal-header" style="flex-shrink: 0;">
+            <div class="ds-modal-overlay" id="chapter-editor-overlay">
+                <div class="ds-modal ds-modal--large" id="chapter-editor-modal">
+                    <div class="ds-modal-header">
                         <div class="ds-modal-title" id="chapter-editor-title">${ICON.edit} Редагувати розділ</div>
                         <button class="ds-modal-close" id="chapter-editor-close">${ICON.x}</button>
                     </div>
-                    <div class="ds-modal-body" style="flex-grow: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; width: 100%; box-sizing: border-box;">
+                    <div class="ds-modal-body">
                         
                         <div style="font-weight: bold; font-size: 14px; color: var(--primary); border-bottom: 1px solid var(--border-s); padding-bottom: 6px; margin-bottom: 4px;">
                             Налаштування зв'язку з випуском журналу

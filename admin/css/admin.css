@@ -1,81 +1,5 @@
+@import url('/static/css/components/modal.css');
 @import url('buttons.css');
-
-/* Existing ds-modal styles ... */
-.ds-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    backdrop-filter: blur(4px);
-}
-
-.ds-modal {
-    border-radius: 12px;
-    max-height: 90vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.ds-modal--large {
-    max-width: 960px;
-    width: 100%;
-}
-
-.ds-modal-header {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border-s);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
-}
-
-.ds-modal-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.ds-modal-close {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: var(--text-muted);
-    line-height: 1;
-}
-
-.ds-modal-body {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
-    min-height: 0;
-    gap: 1em;
-    padding: 20px;
-    overflow-y: auto;
-}
-
-.ds-modal-body > form {
-    width: 100%;
-    min-width: 0;
-}
-
-.ds-modal-footer {
-    padding: 16px 20px;
-    border-top: 1px solid var(--border-s);
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-}
 
 /* Admin Actions Section */
 .volume-hero-admin-actions {
@@ -199,7 +123,6 @@
     border-bottom: 1px solid var(--border-s);
 }
 
-/* Existing ds-modal styles ... */
 .admin-form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;

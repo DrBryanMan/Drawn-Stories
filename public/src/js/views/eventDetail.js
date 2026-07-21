@@ -112,13 +112,13 @@ function issueRowHTML(issue, index, total, canModerate) {
 function editModalHTML(event) {
     return `
         <div class="ds-modal-overlay" id="event-edit-modal" style="display: none;">
-            <div class="ds-modal ds-modal--large">
+            <div class="ds-modal ds-modal--large" id="event-edit-modal-box">
                 <div class="ds-modal-header">
                     <div class="ds-modal-title">${ICON.edit} ${t('edit_event')}</div>
                     <button class="ds-modal-close" type="button" data-close-modal="event-edit-modal">&times;</button>
                 </div>
                 <form id="event-edit-form">
-                    <div class="ds-modal-body" style="display: block;">
+                    <div class="ds-modal-body">
                         <div class="admin-form-grid">
                             <div class="admin-form-group admin-form-group--full">
                                 <label class="admin-label">${ICON.type} ${t('name')}</label>
@@ -298,12 +298,6 @@ function bindEventDetail(container, eventId, existingIds, canModerate) {
                 }
                 await renderEventDetail(container, { id: eventId });
             }
-        });
-    });
-
-    container.querySelectorAll('.ds-modal-overlay').forEach(overlay => {
-        overlay.addEventListener('click', e => {
-            if (e.target === overlay) closeModal(overlay.id);
         });
     });
 

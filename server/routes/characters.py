@@ -7,6 +7,8 @@ router = APIRouter(prefix="/api/characters", tags=["characters"])
 @router.get("")
 async def get_characters(
     search: Optional[str] = None,
+    earth: Optional[str] = None,
+    franchise: Optional[str] = None,
     sort: Optional[str] = "issues",
     order_dir: Optional[str] = "desc",
     page: int = Query(1, ge=1),
@@ -17,8 +19,28 @@ async def get_characters(
     params = []
 
     if search:
-        where_parts.append("LOWER(c.name) LIKE %s")
-        params.append(f"%{search.lower()}%")
+        s_pat = f"%{search.lower().strip()}%"
+        where_parts.append("""(
+            LOWER(COALESCE(c.name, '')) LIKE %s OR
+            LOWER(COALESCE(c.name_uk, '')) LIKE %s OR
+            LOWER(COALESCE(c.real_name, '')) LIKE %s OR
+            LOWER(COALESCE(c.real_name_uk, '')) LIKE %s OR
+            LOWER(COALESCE(c.name_native, '')) LIKE %s OR
+            LOWER(COALESCE(c.franchise, '')) LIKE %s OR
+            LOWER(COALESCE(c.earth, '')) LIKE %s OR
+            LOWER(COALESCE(c.aliases::text, '')) LIKE %s
+        )""")
+        params.extend([s_pat] * 8)
+
+    if earth:
+        e_pat = f"%{earth.lower().strip()}%"
+        where_parts.append("LOWER(COALESCE(c.earth, '')) LIKE %s")
+        params.append(e_pat)
+
+    if franchise:
+        f_pat = f"%{franchise.lower().strip()}%"
+        where_parts.append("LOWER(COALESCE(c.franchise, '')) LIKE %s")
+        params.append(f_pat)
 
     where_clause = "WHERE " + " AND ".join(where_parts) if where_parts else ""
 
@@ -43,7 +65,8 @@ async def get_characters(
 
     rows = db.get_all(
         f"""
-        SELECT c.id, c.cv_id, c.name, c.name_uk, c.name_ro, c.real_name, c.cv_slug, c.image, c.gender,
+        SELECT c.id, c.cv_id, c.name, c.name_uk, c.name_ro, c.real_name, c.real_name_uk, c.name_native,
+               c.earth, c.franchise, c.essence, c.aliases, c.cv_slug, c.image, c.gender,
                (SELECT COUNT(*) FROM issue_characters ic WHERE ic.character_id = c.id) as issue_count
         FROM characters c
         {where_clause}
@@ -188,6 +211,50 @@ async def get_character(character_id: int):
 
     char["personas"] = personas_list
 
+    # Hydrate aliases (JSONB) with issue_info
+    raw_aliases = char.get("aliases")
+    if isinstance(raw_aliases, str):
+        try:
+            aliases_list = json.loads(raw_aliases)
+        except Exception:
+            aliases_list = []
+    elif isinstance(raw_aliases, list):
+        aliases_list = raw_aliases
+    else:
+        aliases_list = []
+
+    for a in aliases_list:
+        if isinstance(a, dict) and a.get("issue_id"):
+            try:
+                iss_id = int(a["issue_id"])
+                iss = db.get_one(
+                    """
+                    SELECT i.id, i.issue_number, i.name, i.image, v.name as volume_name, v.name_uk as volume_name_uk
+                    FROM issues i
+                    JOIN volumes v ON i.volume_id = v.id
+                    WHERE i.id = %s
+                    """,
+                    [iss_id]
+                )
+                if iss:
+                    a["issue_info"] = iss
+            except Exception:
+                pass
+
+    char["aliases"] = aliases_list
+
+    # Earth info
+    if char.get("earth"):
+        earth_val = str(char["earth"])
+        if earth_val.isdigit():
+            char["earth_info"] = db.get_one("SELECT * FROM earths WHERE id = %s", [int(earth_val)])
+        else:
+            char["earth_info"] = db.get_one("SELECT * FROM earths WHERE code = %s OR name = %s OR name_uk = %s", [earth_val, earth_val, earth_val])
+
+    # Essence info
+    if char.get("essence"):
+        char["essence_info"] = db.get_one("SELECT * FROM essences WHERE slug = %s", [char["essence"]])
+
     return char
 
 
@@ -215,6 +282,7 @@ async def update_character(character_id: int, data: dict, request: Request):
     creators = to_null(data.get("creators"))
     franchise = to_null(data.get("franchise"))
     earth = to_null(data.get("earth"))
+    essence = to_null(data.get("essence"))
     image = to_null(data.get("image"))
     portret_img = to_null(data.get("portret_img"))
     costume_img = to_null(data.get("costume_img"))
@@ -233,6 +301,19 @@ async def update_character(character_id: int, data: dict, request: Request):
 
     personas_json = json.dumps(personas, ensure_ascii=False)
 
+    aliases_raw = data.get("aliases")
+    if isinstance(aliases_raw, str):
+        try:
+            aliases = json.loads(aliases_raw)
+        except Exception:
+            aliases = []
+    elif isinstance(aliases_raw, list):
+        aliases = aliases_raw
+    else:
+        aliases = []
+
+    aliases_json = json.dumps(aliases, ensure_ascii=False)
+
     if not name:
         raise HTTPException(status_code=400, detail="Оригінальне ім'я обов'язкове")
         
@@ -240,11 +321,11 @@ async def update_character(character_id: int, data: dict, request: Request):
         """
         UPDATE characters
         SET name = %s, name_uk = %s, name_ro = %s, real_name = %s, real_name_uk = %s, creators = %s, 
-            franchise = %s, earth = %s, image = %s, portret_img = %s, costume_img = %s, portret_costume_img = %s,
-            personas = %s::jsonb, date_last_updated = NOW()
+            franchise = %s, earth = %s, essence = %s, image = %s, portret_img = %s, costume_img = %s, portret_costume_img = %s,
+            personas = %s::jsonb, aliases = %s::jsonb, date_last_updated = NOW()
         WHERE id = %s
         """,
-        [name, name_uk, name_ro, real_name, real_name_uk, creators, franchise, earth, image, portret_img, costume_img, portret_costume_img, personas_json, character_id]
+        [name, name_uk, name_ro, real_name, real_name_uk, creators, franchise, earth, essence, image, portret_img, costume_img, portret_costume_img, personas_json, aliases_json, character_id]
     )
     return {"message": "Персонаж успішно оновлений"}
 
@@ -266,3 +347,89 @@ async def delete_character(character_id: int, request: Request):
     # Видаляємо самого персонажа
     db.execute("DELETE FROM characters WHERE id = %s", [character_id])
     return {"message": "Персонаж успішно видалений"}
+
+
+@router.post("")
+async def create_character(data: dict, request: Request):
+    role = request.cookies.get("role")
+    if role not in {"moderator", "admin"}:
+        raise HTTPException(status_code=403, detail="Потрібні права модератора")
+    
+    db = get_db()
+    
+    def to_null(val):
+        return None if val == "" else val
+
+    name = to_null(data.get("name"))
+    if not name:
+        raise HTTPException(status_code=400, detail="Оригінальне ім'я обов'язкове")
+
+    name_uk = to_null(data.get("name_uk"))
+    name_ro = to_null(data.get("name_ro"))
+    real_name = to_null(data.get("real_name"))
+    real_name_uk = to_null(data.get("real_name_uk"))
+    publisher = data.get("publisher")
+    if publisher == "" or publisher is None:
+        publisher = None
+    else:
+        try:
+            publisher = int(publisher)
+        except Exception:
+            publisher = None
+
+    creators = to_null(data.get("creators"))
+    franchise = to_null(data.get("franchise"))
+    earth = to_null(data.get("earth"))
+    essence = to_null(data.get("essence"))
+    
+    gender = data.get("gender")
+    if gender is not None and gender != "":
+        try:
+            gender = int(gender)
+        except Exception:
+            gender = None
+    else:
+        gender = None
+
+    image = to_null(data.get("image"))
+    portret_img = to_null(data.get("portret_img"))
+    costume_img = to_null(data.get("costume_img"))
+    portret_costume_img = to_null(data.get("portret_costume_img"))
+
+    personas_raw = data.get("personas", [])
+    if isinstance(personas_raw, str):
+        try:
+            personas = json.loads(personas_raw)
+        except Exception:
+            personas = []
+    elif isinstance(personas_raw, list):
+        personas = personas_raw
+    else:
+        personas = []
+
+    aliases_raw = data.get("aliases", [])
+    if isinstance(aliases_raw, str):
+        try:
+            aliases = json.loads(aliases_raw)
+        except Exception:
+            aliases = []
+    elif isinstance(aliases_raw, list):
+        aliases = aliases_raw
+    else:
+        aliases = []
+
+    personas_json = json.dumps(personas, ensure_ascii=False)
+    aliases_json = json.dumps(aliases, ensure_ascii=False)
+
+    row = db.get_one(
+        """
+        INSERT INTO characters (name, name_uk, name_ro, real_name, real_name_uk, publisher, creators,
+                                franchise, earth, essence, gender, image, portret_img, costume_img, portret_costume_img,
+                                personas, aliases, created_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, NOW())
+        RETURNING id
+        """,
+        [name, name_uk, name_ro, real_name, real_name_uk, publisher, creators, franchise, earth, essence, gender, image, portret_img, costume_img, portret_costume_img, personas_json, aliases_json]
+    )
+
+    return {"message": "Персонаж успішно створений", "id": row["id"]}

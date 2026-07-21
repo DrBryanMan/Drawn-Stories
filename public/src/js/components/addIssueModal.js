@@ -29,7 +29,7 @@ function ensureModal() {
     el.style.display = 'none';
     
     el.innerHTML = `
-        <div class="ds-modal ds-modal--large">
+        <div class="ds-modal ds-modal--large" id="add-issue-modal">
             <div class="ds-modal-header">
                 <div class="ds-modal-title" id="aim-title"></div>
                 <button class="ds-modal-close" id="aim-close-btn">${ICON.x}</button>

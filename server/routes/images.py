@@ -13,7 +13,9 @@ TYPE_MAP = {
     "reading-order": "reading-orders",
     "event": "events",
     "manga-chapter": "issues",
-    "publisher": "publishers"
+    "publisher": "publishers",
+    "character": "characters",
+    "essence": "essences"
 }
 
 # Resolve target directory relative to this file

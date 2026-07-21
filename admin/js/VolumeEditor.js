@@ -574,6 +574,7 @@ export class VolumeEditor {
         const v = this.volume;
         const modal = document.createElement('div');
         modal.className = 'ds-modal-overlay';
+        modal.id = 'volume-editor-overlay';
         
         const isPrivileged = currentUser && (currentUser.role === 'admin' || currentUser.role === 'moderator');
         const readOnlyAttr = isPrivileged ? '' : ' readonly';
@@ -616,7 +617,7 @@ export class VolumeEditor {
         window._emFilterThemesVol = (q) => { Utils.filterThemeCheckboxList(q, 'themes-list'); };
 
         modal.innerHTML = `
-            <div class="ds-modal ds-modal--large">
+            <div class="ds-modal ds-modal--large" id="volume-editor-modal">
                 <div class="ds-modal-header">
                     <div class="ds-modal-title">
                         ${ICON.edit}
@@ -814,6 +815,7 @@ export class VolumeEditor {
 
         this.modal = modal;
         document.body.appendChild(modal);
+        document.body.classList.add('modal-open');
 
         this.initImageHandlers(modal);
 
@@ -849,6 +851,7 @@ export class VolumeEditor {
     close() {
         if (this.modal) {
             document.removeEventListener('keydown', this._handleEsc);
+            document.body.classList.remove('modal-open');
             this.modal.remove();
             this.modal = null;
         }

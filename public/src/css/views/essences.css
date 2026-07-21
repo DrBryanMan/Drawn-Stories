@@ -1,0 +1,84 @@
+/* Essences Catalog CSS */
+.essences-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.essence-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg, 12px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.essence-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.essence-card-image-wrap {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-body);
+}
+
+.essence-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.essence-card:hover .essence-card-img {
+  transform: scale(1.05);
+}
+
+.essence-card-content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.essence-card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--text);
+}
+
+.essence-card-person {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.essence-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.essence-card-badge {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--bg-body);
+  border: 1px solid var(--border);
+  font-size: 0.75rem;
+  font-weight: 600;
+}

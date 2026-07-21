@@ -11,7 +11,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from server.db import init_db, close_db
-from server.routes import stats, catalog, volumes, publishers, themes, auth, user_readlist, favorites, collections, issues, events, reading_orders, images, characters, personnel, scrape, wanted, magazines, manga_chapters, parser, edits, ratings
+from server.routes import stats, catalog, volumes, publishers, themes, auth, user_readlist, favorites, collections, issues, events, reading_orders, images, characters, personnel, scrape, wanted, magazines, manga_chapters, parser, edits, ratings, earths, essences
 # Monkey patch Starlette Request to automatically decode URL-encoded username cookie
 import urllib.parse
 original_cookies_property = Request.cookies
@@ -142,6 +142,8 @@ app.include_router(manga_chapters.router)
 app.include_router(parser.router)
 app.include_router(edits.router)
 app.include_router(ratings.router)
+app.include_router(earths.router)
+app.include_router(essences.router)
 
 @app.get("/api/health")
 async def health_check():

@@ -745,7 +745,7 @@ export async function renderCollectionDetail(main, params = {}) {
 
                 const modalHtml = `
                     <div class="ds-modal-overlay" id="contents-modal-overlay" style="display: flex;">
-                        <div class="ds-modal ds-modal--medium">
+                        <div class="ds-modal ds-modal--medium" id="contents-modal">
                             <div class="ds-modal-header">
                                 <div class="ds-modal-title">${ICON.layers} Зміст збірника</div>
                                 <button class="ds-modal-close" id="contents-modal-close">&times;</button>

@@ -168,7 +168,7 @@ function editModalHTML(pub) {
 
   return `
     <div class="ds-modal-overlay" id="pub-edit-modal" style="display: none;">
-      <div class="ds-modal ds-modal--large">
+      <div class="ds-modal ds-modal--large" id="pub-edit-modal-box">
         <div class="ds-modal-header">
           <div class="ds-modal-title">${ICON.edit} Редагувати видавництво</div>
           <button class="ds-modal-close" type="button" data-close-modal="pub-edit-modal">&times;</button>
@@ -292,12 +292,6 @@ export async function renderPublisherDetail(container, params) {
       
       container.querySelectorAll('[data-close-modal]').forEach(btn => {
         btn.addEventListener('click', () => closeModal(btn.dataset.closeModal));
-      });
-
-      container.querySelectorAll('.ds-modal-overlay').forEach(overlay => {
-        overlay.addEventListener('click', e => {
-          if (e.target === overlay) closeModal(overlay.id);
-        });
       });
 
       container.querySelector('#pub-edit-form')?.addEventListener('submit', async event => {

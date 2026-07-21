@@ -26,7 +26,7 @@ function ensureModal() {
     el.style.display = 'none';
     
     el.innerHTML = `
-        <div class="ds-modal ds-modal--large">
+        <div class="ds-modal ds-modal--large" id="add-reprint-modal">
             <div class="ds-modal-header">
                 <div class="ds-modal-title">${ICON.plus} Додати репринт</div>
                 <button class="ds-modal-close" id="arm-close-btn">${ICON.x}</button>

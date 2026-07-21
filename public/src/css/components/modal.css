@@ -1,0 +1,352 @@
+/* public/src/css/components/modal.css */
+
+/* ── Modal Global Scroll & Lock ──────────────────────── */
+body.modal-open,
+body:has(.ds-modal-overlay:not([hidden]):not([style*="display: none"]):not([style*="display:none"])) {
+  overflow: hidden !important;
+}
+
+/* ── Modal Overlay ───────────────────────────────────── */
+.ds-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow: hidden;
+  animation: ds-fade-in 0.2s ease-out;
+}
+
+/* ── Modal Box ───────────────────────────────────────── */
+.ds-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 680px;
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-s, #e2e8f0);
+  border-radius: var(--r-xl, 16px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  animation: ds-slide-up 0.3s ease-out;
+}
+
+/* ── Size Modifiers ──────────────────────────────────── */
+.ds-modal--small {
+  max-width: 400px;
+}
+
+.ds-modal--medium {
+  max-width: 600px;
+}
+
+.ds-modal--large {
+  max-width: 800px;
+}
+
+.ds-modal--xlarge {
+  max-width: 1000px;
+}
+
+/* ── Form Container Inside Modal ─────────────────────── */
+.ds-modal > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+/* ── Header ──────────────────────────────────────────── */
+.ds-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-s, #e2e8f0);
+  background: var(--bg-card, #fff);
+  flex-shrink: 0;
+}
+
+.ds-modal-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ds-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-muted, #64748b);
+  line-height: 1;
+  padding: 4px;
+  border-radius: var(--r-m, 6px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.ds-modal-close:hover {
+  color: var(--text-primary, #0f172a);
+  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
+}
+
+/* ── Body (Content & Scroll) ─────────────────────────── */
+.ds-modal-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto !important;
+  padding: 24px;
+  gap: 16px;
+}
+
+.ds-modal-body form,
+.ds-modal-body > form {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: auto;
+  flex: none;
+  overflow: visible;
+}
+
+/* ── Footer ──────────────────────────────────────────── */
+.ds-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-s, #e2e8f0);
+  background: var(--bg-card, #fff);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* ── Modal Form Controls & Elements ──────────────────── */
+.admin-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.admin-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-form-group--full {
+  grid-column: 1 / -1;
+}
+
+.admin-form-section-title {
+  grid-column: 1 / -1;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primary, #3b82f6);
+  border-bottom: 1px solid var(--border-s, #e2e8f0);
+  padding-bottom: 6px;
+  margin-top: 8px;
+}
+
+.admin-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary, #475569);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-input,
+.admin-select,
+.admin-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-input, var(--bg-card, #fff));
+  border: 1px solid var(--border-s, #cbd5e1);
+  border-radius: var(--r-m, 8px);
+  color: var(--text-primary, #0f172a);
+  font-size: 0.95rem;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.admin-input:focus,
+.admin-select:focus,
+.admin-textarea:focus {
+  outline: none;
+  border-color: var(--primary, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.admin-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* ── Character Picker Component ──────────────────────── */
+.character-picker-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.character-picker-inputs {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.character-picker-name-field {
+  flex: 2;
+  min-width: 0;
+}
+
+.character-picker-earth-field,
+.character-picker-franchise-field,
+.character-picker-id-field {
+  flex: 1;
+  min-width: 110px;
+}
+
+.character-picker-results {
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-s, #cbd5e1);
+  border-radius: var(--r-m, 8px);
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+}
+
+.character-picker-result-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-s, #f1f5f9);
+  transition: background 0.15s ease;
+}
+
+.character-picker-result-item:last-child {
+  border-bottom: none;
+}
+
+.character-picker-result-item:hover {
+  background: var(--bg-hover, rgba(59, 130, 246, 0.08));
+}
+
+.character-picker-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg-input, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.character-picker-item-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.character-picker-item-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.character-picker-item-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Selected Character Badges */
+.character-selected-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.character-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 6px;
+  background: color-mix(in srgb, var(--primary, #3b82f6) 12%, var(--bg-card, #fff));
+  border: 1px solid color-mix(in srgb, var(--primary, #3b82f6) 30%, transparent);
+  border-radius: var(--r-l, 20px);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-primary, #0f172a);
+}
+
+.character-badge-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.character-badge-earth {
+  font-size: 0.75rem;
+  padding: 1px 6px;
+  background: var(--primary, #3b82f6);
+  color: #fff;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.character-badge-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted, #64748b);
+  cursor: pointer;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: color 0.15s, background 0.15s;
+  line-height: 1;
+}
+
+.character-badge-remove:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+

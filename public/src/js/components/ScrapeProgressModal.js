@@ -28,7 +28,7 @@ export function openScrapeProgressModal(type, id) {
         : (type === 'manga-characters' ? 'Парсинг персонажів манґи' : 'Скрапінг випуску');
 
     overlay.innerHTML = `
-        <div class="ds-modal scrape-progress-modal">
+        <div class="ds-modal scrape-progress-modal" id="scrape-progress-modal">
             <div class="ds-modal-header">
                 <div class="ds-modal-title">${titleText}</div>
                 <button class="ds-modal-close" id="spm-close-x-btn" style="display: none;">${ICON.x}</button>

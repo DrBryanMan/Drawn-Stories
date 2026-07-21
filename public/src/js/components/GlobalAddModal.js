@@ -1,6 +1,7 @@
 import { API } from '../helpers/api.js';
 import { LANG_MAP } from '../helpers/lang.js';
 import { normalizeImageUrl } from '../helpers/image.js';
+import { CharacterPicker } from './CharacterPicker.js';
 
 // Local helper functions for rendering themes (identical to VolumeEditor / editorUtils)
 function buildThemeChipsHTML(selectedThemes) {
@@ -138,6 +139,8 @@ const ICON = {
     event: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>',
     publisher: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V4c0-1.1.9-2 2-2h12a2 2 0 0 1 2 2v18"></path><path d="M10 22V15a2 2 0 1 1 4 0v7"></path><path d="M4 18h16"></path></svg>',
     mangaChapter: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>',
+    character: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>',
+    essence: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3z"/></svg>',
     plus: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
     back: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>',
     save: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>',
@@ -147,12 +150,14 @@ const ICON = {
 };
 
 const CONTENT_TYPES = [
-  { id: 'volume',        icon: ICON.volume, label: 'Том (комікс)'      },
-  { id: 'issue',         icon: ICON.issue, label: 'Випуск'            },
-  { id: 'collection',    icon: ICON.collection, label: 'Збірник'           },
+  { id: 'volume',        icon: ICON.volume,       label: 'Том (комікс)'      },
+  { id: 'issue',         icon: ICON.issue,        label: 'Випуск'            },
+  { id: 'collection',    icon: ICON.collection,   label: 'Збірник'           },
+  { id: 'character',     icon: ICON.character,    label: 'Персонаж'          },
+  { id: 'essence',       icon: ICON.essence,      label: 'Сутність'          },
   { id: 'reading-order', icon: ICON.readingOrder, label: 'Порядок читання'   },
-  { id: 'event',         icon: ICON.event, label: 'Подія'             },
-  { id: 'publisher',     icon: ICON.publisher, label: 'Видавництво'       },
+  { id: 'event',         icon: ICON.event,        label: 'Подія'             },
+  { id: 'publisher',     icon: ICON.publisher,    label: 'Видавництво'       },
   { id: 'manga-chapter', icon: ICON.mangaChapter, label: 'Розділ манґи'      },
 ];
 
@@ -160,23 +165,72 @@ let _modal = null;
 let _currentType = null;
 let _allThemes = [];
 let _selectedSuggestedThemeIds = new Set();
+let _earthsCache = null;
+let _publishersCache = null;
+let _essencesCache = null;
+
+function slugify(text) {
+  if (!text) return '';
+  const cyrillicMap = {
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'h', 'ґ': 'g', 'д': 'd', 'е': 'e', 'є': 'ye',
+    'ж': 'zh', 'з': 'z', 'и': 'y', 'і': 'i', 'ї': 'yi', 'й': 'y', 'к': 'k', 'л': 'l',
+    'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+    'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch', 'ь': '', 'ю': 'yu', 'я': 'ya'
+  };
+  let str = text.toLowerCase().trim();
+  let res = '';
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (cyrillicMap[ch]) res += cyrillicMap[ch];
+    else if (/[a-z0-9]/.test(ch)) res += ch;
+    else if (/\s|-|_/.test(ch)) res += '-';
+  }
+  return res.replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+async function loadDropdownData() {
+  if (!_earthsCache) {
+    try {
+      const res = await API.get('/earths', { limit: 200 });
+      _earthsCache = res.items || [];
+    } catch (e) {
+      _earthsCache = [];
+    }
+  }
+  if (!_publishersCache) {
+    try {
+      const res = await API.get('/publishers', { limit: 200 });
+      _publishersCache = res.items || [];
+    } catch (e) {
+      _publishersCache = [];
+    }
+  }
+  if (!_essencesCache) {
+    try {
+      const res = await API.get('/essences', { limit: 200 });
+      _essencesCache = res.items || [];
+    } catch (e) {
+      _essencesCache = [];
+    }
+  }
+}
 
 function ensureModal() {
   if (document.getElementById('global-add-modal')) return;
 
   const el = document.createElement('div');
-  el.id = 'global-add-modal';
+  el.id = 'global-add-modal-overlay';
   el.className = 'ds-modal-overlay';
   el.style.display = 'none';
 
   el.innerHTML = `
-    <div class="ds-modal ds-modal--large" id="gam-box">
+    <div class="ds-modal ds-modal--large" id="global-add-modal">
       <div class="ds-modal-header">
         <div class="ds-modal-title" id="gam-title">${ICON.plus} Додати контент</div>
         <button class="ds-modal-close" id="gam-close">&times;</button>
       </div>
 
-      <div class="ds-modal-body" style="display: block;">
+      <div class="ds-modal-body">
         <div id="gam-type-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px;"></div>
         <div id="gam-form-area" style="display: none;"></div>
         <div id="gam-status" style="display: none; margin-top: 1rem; padding: 12px; border-radius: 8px; font-size: 0.9rem; text-align: center;"></div>
@@ -255,7 +309,7 @@ async function selectType(typeId) {
   document.getElementById('gam-actions').style.display = 'flex';
   document.getElementById('gam-status').style.display = 'none';
 
-  renderForm(typeId);
+  await renderForm(typeId);
 
   if (typeId === 'volume') {
       _selectedSuggestedThemeIds.clear();
@@ -384,6 +438,57 @@ const FORMS = {
         ${imgField('image')}
     </div>
   `,
+  'character': () => `
+    <div class="admin-form-grid">
+        ${fld('Оригінальне ім\'я *', inp('name', 'text', 'Spider-Man'), '', true)}
+        ${fld('Ім\'я українською', inp('name_uk', 'text', 'Людина-Павук'), '', true)}
+        ${fld('Справжнє ім\'я (оригінал)', inp('real_name', 'text', 'Peter Parker'))}
+        ${fld('Справжнє ім\'я (українською)', inp('real_name_uk', 'text', 'Пітер Паркер'))}
+        ${fld('Видавництво', `
+            <select name="publisher" class="admin-input gam-publisher-select">
+                <option value="">— не обрано</option>
+            </select>
+        `)}
+        ${fld('Франшиза', inp('franchise', 'text', 'Marvel Comics'))}
+        ${fld('Земля / Всесвіт', `
+            <select name="earth" class="admin-input gam-earth-select">
+                <option value="">— не обрано</option>
+            </select>
+        `)}
+        ${fld('Сутність (Есенція)', `
+            <select name="essence" class="admin-input gam-essence-select">
+                <option value="">— не обрано</option>
+            </select>
+        `)}
+        ${fld('Творці / Автори', inp('creators', 'text', 'Stan Lee, Steve Ditko'), '', true)}
+        ${fld('Стать', `
+            <select name="gender" class="admin-input">
+                <option value="">— не вказано</option>
+                <option value="1">Чоловіча</option>
+                <option value="0">Жіноча</option>
+                <option value="2">Інша / Невідомо</option>
+            </select>
+        `)}
+        ${imgField('image', 'Зображення / Аватар персонажа')}
+    </div>
+  `,
+  'essence': () => `
+    <div class="admin-form-grid">
+        ${fld('Назва сутності (оригінал) *', inp('essence_name', 'text', 'Spider-Man'), '', true)}
+        ${fld('Назва сутності (українською)', inp('essence_name_uk', 'text', 'Людина-Павук'), '', true)}
+        ${fld('Унікальний слаг *', inp('slug', 'text', 'spider-man'), 'Унікальний ідентифікатор в URL (автогенерація)', true)}
+        ${fld('Цивільне ім\'я (оригінал)', inp('person_name', 'text', 'Peter Parker'))}
+        ${fld('Цивільне ім\'я (українською)', inp('person_name_uk', 'text', 'Пітер Паркер'))}
+        ${fld('Головний персонаж', `
+          <input type="hidden" name="character_id" id="gam-essence-char-id" value="">
+          <div id="gam-essence-char-picker"></div>
+        `, '', true)}
+        ${fld('Слаг зв\'язаної сутності (essence_slug)', inp('essence_slug', 'text', 'spider-man'))}
+        ${fld('Франшиза', inp('franchise', 'text', 'Marvel Comics'))}
+        ${fld('Опис сутності', `<textarea name="description" class="admin-textarea" placeholder="Загальний опис сутності..."></textarea>`, '', true)}
+        ${imgField('image', 'Картка / Зображення сутності')}
+    </div>
+  `,
   'reading-order': () => `
     <div class="admin-form-grid">
         ${fld('Назва списку *', inp('name'), '', true)}
@@ -432,11 +537,60 @@ const FORMS = {
   `,
 };
 
-function renderForm(typeId) {
+async function renderForm(typeId) {
   const area = document.getElementById('gam-form-area');
   const builder = FORMS[typeId];
   area.innerHTML = builder ? builder() : '';
   initFormHandlers(area);
+
+  if (typeId === 'character' || typeId === 'essence') {
+    await loadDropdownData();
+    populateSelects(area);
+  }
+  if (typeId === 'essence') {
+    initSlugAutoGeneration(area);
+    const charPickerEl = area.querySelector('#gam-essence-char-picker');
+    if (charPickerEl) {
+      new CharacterPicker({
+        container: charPickerEl,
+        hiddenInput: area.querySelector('#gam-essence-char-id')
+      });
+    }
+  }
+}
+
+function populateSelects(area) {
+  const earthSel = area.querySelector('.gam-earth-select');
+  if (earthSel && _earthsCache) {
+    earthSel.innerHTML = '<option value="">— не обрано</option>' +
+      _earthsCache.map(e => `<option value="${e.id}">${e.name_uk || e.name} (${e.code || e.id})</option>`).join('');
+  }
+
+  const pubSel = area.querySelector('.gam-publisher-select');
+  if (pubSel && _publishersCache) {
+    pubSel.innerHTML = '<option value="">— не обрано</option>' +
+      _publishersCache.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  }
+
+  const essSel = area.querySelector('.gam-essence-select');
+  if (essSel && _essencesCache) {
+    essSel.innerHTML = '<option value="">— не обрано</option>' +
+      _essencesCache.map(es => `<option value="${es.slug}">${es.essence_name_uk || es.essence_name} (${es.slug})</option>`).join('');
+  }
+}
+
+function initSlugAutoGeneration(area) {
+  const nameInput = area.querySelector('input[name="essence_name"]');
+  const slugInput = area.querySelector('input[name="slug"]');
+  if (!nameInput || !slugInput) return;
+
+  let isSlugEdited = false;
+  slugInput.addEventListener('input', () => { isSlugEdited = true; });
+  nameInput.addEventListener('input', () => {
+    if (!isSlugEdited) {
+      slugInput.value = slugify(nameInput.value);
+    }
+  });
 }
 
 function initFormHandlers(area) {
@@ -561,18 +715,20 @@ async function handleSubmit() {
 
     setTimeout(() => {
       let path = null;
-      if (result && result.id) {
+      if (result && (result.id || result.slug)) {
         if (_currentType === 'volume') path = `#/volumes/${result.id}`;
         else if (_currentType === 'issue' || _currentType === 'manga-chapter') path = `#/issues/${result.id}`;
         else if (_currentType === 'collection') path = `#/collections/${result.id}`;
         else if (_currentType === 'event') path = `#/events/${result.id}`;
+        else if (_currentType === 'character') path = `#/characters/${result.id}`;
+        else if (_currentType === 'essence') path = `#/essences/${result.slug || result.id}`;
       }
       
       const typeForRedirect = _currentType;
       closeGlobalAddModal();
 
-      if (result && result.id) {
-        const supportedTypes = ['volume', 'issue', 'collection', 'event', 'manga-chapter'];
+      if (result && (result.id || result.slug)) {
+        const supportedTypes = ['volume', 'issue', 'collection', 'event', 'manga-chapter', 'character', 'essence'];
         if (supportedTypes.includes(typeForRedirect) && path) {
           window.location.hash = path;
         } else {
@@ -630,7 +786,7 @@ async function submitData(typeId, data) {
   const MAP = {
     volume: '/volumes', issue: '/issues', collection: '/collections',
     'reading-order': '/reading-orders', event: '/events', publisher: '/publishers',
-    'manga-chapter': '/issues'
+    'manga-chapter': '/issues', character: '/characters', essence: '/essences'
   };
   endpoint = MAP[typeId];
 
@@ -641,11 +797,31 @@ async function submitData(typeId, data) {
   return await API.post(endpoint, typedData);
 }
 
-export function openGlobalAddModal() {
+export async function openGlobalAddModal(typeId = null, defaultData = null) {
   ensureModal();
-  if (_modal.style.display === 'flex') return;
   _modal.style.display = 'flex';
-  showTypeSelection();
+  
+  if (typeId) {
+    await selectType(typeId);
+    if (defaultData) {
+      const area = _modal.querySelector('#gam-form-area');
+      if (area) {
+        // Зачекаємо трохи, поки форма повністю відрендериться
+        setTimeout(() => {
+          Object.keys(defaultData).forEach(key => {
+            const input = area.querySelector(`[name="${key}"]`);
+            if (input) {
+              input.value = defaultData[key];
+              input.dispatchEvent(new Event('input'));
+              input.dispatchEvent(new Event('change'));
+            }
+          });
+        }, 50);
+      }
+    }
+  } else {
+    showTypeSelection();
+  }
 }
 
 export function closeGlobalAddModal() {

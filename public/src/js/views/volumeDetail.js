@@ -1988,6 +1988,7 @@ function openEditHistoryModal(edits) {
     if (document.querySelector('.ds-modal-overlay')) return;
     const modal = document.createElement('div');
     modal.className = 'ds-modal-overlay';
+    modal.id = 'edit-history-modal-overlay';
 
     const escapeHtml = (str) => {
         if (!str) return '';
@@ -2116,10 +2117,10 @@ function openEditHistoryModal(edits) {
     };
 
     modal.innerHTML = `
-        <div class="ds-modal">
+        <div class="ds-modal" id="edit-history-modal">
             <div class="ds-modal-header">
                 <div class="ds-modal-title">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    ${ICON.clock || ICON.refreshCw}
                     Історія змін
                 </div>
                 <button class="ds-modal-close" id="modal-close">&times;</button>
@@ -2154,6 +2155,7 @@ function openSynonymsModal(volume) {
     if (document.querySelector('.ds-modal-overlay')) return;
     const modal = document.createElement('div');
     modal.className = 'ds-modal-overlay';
+    modal.id = 'synonyms-modal-overlay';
     
     const synonyms = (Array.isArray(volume.synonyms) ? volume.synonyms : []).filter(s => s);
     const mainNames = [
@@ -2164,7 +2166,7 @@ function openSynonymsModal(volume) {
     ].filter(n => n.value);
 
     modal.innerHTML = `
-        <div class="ds-modal ds-modal--small">
+        <div class="ds-modal ds-modal--small" id="synonyms-modal">
             <div class="ds-modal-header">
                 <div class="ds-modal-title">
                     ${ICON.languages}
@@ -2220,8 +2222,9 @@ async function openIssueMembershipModal(issueId, itemType = 'issue') {
     if (document.querySelector('.ds-modal-overlay')) return;
     const modal = document.createElement('div');
     modal.className = 'ds-modal-overlay';
+    modal.id = 'issue-membership-modal-overlay';
     modal.innerHTML = `
-        <div class="ds-modal">
+        <div class="ds-modal" id="issue-membership-modal">
             <div class="ds-modal-header">
                 <div class="ds-modal-title">
                     ${ICON.layers}
