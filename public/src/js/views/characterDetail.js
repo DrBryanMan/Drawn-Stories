@@ -187,18 +187,11 @@ function renderCharacterContent(container, char, params) {
             </div>
           </section>
 
-          <!-- Tab Pane: Appearances (Directly without top tabs bar) -->
+          <!-- Tab Pane: Appearances (Grouped by Series) -->
           <div class="container" style="margin-top: 32px; margin-bottom: 48px;">
             <div class="personnel-detail-pane is-active" data-pane="appearances">
-              <div class="appearances-filter-bar">
-                <div class="appearances-subtabs">
-                  <button class="subtab-btn active" data-subtab="volumes">Томи (${personaVolumes.length})</button>
-                  <button class="subtab-btn" data-subtab="issues">Випуски (${personaIssues.length})</button>
-                </div>
-              </div>
-
               <div id="appearances-content">
-                ${renderAppearancesHTML(personaVolumes, personaIssues, [], 'volumes')}
+                ${renderAppearancesHTML(personaVolumes, personaIssues, [])}
               </div>
             </div>
           </div>
@@ -382,19 +375,10 @@ function renderCharacterContent(container, char, params) {
           </div>
         </div>
 
-        <!-- Tab 2: Appearances Pane (Full width, no sidebar) -->
+        <!-- Tab 2: Appearances Pane (Grouped by Series) -->
         <div class="personnel-detail-pane" data-pane="appearances" style="padding-top: 28px;">
-          <div class="appearances-filter-bar">
-            <!-- Requirement 4: First "Усі" subtab removed -->
-            <div class="appearances-subtabs">
-              <button class="subtab-btn active" data-subtab="volumes">Томи (${volumes.length})</button>
-              <button class="subtab-btn" data-subtab="issues">Випуски (${issues.length})</button>
-              ${mangaChapters.length > 0 ? `<button class="subtab-btn" data-subtab="manga">Глави мангі (${mangaChapters.length})</button>` : ''}
-            </div>
-          </div>
-
           <div id="appearances-content">
-            ${renderAppearancesHTML(volumes, issues, mangaChapters, 'volumes')}
+            ${renderAppearancesHTML(volumes, issues, mangaChapters)}
           </div>
         </div>
 
@@ -425,32 +409,100 @@ function renderCharacterContent(container, char, params) {
   setupEventListeners(container, char, volumes, issues, mangaChapters);
 }
 
-function renderAppearancesHTML(volumes, issues, mangaChapters, filter) {
-  if (filter === 'issues') {
-    if (issues.length === 0) return `<div class="entity-releases-empty">Випусків не знайдено</div>`;
-    return `
-      <div class="entity-releases-grid">
-        ${issues.map(i => renderIssueCardHTML(i)).join('')}
+function renderAppearancesHTML(volumes, issues, mangaChapters) {
+  if ((!issues || issues.length === 0) && (!volumes || volumes.length === 0) && (!mangaChapters || mangaChapters.length === 0)) {
+    return `<div class="entity-releases-empty">Появ не знайдено</div>`;
+  }
+
+  const volumeMap = new Map();
+
+  // Seed volumeMap from volumes array if provided
+  if (volumes && volumes.length > 0) {
+    volumes.forEach(v => {
+      volumeMap.set(v.id, {
+        id: v.id,
+        title: v.name_uk || v.name || 'Серія',
+        volume: v,
+        issues: []
+      });
+    });
+  }
+
+  // Assign issues to volumeMap
+  if (issues && issues.length > 0) {
+    issues.forEach(iss => {
+      const volId = iss.volume_id;
+      if (!volumeMap.has(volId)) {
+        const title = iss.volume_name_uk || iss.volume_name || 'Серія';
+        volumeMap.set(volId, {
+          id: volId,
+          title: title,
+          volume: null,
+          issues: []
+        });
+      }
+      volumeMap.get(volId).issues.push(iss);
+    });
+  }
+
+  let html = '';
+
+  // Render each volume section block
+  volumeMap.forEach(group => {
+    if (group.issues.length === 0) {
+      if (group.volume) {
+        html += `
+          <div class="entity-recent-section" style="margin-bottom: 24px;">
+            <div class="entity-section-header">
+              <a href="#/volumes/${group.id}" class="entity-section-title" style="font-size: 15px; font-weight: 700; text-decoration: none; color: var(--text);">
+                ${escapeHtmlAttribute(group.title)}
+              </a>
+              <a href="#/volumes/${group.id}" class="entity-section-link">
+                Перейти до серії ${ICON.chevronRight}
+              </a>
+            </div>
+            <div class="entity-releases-grid">
+              ${renderVolumeCardHTML(group.volume)}
+            </div>
+          </div>
+        `;
+      }
+    } else {
+      html += `
+        <div class="entity-recent-section" style="margin-bottom: 24px;">
+          <div class="entity-section-header">
+            <a href="#/volumes/${group.id}" class="entity-section-title" style="font-size: 15px; font-weight: 700; text-decoration: none; color: var(--text);">
+              ${escapeHtmlAttribute(group.title)}
+            </a>
+            <a href="#/volumes/${group.id}" class="entity-section-link">
+              Перейти до серії ${ICON.chevronRight}
+            </a>
+          </div>
+          <div class="entity-releases-grid">
+            ${group.issues.map(i => renderIssueCardHTML(i)).join('')}
+          </div>
+        </div>
+      `;
+    }
+  });
+
+  // Render Manga Chapters if any
+  if (mangaChapters && mangaChapters.length > 0) {
+    html += `
+      <div class="entity-recent-section" style="margin-bottom: 24px;">
+        <div class="entity-section-header">
+          <span class="entity-section-title" style="font-size: 15px; font-weight: 700; color: var(--text);">
+            Глави мангі (${mangaChapters.length})
+          </span>
+        </div>
+        <div class="entity-releases-grid">
+          ${mangaChapters.map(mc => renderMangaChapterCardHTML(mc)).join('')}
+        </div>
       </div>
     `;
   }
 
-  if (filter === 'manga') {
-    if (mangaChapters.length === 0) return `<div class="entity-releases-empty">Глав мангі не знайдено</div>`;
-    return `
-      <div class="entity-releases-grid">
-        ${mangaChapters.map(mc => renderMangaChapterCardHTML(mc)).join('')}
-      </div>
-    `;
-  }
-
-  // Default filter: 'volumes'
-  if (volumes.length === 0) return `<div class="entity-releases-empty">Томів не знайдено</div>`;
-  return `
-    <div class="entity-releases-grid">
-      ${volumes.map(v => renderVolumeCardHTML(v)).join('')}
-    </div>
-  `;
+  return html;
 }
 
 function renderVolumeCardHTML(vol) {

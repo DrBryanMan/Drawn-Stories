@@ -54,8 +54,8 @@
 /* Grids: inside a section (bordered columns) vs standalone grid */
 .entity-recent-section .entity-releases-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 0;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 1;
 }
 
 .entity-releases-grid {
