@@ -61,8 +61,9 @@ export async function renderEssenceDetail(container, params) {
     console.error(err);
     const prettyName = slug.replace(/-/g, ' ');
     const isMod = isModerator();
+    const is404 = err.message && (err.message.includes('404') || err.message.includes('не знайдено') || err.message.includes('not found'));
     
-    if (isMod) {
+    if (is404 && isMod) {
       container.innerHTML = `
         <div class="container" style="padding-top: 40px; text-align: center;">
           <div class="essence-404-box" style="background: var(--bg-card); border-radius: 12px; padding: 48px 24px; border: 1px dashed var(--border-s); max-width: 560px; margin: 0 auto; box-shadow: 0 4px 16px rgba(0,0,0,0.05);">
@@ -86,8 +87,7 @@ export async function renderEssenceDetail(container, params) {
       container.querySelector('#btn-create-missing-essence')?.addEventListener('click', () => {
         openGlobalAddModal('essence', { slug: slug, essence_name: prettyName });
       });
-    } else {
-      // Звичайний користувач бачить просту сторінку 404
+    } else if (is404) {
       container.innerHTML = `
         <div class="container" style="padding-top: 40px; text-align: center;">
           <div class="error-state" style="background: var(--bg-card); border-radius: 12px; padding: 48px 24px; border: 1px solid var(--border-s); max-width: 500px; margin: 0 auto;">
@@ -96,6 +96,20 @@ export async function renderEssenceDetail(container, params) {
             </h2>
             <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 20px;">
               Сутність із слагом <strong>"${escapeHtmlAttribute(slug)}"</strong> не існує або була видалена.
+            </p>
+            <a href="#/essences" class="btn-admin btn-admin--secondary" style="display: inline-block;">Повернутися до каталогу</a>
+          </div>
+        </div>
+      `;
+    } else {
+      container.innerHTML = `
+        <div class="container" style="padding: 60px 0; text-align: center;">
+          <div class="error-state" style="background: var(--bg-card); border-radius: 12px; padding: 48px 24px; border: 1px solid var(--border-s); max-width: 500px; margin: 0 auto;">
+            <h2 style="font-size: 1.4rem; font-weight: 800; color: var(--text-primary); margin-bottom: 8px;">
+              Помилка завантаження
+            </h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 20px;">
+              ${escapeHtmlAttribute(err.message || 'Не вдалося завантажити дані сутності.')}
             </p>
             <a href="#/essences" class="btn-admin btn-admin--secondary" style="display: inline-block;">Повернутися до каталогу</a>
           </div>
@@ -208,121 +222,125 @@ function renderEssenceContent(container, essence) {
   const imgUrl = hasHeroImage ? normalizeImageUrl(rawImage) : '';
 
   container.innerHTML = `
-    <div class="container" style="padding-top: 20px;">
-      <!-- Hero Section -->
-      <div class="essence-detail-hero">
-        <!-- Col 1: Poster & Primary Meta -->
-        <div class="essence-hero-col1">
-          <div class="essence-poster-wrap">
-            ${hasHeroImage ? `
-              <img class="essence-poster-img" src="${escapeHtmlAttribute(imgUrl)}" alt="${escapeHtmlAttribute(title)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-              <div class="essence-hero-fallback-icon" style="display: none; width: 100%; height: 100%; min-height: 250px; align-items: center; justify-content: center; background: var(--bg-hover, #f1f5f9); color: var(--text-muted, #64748b);">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              </div>
-            ` : `
-              <div class="essence-hero-fallback-icon" style="display: flex; width: 100%; height: 100%; min-height: 250px; align-items: center; justify-content: center; background: var(--bg-hover, #f1f5f9); color: var(--text-muted, #64748b);">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              </div>
-            `}
+    <div class="essence-detail">
+      <!-- Hero Band -->
+      <section class="essence-detail-hero-band">
+        <div class="container essence-detail-hero">
+          <!-- Col 1: Poster & Primary Meta -->
+          <div class="essence-hero-col1">
+            <div class="essence-poster-wrap">
+              ${hasHeroImage ? `
+                <img class="essence-poster-img" src="${escapeHtmlAttribute(imgUrl)}" alt="${escapeHtmlAttribute(title)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="essence-hero-fallback-icon" style="display: none; width: 100%; height: 100%; min-height: 250px; align-items: center; justify-content: center; background: var(--bg-hover, #f1f5f9); color: var(--text-muted, #64748b);">
+                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+              ` : `
+                <div class="essence-hero-fallback-icon" style="display: flex; width: 100%; height: 100%; min-height: 250px; align-items: center; justify-content: center; background: var(--bg-hover, #f1f5f9); color: var(--text-muted, #64748b);">
+                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+              `}
+            </div>
+            
+            ${buildEssenceTitleHTML(essence)}
+            ${buildEssenceMetaUnderTitleHTML(essence)}
           </div>
-          
-          ${buildEssenceTitleHTML(essence)}
-          ${buildEssenceMetaUnderTitleHTML(essence)}
-        </div>
 
-        <!-- Col 2: Info & Other Essences -->
-        <div class="essence-hero-col2">
-          <div class="essence-header-row">
-            <div>
-              <div class="essence-subtitle">${escapeHtmlAttribute(essence.franchise || 'Франшиза')}</div>
-              <h1 style="font-size: 1.6rem; font-weight: 800; margin-top: 4px;">${escapeHtmlAttribute(title)}</h1>
+          <!-- Col 2: Info & Other Essences -->
+          <div class="essence-hero-col2">
+            <div class="essence-header-row">
+              <div>
+                <div class="essence-subtitle">${escapeHtmlAttribute(essence.franchise || 'Франшиза')}</div>
+                <h1 style="font-size: 1.6rem; font-weight: 800; margin-top: 4px;">${escapeHtmlAttribute(title)}</h1>
+              </div>
+
+              ${isModerator() ? `
+                <button class="btn-admin btn-admin--secondary hero-edit-action-btn" id="btn-edit-essence" title="Редагувати сторінку">
+                  ${ICON.edit}
+                </button>
+              ` : ''}
             </div>
 
-            ${isModerator() ? `
-              <button class="btn-admin btn-admin--secondary hero-edit-action-btn" id="btn-edit-essence" title="Редагувати сторінку">
-                ${ICON.edit}
-              </button>
+            <!-- Description -->
+            <div class="essence-description-box">
+              <div class="essence-description-title">${ICON.sparkles} Опис сутності</div>
+              <div>${essence.description ? escapeHtmlAttribute(essence.description).replace(/\n/g, '<br>') : '<i style="color: var(--text-muted);">Опис відсутній</i>'}</div>
+            </div>
+
+            <!-- Other Essences / Characters -->
+            ${essence.other_essences && essence.other_essences.length > 0 ? `
+              <div class="essence-other-essences-box">
+                <div class="essence-other-title">${ICON.layers} Пов'язані персонажі</div>
+                <div class="essence-other-list">
+                  ${essence.other_essences.map(item => {
+                    const isObj = typeof item === 'object' && item !== null;
+                    const charId = isObj ? item.character_id : null;
+                    const charName = isObj ? (item.character_name || item.name || item.slug) : item;
+                    const essSlug = isObj ? (item.essence_slug || item.slug) : null;
+                    const essName = isObj ? (item.essence_name || item.name || item.slug) : null;
+                    const rawImg = isObj ? item.image : null;
+
+                    const charHref = charId ? `#/characters/${charId}` : (essSlug ? `#/essences/${essSlug}` : '#');
+                    const charExists = isObj ? (item.exists !== false) : true;
+                    const imgUrl = rawImg ? normalizeImageUrl(rawImg) : '';
+
+                    const charLinkHTML = renderEntityLink({
+                      href: charHref,
+                      exists: charExists,
+                      contentType: charId ? 'character' : 'essence',
+                      identifier: charId || essSlug || '',
+                      displayName: charName,
+                      className: 'essence-other-char-link'
+                    });
+
+                    const essSublinkHTML = essSlug && essName ? `
+                      <div class="essence-other-subtitle">
+                        (Currently ${renderEntityLink({
+                          href: `#/essences/${essSlug}`,
+                          exists: true,
+                          contentType: 'essence',
+                          identifier: essSlug,
+                          displayName: essName,
+                          className: 'essence-other-sublink'
+                        })})
+                      </div>
+                    ` : '';
+
+                    return `
+                      <div class="essence-other-card">
+                        <div class="essence-other-card-img-wrap">
+                          ${imgUrl ? `
+                            <img src="${escapeHtmlAttribute(imgUrl)}" alt="${escapeHtmlAttribute(charName)}" class="essence-other-card-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="essence-version-fallback-icon" style="display: none; width:100%; height:100%; align-items:center; justify-content:center;">
+                              ${ICON.user}
+                            </div>
+                          ` : `
+                            <div class="essence-version-fallback-icon" style="display: flex; width:100%; height:100%; align-items:center; justify-content:center;">
+                              ${ICON.user}
+                            </div>
+                          `}
+                        </div>
+                        <div class="essence-other-card-info">
+                          <div class="essence-other-char-name">${charLinkHTML}</div>
+                          ${essSublinkHTML}
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
             ` : ''}
           </div>
-
-          <!-- Description -->
-          <div class="essence-description-box">
-            <div class="essence-description-title">${ICON.sparkles} Опис сутності</div>
-            <div>${essence.description ? escapeHtmlAttribute(essence.description).replace(/\n/g, '<br>') : '<i style="color: var(--text-muted);">Опис відсутній</i>'}</div>
-          </div>
-
-          <!-- Other Essences / Characters -->
-          ${essence.other_essences && essence.other_essences.length > 0 ? `
-            <div class="essence-other-essences-box">
-              <div class="essence-other-title">${ICON.layers} Пов'язані персонажі</div>
-              <div class="essence-other-list">
-                ${essence.other_essences.map(item => {
-                  const isObj = typeof item === 'object' && item !== null;
-                  const charId = isObj ? item.character_id : null;
-                  const charName = isObj ? (item.character_name || item.name || item.slug) : item;
-                  const essSlug = isObj ? (item.essence_slug || item.slug) : null;
-                  const essName = isObj ? (item.essence_name || item.name || item.slug) : null;
-                  const rawImg = isObj ? item.image : null;
-
-                  const charHref = charId ? `#/characters/${charId}` : (essSlug ? `#/essences/${essSlug}` : '#');
-                  const charExists = isObj ? (item.exists !== false) : true;
-                  const imgUrl = rawImg ? normalizeImageUrl(rawImg) : '';
-
-                  const charLinkHTML = renderEntityLink({
-                    href: charHref,
-                    exists: charExists,
-                    contentType: charId ? 'character' : 'essence',
-                    identifier: charId || essSlug || '',
-                    displayName: charName,
-                    className: 'essence-other-char-link'
-                  });
-
-                  const essSublinkHTML = essSlug && essName ? `
-                    <div class="essence-other-subtitle">
-                      (Currently ${renderEntityLink({
-                        href: `#/essences/${essSlug}`,
-                        exists: true,
-                        contentType: 'essence',
-                        identifier: essSlug,
-                        displayName: essName,
-                        className: 'essence-other-sublink'
-                      })})
-                    </div>
-                  ` : '';
-
-                  return `
-                    <div class="essence-other-card">
-                      <div class="essence-other-card-img-wrap">
-                        ${imgUrl ? `
-                          <img src="${escapeHtmlAttribute(imgUrl)}" alt="${escapeHtmlAttribute(charName)}" class="essence-other-card-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                          <div class="essence-version-fallback-icon" style="display: none; width:100%; height:100%; align-items:center; justify-content:center;">
-                            ${ICON.user}
-                          </div>
-                        ` : `
-                          <div class="essence-version-fallback-icon" style="display: flex; width:100%; height:100%; align-items:center; justify-content:center;">
-                            ${ICON.user}
-                          </div>
-                        `}
-                      </div>
-                      <div class="essence-other-card-info">
-                        <div class="essence-other-char-name">${charLinkHTML}</div>
-                        ${essSublinkHTML}
-                      </div>
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-            </div>
-          ` : ''}
         </div>
+      </section>
+
+      <!-- Main Content Container -->
+      <div class="container" style="margin-top: 32px; margin-bottom: 48px;">
+        ${renderCategorySections(essence, isModerator())}
       </div>
 
-      <!-- Render Version Sections by Category with Tabs -->
-      ${renderCategorySections(essence, isModerator())}
+      <!-- Modals -->
+      ${isModerator() ? renderModalsHTML(essence) : ''}
     </div>
-
-    <!-- Modals -->
-    ${isModerator() ? renderModalsHTML(essence) : ''}
   `;
 
   if (isModerator()) {

@@ -1,22 +1,42 @@
 /* Essence Detail View CSS */
 
+.essence-detail {
+  padding-bottom: 80px;
+}
+
+/* ── Hero Band ────────────────────────────────────── */
+.essence-detail-hero-band {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border-s);
+}
+
+.essence-detail-hero-band::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 55% 130% at 5% 85%, rgba(108, 92, 231, 0.06), transparent),
+    radial-gradient(ellipse 45% 90% at 90% 15%, rgba(124, 58, 237, 0.04), transparent);
+}
+
 .essence-detail-hero {
   position: relative;
+  z-index: 1;
   display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 32px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--r-xl, 16px);
-  padding: 28px;
-  margin-bottom: 32px;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 36px;
+  padding: 24px;
 }
 
 @media (max-width: 860px) {
   .essence-detail-hero {
     grid-template-columns: 1fr;
     gap: 24px;
-    padding: 20px;
+    padding: 20px 0;
   }
 }
 
