@@ -250,7 +250,7 @@ function renderEssenceContent(container, essence) {
             <div class="essence-header-row">
               <div>
                 <div class="essence-subtitle">${escapeHtmlAttribute(essence.franchise || 'Франшиза')}</div>
-                <h1 style="font-size: 1.6rem; font-weight: 800; margin-top: 4px;">${escapeHtmlAttribute(title)}</h1>
+                <h1 style="font-size: 1.6rem; font-weight: 800;">${escapeHtmlAttribute(title)}</h1>
               </div>
 
               ${isModerator() ? `
