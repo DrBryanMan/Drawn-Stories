@@ -2,7 +2,6 @@ import { API } from '../helpers/api.js';
 import { createComicCard } from '../components/cards/ComicCard.js';
 import { escapeHtmlAttribute } from '../helpers/image.js';
 import { mountFilterBar } from '../components/FilterBar.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { t } from '../helpers/i18n.js';
 
 function getVolumeListLabels() {
@@ -72,10 +71,6 @@ function renderLayout(main, username) {
     main.innerHTML = `
         <div class="container">
             <div class="page-header">
-                ${createBreadcrumbs([
-                    { label: t('user_lists_label') },
-                    { label: escapeHtmlAttribute(username) }
-                ])}
                 <h1 class="page-title">${t('user_lists_label')} ${escapeHtmlAttribute(username)}</h1>
             </div>
             <div class="catalog-top-row" style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">

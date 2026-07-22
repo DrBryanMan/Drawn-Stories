@@ -1,6 +1,5 @@
 import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { createPaginator } from '../components/Pagination.js';
 
 export async function renderMagazineAllItems(main, params = {}) {
@@ -20,11 +19,6 @@ export async function renderMagazineAllItems(main, params = {}) {
 
     main.innerHTML = `
         <div class="volume-detail">
-            <div class="container">
-                <nav class="breadcrumbs volume-breadcrumbs">
-                    <div class="skeleton skeleton-text" style="width: 200px; height: 16px;"></div>
-                </nav>
-            </div>
             <div class="container volume-body" style="padding-top: 40px;">
                 <div class="skeleton skeleton-rect" style="width: 100%; height: 400px; border-radius: 12px;"></div>
             </div>
@@ -103,14 +97,6 @@ export async function renderMagazineAllItems(main, params = {}) {
         const renderLayout = () => {
             main.innerHTML = `
                 <div class="volume-detail">
-                    <div class="container">
-                        ${createBreadcrumbs([
-                            { label: 'Каталог', href: '#/catalog' },
-                            { label: magazineTitle, href: `#/magazines/${magazineId}` },
-                            { label: activeTab === 'issues' ? 'Всі випуски' : 'Всі серії' }
-                        ], 'breadcrumbs volume-breadcrumbs')}
-                    </div>
-
                     <div class="container volume-body" style="padding-top: 20px;">
                         <div class="wanted-section-header wanted-section-header--row">
                             <div class="wanted-section-title">
@@ -146,12 +132,6 @@ export async function renderMagazineAllItems(main, params = {}) {
                     // Update url query silently without reloading
                     const hashWithoutQuery = window.location.hash.split('?')[0];
                     history.replaceState(null, '', `${hashWithoutQuery}?tab=${activeTab}`);
-
-                    // Re-render breadcrumbs label
-                    const breadcrumbLast = main.querySelector('.breadcrumbs.volume-breadcrumbs li:last-child span');
-                    if (breadcrumbLast) {
-                        breadcrumbLast.textContent = activeTab === 'issues' ? 'Всі випуски' : 'Всі серії';
-                    }
 
                     updateContent();
                 });

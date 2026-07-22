@@ -4,7 +4,6 @@ import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { openAddIssueModal } from '../components/addIssueModal.js';
 import { renderIssueGridCard } from '../components/cards/IssueGridCard.js';
 import { CollectionEditor } from '/admin/js/CollectionEditor.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { formatDate } from '../helpers/lang.js';
 
 
@@ -218,14 +217,6 @@ export async function renderCollectionDetail(main, params = {}) {
 
         main.innerHTML = `
             <div class="collection-detail">
-                <div class="container">
-                    ${createBreadcrumbs([
-                        { label: 'Каталог', href: '#/catalog' },
-                        ...(collection.volume_id ? [{ label: collection.volume_name_uk || collection.volume_name, href: `#/volumes/${collection.volume_id}` }] : []),
-                        { label: title }
-                    ])}
-                </div>
-
                 <section class="issue-hero-band">
                     <div class="container issue-hero">
                         <div class="issue-cover-column">

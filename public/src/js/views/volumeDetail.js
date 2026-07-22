@@ -7,7 +7,6 @@ import { createPaginator } from '../components/Pagination.js';
 import { renderIssueGridCard } from '../components/cards/IssueGridCard.js';
 import { VolumeEditor } from '/admin/js/VolumeEditor.js';
 import { VolumePicker } from '/admin/js/VolumePicker.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { openScrapeProgressModal } from '../components/ScrapeProgressModal.js';
 import { translateStaffRole } from '../helpers/staff.js';
 import { mountFilterBar } from '../components/FilterBar.js';
@@ -336,11 +335,6 @@ function readlistUIHTML(isCollection = false, stats = {}) {
 function renderSkeleton(main) {
     main.innerHTML = `
         <div class="volume-detail">
-            <div class="container">
-                <nav class="breadcrumbs volume-breadcrumbs">
-                    <div class="skeleton skeleton-text" style="width: 200px; height: 16px;"></div>
-                </nav>
-            </div>
             <section class="volume-hero-band">
                 <div class="container volume-skeleton-hero">
                     <div class="volume-cover-column">
@@ -752,14 +746,6 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
 
         main.innerHTML = `
             <div class="volume-detail">
-                <div class="container breadcrumbs-header">
-                    ${createBreadcrumbs([
-                        { label: 'Каталог', href: '#/catalog' },
-                        { label: title }
-                    ], 'breadcrumbs volume-breadcrumbs')}
-                    ${editorsHistoryBlockHTML}
-                </div>
-
                 <section class="volume-hero-band${heroBannerClass}"${heroBannerStyle}>
                     <div class="container volume-hero">
                         <div class="volume-cover-column">

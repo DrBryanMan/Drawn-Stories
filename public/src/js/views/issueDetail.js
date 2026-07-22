@@ -2,7 +2,6 @@ import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { currentUser } from '../shell.js';
 import { Bookmarks } from '../helpers/bookmarks.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { openScrapeProgressModal } from '../components/ScrapeProgressModal.js';
 import { IssueEditor } from '/admin/js/IssueEditor.js';
 import { formatDate } from '../helpers/lang.js';
@@ -447,13 +446,6 @@ export async function renderIssueDetail(container, params = {}) {
         ? `${issueTitle} ${issueNum} — ${volumeName}`
         : `${issueNum ? issueNum + ' — ' : ''}${volumeName}`;
     document.title = `${pageTitle} | Drawn Stories`;
-
-    // ── Breadcrumb ────────────────────────────────
-    const breadcrumb = createBreadcrumbs([
-        { label: t('catalog'), href: '#/catalog' },
-        ...(issue.volume_id ? [{ label: volumeName, href: `#/volumes/${issue.volume_id}` }] : []),
-        { label: issueNum || issueTitle || t('release') }
-    ]);
 
     // ── Cover ─────────────────────────────────────
     const coverHTML = coverUrl
@@ -992,10 +984,6 @@ export async function renderIssueDetail(container, params = {}) {
 
     container.innerHTML = `
         <div class="issue-detail">
-            <div class="container">
-                ${breadcrumb}
-            </div>
-
             <section class="issue-hero-band">
                 <div class="container issue-hero">
                     <div class="issue-cover-column">

@@ -1,7 +1,6 @@
 import { API } from '../helpers/api.js';
 import { currentUser } from '../shell.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { t } from '../helpers/i18n.js';
 
 const icon = (d, size = 16, strokeWidth = 2) =>
@@ -35,14 +34,6 @@ export async function renderCollections(main, params) {
     main.innerHTML = `
         <div class="container">
             <div class="page-header">
-                ${createBreadcrumbs([
-                    { label: t('user_label') },
-                    { label: escapeHtmlAttribute(username || t('me_label')) },
-                    { label: t('collection') }
-                ])}
-                <h1 class="page-title">${escapeHtmlAttribute(pageTitle)}</h1>
-            </div>
-
             <div class="collection-controls-row" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 32px;">
                 <div class="collection-segmented-wrap" style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
                     <div class="catalog-segmented" role="group" aria-label="Тип контенту" id="collection-type-segmented">

@@ -1,7 +1,6 @@
 import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { currentUser } from '../shell.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { createPaginator } from '../components/Pagination.js';
 import { createComicCard } from '../components/cards/ComicCard.js';
 import { getPublisherColor } from '../helpers/publisher.js';
@@ -353,14 +352,6 @@ function buildDetailHTML(pub) {
 
   return `
     <div class="pub-detail">
-      <!-- Breadcrumbs -->
-      <div class="container">
-        ${createBreadcrumbs([
-          { label: t('publishers'), href: '#/publishers' },
-          { label: escapeHtmlAttribute(pub.name) }
-        ])}
-      </div>
-
       <!-- Hero Band -->
       <section class="pub-detail-hero-band">
         <div class="container pub-detail-hero">

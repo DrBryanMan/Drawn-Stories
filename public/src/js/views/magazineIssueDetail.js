@@ -1,6 +1,5 @@
 import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { currentUser } from '../shell.js';
 import { MagazineChapterAdder } from '/admin/js/MagazineChapterAdder.js';
 import { MagazineChapterEditor } from '/admin/js/MagazineChapterEditor.js';
@@ -24,11 +23,6 @@ export async function renderMagazineIssueDetail(main, params = {}) {
 
     main.innerHTML = `
         <div class="volume-detail">
-            <div class="container">
-                <nav class="breadcrumbs volume-breadcrumbs">
-                    <div class="skeleton skeleton-text" style="width: 200px; height: 16px;"></div>
-                </nav>
-            </div>
             <section class="issue-hero-band">
                 <div class="container volume-skeleton-hero">
                     <div class="volume-cover-column">
@@ -316,14 +310,6 @@ export async function renderMagazineIssueDetail(main, params = {}) {
                 .issue-nav-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             </style>
             <div class="volume-detail">
-                <div class="container">
-                    ${createBreadcrumbs([
-                        { label: 'Каталог', href: '#/catalog' },
-                        { label: magazineName, href: `#/magazines/${issue.magazine_id}` },
-                        { label: `Випуск #${issue.issue_number}` }
-                    ], 'breadcrumbs volume-breadcrumbs')}
-                </div>
-
                 <section class="issue-hero-band issue-hero-band--banner" style="--volume-banner-url: url('${escapeHtmlAttribute(coverUrl)}')">
                     <div class="container issue-hero">
                         <div class="volume-cover-column">

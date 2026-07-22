@@ -99,19 +99,55 @@ async def get_essence(slug: str):
     if raw_other and isinstance(raw_other, list):
         for o_item in raw_other:
             if isinstance(o_item, dict):
-                o_slug = o_item.get("slug") or o_item.get("name")
-                o_name = o_item.get("name") or o_slug
+                o_slug = to_null(o_item.get("slug"))
+                o_name = to_null(o_item.get("name"))
+                o_name_uk = to_null(o_item.get("name_uk"))
+                o_image = to_null(o_item.get("image"))
+                o_char_id = o_item.get("character_id")
+                if o_char_id != "" and o_char_id is not None:
+                    try:
+                        o_char_id = int(o_char_id)
+                    except Exception:
+                        o_char_id = None
+                else:
+                    o_char_id = None
             else:
                 o_slug = str(o_item)
                 o_name = str(o_item)
+                o_name_uk = None
+                o_image = None
+                o_char_id = None
 
-            if o_slug:
-                found_ess = db.get_one("SELECT slug, essence_name, essence_name_uk FROM essences WHERE slug = %s", [o_slug])
-                processed_other.append({
-                    "slug": o_slug,
-                    "name": (found_ess.get("essence_name_uk") or found_ess.get("essence_name")) if found_ess else o_name,
-                    "exists": bool(found_ess)
-                })
+            found_char = None
+            if o_char_id:
+                found_char = db.get_one("SELECT id, name, name_uk, real_name, real_name_uk, image, essence FROM characters WHERE id = %s", [o_char_id])
+
+            target_ess_slug = o_slug
+            if not target_ess_slug and found_char and found_char.get("essence"):
+                target_ess_slug = found_char.get("essence")
+
+            found_ess = None
+            if target_ess_slug:
+                found_ess = db.get_one("SELECT slug, essence_name, essence_name_uk, image FROM essences WHERE slug = %s", [target_ess_slug])
+
+            char_name_display = o_name_uk or o_name
+            if not char_name_display and found_char:
+                char_name_display = found_char.get("name_uk") or found_char.get("name") or found_char.get("real_name_uk") or found_char.get("real_name")
+
+            ess_name_display = (found_ess.get("essence_name_uk") or found_ess.get("essence_name")) if found_ess else target_ess_slug
+
+            item_dict = {
+                "slug": o_slug,
+                "name": o_name,
+                "name_uk": o_name_uk,
+                "character_id": o_char_id if (found_char or o_char_id) else None,
+                "character_name": char_name_display or (found_ess.get("essence_name_uk") or found_ess.get("essence_name") if found_ess else o_slug),
+                "essence_slug": target_ess_slug,
+                "essence_name": ess_name_display,
+                "image": o_image or (found_char.get("image") if found_char else None) or (found_ess.get("image") if found_ess else None),
+                "exists": bool(found_char or found_ess)
+            }
+            processed_other.append(item_dict)
     essence["other_essences"] = processed_other
 
     # Основний персонаж для сутності (якщо вказано character_id)

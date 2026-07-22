@@ -2,7 +2,6 @@ import { API } from '../helpers/api.js';
 import { createPaginator } from '../components/Pagination.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { router } from '../helpers/router.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { t } from '../helpers/i18n.js';
 import { renderMagazineCard } from '../components/cards/MagazineCard.js';
 import { renderMagazineIssueCard } from '../components/cards/MagazineIssueCard.js';
@@ -100,17 +99,8 @@ export async function renderMangaMagazinesCatalog(main, query = {}) {
   currentSortField = query.sort || defaultSort;
   currentSortOrder = query.order_dir || 'desc';
 
-  const breadcrumbItems = [
-    { label: t('catalog') || 'Каталог', href: '#/catalog' },
-    { label: t('manga_magazines') || 'Журнали', id: 'catalog-breadcrumb-current' }
-  ];
-
   main.innerHTML = `
     <div class="container">
-      <div class="page-header">
-        ${createBreadcrumbs(breadcrumbItems)}
-      </div>
- 
       <div class="catalog-top-row" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px;">
         <div id="catalog-filter-bar-container" style="flex: 1; min-width: 300px;"></div>
         <div class="catalog-segmented" id="magazine-view-segmented" role="group" aria-label="Режим перегляду">

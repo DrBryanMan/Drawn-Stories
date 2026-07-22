@@ -1,7 +1,6 @@
 import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { currentUser } from '../shell.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { createPaginator } from '../components/Pagination.js';
 import { createComicCard } from '../components/cards/ComicCard.js';
 import { mountFilterBar } from '../components/FilterBar.js';
@@ -325,14 +324,6 @@ function buildDetailHTML(person) {
 
   return `
     <div class="personnel-detail">
-      <!-- Breadcrumbs -->
-      <div class="container">
-        ${createBreadcrumbs([
-          { label: t('personnel'), href: '#/personnel' },
-          { label: displayName }
-        ])}
-      </div>
-
       <!-- Hero Band -->
       <section class="personnel-detail-hero-band">
         <div class="container personnel-detail-hero">
@@ -374,8 +365,8 @@ function buildDetailHTML(person) {
                 </a>
               ` : ''}
               ${isModerator() ? `
-                <button class="personnel-detail-action-btn" id="person-edit-btn">
-                  ${ICON.edit} Редагувати
+                <button class="personnel-detail-action-btn hero-edit-action-btn" id="person-edit-btn" title="Редагувати">
+                  ${ICON.edit}
                 </button>
               ` : ''}
             </div>

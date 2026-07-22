@@ -2,7 +2,6 @@ import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { currentUser } from '../shell.js';
 import { openAddIssueModal } from '../components/addIssueModal.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { formatDate } from '../helpers/lang.js';
 import { t } from '../helpers/i18n.js';
 
@@ -191,10 +190,6 @@ export async function renderEventDetail(container, params = {}) {
 
     container.innerHTML = `
         <div class="event-detail">
-            <div class="container">
-                ${createBreadcrumbs([{ label: event.name || t('event') }])}
-            </div>
-
             <section class="event-hero-band" ${cover ? `style="--event-bg:url('${escapeHtmlAttribute(cover)}')"` : ''}>
                 <div class="container event-hero">
                     <div class="event-cover">

@@ -1,11 +1,9 @@
 import { API } from '../helpers/api.js';
-import { THEME_GROUP_LABELS, mountCatalogFilters, themeIcon, themeLabel, loadAllThemes, loadAllPublishers } from '../components/CatalogFilterPanel.js';
+import { mountCatalogFilters } from '../components/CatalogFilterPanel.js';
 import { createComicCard } from '../components/cards/ComicCard.js';
 import { createPaginator } from '../components/Pagination.js';
-import { escapeHtmlAttribute } from '../helpers/image.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { router } from '../helpers/router.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { t } from '../helpers/i18n.js';
 
 const paginator = createPaginator({ pageSize: 20 });
@@ -124,11 +122,6 @@ export async function renderCatalog(main, query = {}) {
   paginator.setPage(page);
   paginator.setNextCursor(null);
 
-  const breadcrumbItems = [
-    { label: t('breadcrumb_home'), path: '/' },
-    { label: currentContentType === 'manga' ? t('manga') : t('comics'), id: 'catalog-breadcrumb-current' },
-  ];
-
   currentPublishers = [];
   if (query.publisher_ids) {
     try {
@@ -182,10 +175,6 @@ export async function renderCatalog(main, query = {}) {
 
   main.innerHTML = `
     <div class="container">
-      <div class="page-header">
-        ${createBreadcrumbs(breadcrumbItems)}
-      </div>
-
       <div class="catalog-top-row">
         <div id="catalog-filter-bar-container"></div>
 
@@ -215,7 +204,6 @@ export async function renderCatalog(main, query = {}) {
   const catalogLayout = document.getElementById('catalog-layout');
   const viewTypeButtons = [...document.querySelectorAll('[data-view-type]')];
   const collectionBtn = document.getElementById('collection-filter-btn');
-  const breadcrumbCurrent = document.getElementById('catalog-breadcrumb-current');
   const actionsPanel = document.getElementById('catalog-actions-panel');
 
   const sortOptions = getSortOptions();
@@ -316,8 +304,6 @@ export async function renderCatalog(main, query = {}) {
     if (currentContentType === 'manga') baseLabel = t('manga');
     
     document.title = `${currentContentType === 'manga' ? t('manga') : t('comics')} — Drawn Stories`;
-    const viewLabel = currentViewType === 'series' ? t('series') : t('releases');
-    breadcrumbCurrent.textContent = `${baseLabel} / ${viewLabel}${currentCollectionOnly ? (currentContentType === 'manga' ? ` / ${t('volumes')}` : ` / ${t('collections')}`) : ''}`;
   };
 
   const inlineFilters = mountCatalogFilters({

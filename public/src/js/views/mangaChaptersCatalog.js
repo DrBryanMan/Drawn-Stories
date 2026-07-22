@@ -3,7 +3,6 @@ import { createPaginator } from '../components/Pagination.js';
 import { escapeHtmlAttribute } from '../helpers/image.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { router } from '../helpers/router.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { t } from '../helpers/i18n.js';
 import { renderMangaChapterCard } from '../components/cards/MangaChapterCard.js';
 
@@ -79,17 +78,8 @@ export async function renderMangaChaptersCatalog(main, query = {}) {
     }
   }
 
-  const breadcrumbItems = [
-    { label: t('catalog') || 'Каталог', href: '#/catalog' },
-    { label: t('manga_chapters') || 'Розділи', id: 'catalog-breadcrumb-current' }
-  ];
-
   main.innerHTML = `
     <div class="container">
-      <div class="page-header">
-        ${createBreadcrumbs(breadcrumbItems)}
-      </div>
-
       <div class="catalog-top-row">
         <div id="catalog-filter-bar-container"></div>
       </div>

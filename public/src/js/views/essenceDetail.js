@@ -1,7 +1,6 @@
 import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { currentUser } from '../shell.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { t } from '../helpers/i18n.js';
 import { CharacterPicker } from '../components/CharacterPicker.js';
 import { renderEntityLink, initEntityExistenceHandlers } from '../helpers/entityExistence.js';
@@ -10,7 +9,7 @@ import { openGlobalAddModal } from '../components/GlobalAddModal.js';
 const ICON = {
   user:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
   globe:        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
-  edit:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  edit:         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
   sparkles:     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>',
   plus:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
   trash:        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
@@ -210,13 +209,6 @@ function renderEssenceContent(container, essence) {
 
   container.innerHTML = `
     <div class="container" style="padding-top: 20px;">
-      <div class="page-header" style="margin-bottom: 20px;">
-        ${createBreadcrumbs([
-          { label: 'Сутності', href: '#/essences' },
-          { label: title }
-        ])}
-      </div>
-
       <!-- Hero Section -->
       <div class="essence-detail-hero">
         <!-- Col 1: Poster & Primary Meta -->
@@ -247,8 +239,8 @@ function renderEssenceContent(container, essence) {
             </div>
 
             ${isModerator() ? `
-              <button class="btn-admin btn-admin--secondary" id="btn-edit-essence" style="gap: 6px;">
-                ${ICON.edit} Редагувати сторінку
+              <button class="btn-admin btn-admin--secondary hero-edit-action-btn" id="btn-edit-essence" title="Редагувати сторінку">
+                ${ICON.edit}
               </button>
             ` : ''}
           </div>
@@ -259,25 +251,65 @@ function renderEssenceContent(container, essence) {
             <div>${essence.description ? escapeHtmlAttribute(essence.description).replace(/\n/g, '<br>') : '<i style="color: var(--text-muted);">Опис відсутній</i>'}</div>
           </div>
 
-          <!-- Other Essences -->
+          <!-- Other Essences / Characters -->
           ${essence.other_essences && essence.other_essences.length > 0 ? `
             <div class="essence-other-essences-box">
-              <div class="essence-other-title">${ICON.layers} Пов'язані сутності</div>
+              <div class="essence-other-title">${ICON.layers} Пов'язані персонажі</div>
               <div class="essence-other-list">
                 ${essence.other_essences.map(item => {
-                  const isObj = typeof item === 'object';
-                  const label = isObj ? (item.name || item.slug) : item;
-                  const targetSlug = isObj ? (item.slug || item.name) : item;
-                  const exists = isObj ? (item.exists !== false) : true;
+                  const isObj = typeof item === 'object' && item !== null;
+                  const charId = isObj ? item.character_id : null;
+                  const charName = isObj ? (item.character_name || item.name || item.slug) : item;
+                  const essSlug = isObj ? (item.essence_slug || item.slug) : null;
+                  const essName = isObj ? (item.essence_name || item.name || item.slug) : null;
+                  const rawImg = isObj ? item.image : null;
 
-                  return renderEntityLink({
-                    href: `#/essences/${targetSlug}`,
-                    exists: exists,
-                    contentType: 'essence',
-                    identifier: targetSlug,
-                    displayName: label,
-                    className: 'essence-other-chip'
+                  const charHref = charId ? `#/characters/${charId}` : (essSlug ? `#/essences/${essSlug}` : '#');
+                  const charExists = isObj ? (item.exists !== false) : true;
+                  const imgUrl = rawImg ? normalizeImageUrl(rawImg) : '';
+
+                  const charLinkHTML = renderEntityLink({
+                    href: charHref,
+                    exists: charExists,
+                    contentType: charId ? 'character' : 'essence',
+                    identifier: charId || essSlug || '',
+                    displayName: charName,
+                    className: 'essence-other-char-link'
                   });
+
+                  const essSublinkHTML = essSlug && essName ? `
+                    <div class="essence-other-subtitle">
+                      (Currently ${renderEntityLink({
+                        href: `#/essences/${essSlug}`,
+                        exists: true,
+                        contentType: 'essence',
+                        identifier: essSlug,
+                        displayName: essName,
+                        className: 'essence-other-sublink'
+                      })})
+                    </div>
+                  ` : '';
+
+                  return `
+                    <div class="essence-other-card">
+                      <div class="essence-other-card-img-wrap">
+                        ${imgUrl ? `
+                          <img src="${escapeHtmlAttribute(imgUrl)}" alt="${escapeHtmlAttribute(charName)}" class="essence-other-card-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                          <div class="essence-version-fallback-icon" style="display: none; width:100%; height:100%; align-items:center; justify-content:center;">
+                            ${ICON.user}
+                          </div>
+                        ` : `
+                          <div class="essence-version-fallback-icon" style="display: flex; width:100%; height:100%; align-items:center; justify-content:center;">
+                            ${ICON.user}
+                          </div>
+                        `}
+                      </div>
+                      <div class="essence-other-card-info">
+                        <div class="essence-other-char-name">${charLinkHTML}</div>
+                        ${essSublinkHTML}
+                      </div>
+                    </div>
+                  `;
                 }).join('')}
               </div>
             </div>
@@ -531,6 +563,35 @@ function renderModalsHTML(essence) {
               <label class="admin-label">Опис сутності</label>
               <textarea name="description" class="admin-textarea" rows="4">${escapeHtmlAttribute(essence.description || '')}</textarea>
             </div>
+
+            <!-- Group: Пов'язані сутності (Other Essences) -->
+            <div class="admin-form-section-title" style="grid-column: span 2; font-weight: 800; border-bottom: 1px solid var(--border-s); padding-bottom: 4px; margin-top: 12px; text-transform: uppercase; font-size: 12px; color: var(--accent); display: flex; align-items: center; gap: 6px;">
+              ${ICON.layers} Пов'язані сутності (Other Essences)
+            </div>
+
+            <div class="admin-form-group admin-form-group--full" style="grid-column: span 2;">
+              <div class="other-essences-manager-container">
+                <div class="other-essences-list-wrap" id="edit-other-essences-list" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;"></div>
+
+                <div class="other-essence-add-form" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:12px; background:var(--bg-2); border-radius:6px; border:1px dashed var(--border-s);">
+                  <div style="grid-column: span 2;">
+                    <label class="admin-label" style="font-size: 11px; font-weight: bold; color: var(--text-muted); display:flex; align-items:center; gap:4px; margin-bottom:4px;">
+                      ${ICON.user} Прив'язати персонажа (необов'язково)
+                    </label>
+                    <input type="hidden" id="edit-other-ess-char-id" value="">
+                    <div id="edit-other-ess-char-picker"></div>
+                  </div>
+
+                  <input type="text" id="edit-other-ess-name" class="admin-input" placeholder="Display name / Назва (напр. Miles Morales)">
+                  <input type="text" id="edit-other-ess-name-uk" class="admin-input" placeholder="Українською (напр. Майлз Моралес)">
+                  <input type="text" id="edit-other-ess-slug" class="admin-input" placeholder="Слаг сутності (напр. miles-morales)">
+                  <input type="text" id="edit-other-ess-image" class="admin-input" placeholder="URL картинки / аватарки">
+
+                  <button type="button" id="edit-other-ess-add-btn" class="btn-admin btn-admin--secondary" style="grid-column: span 2;">+ Додати сутність</button>
+                </div>
+              </div>
+              <input type="hidden" name="other_essences" id="edit-other-essences-hidden" value="${escapeHtmlAttribute(JSON.stringify(essence.other_essences || []))}">
+            </div>
           </form>
         </div>
         <div class="ds-modal-footer">
@@ -657,10 +718,6 @@ function renderModalsHTML(essence) {
 
             <div class="admin-form-group admin-form-group--full" id="edit-ver-slug-group">
               <label class="admin-label">${ICON.sparkles} Слаг цільової сутності (target_essence_slug)</label>
-              <input type="text" name="target_essence_slug" id="edit-ver-target-slug" class="admin-input">
-            </div>
-
-            <div class="admin-form-group admin-form-group--full" id="edit-ver-char-group">
               <label class="admin-label">${ICON.user} Персонаж / Команда з системи</label>
               <input type="hidden" name="character_id" id="edit-version-char-id" value="">
               <div id="edit-version-char-picker"></div>
@@ -709,6 +766,158 @@ function initModeratorHandlers(container, essence) {
       initialId: essence.character_id
     });
   }
+
+  // Other Essences Manager Logic
+  const otherEssencesHidden = container.querySelector('#edit-other-essences-hidden');
+  const otherEssencesList = container.querySelector('#edit-other-essences-list');
+  const otherEssAddBtn = container.querySelector('#edit-other-ess-add-btn');
+  const otherCharPickerContainer = container.querySelector('#edit-other-ess-char-picker');
+
+  let otherEssences = Array.isArray(essence.other_essences) ? [...essence.other_essences] : [];
+  let editingOtherIdx = null;
+
+  let otherCharPicker = null;
+  let selectedCharObject = null; // зберігаємо повний об'єкт обраного персонажа
+
+  if (otherCharPickerContainer) {
+    otherCharPicker = new CharacterPicker({
+      container: otherCharPickerContainer,
+      hiddenInput: container.querySelector('#edit-other-ess-char-id'),
+      onSelect: (list) => {
+        selectedCharObject = list.length > 0 ? list[0] : null;
+        // Якщо поле слага порожнє — автоматично підставляємо сутність персонажа
+        const slugInp = container.querySelector('#edit-other-ess-slug');
+        if (slugInp && !slugInp.value.trim() && selectedCharObject?.essence) {
+          slugInp.value = selectedCharObject.essence;
+        }
+      }
+    });
+  }
+
+  const updateOtherEssencesState = () => {
+    if (otherEssencesHidden) {
+      otherEssencesHidden.value = JSON.stringify(otherEssences);
+    }
+
+    if (otherEssAddBtn) {
+      otherEssAddBtn.textContent = editingOtherIdx !== null ? 'Зберегти зміни сутності' : '+ Додати сутність';
+    }
+
+    if (!otherEssencesList) return;
+
+    if (otherEssences.length === 0) {
+      otherEssencesList.innerHTML = `<span style="font-size: 12px; color: var(--text-muted);">Пов'язаних сутностей ще не додано</span>`;
+      return;
+    }
+
+    otherEssencesList.innerHTML = otherEssences.map((item, idx) => {
+      const isObj = typeof item === 'object' && item !== null;
+      const charName = isObj ? (item.character_name || item.name_uk || item.name || '—') : item;
+      const essLabel = isObj ? (item.essence_name || item.essence_slug) : null;
+      const img = isObj && item.image ? normalizeImageUrl(item.image) : null;
+      const isEditingThis = editingOtherIdx === idx;
+
+      return `
+        <div style="display:inline-flex; align-items:center; gap:8px; padding:6px 10px; background:var(--bg-2); border:1px solid ${isEditingThis ? 'var(--accent)' : 'var(--border-s)'}; border-radius:6px; font-size:12px;">
+          <span style="width:20px; height:20px; border-radius:50%; overflow:hidden; display:inline-flex; align-items:center; justify-content:center; background:var(--bg-hover);">
+            ${img ? `<img src="${escapeHtmlAttribute(img)}" style="width:100%;height:100%;object-fit:cover;">` : ICON.user}
+          </span>
+          <span>${escapeHtmlAttribute(charName)} ${essLabel ? `<small style="color:#15803d; font-weight:700; font-style:italic;">(Currently ${escapeHtmlAttribute(essLabel)})</small>` : ''}</span>
+          <button type="button" class="other-ess-edit-btn" data-idx="${idx}" style="background:none; border:none; cursor:pointer; color:var(--text-muted); padding:2px;" title="Редагувати">${ICON.edit}</button>
+          <button type="button" class="other-ess-remove-btn" data-idx="${idx}" style="background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:14px; font-weight:bold; padding:2px;" title="Видалити">&times;</button>
+        </div>
+      `;
+    }).join('');
+
+    otherEssencesList.querySelectorAll('.other-ess-edit-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.idx, 10);
+        const item = otherEssences[idx];
+        if (!item) return;
+        editingOtherIdx = idx;
+
+        const isObj = typeof item === 'object' && item !== null;
+        container.querySelector('#edit-other-ess-name').value = isObj ? (item.name || '') : item;
+        container.querySelector('#edit-other-ess-name-uk').value = isObj ? (item.name_uk || '') : '';
+        container.querySelector('#edit-other-ess-slug').value = isObj ? (item.essence_slug || item.slug || '') : item;
+        container.querySelector('#edit-other-ess-image').value = isObj ? (item.image || '') : '';
+        if (otherCharPicker) {
+          otherCharPicker.setSelected(isObj ? (item.character_id || null) : null);
+        }
+        updateOtherEssencesState();
+      });
+    });
+
+    otherEssencesList.querySelectorAll('.other-ess-remove-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.idx, 10);
+        if (editingOtherIdx === idx) {
+          editingOtherIdx = null;
+        } else if (editingOtherIdx !== null && editingOtherIdx > idx) {
+          editingOtherIdx--;
+        }
+        otherEssences.splice(idx, 1);
+        updateOtherEssencesState();
+      });
+    });
+  };
+
+  if (otherEssAddBtn) {
+    otherEssAddBtn.addEventListener('click', () => {
+      const nameInp = container.querySelector('#edit-other-ess-name');
+      const nameUkInp = container.querySelector('#edit-other-ess-name-uk');
+      const slugInp = container.querySelector('#edit-other-ess-slug');
+      const imgInp = container.querySelector('#edit-other-ess-image');
+      const charIdInp = container.querySelector('#edit-other-ess-char-id');
+
+      const name = nameInp.value.trim();
+      const name_uk = nameUkInp.value.trim();
+      const slugRaw = slugInp.value.trim();
+      const image = imgInp.value.trim();
+      const charIdVal = charIdInp ? parseInt(charIdInp.value.trim(), 10) : null;
+      const character_id = charIdVal && !isNaN(charIdVal) ? charIdVal : null;
+
+      if (!character_id && !name && !slugRaw) {
+        alert("Оберіть персонажа або введіть назву/слаг сутності");
+        return;
+      }
+
+      // Ім'я персонажа — з пікера або з ручного вводу
+      const charName = selectedCharObject
+        ? (selectedCharObject.name_uk || selectedCharObject.name || null)
+        : (name || null);
+
+      // Slug сутності — з ручного вводу або з поля essence персонажа
+      const essenceSlug = slugRaw || selectedCharObject?.essence || null;
+
+      const newItem = {
+        character_id: character_id || undefined,
+        character_name: charName || undefined,
+        name: name || undefined,
+        name_uk: name_uk || undefined,
+        slug: essenceSlug || undefined,
+        essence_slug: essenceSlug || undefined,
+        image: image || undefined
+      };
+
+      if (editingOtherIdx !== null) {
+        otherEssences[editingOtherIdx] = newItem;
+        editingOtherIdx = null;
+      } else {
+        otherEssences.push(newItem);
+      }
+
+      nameInp.value = '';
+      nameUkInp.value = '';
+      slugInp.value = '';
+      imgInp.value = '';
+      selectedCharObject = null;
+      if (otherCharPicker) otherCharPicker.clear();
+      updateOtherEssencesState();
+    });
+  }
+
+  updateOtherEssencesState();
 
   let addVerPicker = null;
   const addVerPickerContainer = container.querySelector('#add-version-char-picker');

@@ -2,7 +2,6 @@ import { API } from '../helpers/api.js';
 import { currentUser } from '../shell.js';
 import { createComicCard } from '../components/cards/ComicCard.js';
 import { escapeHtmlAttribute, normalizeImageUrl } from '../helpers/image.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { t } from '../helpers/i18n.js';
 
 export async function renderFavorites(main, params) {
@@ -13,10 +12,6 @@ export async function renderFavorites(main, params) {
         <div class="bookmarks-page">
             <div class="container">
                 <div class="page-header">
-                    ${createBreadcrumbs([
-                        { label: t('user_label'), href: `#/user/${escapeHtmlAttribute(username)}/lists` },
-                        { label: t('favorites') }
-                    ])}
                     <h1 class="page-title">${t('favorites_title').replace('{username}', escapeHtmlAttribute(username))}</h1>
                     <p class="bookmarks-subtitle" style="margin-top: 4px; color: var(--text-muted); font-size: 14px;">${t('favorites_sub').replace('{username}', escapeHtmlAttribute(username))}</p>
                 </div>

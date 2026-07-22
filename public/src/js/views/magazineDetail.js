@@ -1,6 +1,5 @@
 import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 
 // ── Lucide SVG icons ────────────────────────────────
 const ICON = {
@@ -17,11 +16,6 @@ export async function renderMagazineDetail(main, params = {}) {
 
     main.innerHTML = `
         <div class="volume-detail">
-            <div class="container">
-                <nav class="breadcrumbs volume-breadcrumbs">
-                    <div class="skeleton skeleton-text" style="width: 200px; height: 16px;"></div>
-                </nav>
-            </div>
             <section class="volume-hero-band">
                 <div class="container volume-skeleton-hero">
                     <div class="volume-cover-column">
@@ -51,13 +45,6 @@ export async function renderMagazineDetail(main, params = {}) {
 
         main.innerHTML = `
             <div class="volume-detail">
-                <div class="container">
-                    ${createBreadcrumbs([
-                        { label: 'Каталог', href: '#/catalog' },
-                        { label: title }
-                    ], 'breadcrumbs volume-breadcrumbs')}
-                </div>
-
                 <section class="volume-hero-band volume-hero-band--banner" style="--volume-banner-url: url('${escapeHtmlAttribute(coverUrl)}')">
                     <div class="container volume-hero">
                         <div class="volume-cover-column">

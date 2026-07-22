@@ -1,7 +1,6 @@
 import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { currentUser } from '../shell.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { t } from '../helpers/i18n.js';
 import { parseAliases } from '../helpers/lang.js';
 import { translateOrigin } from '../helpers/character.js';
@@ -17,7 +16,7 @@ const ICON = {
   globe:        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
   building:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>',
   externalLink: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
-  edit:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  edit:         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
   image:        '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>',
   users:        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
   male:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="m21 3-6.75 6.75"/><circle cx="10" cy="14" r="6"/></svg>',
@@ -140,15 +139,6 @@ function renderCharacterContent(container, char, params) {
 
       container.innerHTML = `
         <div class="character-detail character-persona-detail">
-          <!-- Breadcrumbs -->
-          <div class="container">
-            ${createBreadcrumbs([
-              { label: t('characters'), href: '#/characters' },
-              { label: displayName, href: `#/characters/${char.id}` },
-              { label: pTitle }
-            ])}
-          </div>
-
           <!-- Hero Band (Simplified for Persona) -->
           <section class="character-detail-hero-band">
             <div class="container character-detail-hero">
@@ -197,14 +187,6 @@ function renderCharacterContent(container, char, params) {
 
   container.innerHTML = `
     <div class="character-detail">
-      <!-- Breadcrumbs -->
-      <div class="container">
-        ${createBreadcrumbs([
-          { label: t('characters'), href: '#/characters' },
-          { label: displayName }
-        ])}
-      </div>
-
       <!-- Hero Band -->
       <section class="character-detail-hero-band">
         <div class="container character-detail-hero">
@@ -275,14 +257,12 @@ function renderCharacterContent(container, char, params) {
               </div>
             ` : ''}
 
-            <!-- Actions (Edit button as on Personnel page) -->
-            <div class="personnel-detail-actions">
-              ${isModerator() ? `
-                <button class="personnel-detail-action-btn" id="char-edit-btn">
-                  ${ICON.edit} Редагувати
-                </button>
-              ` : ''}
-            </div>
+            <!-- Actions (Edit button) -->
+            ${isModerator() ? `
+              <button class="personnel-detail-action-btn hero-edit-action-btn" id="char-edit-btn" title="Редагувати">
+                ${ICON.edit}
+              </button>
+            ` : ''}
           </div>
         </div>
       </section>

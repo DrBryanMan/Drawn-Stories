@@ -135,3 +135,38 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* ── Hero Edit Button ────────────────────────────── */
+.hero-edit-action-btn {
+  position: absolute;
+  top: 24px;
+  right: -40px;
+  font-size: 0;
+  padding: 10px;
+  gap: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-md, 10px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-s);
+  color: var(--text);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  cursor: pointer;
+  z-index: 10;
+  transition: transform 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.hero-edit-action-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+@media (max-width: 768px) {
+  .hero-edit-action-btn {
+    top: 12px;
+    right: 12px;
+  }
+}

@@ -1,6 +1,5 @@
 import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { createPaginator } from '../components/Pagination.js';
 
@@ -21,10 +20,6 @@ export async function renderVolumeCharacters(container, params = {}) {
     
     container.innerHTML = `
         <div class="container">
-            <div class="page-header" id="vol-char-breadcrumbs">
-                <!-- Breadcrumbs skeleton -->
-            </div>
-
             <div class="catalog-top-row">
                 <div id="vol-char-filter-bar-container"></div>
             </div>
@@ -47,19 +42,6 @@ export async function renderVolumeCharacters(container, params = {}) {
         const volume = res.volume || {};
         allCharacters = res.items || [];
         filteredCharacters = [...allCharacters];
-
-        // Render breadcrumbs
-        const volTitle = volume.name_uk || volume.name || 'Том';
-        const breadcrumbsContainer = container.querySelector('#vol-char-breadcrumbs');
-        if (breadcrumbsContainer) {
-            breadcrumbsContainer.innerHTML = createBreadcrumbs([
-                { label: 'Каталог', href: '#/catalog' },
-                { label: volTitle, href: `#/volumes/${volumeId}` },
-                { label: 'Персонажі' }
-            ]);
-        }
-
-        document.title = `Персонажі — ${volTitle} — Drawn Stories`;
 
         // Mount FilterBar
         const filterBarContainer = container.querySelector('#vol-char-filter-bar-container');

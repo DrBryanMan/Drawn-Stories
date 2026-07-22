@@ -2,7 +2,6 @@ import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { createPaginator } from '../components/Pagination.js';
 import { mountFilterBar } from '../components/FilterBar.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { t } from '../helpers/i18n.js';
 
 const paginator = createPaginator({ pageSize: 20 });
@@ -23,10 +22,6 @@ export async function renderPublishers(container, query) {
 
   container.innerHTML = `
     <div class="container">
-      <div class="page-header">
-        ${createBreadcrumbs([{ label: t('publishers') }])}
-      </div>
-
       <div class="catalog-top-row">
         <div id="catalog-filter-bar-container">
           <div id="publishers-filter-bar-container"></div>

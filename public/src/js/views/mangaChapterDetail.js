@@ -1,7 +1,5 @@
 import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
-import { currentUser } from '../shell.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { formatDate } from '../helpers/lang.js';
 
 const ICON = {
@@ -51,14 +49,6 @@ export async function renderMangaChapterDetail(main, params = {}) {
         
         main.innerHTML = `
             <div class="issue-detail volume-detail">
-                <div class="container">
-                    ${createBreadcrumbs([
-                        { label: 'Каталог', href: '#/catalog' },
-                        { label: volName, href: `#/volumes/${chapter.volume_id}` },
-                        { label: `Розділ #${chapter.chapter_number}` }
-                    ], 'breadcrumbs issue-breadcrumbs')}
-                </div>
-
                 <section class="issue-hero-band volume-hero-band">
                     <div class="container issue-hero volume-hero">
                         <div class="volume-cover-column">

@@ -3,19 +3,12 @@ import { Bookmarks } from '../helpers/bookmarks.js';
 import { currentUser } from '../shell.js';
 import { createComicCard } from '../components/cards/ComicCard.js';
 import { escapeHtmlAttribute, normalizeImageUrl } from '../helpers/image.js';
-import { createBreadcrumbs } from '../components/Breadcrumbs.js';
 import { t } from '../helpers/i18n.js';
 
 export async function renderBookmarks(main) {
     main.innerHTML = `
         <div class="bookmarks-page">
             <div class="container">
-                <div class="page-header">
-                    ${createBreadcrumbs([{ label: t('bookmarks_title') }])}
-                    <h1 class="page-title">${t('bookmarks_title')}</h1>
-                    <p class="bookmarks-subtitle" style="margin-top: 4px; color: var(--text-muted); font-size: 14px;">${t('bookmarks_sub')}</p>
-                </div>
-
                 ${!currentUser ? `
                     <div class="bookmarks-login-banner">
                         <div class="banner-icon">
