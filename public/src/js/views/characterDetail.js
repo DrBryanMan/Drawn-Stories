@@ -100,10 +100,10 @@ function renderCharacterContent(container, char, params) {
 
   // Images gallery
   const images = [];
-  if (char.image) images.push({ key: 'main', label: 'Основна', url: normalizeImageUrl(char.image) });
-  if (char.portret_img) images.push({ key: 'portrait', label: 'Портрет', url: normalizeImageUrl(char.portret_img) });
-  if (char.costume_img) images.push({ key: 'costume', label: 'Костюм', url: normalizeImageUrl(char.costume_img) });
-  if (char.portret_costume_img) images.push({ key: 'portret_costume', label: 'Портрет у костюмі', url: normalizeImageUrl(char.portret_costume_img) });
+  if (char.image) images.push({ key: 'main', label: t('photo_main'), url: normalizeImageUrl(char.image) });
+  if (char.portret_img) images.push({ key: 'portrait', label: t('photo_portrait'), url: normalizeImageUrl(char.portret_img) });
+  if (char.costume_img) images.push({ key: 'costume', label: t('photo_costume'), url: normalizeImageUrl(char.costume_img) });
+  if (char.portret_costume_img) images.push({ key: 'portret_costume', label: t('photo_portrait_costume'), url: normalizeImageUrl(char.portret_costume_img) });
 
   const activeImage = images.length > 0 ? images[0].url : null;
   const pubInfo = char.publisher_info;
@@ -113,7 +113,7 @@ function renderCharacterContent(container, char, params) {
   const essSlug = char.essence;
   const essName = char.essence_info ? (char.essence_info.essence_name_uk || char.essence_info.essence_name || essSlug) : essSlug;
   const essLinkHTML = essSlug ? `<a href="#/essences/${escapeHtmlAttribute(essSlug)}">${escapeHtmlAttribute(essName)}</a>` : '';
-  const charEssenceFact = essSlug ? factItemHTML(ICON.sparkles, "Сутність", essLinkHTML) : '';
+  const charEssenceFact = essSlug ? factItemHTML(ICON.sparkles, t('essence'), essLinkHTML) : '';
 
   const volumes = char.volumes || [];
   const issues = char.issues || [];
@@ -146,14 +146,14 @@ function renderCharacterContent(container, char, params) {
                 <div class="character-detail-avatar-frame">
                   ${pImg 
                     ? `<img src="${escapeHtmlAttribute(pImg)}" alt="${escapeHtmlAttribute(pTitle)}">`
-                    : `<div class="character-detail-avatar-empty">${ICON.user}<span>Без фото</span></div>`
+                    : `<div class="character-detail-avatar-empty">${ICON.user}<span>${t('no_photo')}</span></div>`
                   }
                 </div>
               </div>
 
               <div class="character-detail-info">
                 <a href="#/characters/${char.id}" class="persona-back-link">
-                  &larr; Назад до персонажа ${escapeHtmlAttribute(displayName)}
+                  &larr; ${t('back_to_character', { name: escapeHtmlAttribute(displayName) })}
                 </a>
                 <h1 style="margin-top: 6px;">${escapeHtmlAttribute(pTitle)}</h1>
                 ${persona.name_uk && persona.name !== persona.name_uk ? `<div class="character-detail-subname">${escapeHtmlAttribute(persona.name)}</div>` : ''}
@@ -161,7 +161,7 @@ function renderCharacterContent(container, char, params) {
                 <div class="character-detail-badges" style="margin-top: 14px;">
                   ${persona.first_appearance || persona.issue_id ? `
                     <a href="${persona.issue_id ? `#/issues/${persona.issue_id}` : 'javascript:void(0)'}" class="character-badge">
-                      ${ICON.sparkles} Перша поява: ${escapeHtmlAttribute(persona.first_appearance || `Випуск #${persona.issue_id}`)}
+                      ${ICON.sparkles} ${t('first_appearance')}: ${escapeHtmlAttribute(persona.first_appearance || `#${persona.issue_id}`)}
                     </a>
                   ` : ''}
                 </div>
@@ -195,7 +195,7 @@ function renderCharacterContent(container, char, params) {
             <div class="character-detail-avatar-frame">
               ${activeImage 
                 ? `<img id="char-main-img" src="${escapeHtmlAttribute(activeImage)}" alt="${escapeHtmlAttribute(displayName)}">`
-                : `<div class="character-detail-avatar-empty">${ICON.image}<span>Без фото</span></div>`
+                : `<div class="character-detail-avatar-empty">${ICON.image}<span>${t('no_photo')}</span></div>`
               }
             </div>
             ${images.length > 1 ? `
@@ -213,9 +213,9 @@ function renderCharacterContent(container, char, params) {
           <div class="character-detail-info">
             <!-- Over title simple metadata -->
             <div class="character-detail-over-title" style="display: flex; gap: 8px; font-size: 13px; font-weight: 500; color: var(--text-2);">
-              ${char.essence ? `<span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="Сутність">${ICON.sparkles} ${essLinkHTML}</span> • ` : ''}
-              ${char.franchise ? `<span style="display: inline-flex; align-items: center; gap: 4px;" title="Франшиза">${ICON.book} ${escapeHtmlAttribute(char.franchise)}</span>` : ''}
-              ${char.earth ? ` • <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="Всесвіт">${ICON.globe} ${escapeHtmlAttribute(char.earth)}</span>` : ''}
+              ${char.essence ? `<span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="${escapeHtmlAttribute(t('essence'))}">${ICON.sparkles} ${essLinkHTML}</span> • ` : ''}
+              ${char.franchise ? `<span style="display: inline-flex; align-items: center; gap: 4px;" title="${escapeHtmlAttribute(t('franchise'))}">${ICON.book} ${escapeHtmlAttribute(char.franchise)}</span>` : ''}
+              ${char.earth ? ` • <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="${escapeHtmlAttribute(t('universe'))}">${ICON.globe} ${escapeHtmlAttribute(char.earth)}</span>` : ''}
             </div>
 
             <h1>${escapeHtmlAttribute(displayName)}</h1>
@@ -223,15 +223,15 @@ function renderCharacterContent(container, char, params) {
 
             <!-- Badges Row -->
             <div class="character-detail-badges" style="margin-top: 12px;">
-              ${char.origin ? `<span class="character-badge" title="Вид">${ICON.tag} ${escapeHtmlAttribute(translateOrigin(char.origin))}</span>` : ''}
-              ${char.gender === 1 ? `<span class="character-badge gender-male" title="Стать">${ICON.male} ${t('gender_male')}</span>` : ''}
-              ${char.gender === 2 ? `<span class="character-badge gender-female" title="Стать">${ICON.female} ${t('gender_female')}</span>` : ''}
+              ${char.origin ? `<span class="character-badge" title="${escapeHtmlAttribute(t('species'))}">${ICON.tag} ${escapeHtmlAttribute(translateOrigin(char.origin))}</span>` : ''}
+              ${char.gender === 1 ? `<span class="character-badge gender-male" title="${escapeHtmlAttribute(t('gender'))}">${ICON.male} ${t('gender_male')}</span>` : ''}
+              ${char.gender === 2 ? `<span class="character-badge gender-female" title="${escapeHtmlAttribute(t('gender'))}">${ICON.female} ${t('gender_female')}</span>` : ''}
             </div>
 
             <!-- Personas Cards Section in Hero -->
             ${personas.length > 0 ? `
               <div class="character-personas-section" style="margin-top: 1em;">
-                <h3 class="character-personas-title">Інші особистості</h3>
+                <h3 class="character-personas-title">${t('other_personas')}</h3>
                 <div class="character-personas-grid">
                   ${personas.map((p, pIdx) => `
                     <a href="#/characters/${char.id}/persona/${pIdx}" class="character-persona-card">
@@ -246,8 +246,8 @@ function renderCharacterContent(container, char, params) {
                         ${p.name_uk && p.name !== p.name_uk ? `<span class="character-persona-subname">${escapeHtmlAttribute(p.name)}</span>` : ''}
                         ${p.first_appearance || p.issue_id ? `
                           <div class="character-persona-first-app">
-                            <span style="color: #6486d6ff;">Перша поява:</span><br>
-                            <strong>${escapeHtmlAttribute(p.first_appearance || `Випуск #${p.issue_id}`)}</strong>
+                            <span style="color: #6486d6ff;">${t('first_appearance')}:</span><br>
+                            <strong>${escapeHtmlAttribute(p.first_appearance || `#${p.issue_id}`)}</strong>
                           </div>
                         ` : ''}
                       </div>
@@ -259,7 +259,7 @@ function renderCharacterContent(container, char, params) {
 
             <!-- Actions (Edit button) -->
             ${isModerator() ? `
-              <button class="personnel-detail-action-btn hero-edit-action-btn" id="char-edit-btn" title="Редагувати">
+              <button class="personnel-detail-action-btn hero-edit-action-btn" id="char-edit-btn" title="${escapeHtmlAttribute(t('edit'))}">
                 ${ICON.edit}
               </button>
             ` : ''}
@@ -272,14 +272,14 @@ function renderCharacterContent(container, char, params) {
         <div class="container">
           <div class="personnel-detail-tabs" role="tablist">
             <button class="personnel-detail-tab-btn is-active" data-tab="overview" role="tab">
-              Огляд
+              ${t('tab_overview')}
             </button>
             <button class="personnel-detail-tab-btn" data-tab="appearances" role="tab">
-              ${ICON.book} Появи <span class="tab-count">${totalAppearances.toLocaleString('uk-UA')}</span>
+              ${ICON.book} ${t('tab_appearances')} <span class="tab-count">${totalAppearances.toLocaleString()}</span>
             </button>
             ${teams.length > 0 ? `
               <button class="personnel-detail-tab-btn" data-tab="teams" role="tab">
-                ${ICON.users} Команди <span class="tab-count">${teams.length}</span>
+                ${ICON.users} ${t('tab_teams')} <span class="tab-count">${teams.length}</span>
               </button>
             ` : ''}
           </div>
@@ -294,7 +294,7 @@ function renderCharacterContent(container, char, params) {
             <!-- Sidebar Custom Character Info Block -->
             <aside>
               <div class="character-detail-info-block">
-                <div class="character-detail-info-block-title">${ICON.user} Відомості</div>
+                <div class="character-detail-info-block-title">${ICON.user} ${t('details')}</div>
                 <ul class="character-detail-fact-list">
                   ${charEssenceFact}
                   ${(() => {
@@ -325,19 +325,19 @@ function renderCharacterContent(container, char, params) {
                       `;
                     }).join('');
 
-                    return factItemHTML(ICON.user, "Творці", `${cardsHTML}`);
+                    return factItemHTML(ICON.user, t('creators_label'), `${cardsHTML}`);
                   })()}
-                  ${factItemHTML(char.gender === 1 ? ICON.male : ICON.female, "Стать", genderText(char.gender))}
-                  ${factItemHTML(ICON.building, "Видавництво", pubInfo ? `<a href="#/publishers/${pubInfo.id}">${escapeHtmlAttribute(pubInfo.name)}</a>` : null)}
-                  ${factItemHTML(ICON.tag, "Походження", escapeHtmlAttribute(translateOrigin(char.origin)))}
-                  ${factItemHTML(ICON.book, "Франшиза", escapeHtmlAttribute(char.franchise))}
-                  ${factItemHTML(ICON.globe, "Всесвіт / Земля", escapeHtmlAttribute(char.earth))}
-                  ${factItemHTML(ICON.calendar, "Народження", escapeHtmlAttribute(char.birth))}
-                  ${factItemHTML(ICON.calendar, "Смерть", escapeHtmlAttribute(char.death))}
-                  ${factItemHTML(ICON.calendar, "Перша поява", firstApp 
+                  ${factItemHTML(char.gender === 1 ? ICON.male : ICON.female, t('gender'), genderText(char.gender))}
+                  ${factItemHTML(ICON.building, t('publisher'), pubInfo ? `<a href="#/publishers/${pubInfo.id}">${escapeHtmlAttribute(pubInfo.name)}</a>` : null)}
+                  ${factItemHTML(ICON.tag, t('origin_label'), escapeHtmlAttribute(translateOrigin(char.origin)))}
+                  ${factItemHTML(ICON.book, t('franchise'), escapeHtmlAttribute(char.franchise))}
+                  ${factItemHTML(ICON.globe, t('universe_earth'), escapeHtmlAttribute(char.earth))}
+                  ${factItemHTML(ICON.calendar, t('birth'), escapeHtmlAttribute(char.birth))}
+                  ${factItemHTML(ICON.calendar, t('death'), escapeHtmlAttribute(char.death))}
+                  ${factItemHTML(ICON.calendar, t('first_appearance'), firstApp 
                     ? `<a href="#/issues/${firstApp.id}">${escapeHtmlAttribute(firstApp.volume_name_uk || firstApp.volume_name)} #${firstApp.issue_number}</a>`
                     : (char.first_appearance ? `#${char.first_appearance}` : null))}
-                  ${factItemHTML(ICON.sparkles, "Псевдоніми", aliases.length ? escapeHtmlAttribute(aliases.join(', ')) : null)}
+                  ${factItemHTML(ICON.sparkles, t('aliases'), aliases.length ? escapeHtmlAttribute(aliases.join(', ')) : null)}
                   ${factItemHTML(ICON.externalLink, "ComicVine", char.cv_slug ? `<a href="https://comicvine.gamespot.com/${char.cv_slug}/4005-${char.cv_id}/" target="_blank" rel="noopener">${escapeHtmlAttribute(String(char.cv_id || 'CV'))} ${ICON.externalLink}</a>` : null)}
                 </ul>
               </div>
@@ -348,7 +348,7 @@ function renderCharacterContent(container, char, params) {
               ${volumes.length > 0 ? `
                 <div class="entity-recent-section">
                   <div class="entity-section-header">
-                    <span class="entity-section-title">Серії / Томи</span>
+                    <span class="entity-section-title">${t('series_volumes')}</span>
                   </div>
                   <div class="entity-releases-grid">
                     ${volumes.slice(0, 8).map(v => renderVolumeCardHTML(v)).join('')}
@@ -359,7 +359,7 @@ function renderCharacterContent(container, char, params) {
               ${issues.length > 0 ? `
                 <div class="entity-recent-section" style="margin-top: 24px;">
                   <div class="entity-section-header">
-                    <span class="entity-section-title">Випуски</span>
+                    <span class="entity-section-title">${t('releases')}</span>
                   </div>
                   <div class="entity-releases-grid">
                     ${issues.slice(0, 12).map(i => renderIssueCardHTML(i)).join('')}
@@ -367,7 +367,7 @@ function renderCharacterContent(container, char, params) {
                 </div>
               ` : ''}
 
-              ${volumes.length === 0 && issues.length === 0 ? `<div class="entity-releases-empty">Даних немає</div>` : ''}
+              ${volumes.length === 0 && issues.length === 0 ? `<div class="entity-releases-empty">${t('no_data')}</div>` : ''}
             </div>
           </div>
         </div>
@@ -405,7 +405,7 @@ function renderCharacterContent(container, char, params) {
 
 function renderAppearancesHTML(volumes, issues, mangaChapters) {
   if ((!issues || issues.length === 0) && (!volumes || volumes.length === 0) && (!mangaChapters || mangaChapters.length === 0)) {
-    return `<div class="entity-releases-empty">Появ не знайдено</div>`;
+    return `<div class="entity-releases-empty">${t('no_appearances_found')}</div>`;
   }
 
   const volumeMap = new Map();
@@ -415,7 +415,7 @@ function renderAppearancesHTML(volumes, issues, mangaChapters) {
     volumes.forEach(v => {
       volumeMap.set(v.id, {
         id: v.id,
-        title: v.name_uk || v.name || 'Серія',
+        title: v.name_uk || v.name || t('series'),
         volume: v,
         issues: []
       });
@@ -427,7 +427,7 @@ function renderAppearancesHTML(volumes, issues, mangaChapters) {
     issues.forEach(iss => {
       const volId = iss.volume_id;
       if (!volumeMap.has(volId)) {
-        const title = iss.volume_name_uk || iss.volume_name || 'Серія';
+        const title = iss.volume_name_uk || iss.volume_name || t('series');
         volumeMap.set(volId, {
           id: volId,
           title: title,
@@ -452,7 +452,7 @@ function renderAppearancesHTML(volumes, issues, mangaChapters) {
                 ${escapeHtmlAttribute(group.title)}
               </a>
               <a href="#/volumes/${group.id}" class="entity-section-link">
-                Перейти до серії ${ICON.chevronRight}
+                ${t('go_to_series')} ${ICON.chevronRight || '→'}
               </a>
             </div>
             <div class="entity-releases-grid">
@@ -469,7 +469,7 @@ function renderAppearancesHTML(volumes, issues, mangaChapters) {
               ${escapeHtmlAttribute(group.title)}
             </a>
             <a href="#/volumes/${group.id}" class="entity-section-link">
-              Перейти до серії ${ICON.chevronRight}
+              ${t('go_to_series')} ${ICON.chevronRight || '→'}
             </a>
           </div>
           <div class="entity-releases-grid">
@@ -486,7 +486,7 @@ function renderAppearancesHTML(volumes, issues, mangaChapters) {
       <div class="entity-recent-section" style="margin-bottom: 24px;">
         <div class="entity-section-header">
           <span class="entity-section-title" style="font-size: 15px; font-weight: 700; color: var(--text);">
-            Глави мангі (${mangaChapters.length})
+            ${t('manga_chapters_count', { count: mangaChapters.length })}
           </span>
         </div>
         <div class="entity-releases-grid">
@@ -501,8 +501,8 @@ function renderAppearancesHTML(volumes, issues, mangaChapters) {
 
 function renderVolumeCardHTML(vol) {
   const cover = normalizeImageUrl(vol.cover_img || vol.image);
-  const title = escapeHtmlAttribute(vol.name_uk || vol.name || 'Без назви');
-  const countText = vol.char_issue_count ? `${vol.char_issue_count} вип.` : `${vol.issue_count || 0} вип.`;
+  const title = escapeHtmlAttribute(vol.name_uk || vol.name || t('no_title'));
+  const countText = vol.char_issue_count ? t('issues_abbr', { count: vol.char_issue_count }) : t('issues_abbr', { count: vol.issue_count || 0 });
 
   return `
     <a href="#/volumes/${vol.id}" class="entity-release-card">
@@ -540,7 +540,7 @@ function renderIssueCardHTML(issue) {
 }
 
 function renderMangaChapterCardHTML(mc) {
-  const displayTitle = `Глава ${mc.chapter_number}`;
+  const displayTitle = t('manga_chapter_num', { num: mc.chapter_number });
   const subTitle = escapeHtmlAttribute(mc.title || mc.volume_name || '');
 
   return `

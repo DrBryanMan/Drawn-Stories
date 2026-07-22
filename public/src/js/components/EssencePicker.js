@@ -34,6 +34,8 @@ export class EssencePicker {
   render() {
     this.container.innerHTML = `
       <div class="essence-picker-wrap" style="position: relative;">
+        <div class="essence-selected-badge" style="margin-bottom: 10px;"></div>
+
         <div class="essence-picker-inputs" style="display: flex; gap: 8px;">
           <div class="essence-picker-name-field" style="position: relative; flex: 2;">
             <input type="text" class="admin-input essence-search-input" placeholder="Шукати сутність за назвою (напр. Спідвей)..." autocomplete="off">
@@ -44,8 +46,6 @@ export class EssencePicker {
         </div>
 
         <div class="essence-picker-results" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border: 1px solid var(--border-s); border-radius: 6px; max-height: 220px; overflow-y: auto; z-index: 10010; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-top: 4px;"></div>
-
-        <div class="essence-selected-badge" style="margin-top: 6px;"></div>
       </div>
     `;
 

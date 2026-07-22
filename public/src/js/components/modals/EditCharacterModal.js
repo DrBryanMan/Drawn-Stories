@@ -1,9 +1,9 @@
-/* public/src/js/components/modals/EditCharacterModal.js */
 import { API } from '../../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../../helpers/image.js';
 import { openAddIssueModal } from '../addIssueModal.js';
 import { translateOrigin } from '../../helpers/character.js';
 import { EssencePicker } from '../EssencePicker.js';
+import { t } from '../../helpers/i18n.js';
 
 const ICON = {
   user:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
@@ -49,120 +49,121 @@ export function openEditCharacterModal(char, onUpdate) {
 
   const personas = parsePersonas(char.personas);
   const genderOptions = `
-    <option value="" ${!char.gender ? 'selected' : ''}>Не вказано</option>
-    <option value="1" ${char.gender === 1 ? 'selected' : ''}>Чоловік</option>
-    <option value="2" ${char.gender === 2 ? 'selected' : ''}>Жінка</option>
+    <option value="" ${!char.gender ? 'selected' : ''}>${t('gender_unspecified')}</option>
+    <option value="1" ${char.gender === 1 ? 'selected' : ''}>${t('gender_male')}</option>
+    <option value="2" ${char.gender === 2 ? 'selected' : ''}>${t('gender_female')}</option>
   `;
 
   modal.innerHTML = `
     <div class="ds-modal ds-modal--large" style="max-height: 90vh; overflow-y: auto; background: var(--bg-card); width: 680px;">
       <div class="ds-modal-header">
-        <div class="ds-modal-title">${ICON.edit} Редагувати дані персонажа</div>
+        <div class="ds-modal-title">${ICON.edit} ${t('edit_character_title')}</div>
         <button class="ds-modal-close" type="button" id="universal-char-close-btn">&times;</button>
       </div>
       <form id="universal-char-edit-form">
         <div class="ds-modal-body">
           <div class="admin-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
             <!-- Group 1: Основні дані -->
-            <div class="admin-form-section-title" style="grid-column: span 2; font-weight: 800; border-bottom: 1px solid var(--border-s); padding-bottom: 4px; margin-top: 8px; text-transform: uppercase; font-size: 12px; color: var(--accent);">Основні дані</div>
+            <div class="admin-form-section-title" style="grid-column: span 2; font-weight: 800; border-bottom: 1px solid var(--border-s); padding-bottom: 4px; margin-top: 8px; text-transform: uppercase; font-size: 12px; color: var(--accent);">${t('group_main_info')}</div>
 
             <div class="admin-form-group">
-              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Оригінальне ім'я *</label>
+              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">${t('original_name')} *</label>
               <input type="text" name="name" class="admin-input" value="${escapeHtmlAttribute(char.name || '')}" required>
             </div>
             <div class="admin-form-group">
-              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Українська назва/ім'я</label>
+              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">${t('ukrainian_name')}</label>
               <input type="text" name="name_uk" class="admin-input" value="${escapeHtmlAttribute(char.name_uk || '')}">
             </div>
             <div class="admin-form-group">
-              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Справжнє ім'я (Оригінал)</label>
+              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">${t('real_name_original')}</label>
               <input type="text" name="real_name" class="admin-input" value="${escapeHtmlAttribute(char.real_name || '')}">
             </div>
             <div class="admin-form-group">
-              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Справжнє ім'я (Українською)</label>
+              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">${t('real_name_ukrainian')}</label>
               <input type="text" name="real_name_uk" class="admin-input" value="${escapeHtmlAttribute(char.real_name_uk || '')}">
             </div>
             <div class="admin-form-group">
-              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Франшиза</label>
+              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">${t('franchise')}</label>
               <input type="text" name="franchise" class="admin-input" value="${escapeHtmlAttribute(char.franchise || '')}">
             </div>
             <div class="admin-form-group">
-              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Земля / Всесвіт</label>
-              <input type="text" name="earth" class="admin-input" value="${escapeHtmlAttribute(char.earth || '')}" placeholder="Наприклад: Earth-616, Earth-65">
+              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">${t('earth_universe')}</label>
+              <input type="text" name="earth" class="admin-input" value="${escapeHtmlAttribute(char.earth || '')}" placeholder="Earth-616, Earth-65">
             </div>
             <div class="admin-form-group">
-              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Походження (Origin)</label>
+              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">${t('origin_species')}</label>
               <input type="text" name="origin" class="admin-input" value="${escapeHtmlAttribute(char.origin || '')}">
             </div>
             <div class="admin-form-group">
-              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Стать</label>
+              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">${t('gender')}</label>
               <select name="gender" class="admin-input">${genderOptions}</select>
             </div>
 
             <!-- Group: Зображення -->
-            <div class="admin-form-section-title" style="grid-column: span 2; font-weight: 800; border-bottom: 1px solid var(--border-s); padding-bottom: 4px; margin-top: 8px; text-transform: uppercase; font-size: 12px; color: var(--accent);">Зображення</div>
+            <div class="admin-form-section-title" style="grid-column: span 2; font-weight: 800; border-bottom: 1px solid var(--border-s); padding-bottom: 4px; margin-top: 8px; text-transform: uppercase; font-size: 12px; color: var(--accent);">${t('group_images')}</div>
 
             <div class="admin-form-group">
-              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">URL Головного фото</label>
+              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">${t('url_main_photo')}</label>
               <input type="text" name="image" class="admin-input" value="${escapeHtmlAttribute(char.image || '')}">
             </div>
             <div class="admin-form-group">
-              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">URL Портрета</label>
+              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">${t('url_portrait')}</label>
               <input type="text" name="portret_img" class="admin-input" value="${escapeHtmlAttribute(char.portret_img || '')}">
             </div>
             <div class="admin-form-group">
-              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">URL Костюма</label>
+              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">${t('url_costume')}</label>
               <input type="text" name="costume_img" class="admin-input" value="${escapeHtmlAttribute(char.costume_img || '')}">
             </div>
             <div class="admin-form-group">
-              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">URL Портрета в костюмі</label>
+              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">${t('url_portrait_costume')}</label>
               <input type="text" name="portret_costume_img" class="admin-input" value="${escapeHtmlAttribute(char.portret_costume_img || '')}">
             </div>
 
             <!-- Group: Пошук та вибір -->
-            <div class="admin-form-section-title" style="grid-column: span 2; font-weight: 800; border-bottom: 1px solid var(--border-s); padding-bottom: 4px; margin-top: 8px; text-transform: uppercase; font-size: 12px; color: var(--accent);">Пошук та вибір</div>
+            <div class="admin-form-section-title" style="grid-column: span 2; font-weight: 800; border-bottom: 1px solid var(--border-s); padding-bottom: 4px; margin-top: 8px; text-transform: uppercase; font-size: 12px; color: var(--accent);">${t('group_search_select')}</div>
 
-            <div class="admin-form-group>
-              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Творці (пошук по персонах або введення)</label>
+            <div class="admin-form-group admin-form-group--full" style="grid-column: span 2;">
+              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">${t('creators_search_label')}</label>
               <div class="creators-selector-container">
-                <div class="creators-badges-wrap" id="universal-creators-badges" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;"></div>
+                <div class="creators-badges-wrap" id="universal-creators-badges" style="display:flex; flex-wrap:wrap; gap: 10px;"></div>
                 <div class="creator-search-box" style="position:relative;">
-                  <input type="text" id="universal-creator-search" class="admin-input" placeholder="Введіть ім'я творця для пошуку..." autocomplete="off">
+                  <input type="text" id="universal-creator-search" class="admin-input" placeholder="${escapeHtmlAttribute(t('enter_creator_name'))}" autocomplete="off">
                   <div class="creator-search-dropdown" id="universal-creator-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--bg-card); border:1px solid var(--border-s); border-radius:4px; max-height:200px; overflow-y:auto; z-index:10005;"></div>
                 </div>
               </div>
               <input type="hidden" name="creators" id="universal-creators-hidden" value="${escapeHtmlAttribute(char.creators || '')}">
             </div>
-            <div class="admin-form-group>
-              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Сутність (Essence)</label>
+
+            <div class="admin-form-group admin-form-group--full" style="grid-column: span 2;">
+              <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">${t('essence')}</label>
               <input type="hidden" name="essence" id="universal-char-essence-input" value="${escapeHtmlAttribute(char.essence || '')}">
               <div id="universal-char-essence-picker"></div>
             </div>
 
             <!-- Group: Окремі особистості (Personas) -->
-            <div class="admin-form-section-title" style="grid-column: span 2; font-weight: 800; border-bottom: 1px solid var(--border-s); padding-bottom: 4px; margin-top: 8px; text-transform: uppercase; font-size: 12px; color: var(--accent);">Окремі особистості (Personas)</div>
+            <div class="admin-form-section-title" style="grid-column: span 2; font-weight: 800; border-bottom: 1px solid var(--border-s); padding-bottom: 4px; margin-top: 8px; text-transform: uppercase; font-size: 12px; color: var(--accent);">${t('group_personas')}</div>
 
             <div class="admin-form-group admin-form-group--full" style="grid-column: span 2;">
               <div class="personas-manager-container">
-                <div class="personas-list-wrap" id="universal-personas-list" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;"></div>
+                <div class="personas-list-wrap" id="universal-personas-list" style="display:flex; flex-wrap:wrap; gap: 10px;"></div>
                 
                 <div class="persona-add-form" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:12px; background:var(--bg-2); border-radius:6px; border:1px dashed var(--border-s);">
-                  <input type="text" id="universal-persona-name" class="admin-input" placeholder="Назва особистості (Ghost-Spider)">
-                  <input type="text" id="universal-persona-name-uk" class="admin-input" placeholder="Українською (Привид-Павук)">
-                  <input type="text" id="universal-persona-image" class="admin-input" placeholder="URL фото / аватарки" style="grid-column: span 2;">
+                  <input type="text" id="universal-persona-name" class="admin-input" placeholder="${escapeHtmlAttribute(t('persona_name_placeholder'))}">
+                  <input type="text" id="universal-persona-name-uk" class="admin-input" placeholder="${escapeHtmlAttribute(t('persona_name_uk_placeholder'))}">
+                  <input type="text" id="universal-persona-image" class="admin-input" placeholder="${escapeHtmlAttribute(t('persona_image_placeholder'))}" style="grid-column: span 2;">
                   
                   <div class="persona-issue-search-box" style="grid-column: span 2; position: relative;">
                     <div style="display: flex; gap: 8px;">
-                      <input type="text" id="universal-persona-app" class="admin-input" placeholder="Перша поява (назва/номер випуску для пошуку або текст)" style="flex: 1;" autocomplete="off">
+                      <input type="text" id="universal-persona-app" class="admin-input" placeholder="${escapeHtmlAttribute(t('first_appearance_placeholder'))}" style="flex: 1;" autocomplete="off">
                       <button type="button" id="universal-persona-issue-btn" class="btn-admin btn-admin--secondary" style="white-space: nowrap; display: flex; align-items: center; gap: 6px;">
-                        ${ICON.book} База
+                        ${ICON.book} ${t('database_btn')}
                       </button>
                     </div>
                     <div class="persona-issue-dropdown" id="universal-persona-issue-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--bg-card); border:1px solid var(--border-s); border-radius:4px; max-height:160px; overflow-y:auto; z-index:10005;"></div>
                     <div id="universal-persona-selected-issue" style="margin-top: 4px;"></div>
                   </div>
 
-                  <button type="button" id="universal-persona-add" class="btn-admin btn-admin--secondary" style="grid-column: span 2;">+ Додати особистість</button>
+                  <button type="button" id="universal-persona-add" class="btn-admin btn-admin--secondary" style="grid-column: span 2;">${t('add_persona_btn')}</button>
                 </div>
               </div>
               <input type="hidden" name="personas" id="universal-personas-hidden" value="${escapeHtmlAttribute(JSON.stringify(personas))}">
@@ -170,10 +171,10 @@ export function openEditCharacterModal(char, onUpdate) {
           </div>
         </div>
         <div class="ds-modal-footer" style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-top:1px solid var(--border-s);">
-          <button type="button" class="btn-admin btn-admin--danger" id="universal-char-delete-btn">Видалити з бази</button>
+          <button type="button" class="btn-admin btn-admin--danger" id="universal-char-delete-btn">${t('delete_from_db')}</button>
           <div style="display:flex; gap:8px;">
-            <button class="btn-admin btn-admin--secondary" type="button" id="universal-char-cancel-btn">Скасувати</button>
-            <button class="btn-admin btn-admin--primary" type="submit">Зберегти зміни</button>
+            <button class="btn-admin btn-admin--secondary" type="button" id="universal-char-cancel-btn">${t('cancel')}</button>
+            <button class="btn-admin btn-admin--primary" type="submit">${t('save_changes')}</button>
           </div>
         </div>
       </form>
@@ -290,7 +291,7 @@ export function openEditCharacterModal(char, onUpdate) {
         if (items.length === 0) {
           creatorDropdown.innerHTML = `
             <div class="creator-search-item" id="add-custom-creator-btn-u" style="padding:8px; cursor:pointer; color:var(--text-muted); font-size:12px;">
-              Додати "${escapeHtmlAttribute(query)}"
+              ${t('add_custom_creator', { query: escapeHtmlAttribute(query) })}
             </div>
           `;
           creatorDropdown.querySelector('#add-custom-creator-btn-u')?.addEventListener('click', () => addCreator(query));
@@ -308,7 +309,7 @@ export function openEditCharacterModal(char, onUpdate) {
                 ${pImg ? `<img src="${escapeHtmlAttribute(pImg)}" style="width:100%;height:100%;object-fit:cover;">` : ICON.user}
               </span>
               <span>${escapeHtmlAttribute(pName)}</span>
-              ${isAlreadyAdded ? `<span style="margin-left:auto; font-size:10px; color:var(--accent); font-weight:700;">Обрано</span>` : ''}
+              ${isAlreadyAdded ? `<span style="margin-left:auto; font-size:10px; color:var(--accent); font-weight:700;">${t('selected')}</span>` : ''}
             </div>
           `;
         }).join('');
@@ -400,13 +401,13 @@ export function openEditCharacterModal(char, onUpdate) {
   const updatePersonasState = () => {
     personasHidden.value = JSON.stringify(personas);
     if (editingPersonaIdx !== null) {
-      personaAdd.textContent = 'Зберегти зміни особистості';
+      personaAdd.textContent = t('save_persona_changes_btn');
     } else {
-      personaAdd.textContent = '+ Додати особистість';
+      personaAdd.textContent = t('add_persona_btn');
     }
 
     if (personas.length === 0) {
-      personasList.innerHTML = `<span style="font-size: 12px; color: var(--text-muted);">Особистостей ще не додано</span>`;
+      personasList.innerHTML = `<span style="font-size: 12px; color: var(--text-muted);">${t('no_personas_added')}</span>`;
       return;
     }
 
@@ -469,7 +470,7 @@ export function openEditCharacterModal(char, onUpdate) {
 
     const pName = nameInp.value.trim();
     if (!pName) {
-      alert("Введіть назву особистості");
+      alert(t('enter_persona_name_alert'));
       return;
     }
 
@@ -549,19 +550,19 @@ export function openEditCharacterModal(char, onUpdate) {
       close();
       if (onUpdate) onUpdate(data);
     } catch (err) {
-      alert('Помилка збереження: ' + (err.message || err));
+      alert(t('error_saving', { error: err.message || err }));
     }
   });
 
   // Delete Character Button
   modal.querySelector('#universal-char-delete-btn').addEventListener('click', async () => {
-    if (!confirm(`Ви впевнені, що хочете остаточно видалити персонажа "${char.name}" з бази даних?`)) return;
+    if (!confirm(t('confirm_delete_character', { name: char.name }))) return;
     try {
       await API.delete(`/characters/${char.id}`);
       close();
       if (onUpdate) onUpdate(null);
     } catch (err) {
-      alert('Помилка видалення: ' + (err.message || err));
+      alert(t('error_deleting') + ': ' + (err.message || err));
     }
   });
 }
