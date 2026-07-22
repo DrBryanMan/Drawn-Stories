@@ -230,26 +230,25 @@ function renderCharacterContent(container, char, params) {
           <!-- Info Column -->
           <div class="character-detail-info">
             <!-- Over title simple metadata -->
-            <div class="character-detail-over-title" style="display: flex; gap: 12px; font-size: 13px; font-weight: 500; color: var(--text-2); margin-bottom: 8px;">
-              ${char.essence ? `<span style="display: inline-flex; align-items: center; gap: 4px;">${ICON.sparkles} ${essLinkHTML}</span> • ` : ''}
-              ${char.franchise ? `<span style="display: inline-flex; align-items: center; gap: 4px;">${ICON.book} ${escapeHtmlAttribute(char.franchise)}</span>` : ''}
-              ${char.earth ? ` • <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">${ICON.globe} ${escapeHtmlAttribute(char.earth)}</span>` : ''}
+            <div class="character-detail-over-title" style="display: flex; gap: 8px; font-size: 13px; font-weight: 500; color: var(--text-2);">
+              ${char.essence ? `<span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="Сутність">${ICON.sparkles} ${essLinkHTML}</span> • ` : ''}
+              ${char.franchise ? `<span style="display: inline-flex; align-items: center; gap: 4px;" title="Франшиза">${ICON.book} ${escapeHtmlAttribute(char.franchise)}</span>` : ''}
+              ${char.earth ? ` • <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="Всесвіт">${ICON.globe} ${escapeHtmlAttribute(char.earth)}</span>` : ''}
             </div>
 
             <h1>${escapeHtmlAttribute(displayName)}</h1>
-            ${subName ? `<div class="character-detail-subname" style="margin-bottom: 12px;">${escapeHtmlAttribute(subName)}</div>` : ''}
+            ${subName ? `<div class="character-detail-subname">${escapeHtmlAttribute(subName)}</div>` : ''}
 
             <!-- Badges Row -->
             <div class="character-detail-badges" style="margin-top: 12px;">
-              ${char.origin ? `<span class="character-badge">${ICON.tag} ${escapeHtmlAttribute(translateOrigin(char.origin))}</span>` : ''}
-              ${char.gender === 1 ? `<span class="character-badge gender-male">${ICON.male} ${t('gender_male')}</span>` : ''}
-              ${char.gender === 2 ? `<span class="character-badge gender-female">${ICON.female} ${t('gender_female')}</span>` : ''}
-              ${pubInfo ? `<a href="#/publishers/${pubInfo.id}" class="character-badge">${ICON.building} ${escapeHtmlAttribute(pubInfo.name)}</a>` : ''}
+              ${char.origin ? `<span class="character-badge" title="Вид">${ICON.tag} ${escapeHtmlAttribute(translateOrigin(char.origin))}</span>` : ''}
+              ${char.gender === 1 ? `<span class="character-badge gender-male" title="Стать">${ICON.male} ${t('gender_male')}</span>` : ''}
+              ${char.gender === 2 ? `<span class="character-badge gender-female" title="Стать">${ICON.female} ${t('gender_female')}</span>` : ''}
             </div>
 
             <!-- Personas Cards Section in Hero -->
             ${personas.length > 0 ? `
-              <div class="character-personas-section">
+              <div class="character-personas-section" style="margin-top: 1em;">
                 <h3 class="character-personas-title">Інші особистості</h3>
                 <div class="character-personas-grid">
                   ${personas.map((p, pIdx) => `

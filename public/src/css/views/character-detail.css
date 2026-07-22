@@ -114,7 +114,6 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  gap: 12px;
 }
 
 .character-detail-info h1 {
@@ -130,7 +129,7 @@
 .character-detail-subname {
   font-size: 14px;
   color: var(--text-2);
-  margin-top: -6px;
+  margin-top: 6px;
 }
 
 /* ── Badges Row ──────────────────────────────────── */
@@ -141,7 +140,7 @@
   gap: 8px;
 }
 
-.character-badge {
+.character-detail-badges .character-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -154,11 +153,6 @@
   color: var(--text);
   text-decoration: none;
   transition: all 0.2s ease;
-}
-
-.character-badge:hover {
-  border-color: var(--accent);
-  color: var(--accent);
 }
 
 .character-badge.gender-male {
