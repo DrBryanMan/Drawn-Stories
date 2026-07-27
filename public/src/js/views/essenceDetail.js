@@ -1,7 +1,7 @@
 import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { currentUser } from '../shell.js';
-import { t } from '../helpers/i18n.js';
+import { t, l } from '../helpers/i18n.js';
 import { CharacterPicker } from '../components/CharacterPicker.js';
 import { renderEntityLink, initEntityExistenceHandlers } from '../helpers/entityExistence.js';
 import { openGlobalAddModal } from '../components/GlobalAddModal.js';
@@ -55,7 +55,8 @@ export async function renderEssenceDetail(container, params) {
 
   try {
     const essence = await API.get(`/essences/${slug}`);
-    document.title = `${essence.essence_name_uk || essence.essence_name} — Drawn Stories`;
+    const essTitle = l(essence, 'essence_name');
+    document.title = `${essTitle} — Drawn Stories`;
     renderEssenceContent(container, essence);
   } catch (err) {
     console.error(err);
@@ -120,8 +121,9 @@ export async function renderEssenceDetail(container, params) {
 }
 
 function buildEssenceTitleHTML(essence) {
-  const essenceName = essence.essence_name_uk || essence.essence_name || '';
-  const personName = essence.person_name_uk || essence.person_name || (essence.character_info ? (essence.character_info.name_uk || essence.character_info.name) : '');
+  const essenceName = l(essence, 'essence_name', { uk: ['essence_name_uk', 'essence_name'], en: ['essence_name'] }) || '';
+  const charInfoName = essence.character_info ? l(essence.character_info, 'name', { uk: ['name_uk', 'name'], en: ['name'] }) : '';
+  const personName = l(essence, 'person_name', { uk: ['person_name_uk', 'person_name'], en: ['person_name'] }) || charInfoName;
   const essenceSlug = essence.essence_slug || '';
   const characterId = essence.character_id || null;
 
@@ -216,7 +218,7 @@ function buildEssenceMetaUnderTitleHTML(essence) {
 }
 
 function renderEssenceContent(container, essence) {
-  const title = essence.essence_name_uk || essence.essence_name;
+  const title = l(essence, 'essence_name');
   const rawImage = essence.image || essence.character_info?.image;
   const hasHeroImage = Boolean(rawImage);
   const imgUrl = hasHeroImage ? normalizeImageUrl(rawImage) : '';
@@ -274,9 +276,9 @@ function renderEssenceContent(container, essence) {
                   ${essence.other_essences.map(item => {
                     const isObj = typeof item === 'object' && item !== null;
                     const charId = isObj ? item.character_id : null;
-                    const charName = isObj ? (item.character_name || item.name || item.slug) : item;
+                    const charName = isObj ? (l(item, 'character_name', { uk: ['character_name_uk', 'character_name', 'name_uk', 'name'], en: ['character_name_en', 'name', 'character_name'] }) || item.slug) : item;
                     const essSlug = isObj ? (item.essence_slug || item.slug) : null;
-                    const essName = isObj ? (item.essence_name || item.name || item.slug) : null;
+                    const essName = isObj ? (l(item, 'essence_name', { uk: ['essence_name_uk', 'essence_name', 'name_uk', 'name'], en: ['essence_name_en', 'essence_name', 'name'] }) || item.slug) : null;
                     const rawImg = isObj ? item.image : null;
 
                     const charHref = charId ? `#/characters/${charId}` : (essSlug ? `#/essences/${essSlug}` : '#');
@@ -428,7 +430,10 @@ function renderTabContent(allVersions, activeTabKey, isModerator) {
 }
 
 function renderVersionCard(item, isModerator) {
-  const displayName = item.display_name_uk || item.display_name || item.char_name_uk || item.char_name || item.ess_name_uk || item.ess_name || t('version_label');
+  const displayName = l(item, 'display_name', {
+    uk: ['display_name_uk', 'display_name', 'char_name_uk', 'char_name', 'ess_name_uk', 'ess_name'],
+    en: ['display_name', 'char_name', 'ess_name']
+  }) || t('version_label');
   const hasImage = Boolean(item.image);
   const imgUrl = hasImage ? normalizeImageUrl(item.image) : '';
   const exists = item.target_exists !== false;
@@ -455,7 +460,7 @@ function renderVersionCard(item, isModerator) {
 
   let earthLineHTML = '';
   if (earthInfo || earthCode) {
-    const earthName = earthInfo ? (earthInfo.name_uk || earthInfo.name) : t('earth_name_format', { code: earthCode });
+    const earthName = earthInfo ? l(earthInfo, 'name', { uk: ['name_uk', 'name'], en: ['name'] }) : t('earth_name_format', { code: earthCode });
     const codeDisplay = (earthInfo && earthInfo.code) ? earthInfo.code : (earthCode && earthCode !== earthName ? earthCode : '');
 
     earthLineHTML = `

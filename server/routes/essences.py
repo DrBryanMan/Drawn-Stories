@@ -130,20 +130,24 @@ async def get_essence(slug: str):
             if target_ess_slug:
                 found_ess = db.get_one("SELECT slug, essence_name, essence_name_uk, image FROM essences WHERE slug = %s", [target_ess_slug])
 
-            char_name_display = o_name_uk or o_name
-            if not char_name_display and found_char:
-                char_name_display = found_char.get("name_uk") or found_char.get("name") or found_char.get("real_name_uk") or found_char.get("real_name")
+            char_name_en = o_name or (found_char.get("name") or found_char.get("real_name") if found_char else None)
+            char_name_uk = o_name_uk or (found_char.get("name_uk") or found_char.get("real_name_uk") if found_char else None)
 
-            ess_name_display = (found_ess.get("essence_name_uk") or found_ess.get("essence_name")) if found_ess else target_ess_slug
+            ess_name_en = (found_ess.get("essence_name") if found_ess else None) or target_ess_slug
+            ess_name_uk = (found_ess.get("essence_name_uk") if found_ess else None) or target_ess_slug
 
             item_dict = {
                 "slug": o_slug,
                 "name": o_name,
                 "name_uk": o_name_uk,
                 "character_id": o_char_id if (found_char or o_char_id) else None,
-                "character_name": char_name_display or (found_ess.get("essence_name_uk") or found_ess.get("essence_name") if found_ess else o_slug),
+                "character_name": char_name_uk or char_name_en or (found_ess.get("essence_name_uk") or found_ess.get("essence_name") if found_ess else o_slug),
+                "character_name_en": char_name_en,
+                "character_name_uk": char_name_uk,
                 "essence_slug": target_ess_slug,
-                "essence_name": ess_name_display,
+                "essence_name": ess_name_uk or ess_name_en,
+                "essence_name_en": ess_name_en,
+                "essence_name_uk": ess_name_uk,
                 "image": o_image or (found_char.get("image") if found_char else None) or (found_ess.get("image") if found_ess else None),
                 "exists": bool(found_char or found_ess)
             }

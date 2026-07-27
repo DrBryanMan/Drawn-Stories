@@ -71,7 +71,7 @@ def calculate_edit_score(
       • themes — кожна нова тема      → +2 б.
       • synopsis_ua / synopsis:
           - новий синопсис → кількість слів > 2 символи, поділена на 2
-          - змінений синопсис → фіксовано +20 б.
+          - змінений синопсис → залежно від % змін (1-20%: +2 б., 21-30%: +5 б., 31-60%: +10 б., 61-100%: +20 б.)
     """
     total = 0
     parts: list[str] = []
@@ -143,9 +143,23 @@ def calculate_edit_score(
             continue
 
         if old_val:
-            # Редагування існуючого синопсису — фіксовано
-            pts = 20
-            parts.append(f"відредаговано синопсис (+{pts} б.)")
+            # Редагування існуючого синопсису — перевіряємо відсоток змін
+            import difflib
+            matcher = difflib.SequenceMatcher(None, str(old_val), str(new_val))
+            similarity = matcher.ratio()  # 1.0 = однакові, 0.0 = повністю різні
+            diff_ratio = 1.0 - similarity  # Частка зміненого тексту (0.0 .. 1.0)
+            diff_percent = int(diff_ratio * 100)
+
+            if diff_ratio > 0.60:
+                pts = 20
+            elif diff_ratio > 0.30:
+                pts = 10
+            elif diff_ratio > 0.20:
+                pts = 5
+            else:
+                pts = 2
+
+            parts.append(f"відредаговано синопсис ({diff_percent}% змін, +{pts} б.)")
         else:
             # Новий синопсис — підраховуємо слова
             words = _count_meaningful_words(str(new_val))

@@ -724,8 +724,8 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
         const orangeIndicatorHTML = hasPendingEdits ? `<span class="badge-pending-dot"></span>` : '';
 
         const editButtonHTML = currentUser ? `
-            <button class="btn-history-trigger" id="volume-edit-btn" title="${isModerator ? 'Редагувати' : t('suggest_edit')}">
-                <i class="bi bi-pencil-square"></i>
+            <button class="personnel-detail-action-btn hero-edit-action-btn" id="volume-edit-btn" title="${isModerator ? 'Редагувати' : t('suggest_edit')}">
+                ${ICON.edit}
             </button>
         ` : '';
 
@@ -739,7 +739,6 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
         const editorsHistoryBlockHTML = `
             <div class="volume-editors-history-block">
                 ${editorsListHTML}
-                ${editButtonHTML}
                 ${historyButtonHTML}
             </div>
         `;
@@ -817,6 +816,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                                     </span>
                                     <span class="volume-original-title">${subTitle}</span>
                                 </div>
+                                ${editorsHistoryBlockHTML}
                             </div>
                             <div class="volume-hero-badges">
                                 ${magazine ? `
@@ -904,6 +904,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                                 `;
                             })()}
                         </div>
+                        ${editButtonHTML}
                     </div>
                     <div class="volume-hero-tabs-band">
                         <div class="container" style="display: flex; justify-content: center;">

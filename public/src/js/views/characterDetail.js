@@ -1,7 +1,7 @@
 import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { currentUser } from '../shell.js';
-import { t } from '../helpers/i18n.js';
+import { t, l, getCurrentLanguage } from '../helpers/i18n.js';
 import { parseAliases } from '../helpers/lang.js';
 import { translateOrigin } from '../helpers/character.js';
 import { openEditCharacterModal } from '../components/modals/EditCharacterModal.js';
@@ -61,7 +61,7 @@ function factItemHTML(iconSvg, label, valueHTML) {
   `;
 }
 
-
+const NAME_RULES = { uk: ['real_name_uk', 'name_uk', 'name'], en: ['name'] };
 
 export async function renderCharacterDetail(container, params) {
   const characterId = params.id ? parseInt(params.id, 10) : null;
@@ -78,7 +78,8 @@ export async function renderCharacterDetail(container, params) {
 
   try {
     const char = await API.get(`/characters/${characterId}`);
-    document.title = `${char.real_name_uk || char.name_uk || char.name} — Drawn Stories`;
+    const charTitle = l(char, 'name', NAME_RULES) || char.name;
+    document.title = `${charTitle} — Drawn Stories`;
     renderCharacterContent(container, char, params);
   } catch (err) {
     console.error(err);
@@ -94,9 +95,9 @@ export async function renderCharacterDetail(container, params) {
 }
 
 function renderCharacterContent(container, char, params) {
-  const displayName = char.real_name_uk || char.name_uk || char.name;
-  const rawSubName = char.real_name || char.name;
-  const subName = rawSubName !== displayName ? rawSubName : null;
+  const displayName = l(char, 'name', NAME_RULES) || char.name;
+  const rawSubName = l(char, 'subname', { uk: ['real_name', 'name'], en: ['real_name', 'real_name_uk'] });
+  const subName = rawSubName && rawSubName !== displayName ? rawSubName : null;
 
   // Images gallery
   const images = [];
@@ -111,7 +112,7 @@ function renderCharacterContent(container, char, params) {
 
   // Essence details
   const essSlug = char.essence;
-  const essName = char.essence_info ? (char.essence_info.essence_name_uk || char.essence_info.essence_name || essSlug) : essSlug;
+  const essName = char.essence_info ? (l(char.essence_info, 'essence_name', { uk: ['essence_name_uk', 'essence_name'], en: ['essence_name'] }) || essSlug) : essSlug;
   const essLinkHTML = essSlug ? `<a href="#/essences/${escapeHtmlAttribute(essSlug)}">${escapeHtmlAttribute(essName)}</a>` : '';
   const charEssenceFact = essSlug ? factItemHTML(ICON.sparkles, t('essence'), essLinkHTML) : '';
 
@@ -129,7 +130,8 @@ function renderCharacterContent(container, char, params) {
     const persona = !isNaN(pIdx) && personas[pIdx] ? personas[pIdx] : null;
 
     if (persona) {
-      const pTitle = persona.name_uk || persona.name;
+      const pTitle = l(persona, 'name', { uk: ['name_uk', 'name'], en: ['name'] });
+      const pSubTitle = getCurrentLanguage() === 'uk' && persona.name_uk && persona.name !== persona.name_uk ? persona.name : null;
       const pImg = persona.image ? normalizeImageUrl(persona.image) : activeImage;
 
       // Filter issues and volumes by persona_idx
@@ -156,7 +158,7 @@ function renderCharacterContent(container, char, params) {
                   &larr; ${t('back_to_character', { name: escapeHtmlAttribute(displayName) })}
                 </a>
                 <h1 style="margin-top: 6px;">${escapeHtmlAttribute(pTitle)}</h1>
-                ${persona.name_uk && persona.name !== persona.name_uk ? `<div class="character-detail-subname">${escapeHtmlAttribute(persona.name)}</div>` : ''}
+                ${pSubTitle ? `<div class="character-detail-subname">${escapeHtmlAttribute(pSubTitle)}</div>` : ''}
 
                 <div class="character-detail-badges" style="margin-top: 14px;">
                   ${persona.first_appearance || persona.issue_id ? `
@@ -233,26 +235,30 @@ function renderCharacterContent(container, char, params) {
               <div class="character-personas-section" style="margin-top: 1em;">
                 <h3 class="character-personas-title">${t('other_personas')}</h3>
                 <div class="character-personas-grid">
-                  ${personas.map((p, pIdx) => `
-                    <a href="#/characters/${char.id}/persona/${pIdx}" class="character-persona-card">
-                      <div class="character-persona-cover">
-                        ${p.image 
-                          ? `<img src="${escapeHtmlAttribute(normalizeImageUrl(p.image))}" alt="${escapeHtmlAttribute(p.name)}">`
-                          : `<div class="character-persona-cover-empty">${ICON.user}</div>`
-                        }
-                      </div>
-                      <div class="character-persona-info">
-                        <span class="character-persona-name">${escapeHtmlAttribute(p.name_uk || p.name)}</span>
-                        ${p.name_uk && p.name !== p.name_uk ? `<span class="character-persona-subname">${escapeHtmlAttribute(p.name)}</span>` : ''}
-                        ${p.first_appearance || p.issue_id ? `
-                          <div class="character-persona-first-app">
-                            <span style="color: #6486d6ff;">${t('first_appearance')}:</span><br>
-                            <strong>${escapeHtmlAttribute(p.first_appearance || `#${p.issue_id}`)}</strong>
+                    ${personas.map((p, pIdx) => {
+                      const pName = l(p, 'name', { uk: ['name_uk', 'name'], en: ['name'] });
+                      const pSubName = getCurrentLanguage() === 'uk' && p.name_uk && p.name !== p.name_uk ? p.name : null;
+                      return `
+                        <a href="#/characters/${char.id}/persona/${pIdx}" class="character-persona-card">
+                          <div class="character-persona-cover">
+                            ${p.image 
+                              ? `<img src="${escapeHtmlAttribute(normalizeImageUrl(p.image))}" alt="${escapeHtmlAttribute(p.name)}">`
+                              : `<div class="character-persona-cover-empty">${ICON.user}</div>`
+                            }
                           </div>
-                        ` : ''}
-                      </div>
-                    </a>
-                  `).join('')}
+                          <div class="character-persona-info">
+                            <span class="character-persona-name">${escapeHtmlAttribute(pName)}</span>
+                            ${pSubName ? `<span class="character-persona-subname">${escapeHtmlAttribute(pSubName)}</span>` : ''}
+                            ${p.first_appearance || p.issue_id ? `
+                              <div class="character-persona-first-app">
+                                <span style="color: #6486d6ff;">${t('first_appearance')}:</span><br>
+                                <strong>${escapeHtmlAttribute(p.first_appearance || `#${p.issue_id}`)}</strong>
+                              </div>
+                            ` : ''}
+                          </div>
+                        </a>
+                      `;
+                    }).join('')}
                 </div>
               </div>
             ` : ''}
