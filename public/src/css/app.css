@@ -20,6 +20,7 @@
 @import url('components/scrape-progress-modal.css');
 @import url('components/entity-releases.css');
 @import url('components/essence-versions.css');
+@import url('components/edit-diff.css');
 
 /* Сторінки */
 @import url('views/volumeCharacters.css');

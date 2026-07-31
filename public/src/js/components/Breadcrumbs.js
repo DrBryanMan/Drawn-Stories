@@ -1,3 +1,5 @@
+import { icon } from '../helpers/icons.js';
+
 /**
  * Generates HTML string for Breadcrumbs navigation.
  * @param {Array<{label: string, href?: string}>} items - List of breadcrumb links/steps (excluding Home, which is prepended automatically)
@@ -5,7 +7,7 @@
  * @returns {string} HTML string
  */
 export function createBreadcrumbs(items = [], className = 'breadcrumbs') {
-  const chevron = `<span class="breadcrumb-separator"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span>`;
+  const chevron = `<span class="breadcrumb-separator">${icon('chevron', 16, { strokeWidth: 2.2 })}</span>`;
   
   const allItems = [
     { label: 'Drawn Stories', href: '#/' },

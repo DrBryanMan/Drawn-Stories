@@ -2,6 +2,7 @@ import { API } from '../helpers/api.js';
 import { LANG_MAP } from '../helpers/lang.js';
 import { normalizeImageUrl } from '../helpers/image.js';
 import { CharacterPicker } from './CharacterPicker.js';
+import { icon } from '../helpers/icons.js';
 
 // Local helper functions for rendering themes (identical to VolumeEditor / editorUtils)
 function buildThemeChipsHTML(selectedThemes) {
@@ -131,34 +132,18 @@ window._emFilterThemesGlobal = (q) => {
 };
 
 
-const ICON = {
-    volume: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></svg>',
-    issue: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path><path d="M8 7h8"></path><path d="M8 11h8"></path></svg>',
-    collection: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>',
-    readingOrder: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>',
-    event: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>',
-    publisher: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V4c0-1.1.9-2 2-2h12a2 2 0 0 1 2 2v18"></path><path d="M10 22V15a2 2 0 1 1 4 0v7"></path><path d="M4 18h16"></path></svg>',
-    mangaChapter: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>',
-    character: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>',
-    essence: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3z"/></svg>',
-    plus: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
-    back: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>',
-    save: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>',
-    check: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>',
-    alert: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>',
-    trash: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>'
-};
+
 
 const CONTENT_TYPES = [
-  { id: 'volume',        icon: ICON.volume,       label: 'Том (комікс)'      },
-  { id: 'issue',         icon: ICON.issue,        label: 'Випуск'            },
-  { id: 'collection',    icon: ICON.collection,   label: 'Збірник'           },
-  { id: 'character',     icon: ICON.character,    label: 'Персонаж'          },
-  { id: 'essence',       icon: ICON.essence,      label: 'Сутність'          },
-  { id: 'reading-order', icon: ICON.readingOrder, label: 'Порядок читання'   },
-  { id: 'event',         icon: ICON.event,        label: 'Подія'             },
-  { id: 'publisher',     icon: ICON.publisher,    label: 'Видавництво'       },
-  { id: 'manga-chapter', icon: ICON.mangaChapter, label: 'Розділ манґи'      },
+  { id: 'volume',        icon: icon('volume', 24),       label: 'Том (комікс)'      },
+  { id: 'issue',         icon: icon('issue', 24),        label: 'Випуск'            },
+  { id: 'collection',    icon: icon('collection', 24),   label: 'Збірник'           },
+  { id: 'character',     icon: icon('character', 24),    label: 'Персонаж'          },
+  { id: 'essence',       icon: icon('essence', 24),      label: 'Сутність'          },
+  { id: 'reading-order', icon: icon('readingOrder', 24), label: 'Порядок читання'   },
+  { id: 'event',         icon: icon('event', 24),        label: 'Подія'             },
+  { id: 'publisher',     icon: icon('publisher', 24),    label: 'Видавництво'       },
+  { id: 'manga-chapter', icon: icon('mangaChapter', 24), label: 'Розділ манґи'      },
 ];
 
 let _modal = null;
@@ -226,7 +211,7 @@ function ensureModal() {
   el.innerHTML = `
     <div class="ds-modal ds-modal--large" id="global-add-modal">
       <div class="ds-modal-header">
-        <div class="ds-modal-title" id="gam-title">${ICON.plus} Додати контент</div>
+        <div class="ds-modal-title" id="gam-title">${icon('plus', 18)} Додати контент</div>
         <button class="ds-modal-close" id="gam-close">&times;</button>
       </div>
 
@@ -237,8 +222,8 @@ function ensureModal() {
       </div>
 
       <div class="ds-modal-footer" id="gam-actions" style="display: none;">
-        <button id="gam-back" class="btn-admin btn-admin--secondary">${ICON.back} Назад</button>
-        <button id="gam-submit" class="btn-admin btn-admin--primary">${ICON.save} Зберегти</button>
+        <button id="gam-back" class="btn-admin btn-admin--secondary">${icon('arrowLeft', 18)} Назад</button>
+        <button id="gam-submit" class="btn-admin btn-admin--primary">${icon('save', 18)} Зберегти</button>
       </div>
     </div>
   `;
@@ -285,7 +270,7 @@ function renderTypeGrid() {
 
 function showTypeSelection() {
   _currentType = null;
-  document.getElementById('gam-title').innerHTML = `${ICON.plus} Додати контент`;
+  document.getElementById('gam-title').innerHTML = `${icon('plus', 18)} Додати контент`;
   document.getElementById('gam-type-grid').style.display = 'grid';
   document.getElementById('gam-form-area').style.display = 'none';
   document.getElementById('gam-actions').style.display = 'none';
@@ -295,7 +280,7 @@ function showTypeSelection() {
   const submitBtn = document.getElementById('gam-submit');
   if (submitBtn) {
     submitBtn.disabled = false;
-    submitBtn.innerHTML = `${ICON.save} Зберегти`;
+    submitBtn.innerHTML = `${icon('save', 18)} Зберегти`;
   }
 }
 
@@ -353,10 +338,10 @@ function imgField(name = 'image', label = 'Обкладинка') {
             <input type="url" name="${name}" placeholder="URL зображення (ComicVine, Fandom...)" class="admin-input gam-img-url-input">
             <div style="display: flex; align-items: center; gap: 8px;">
                 <label class="btn-admin btn-admin--secondary" style="margin: 0; cursor: pointer; flex: 1; text-align: center;">
-                    ${ICON.plus} Завантажити локально
+                    ${icon('plus', 18)} Завантажити локально
                     <input type="file" name="${name}_file" class="gam-img-file-input" style="display: none;" accept="image/webp">
                 </label>
-                <button type="button" class="btn-admin btn-admin--danger gam-img-clear" style="display: none; padding: 8px 12px; align-items: center; justify-content: center; height: 38px;">${ICON.trash}</button>
+                <button type="button" class="btn-admin btn-admin--danger gam-img-clear" style="display: none; padding: 8px 12px; align-items: center; justify-content: center; height: 38px;">${icon('trash', 18)}</button>
             </div>
              <div style="font-size: 0.75rem; color: #db5a5a; margin-top: 2px;">Дозволено лише формат <strong>.webp</strong></div>
             <div class="gam-img-filename" style="font-size: 0.75rem; color: var(--text-muted); display: none; word-break: break-all;"></div>
@@ -521,7 +506,7 @@ const FORMS = {
             <select name="work_type" class="admin-input">
                 <option value="comics">Комікси</option>
                 <option value="manga">Манґа</option>
-                <option value="mixed">Змішаний (Комікси, Манґа)</option>
+                <option value="manga, comics">Змішаний (Комікси, Манґа)</option>
             </select>
         `)}
         ${fld('Статус', `
@@ -711,7 +696,7 @@ async function handleSubmit() {
     status.style.gap = '8px';
     status.style.background = 'rgba(16, 185, 129, 0.1)';
     status.style.color = '#10b981';
-    status.innerHTML = `${ICON.check} Збережено успішно`;
+    status.innerHTML = `${icon('check', 18)} Збережено успішно`;
 
     setTimeout(() => {
       let path = null;
@@ -751,7 +736,7 @@ async function handleSubmit() {
         msg = 'Помилка: цей тип контенту ще не підтримується сервером';
     }
     
-    status.innerHTML = `${ICON.alert} ${msg}`;
+    status.innerHTML = `${icon('alert', 18)} ${msg}`;
     btn.disabled = false;
     btn.innerHTML = originalBtnText;
   }

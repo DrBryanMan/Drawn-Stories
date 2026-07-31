@@ -82,7 +82,7 @@ async def get_collections(username: Optional[str] = None, content_type: str = "c
             JOIN user_issues_collection uc2 ON uc2.issue_id = i2.id
             WHERE uc2.user_id = %s
         )
-        ORDER BY uc.created_at DESC, CAST(i.issue_number AS REAL) DESC, i.issue_number DESC
+        ORDER BY uc.created_at DESC, CASE WHEN i.issue_number ~ '^[0-9]' THEN CAST(substring(i.issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END DESC NULLS LAST, i.issue_number DESC
         """
         rows = db.get_all(query, [target_user_id, target_user_id])
     else:
@@ -561,7 +561,7 @@ async def get_collection_detail(collection_id: int, request: Request):
             SELECT id, name, issue_number, image
             FROM collections
             WHERE volume_id = %s
-            ORDER BY CAST(issue_number AS FLOAT) ASC, issue_number ASC
+            ORDER BY CASE WHEN issue_number ~ '^[0-9]' THEN CAST(substring(issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, issue_number ASC
             """,
             [collection['volume_id']]
         )
@@ -647,7 +647,7 @@ async def get_collection_candidates(
         FROM issues i
         LEFT JOIN volumes v ON i.volume_id = v.id
         {where_issues}
-        ORDER BY i.volume_id DESC, CAST(i.issue_number AS FLOAT) ASC, i.issue_number ASC
+        ORDER BY i.volume_id DESC, CASE WHEN i.issue_number ~ '^[0-9]' THEN CAST(substring(i.issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, i.issue_number ASC
         LIMIT %s
         """,
         params_issues + [limit]
@@ -716,7 +716,7 @@ async def get_collection_candidates(
             FROM manga_chapters mc
             LEFT JOIN volumes v ON mc.volume_id = v.id
             {where_manga}
-            ORDER BY mc.volume_id DESC, CAST(mc.chapter_number AS FLOAT) ASC, mc.chapter_number ASC
+            ORDER BY mc.volume_id DESC, CASE WHEN mc.chapter_number ~ '^[0-9]' THEN CAST(substring(mc.chapter_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, mc.chapter_number ASC
             LIMIT %s
             """,
             params_manga + [limit]

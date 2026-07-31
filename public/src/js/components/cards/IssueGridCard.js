@@ -1,12 +1,6 @@
 import { normalizeImageUrl, escapeHtmlAttribute } from '../../helpers/image.js';
 import { formatDate } from '../../helpers/lang.js';
-
-const ICON = {
-    layers: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>',
-    plus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
-    trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
-    grip: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>'
-};
+import { icon } from '../../helpers/icons.js';
 
 /**
  * Creates a grid card for an issue or collection.
@@ -42,7 +36,7 @@ export function renderIssueGridCard(item, options = {}) {
         : '';
     
     const dragHandle = options.draggable 
-        ? `<div class="issue-grid-drag-handle" draggable="true">${ICON.grip}</div>` 
+        ? `<div class="issue-grid-drag-handle" draggable="true">${icon('list', 12)}</div>` 
         : '';
 
     return `
@@ -62,7 +56,7 @@ export function renderIssueGridCard(item, options = {}) {
                 <div class="issue-grid-actions">
                     ${isCollection ? `
                         <button class="issue-grid-toggle-btn ${item.is_owned ? 'is-owned' : ''}" data-id="${item.id}" title="${item.is_owned ? 'Видалити з колекції' : 'Додати в колекцію'}">
-                             ${item.is_owned ? ICON.trash : ICON.plus}
+                             ${item.is_owned ? icon('trash', 14) : icon('plus', 14)}
                         </button>
                     ` : `
                         <button class="issue-grid-membership-btn ${item.collection_count === 0 ? 'is-disabled' : ''}" 
@@ -70,7 +64,7 @@ export function renderIssueGridCard(item, options = {}) {
                                 data-item-type="${isMangaChapter ? 'manga_chapter' : 'issue'}" 
                                 title="${item.collection_count > 0 ? 'У збірниках' : 'Не у збірниках'}"
                                 ${item.collection_count === 0 ? 'style="opacity: 0.4; cursor: default;"' : ''}>
-                            ${ICON.layers}
+                            ${icon('layers', 14)}
                             <span class="membership-count">${item.collection_count || 0}</span>
                         </button>
                     `}

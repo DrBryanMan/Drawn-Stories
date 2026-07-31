@@ -3,24 +3,18 @@
  * Підтримує всі типи: volumes, collections, issues, characters, personnel, publishers.
  */
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
+import { icon } from '../helpers/icons.js';
 
-const BADGE_ICON = '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+const BADGE_ICON = icon('warning', 9, { strokeWidth: 2.5 });
 
 const PLACEHOLDER_IMG = `
   <div class="wanted-card-poster-placeholder">
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-      <rect x="3" y="3" width="18" height="18" rx="2"/>
-      <circle cx="8.5" cy="8.5" r="1.5"/>
-      <path d="m21 15-5-5L5 21"/>
-    </svg>
+    ${icon('imagePlaceholder', 28, { strokeWidth: 1.5 })}
   </div>`;
 
 const PERSON_PLACEHOLDER = `
   <div class="wanted-card-poster-placeholder">
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-      <circle cx="12" cy="7" r="4"/>
-    </svg>
+    ${icon('character', 28, { strokeWidth: 1.5 })}
   </div>`;
 
 /**

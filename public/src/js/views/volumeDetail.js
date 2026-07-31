@@ -5,12 +5,14 @@ import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { langDisplay, langName, formatDate } from '../helpers/lang.js';
 import { createPaginator } from '../components/Pagination.js';
 import { renderIssueGridCard } from '../components/cards/IssueGridCard.js';
-import { VolumeEditor } from '/admin/js/VolumeEditor.js';
+import { VolumeEditor } from '../components/modals/EditVolumeModal.js';
 import { VolumePicker } from '/admin/js/VolumePicker.js';
 import { openScrapeProgressModal } from '../components/ScrapeProgressModal.js';
 import { translateStaffRole } from '../helpers/staff.js';
 import { mountFilterBar } from '../components/FilterBar.js';
-import { t } from '../helpers/i18n.js';
+import { t, getCurrentLanguage } from '../helpers/i18n.js';
+import { icon } from '../helpers/icons.js';
+import { renderEditorsHistoryBlock, initEditorsHistoryBlock } from '../components/editorsHistoryBlock.js';
 
 let currentItems = [];
 let currentView = localStorage.getItem('ds-volume-view') || 'grid';
@@ -19,6 +21,9 @@ let currentView = localStorage.getItem('ds-volume-view') || 'grid';
 
 
 function themeName(theme) {
+    if (getCurrentLanguage() === 'en') {
+        return theme.name || theme.ua_name || 'Theme';
+    }
     return theme.ua_name || theme.name || 'Тема';
 }
 
@@ -61,11 +66,14 @@ function formatYearPeriod(volume) {
     return String(start);
 }
 
-function formatIssueRanges(nums) {
-    if (!nums || !nums.length) return '';
-    const sorted = [...nums].map(n => parseFloat(n)).filter(n => !isNaN(n)).sort((a, b) => a - b);
-    if (!sorted.length) return '';
+function formatIssuesRange(issues) {
+    if (!issues || !issues.length) return '';
+    const nums = issues
+        .map(i => parseInt(i.issue_number, 10))
+        .filter(n => !isNaN(n));
+    if (!nums.length) return '';
     
+    const sorted = Array.from(new Set(nums)).sort((a, b) => a - b);
     const parts = [];
     let start = sorted[0];
     let prev = sorted[0];
@@ -84,48 +92,20 @@ function formatIssueRanges(nums) {
     return parts.join(', ');
 }
 
-// ── Lucide SVG icons ────────────────────────────────
-const ICON = {
-    edit:           '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
-    chevronRight:   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
-    arrowLeft:      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>',
-    externalLink:   '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
-    building:       '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>',
-    calendar:       '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
-    hash:           '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>',
-    bookOpen:       '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
-    search:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
-    tags:           '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H2v7l6.29 6.29c.94.94 2.48.94 3.42 0l3.58-3.58c.94-.94.94-2.48 0-3.42L9 5Z"/><path d="M6 9.01V9"/><path d="m15 5 6.3 6.3a2.4 2.4 0 0 1 0 3.4L17 19"/></svg>',
-    info:           '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>',
-    languages:      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>',
-    grid:           '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>',
-    list:           '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
-    layers:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>',
-    book:           '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>',
-    link:           '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
-    newspaper:      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18h-5"/><path d="M18 14h-8"/><path d="M4 22h16a2 2 0 0 0 2-2V4H8v16a2 2 0 0 1-4 0V6H2v14a2 2 0 0 0 2 2Z"/><path d="M10 6h8v4h-8V6Z"/></svg>',
-    heart:          '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>',
-    bookmark:       '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>',
-    star:           '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
-    trash:          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
-    plus:           '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
-    refreshCw:      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M16 3h5v5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 21H3v-5"/></svg>',
-    user:           '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
-    chevronRight:   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>',
-};
-
-// ── Readlist options config ──────────────────────────
-const READLIST_OPTIONS = [
-    { value: '',          label: 'Додати в список', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>', color: 'var(--status-default)', bg: 'var(--bg-card)', borderColor: 'var(--border-s)' },
-    { value: 'Planned',   label: 'Заплановано',     icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', color: 'var(--status-planned)', bg: 'color-mix(in srgb, var(--status-planned) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-planned) 20%, var(--border-s))' },
-    { value: 'Reading',   label: 'Читаю',           icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>', color: 'var(--status-reading)', bg: 'color-mix(in srgb, var(--status-reading) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-reading) 20%, var(--border-s))' },
-    { value: 'Completed', label: 'Прочитано',        icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>', color: 'var(--status-completed)', bg: 'color-mix(in srgb, var(--status-completed) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-completed) 20%, var(--border-s))' },
-    { value: 'On Hold',   label: 'Відкладено',       icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="10" y1="15" x2="10" y2="9"/><line x1="14" y1="15" x2="14" y2="9"/></svg>', color: 'var(--status-on-hold)', bg: 'color-mix(in srgb, var(--status-on-hold) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-on-hold) 20%, var(--border-s))' },
-    { value: 'Dropped',   label: 'Закинуто',         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>', color: 'var(--status-dropped)', bg: 'color-mix(in srgb, var(--status-dropped) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-dropped) 20%, var(--border-s))' },
-];
+function getReadlistOptions() {
+    return [
+        { value: '',          label: t('add_to_list'),     icon: icon('plus', 14, { strokeWidth: 2.2 }), color: 'var(--status-default)', bg: 'var(--bg-card)', borderColor: 'var(--border-s)' },
+        { value: 'Planned',   label: t('list_planned'),     icon: icon('planned', 14, { strokeWidth: 2.2 }), color: 'var(--status-planned)', bg: 'color-mix(in srgb, var(--status-planned) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-planned) 20%, var(--border-s))' },
+        { value: 'Reading',   label: t('list_reading'),     icon: icon('reading', 14, { strokeWidth: 2.2 }), color: 'var(--status-reading)', bg: 'color-mix(in srgb, var(--status-reading) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-reading) 20%, var(--border-s))' },
+        { value: 'Completed', label: t('list_completed'),   icon: icon('completed', 14, { strokeWidth: 2.2 }), color: 'var(--status-completed)', bg: 'color-mix(in srgb, var(--status-completed) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-completed) 20%, var(--border-s))' },
+        { value: 'On Hold',   label: t('list_on_hold'),     icon: icon('onHold', 14, { strokeWidth: 2.2 }), color: 'var(--status-on-hold)', bg: 'color-mix(in srgb, var(--status-on-hold) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-on-hold) 20%, var(--border-s))' },
+        { value: 'Dropped',   label: t('list_dropped'),     icon: icon('dropped', 14, { strokeWidth: 2.2 }), color: 'var(--status-dropped)', bg: 'color-mix(in srgb, var(--status-dropped) 8%, var(--bg-card))', borderColor: 'color-mix(in srgb, var(--status-dropped) 20%, var(--border-s))' },
+    ];
+}
 
 function readlistOptionLabel(value) {
-    return READLIST_OPTIONS.find(o => o.value === value) || READLIST_OPTIONS[0];
+    const options = getReadlistOptions();
+    return options.find(o => o.value === value) || options[0];
 }
 
 const THEME_ICON = {
@@ -191,19 +171,19 @@ function heroRelationsHTML({ translationParents, magazineParents, magazine, isMo
     const cards = [
         original ? relationCardHTML(original, {
             title: 'Оригінал',
-            icon: ICON.bookOpen,
+            icon: icon('bookOpen', 14),
             isModerator,
             onRemove: `window.removeTranslation(${original.id}, ${currentVolumeId})`
         }) : '',
         source ? relationCardHTML(source, {
             title: 'Джерело',
-            icon: ICON.link,
+            icon: icon('link', 14),
             isModerator,
             onRemove: `window.removeTranslation(${source.id}, ${currentVolumeId})`
         }) : '',
         ...magazines.map(item => relationCardHTML(item, {
             title: 'Журнал',
-            icon: ICON.newspaper,
+            icon: icon('newspaper', 14),
             isModerator,
             onRemove: `window.removeMagazineChild(${item.id}, ${currentVolumeId})`
         })),
@@ -238,7 +218,7 @@ function translationCardHTML(item, { isModerator, currentVolumeId }) {
             <span class="volume-translation-poster">
                 ${cover
                     ? `<img src="${escapeHtmlAttribute(cover)}" alt="${title}" loading="lazy">`
-                    : ICON.bookOpen}
+                    : icon('bookOpen', 14)}
             </span>
             <span class="volume-translation-body">
                 <span class="volume-translation-title">${lang.code ? `<span class="volume-translation-lang">${escapeHtmlAttribute(lang.code)}</span>` : ''} ${title}</span>
@@ -257,7 +237,7 @@ function translationsSectionHTML(translations, { isModerator, currentVolumeId })
             <div class="section-header">
                 <div class="section-title">
                     <h2>Збірні видання ${translations.length ? `(${translations.length})` : ''}</h2>
-                    ${isModerator ? `<button class="btn-admin btn-admin--secondary" id="volume-add-translation-btn" title="Додати переклад" style="width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center;">${ICON.plus}</button>` : ''}
+                    ${isModerator ? `<button class="btn-admin btn-admin--secondary" id="volume-add-translation-btn" title="Додати переклад" style="width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center;">${icon('plus', 14, { strokeWidth: 2.5 })}</button>` : ''}
                 </div>
             </div>
             <div class="volume-translations-grid">
@@ -276,7 +256,7 @@ function readlistUIHTML(isCollection = false, stats = {}) {
 
         let btnClass = 'btn-add-all-collection';
         let btnText = 'Додати все до колекції';
-        let btnIcon = ICON.plus;
+        let btnIcon = icon('plus', 14);
 
         if (allOwned) {
             btnClass += ' btn-all-owned';
@@ -297,8 +277,9 @@ function readlistUIHTML(isCollection = false, stats = {}) {
         `;
     }
 
-    const defaultOpt = READLIST_OPTIONS[0];
-    const activeOpts = READLIST_OPTIONS.filter(opt => opt.value !== '');
+    const readlistOptions = getReadlistOptions();
+    const defaultOpt = readlistOptions[0];
+    const activeOpts = readlistOptions.filter(opt => opt.value !== '');
     return `
         <div class="volume-readlist-controls">
             <div class="readlist-select-wrap">
@@ -319,13 +300,13 @@ function readlistUIHTML(isCollection = false, stats = {}) {
                         </option>
                     `).join('')}
                     <option value="" class="readlist-remove-option">
-                        <span class="readlist-icon" style="color: #dc2626"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></span>
-                        <span>Видалити</span>
+                        <span class="readlist-icon" style="color: #dc2626">${icon('trash', 14, { strokeWidth: 2.2 })}</span>
+                        <span>${t('remove_from_list')}</span>
                     </option>
                 </select>
             </div>
-            <button class="readlist-btn ${!currentUser ? 'readlist-btn--anon' : ''}" id="readlist-favorite-btn" title="${currentUser ? 'В обране' : 'У закладки'}">
-                ${currentUser ? ICON.heart : ICON.bookmark}
+            <button class="readlist-btn ${!currentUser ? 'readlist-btn--anon' : ''}" id="readlist-favorite-btn" title="${currentUser ? t('add_to_fav') : t('add_to_bookmarks')}">
+                ${currentUser ? icon('heart', 14, { strokeWidth: 2.5 }) : icon('bookmark', 20)}
             </button>
         </div>
     `;
@@ -417,7 +398,7 @@ function renderItems(container, items) {
                                     <td>
                                          ${isCollection ? `
                                              <button class="issue-grid-toggle-btn ${item.is_owned ? 'is-owned' : ''}" data-id="${item.id}" title="${item.is_owned ? 'Видалити з колекції' : 'Додати в колекцію'}" style="position: static; width: 28px; height: 28px;">
-                                                 ${item.is_owned ? ICON.trash : ICON.plus}
+                                                 ${item.is_owned ? icon('trash', 14) : icon('plus', 14)}
                                              </button>
                                          ` : ''}
                                          ${(!isCollection && !isVolume) ? `
@@ -426,7 +407,7 @@ function renderItems(container, items) {
                                                      data-item-type="${item.type || 'issue'}"
                                                      title="${item.collection_count > 0 ? 'У збірниках' : 'Не у збірниках'}"
                                                      ${item.collection_count === 0 ? 'style="opacity: 0.4; cursor: default;"' : ''}>
-                                                 ${ICON.layers}
+                                                 ${icon('layers', 14, { strokeWidth: 2.2 })}
                                                  <span class="membership-count">${item.collection_count || 0}</span>
                                              </button>` : ''}
                                      </td>
@@ -523,8 +504,8 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
         const isMagazine = themes.some(t => t.id === 35);
         const isMangaWithMagazine = isManga && Boolean(magazine);
 
-        const issuesTabLabel = isMagazine ? 'Номери' : (isManga ? 'Розділи' : 'Випуски');
-        const collectionsTabLabel = isMagazine ? 'Серії манґи' : (isManga ? 'Томи' : 'Збірники');
+        const issuesTabLabel = isMagazine ? t('magazine_issues_label') : (isManga ? t('manga_chapters_label') : t('releases'));
+        const collectionsTabLabel = isMagazine ? t('manga_series') : (isManga ? t('volumes') : t('collections'));
         
         const shouldSeparate = isManga || isCollection;
         currentItems = shouldSeparate ? (data.issues || []) : (data.items || data.issues || []);
@@ -569,7 +550,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                     <span class="volume-staff-avatar">
                         ${cover
                             ? `<img src="${escapeHtmlAttribute(cover)}" alt="${name}" loading="lazy">`
-                            : `<div class="volume-staff-avatar-empty">${ICON.user}</div>`}
+                            : `<div class="volume-staff-avatar-empty">${icon('user', 14, { strokeWidth: 2.2 })}</div>`}
                     </span>
                     <span class="volume-staff-content">
                         <span class="volume-staff-name">${name}</span>
@@ -595,7 +576,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                     ${characters.length > 8 ? `
                         <a href="javascript:void(0)" id="btn-show-all-characters" class="section-link">
                             Всі персонажі (${characters.length})
-                            ${ICON.chevronRight}
+                            ${icon('chevronRight', 16, { strokeWidth: 2.2 })}
                         </a>
                     ` : ''}
                 </div>
@@ -628,11 +609,9 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
         const hasUaSynopsis = !!(volume.synopsis_ua || volume.description);
         const activeTab = hasUaSynopsis ? 'ua' : 'en';
 
-        const hasSynopsis = volume.synopsis_ua || volume.synopsis || volume.description;
-        const synopsisHTML = hasSynopsis
-            ? `<div class="volume-synopsis">
+        const synopsisHTML = `<div class="volume-synopsis">
                    <div class="synopsis-header">
-                       <h2 class="synopsis-title">Синопсис</h2>
+                       <h2 class="synopsis-title">${t('synopsis')}</h2>
                        <div class="synopsis-tabs">
                            <button class="synopsis-tab ${activeTab === 'ua' ? 'is-active' : ''}" data-tab="ua">UA</button>
                            <button class="synopsis-tab ${activeTab === 'en' ? 'is-active' : ''}" data-tab="en">EN</button>
@@ -640,50 +619,49 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                    </div>
                    <div class="synopsis-content">
                        <div class="synopsis-pane ${activeTab === 'ua' ? 'is-active' : ''}" id="synopsis-ua">
-                           ${volume.synopsis_ua || 'Немає синопсису українською.'}
+                           ${volume.synopsis_ua || t('no_synopsis_ua')}
                        </div>
                        <div class="synopsis-pane ${activeTab === 'en' ? 'is-active' : ''}" id="synopsis-en">
-                           ${volume.synopsis || 'No description available in English.'}
+                           ${volume.synopsis || t('no_synopsis_en')}
                        </div>
                    </div>
                    ${volume.description ? `
                        <div class="volume-description-extra">
-                           <h2 class="synopsis-title" style="margin-top: 1.5rem;">Опис</h2>
+                           <h2 class="synopsis-title" style="margin-top: 1.5rem;">${t('description')}</h2>
                            <div class="synopsis-pane is-active" style="padding: 0;">
                                ${volume.description}
                            </div>
                        </div>
                    ` : ''}
-               </div>`
-            : '';
+               </div>`;
 
         const hasExternalLinks = volume.cv_id || volume.hikka_slug || volume.mal_id || volume.site_link;
         const externalLinksBlockHTML = hasExternalLinks
             ? `<div class="volume-cover-ext-sources" style="margin-top: 16px; border-top: 1px solid var(--border-s); padding-top: 16px; width: 100%;">
-                   <div style="font-family: var(--font-oswald); font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; text-align: center;">Зовнішні джерела</div>
+                   <div style="font-family: var(--font-oswald); font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; text-align: center;">${t('external_sources')}</div>
                    <div class="source-links">
                        ${volume.cv_id ? `
                            <a href="https://comicvine.gamespot.com/${volume.cv_slug}/4050-${volume.cv_id}/" class="source-link-cv" target="_blank" rel="noreferrer">
                                CV
-                               ${ICON.externalLink}
+                               ${icon('externalLink', 12, { strokeWidth: 2.2 })}
                            </a>
                        ` : ''}
                        ${volume.hikka_slug ? `
                            <a href="https://hikka.io/manga/${volume.hikka_slug}" class="source-link-hikka" target="_blank" rel="noreferrer">
                                Hikka
-                               ${ICON.externalLink}
+                               ${icon('externalLink', 12, { strokeWidth: 2.2 })}
                            </a>
                        ` : ''}
                        ${volume.mal_id ? `
                            <a href="https://myanimelist.net/manga/${volume.mal_id}" class="source-link-mal" target="_blank" rel="noreferrer">
                                MAL
-                               ${ICON.externalLink}
+                               ${icon('externalLink', 12, { strokeWidth: 2.2 })}
                            </a>
                        ` : ''}
                        ${volume.site_link ? `
                            <a href="${escapeHtmlAttribute(volume.site_link)}" class="source-link-site" target="_blank" rel="noreferrer">
                                SITE
-                               ${ICON.externalLink}
+                               ${icon('externalLink', 12, { strokeWidth: 2.2 })}
                            </a>
                        ` : ''}
                    </div>
@@ -720,28 +698,10 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
             `;
         }
 
-        const hasPendingEdits = edits.some(e => e.status === 'pending');
-        const orangeIndicatorHTML = hasPendingEdits ? `<span class="badge-pending-dot"></span>` : '';
-
-        const editButtonHTML = currentUser ? `
-            <button class="personnel-detail-action-btn hero-edit-action-btn" id="volume-edit-btn" title="${isModerator ? 'Редагувати' : t('suggest_edit')}">
-                ${ICON.edit}
-            </button>
-        ` : '';
-
-        const historyButtonHTML = `
-            <button class="btn-history-trigger" id="volume-history-btn" title="Історія змін">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                ${orangeIndicatorHTML}
-            </button>
-        `;
-
-        const editorsHistoryBlockHTML = `
-            <div class="volume-editors-history-block">
-                ${editorsListHTML}
-                ${historyButtonHTML}
-            </div>
-        `;
+        const editorsHistoryBlockHTML = renderEditorsHistoryBlock(edits, currentUser, {
+            editButtonId: 'volume-edit-btn',
+            editTitle: isModerator ? 'Редагувати' : t('suggest_edit')
+        });
 
         main.innerHTML = `
             <div class="volume-detail">
@@ -768,7 +728,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                                 <div class="user-interaction-block">
                                     <div class="interactive-rating-section">
                                         <div class="interactive-rating-title" style="display: flex; justify-content: space-between; align-items: center;">
-                                            <span>Ваша оцінка</span>
+                                            <span>${t('your_rating')}</span>
                                             <span class="user-score-badge" style="font-family: var(--font-mono); font-weight: bold; color: #ffc107;"></span>
                                         </div>
                                         <div class="star-rating-widget" data-entity-type="volume" data-entity-id="${volumeId}">
@@ -783,18 +743,18 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                                                     </div>
                                                 `;
                                             }).join('')}
-                                            <button class="btn-clear-rating" title="Видалити оцінку" style="display: none;">✕</button>
+                                            <button class="btn-clear-rating" title="${t('clear_rating')}" style="display: none;">✕</button>
                                         </div>
                                     </div>
 
                                     ${currentUser ? `
                                         <div class="read-progress-section">
-                                            <div class="progress-title">Прочитано випусків</div>
+                                            <div class="progress-title">${t('issues_read')}</div>
                                             <div class="progress-controls">
                                                 <input type="number" min="0" max="${stats.issues || 0}" class="progress-input" id="read-issues-input" value="${readlistStatus.issues_count !== null ? readlistStatus.issues_count : ''}" placeholder="${readlistStatus.read_issues_count}">
                                                 <span class="progress-slash">/</span>
                                                 <span class="progress-total">${stats.issues || 0}</span>
-                                                <button class="progress-save-btn" id="save-progress-btn">Зберегти</button>
+                                                <button class="progress-save-btn" id="save-progress-btn">${t('save')}</button>
                                             </div>
                                         </div>
                                     ` : ''}
@@ -809,35 +769,34 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                                     <span class="volume-main-title">
                                         <h1>
                                             ${title}
-                                            <button class="btn-synonyms" id="btn-show-synonyms" title="Всі назви та синоніми">
-                                                ${ICON.languages}
+                                            <button class="btn-synonyms" id="btn-show-synonyms" title="${t('all_names_synonyms')}">
+                                                ${icon('language', 13, { strokeWidth: 2.2 })}
                                             </button>
                                         </h1>
                                     </span>
                                     <span class="volume-original-title">${subTitle}</span>
                                 </div>
-                                ${editorsHistoryBlockHTML}
                             </div>
                             <div class="volume-hero-badges">
                                 ${magazine ? `
                                     <a href="#/catalog?magazine_ids=${magazine.id}" class="volume-badge volume-magazine-badge" title="Журнал">
-                                        ${ICON.book}
+                                        ${icon('book', 13, { strokeWidth: 2.2 })}
                                         ${escapeHtmlAttribute(magazine.name)}
                                     </a>
                                 ` : `
                                     <a href="#/catalog?publisher_ids=${volume.publisher}" class="volume-badge volume-publisher-badge" title="Видавництво">
-                                        ${ICON.building}
+                                        ${icon('building', 13, { strokeWidth: 2.2 })}
                                         ${publisherName}
                                     </a>
                                 `}
                                 ${volume.lang ? `
                                     <span class="volume-badge volume-lang-badge" title="Мова видання">
-                                        ${ICON.languages}
+                                        ${icon('language', 13, { strokeWidth: 2.2 })}
                                         ${langName(volume.lang)}
                                     </span>
                                 ` : ''}
                                 <span class="volume-badge volume-year-badge" title="Період видання">
-                                    ${ICON.calendar}
+                                    ${icon('calendar', 13, { strokeWidth: 2.2 })}
                                     ${formatYearPeriod(volume)}
                                 </span>
                             </div>
@@ -848,7 +807,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                         <div class="volume-hero-aside">
                             <div class="volume-ratings">
                                 <div class="rating-item rating-main" title="Середня оцінка користувачів: ${ratingData.average || 0} (${ratingData.count} оцінок)">
-                                    ${ICON.star}
+                                    ${icon('star', 14, { strokeWidth: 2.5 })}
                                     <span class="rating-value">${ratingData.average ? ratingData.average.toFixed(1) : '—'}</span>
                                 </div>
                                 ${volume.hikka_score ? `
@@ -889,7 +848,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                                                         <span class="volume-relation-cover">
                                                             ${cover
                                                                 ? `<img src="${escapeHtmlAttribute(cover)}" alt="${name}" loading="lazy">`
-                                                                : ICON.bookOpen}
+                                                                : icon('bookOpen', 14)}
                                                         </span>
                                                         <span class="volume-relation-content">
                                                             <span class="volume-relation-title">${name}</span>
@@ -904,7 +863,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                                 `;
                             })()}
                         </div>
-                        ${editButtonHTML}
+                        ${editorsHistoryBlockHTML}
                     </div>
                     <div class="volume-hero-tabs-band">
                         <div class="container" style="display: flex; justify-content: center;">
@@ -919,11 +878,11 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                                     ${currentCollections.length > 0 ? `<span class="tab-count">${currentCollections.length}</span>` : ''}
                                 </button>
                                 <button class="volume-page-tab-btn" data-page-tab="characters" ${characters.length === 0 ? 'disabled' : ''}>
-                                    <span>Персонажі</span>
+                                    <span>${t('characters')}</span>
                                     ${characters.length > 0 ? `<span class="tab-count">${characters.length}</span>` : ''}
                                 </button>
                                 <button class="volume-page-tab-btn" data-page-tab="editions" ${(!isModerator && translations.length === 0) ? 'disabled' : ''}>
-                                    <span>Інші видання</span>
+                                    <span>${t('other_editions')}</span>
                                     ${translations.length > 0 ? `<span class="tab-count">${translations.length}</span>` : ''}
                                 </button>
                             </div>
@@ -943,9 +902,15 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                             };
 
                             const groupLabels = {
-                                type: 'Тип',
-                                genre: 'Жанри',
-                                theme: 'Теми'
+                                type: t('category_type'),
+                                genre: t('genres'),
+                                theme: t('themes')
+                            };
+
+                            const icons = {
+                                type: icon('type', 12, { strokeWidth: 2.2 }),
+                                genre: icon('tag', 12, { strokeWidth: 2.2 }),
+                                theme: icon('theme', 12, { strokeWidth: 2.2 })
                             };
 
                             return `
@@ -954,7 +919,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                                         if (!items.length) return '';
                                         return `
                                             <div class="volume-theme-group">
-                                                <span style="color: var(--text-muted); line-height: 0;">${THEME_ICON[type] || ''}</span>
+                                                <span style="color: var(--text-muted); line-height: 0;">${icons[type] || ''}</span>
                                                 <span class="volume-theme-group-label">${groupLabels[type]}</span>
                                                 <div class="volume-theme-chips-wrap">
                                                     ${items.map(theme => themeChipHTML(theme)).join('')}
@@ -992,8 +957,8 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                                         </select>
                                     </div>
                                     <div class="view-toggle-mini" id="issues-view-switcher">
-                                        <button class="view-toggle-btn ${currentView === 'grid' ? 'is-active' : ''}" data-view="grid" title="Плитка">${ICON.grid}</button>
-                                        <button class="view-toggle-btn ${currentView === 'table' ? 'is-active' : ''}" data-view="table" title="Список">${ICON.list}</button>
+                                        <button class="view-toggle-btn ${currentView === 'grid' ? 'is-active' : ''}" data-view="grid" title="Плитка">${icon('all', 18)}</button>
+                                        <button class="view-toggle-btn ${currentView === 'table' ? 'is-active' : ''}" data-view="table" title="Список">${icon('list', 18)}</button>
                                     </div>
                                 </div>
                             </div>
@@ -1069,31 +1034,31 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                     ` : ''}
                     ${!isMagazine && !volume.mal_id && data.convertable_count > 0 ? `
                         <button class="btn-admin btn-admin--warning" id="volume-convert-btn" title="Конвертувати всі випуски у збірники">
-                            ${ICON.layers}
+                            ${icon('layers', 14, { strokeWidth: 2.2 })}
                             У збірники (${data.convertable_count})
                         </button>
                     ` : ''}
                     ${isMagazine && isManga ? `
                         <button class="btn-admin btn-admin--warning" id="volume-convert-to-magazine-btn" title="Конвертувати том у повноцінний журнал манґи">
-                            ${ICON.newspaper}
+                            ${icon('magazine', 14, { strokeWidth: 2.2 })}
                             У журнал манґи
                             </button>
                     ` : ''}
                     ${isCollection && data.collections.length > 0 ? `
                         <button class="btn-admin btn-admin--danger" id="volume-revert-btn" title="Конвертувати всі збірники у випуски">
-                            ${ICON.hash}
+                            ${icon('hash', 13, { strokeWidth: 2.2 })}
                             У випуски (${data.collections.length})
                         </button>
                     ` : ''}
                     ${!isManga ? `
                         <button class="btn-admin btn-admin--warning" id="volume-scrape-appearances-btn" title="Скрапити стаф та появи для всіх випусків тому">
-                            ${ICON.refreshCw}
+                            ${icon('refreshCw', 14, { strokeWidth: 2.2 })}
                             <span>Скрапити стаф та появи</span>
                         </button>
                     ` : ''}
                     ${volume.mal_id ? `
                         <button class="btn-admin btn-admin--warning" id="volume-scrape-manga-characters-btn" title="Парсити персонажів манґи з MyAnimeList (Jikan)">
-                            ${ICON.refreshCw}
+                            ${icon('refreshCw', 14, { strokeWidth: 2.2 })}
                             <span>Парсити персонажів</span>
                         </button>
                     ` : ''}
@@ -1341,12 +1306,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
             });
         }
 
-        const historyBtn = main.querySelector('#volume-history-btn');
-        if (historyBtn) {
-            historyBtn.addEventListener('click', () => {
-                openEditHistoryModal(edits);
-            });
-        }
+        initEditorsHistoryBlock(main, edits);
 
         const editBtn = main.querySelector('#volume-edit-btn');
         if (editBtn) {
@@ -1971,172 +1931,7 @@ window.removeMagazineChild = async (magazineId, childId) => {
     }
 };
 
-function openEditHistoryModal(edits) {
-    if (document.querySelector('.ds-modal-overlay')) return;
-    const modal = document.createElement('div');
-    modal.className = 'ds-modal-overlay';
-    modal.id = 'edit-history-modal-overlay';
 
-    const escapeHtml = (str) => {
-        if (!str) return '';
-        return str
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-    };
-
-    const formatEditDate = (dateStr) => {
-        if (!dateStr) return '—';
-        const date = new Date(dateStr);
-        const months = ['січ.', 'лют.', 'берез.', 'квіт.', 'трав.', 'черв.', 'лип.', 'серп.', 'верес.', 'жовт.', 'лист.', 'груд.'];
-        const day = date.getDate();
-        const month = months[date.getMonth()];
-        const year = date.getFullYear();
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        return `${day} ${month} ${year} ${hours}:${minutes}`;
-    };
-
-    const getStatusBadge = (status) => {
-        if (status === 'approved') {
-            return `
-                <span class="edit-history-status-badge edit-history-status-badge--approved">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    Прийнято
-                </span>
-            `;
-        }
-        if (status === 'pending') {
-            return `
-                <span class="edit-history-status-badge edit-history-status-badge--pending">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                    Очікує
-                </span>
-            `;
-        }
-        if (status === 'rejected') {
-            return `
-                <span class="edit-history-status-badge edit-history-status-badge--rejected">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    Відхилено
-                </span>
-            `;
-        }
-        if (status === 'closed') {
-            return `
-                <span class="edit-history-status-badge edit-history-status-badge--closed">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
-                    Закрито
-                </span>
-            `;
-        }
-        return status;
-    };
-
-    const getFieldBadge = (fieldKey) => {
-        const fieldMapping = {
-            'name_uk': 'Назва UA',
-            'name_en': 'Назва EN',
-            'name': 'Оригінальна назва',
-            'name_native': 'Рідна назва',
-            'start_year': 'Рік початку',
-            'synopsis_ua': 'Опис UA',
-            'synopsis': 'Опис EN',
-            'description': 'Опис тома',
-            'lang': 'Мова',
-            'site_link': 'Джерело',
-            'image': 'Обкладинка',
-            'cover_img': 'Банер',
-            'theme_ids': 'Теми',
-            'staff': 'Творці',
-            'characters': 'Персонажі'
-        };
-        return fieldMapping[fieldKey] || fieldKey;
-    };
-
-    const renderEditsList = () => {
-        if (edits.length === 0) {
-            return `
-                <div class="ds-empty-state">
-                    <h3>Нічого не знайдено</h3>
-                    <p>До цієї сторінки ще не було запропоновано жодної правки.</p>
-                </div>
-            `;
-        }
-        return `
-            <div class="edit-history-list">
-                ${edits.map(e => {
-                    const avatarUrl = `/api/auth/avatar/${e.proposer_username}`;
-                    const avatarHtml = getAvatarHtml(avatarUrl, 'contributor-avatar', 44);
-                    const after = e.patch_data?.after || {};
-                    const changedFields = Object.keys(after).filter(k => k !== 'image_file' && k !== 'cover_img_file');
-                    const badgesHtml = changedFields.map(f => `<span class="edit-history-field-badge">${getFieldBadge(f)}</span>`).join('');
-                    
-                    return `
-                        <a href="#/edits/${e.id}" class="edit-history-item">
-                            <div class="edit-history-header">
-                                <div class="edit-history-user">
-                                    <div class="edit-history-avatar-wrap">
-                                        ${avatarHtml}
-                                    </div>
-                                    <div class="edit-history-meta">
-                                        <span class="edit-history-username">${escapeHtml(e.proposer_username)}</span>
-                                        <span class="edit-history-date">${formatEditDate(e.created_at)}</span>
-                                    </div>
-                                </div>
-                                <div class="edit-history-status">
-                                    ${getStatusBadge(e.status)}
-                                </div>
-                            </div>
-                            <div class="edit-history-body">
-                                <div class="edit-history-badges-wrap">
-                                    ${badgesHtml || '<span class="edit-history-field-badge">Без змін</span>'}
-                                </div>
-                                ${e.comment ? `<div class="edit-history-comment">${escapeHtml(e.comment)}</div>` : ''}
-                            </div>
-                        </a>
-                    `;
-                }).join('')}
-            </div>
-        `;
-    };
-
-    modal.innerHTML = `
-        <div class="ds-modal" id="edit-history-modal">
-            <div class="ds-modal-header">
-                <div class="ds-modal-title">
-                    ${ICON.clock || ICON.refreshCw}
-                    Історія змін
-                </div>
-                <button class="ds-modal-close" id="modal-close">&times;</button>
-            </div>
-            <div class="ds-modal-body">
-                ${renderEditsList()}
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-    document.body.style.overflow = 'hidden';
-
-    const close = () => {
-        document.removeEventListener('keydown', handleEsc);
-        modal.remove();
-        document.body.style.overflow = '';
-    };
-
-    const handleEsc = (e) => {
-        if (e.key === 'Escape') close();
-    };
-    document.addEventListener('keydown', handleEsc);
-
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal || e.target.closest('.edit-history-item')) close();
-    });
-    modal.querySelector('#modal-close').addEventListener('click', close);
-}
 
 function openSynonymsModal(volume) {
     if (document.querySelector('.ds-modal-overlay')) return;
@@ -2156,7 +1951,7 @@ function openSynonymsModal(volume) {
         <div class="ds-modal ds-modal--small" id="synonyms-modal">
             <div class="ds-modal-header">
                 <div class="ds-modal-title">
-                    ${ICON.languages}
+                    ${icon('language', 13, { strokeWidth: 2.2 })}
                     Всі назви та синоніми
                 </div>
                 <button class="ds-modal-close" id="modal-close">&times;</button>
@@ -2214,7 +2009,7 @@ async function openIssueMembershipModal(issueId, itemType = 'issue') {
         <div class="ds-modal" id="issue-membership-modal">
             <div class="ds-modal-header">
                 <div class="ds-modal-title">
-                    ${ICON.layers}
+                    ${icon('layers', 14, { strokeWidth: 2.2 })}
                     Входить у збірники
                 </div>
                 <button class="ds-modal-close" id="modal-close">&times;</button>
@@ -2337,7 +2132,7 @@ function renderCollectionsFromIssues(container, collections, options = {}) {
                             <div class="issue-grid-body">
                                 <div class="issue-grid-title">${escapeHtmlAttribute(col.name || 'Без назви')}</div>
                                 <div class="issue-grid-meta">
-                                    ${range ? `<span class="issue-grid-range">${ICON.hash} ${range}</span>` : ''}
+                                    ${range ? `<span class="issue-grid-range">${icon('hash', 13, { strokeWidth: 2.2 })} ${range}</span>` : ''}
                                     <span class="issue-grid-date">${formatDate(col.cover_date || col.release_date, '—')}</span>
                                 </div>
                             </div>

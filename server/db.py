@@ -124,4 +124,6 @@ def close_db():
     db_instance.close()
 
 def get_db():
+    if db_instance.conn is None:
+        db_instance.connect()
     return db_instance

@@ -126,7 +126,7 @@ async def get_chapters_by_volume(volume_id: int):
         SELECT mc.*, 'manga_chapter' as type
         FROM manga_chapters mc
         WHERE mc.volume_id = %s
-        ORDER BY CAST(mc.chapter_number AS REAL) ASC, mc.chapter_number ASC
+        ORDER BY CASE WHEN mc.chapter_number ~ '^[0-9]' THEN CAST(substring(mc.chapter_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, mc.chapter_number ASC
     """, [volume_id])
     return [dict(ch) for ch in chapters]
 

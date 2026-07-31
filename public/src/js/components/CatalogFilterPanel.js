@@ -1,18 +1,7 @@
 import { API } from '../helpers/api.js';
 import { escapeHtmlAttribute } from '../helpers/image.js';
 import Fuse from 'https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.mjs';
-
-const ICONS = {
-  publisher: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9h1"/><path d="M9 13h1"/><path d="M9 17h1"/></svg>',
-  theme: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L3 13V3h10l7.59 7.59a2 2 0 0 1 0 2.82Z"/><path d="M7 7h.01"/></svg>',
-  type: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"/><path d="M3 12h18"/><path d="M3 17h18"/></svg>',
-  genre: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M3 12h18"/><path d="m5 5 14 14"/><path d="m19 5-14 14"/></svg>',
-  check: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
-  magazine: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18h-5"/><path d="M18 14h-8"/><path d="M4 22h16a2 2 0 0 0 2-2V4H8v16a2 2 0 0 1-4 0V6H2v14a2 2 0 0 0 2 2Z"/><path d="M10 6h8v4h-8V6Z"/></svg>',
-  language: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
-  source: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>',
-  trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
-};
+import { icon } from '../helpers/icons.js';
 
 export const THEME_GROUP_LABELS = {
   type: 'Тип',
@@ -122,9 +111,7 @@ export function themeLabel(theme) {
 }
 
 export function themeIcon(type) {
-  if (type === 'type') return ICONS.type;
-  if (type === 'genre') return ICONS.genre;
-  return ICONS.theme;
+  return icon(type === 'type' ? 'type' : type === 'genre' ? 'genre' : 'theme', 14, { strokeWidth: 2.1 });
 }
 
 export function mountCatalogFilters({
@@ -160,35 +147,35 @@ export function mountCatalogFilters({
   container.innerHTML = `
     <div class="catalog-inline-filter-controls">
       <div class="catalog-inline-filter" id="catalog-inline-publisher-filter">
-        <span class="catalog-inline-filter__label" title="Видавництво">${ICONS.publisher}</span>
+        <span class="catalog-inline-filter__label" title="Видавництво">${icon('publisher', 16, { strokeWidth: 2.1 })}</span>
         <div class="catalog-inline-filter__input-wrap">
           <input class="catalog-inline-filter__input" type="text" data-publisher-input placeholder="Видавництво...">
           <div class="catalog-filter-dropdown" data-publisher-dropdown hidden></div>
         </div>
       </div>
       <div class="catalog-inline-filter" id="catalog-inline-theme-filter">
-        <span class="catalog-inline-filter__label" title="Тема">${ICONS.theme}</span>
+        <span class="catalog-inline-filter__label" title="Тема">${icon('theme', 16, { strokeWidth: 2.1 })}</span>
         <div class="catalog-inline-filter__input-wrap">
           <input class="catalog-inline-filter__input" type="text" data-theme-input placeholder="Тема...">
           <div class="catalog-filter-dropdown catalog-filter-dropdown--themes" data-theme-dropdown hidden></div>
         </div>
       </div>
       <div class="catalog-inline-filter" id="catalog-inline-language-filter">
-        <span class="catalog-inline-filter__label" title="Мова">${ICONS.language}</span>
+        <span class="catalog-inline-filter__label" title="Мова">${icon('language', 16, { strokeWidth: 2.1 })}</span>
         <div class="catalog-inline-filter__input-wrap">
           <input class="catalog-inline-filter__input" type="text" data-language-input placeholder="Мова...">
           <div class="catalog-filter-dropdown" data-language-dropdown hidden></div>
         </div>
       </div>
       <div class="catalog-inline-filter" id="catalog-inline-source-filter">
-        <span class="catalog-inline-filter__label" title="Джерело">${ICONS.source}</span>
+        <span class="catalog-inline-filter__label" title="Джерело">${icon('source', 16, { strokeWidth: 2.1 })}</span>
         <div class="catalog-inline-filter__input-wrap">
           <input class="catalog-inline-filter__input" type="text" data-source-input placeholder="Джерело...">
           <div class="catalog-filter-dropdown" data-source-dropdown hidden></div>
         </div>
       </div>
       <div class="catalog-inline-filter" id="catalog-inline-magazine-filter">
-        <span class="catalog-inline-filter__label" title="Журнал">${ICONS.magazine}</span>
+        <span class="catalog-inline-filter__label" title="Журнал">${icon('magazine', 16, { strokeWidth: 2.1 })}</span>
         <div class="catalog-inline-filter__input-wrap">
           <input class="catalog-inline-filter__input" type="text" data-magazine-input placeholder="Журнал...">
           <div class="catalog-filter-dropdown" data-magazine-dropdown hidden></div>
@@ -197,27 +184,27 @@ export function mountCatalogFilters({
     </div>
     <div class="catalog-selected-filters" data-selected-filters hidden>
       <div class="catalog-selected-filter-group" data-publisher-filter-group hidden>
-        <span class="catalog-selected-filter-group__label">${ICONS.publisher}</span>
+        <span class="catalog-selected-filter-group__label">${icon('publisher', 16, { strokeWidth: 2.1 })}</span>
         <div class="catalog-inline-filter__chips" data-publisher-chips></div>
       </div>
       <div class="catalog-selected-filter-group" data-theme-filter-group hidden>
-        <span class="catalog-selected-filter-group__label">${ICONS.theme}</span>
+        <span class="catalog-selected-filter-group__label">${icon('theme', 16, { strokeWidth: 2.1 })}</span>
         <div class="catalog-inline-filter__chips" data-theme-chips></div>
       </div>
       <div class="catalog-selected-filter-group" data-language-filter-group hidden>
-        <span class="catalog-selected-filter-group__label">${ICONS.language}</span>
+        <span class="catalog-selected-filter-group__label">${icon('language', 16, { strokeWidth: 2.1 })}</span>
         <div class="catalog-inline-filter__chips" data-language-chips></div>
       </div>
       <div class="catalog-selected-filter-group" data-source-filter-group hidden>
-        <span class="catalog-selected-filter-group__label">${ICONS.source}</span>
+        <span class="catalog-selected-filter-group__label">${icon('source', 16, { strokeWidth: 2.1 })}</span>
         <div class="catalog-inline-filter__chips" data-source-chips></div>
       </div>
       <div class="catalog-selected-filter-group" data-magazine-filter-group hidden>
-        <span class="catalog-selected-filter-group__label">${ICONS.magazine}</span>
+        <span class="catalog-selected-filter-group__label">${icon('magazine', 16, { strokeWidth: 2.1 })}</span>
         <div class="catalog-inline-filter__chips" data-magazine-chips></div>
       </div>
       <button type="button" class="catalog-clear-all-filters-btn" data-clear-all-filters title="Скинути всі фільтри">
-        ${ICONS.trash}
+        ${icon('trash', 14)}
         <span>Скинути все</span>
       </button>
     </div>
@@ -322,7 +309,7 @@ export function mountCatalogFilters({
   const renderSourceChips = () => {
     sourceChips.innerHTML = sources.map((s) => `
       <span class="catalog-selected-filter catalog-selected-filter--source${s.exclude ? ' is-excluded' : ''}" data-source-id="${s.id}">
-        ${ICONS.source}
+        ${icon('source', 16, { strokeWidth: 2.1 })}
         <span>${escapeHtmlAttribute(s.name)}</span>
         <button type="button" data-toggle-source="${s.id}" title="Перемкнути включення/виключення">⇄</button>
         <button type="button" data-remove-source="${s.id}" title="Прибрати">×</button>
@@ -365,7 +352,7 @@ export function mountCatalogFilters({
             <button class="catalog-filter-dropdown__item${selected ? ' is-selected' : ''}" type="button" data-publisher-id="${publisher.id}" data-publisher-name="${escapeHtmlAttribute(publisher.name)}">
               <span class="catalog-filter-dropdown__name">${escapeHtmlAttribute(publisher.name)}</span>
               <span class="catalog-filter-dropdown__meta">${publisher.volume_count?.toLocaleString('uk-UA') ?? 0}</span>
-              ${selected ? `<span class="catalog-filter-state catalog-filter-state--include">${ICONS.check}</span>` : ''}
+              ${selected ? `<span class="catalog-filter-state catalog-filter-state--include">${icon('check', 13, { strokeWidth: 2.8 })}</span>` : ''}
             </button>
           `;
         }).join('')
@@ -388,7 +375,7 @@ export function mountCatalogFilters({
       return `
         <button class="catalog-filter-dropdown__item${selected ? ' is-selected' : ''}" type="button" data-language-id="${lang.id}">
           <span class="catalog-filter-dropdown__name">${lang.name}</span>
-          ${selected ? `<span class="catalog-filter-state catalog-filter-state--include">${ICONS.check}</span>` : ''}
+          ${selected ? `<span class="catalog-filter-state catalog-filter-state--include">${icon('check', 13, { strokeWidth: 2.8 })}</span>` : ''}
         </button>
       `;
     }).join('');
@@ -416,7 +403,7 @@ export function mountCatalogFilters({
             <div class="catalog-filter-dropdown__item catalog-filter-dropdown__item--source${included ? ' is-included' : ''}${excluded ? ' is-excluded' : ''}" data-source-id="${s.id}" data-source-name="${s.name}">
               <span class="catalog-filter-dropdown__name">${s.name}</span>
               <span class="catalog-filter-dropdown__actions">
-                ${included ? `<span class="catalog-filter-state catalog-filter-state--include">${ICONS.check}</span>` : ''}
+                ${included ? `<span class="catalog-filter-state catalog-filter-state--include">${icon('check', 13, { strokeWidth: 2.8 })}</span>` : ''}
                 ${excluded ? '<span class="catalog-filter-state catalog-filter-state--exclude">−</span>' : ''}
                 <button type="button" data-source-action="include" title="Включити">＋</button>
                 <button type="button" data-source-action="exclude" title="Виключити">−</button>
@@ -447,7 +434,7 @@ export function mountCatalogFilters({
           return `
             <button class="catalog-filter-dropdown__item${selected ? ' is-selected' : ''}" type="button" data-magazine-id="${magazine.id}" data-magazine-name="${escapeHtmlAttribute(magazine.name)}">
               <span class="catalog-filter-dropdown__name">${escapeHtmlAttribute(magazine.name)}</span>
-              ${selected ? `<span class="catalog-filter-state catalog-filter-state--include">${ICONS.check}</span>` : ''}
+              ${selected ? `<span class="catalog-filter-state catalog-filter-state--include">${icon('check', 13, { strokeWidth: 2.8 })}</span>` : ''}
             </button>
           `;
         }).join('')
@@ -488,7 +475,7 @@ export function mountCatalogFilters({
           <div class="catalog-filter-dropdown__item catalog-filter-dropdown__item--theme${included ? ' is-included' : ''}${excluded ? ' is-excluded' : ''}" data-theme-id="${theme.id}" data-theme-name="${escapeHtmlAttribute(name)}" data-theme-type="${theme.type || 'theme'}">
             <span class="catalog-filter-dropdown__name">${escapeHtmlAttribute(name)}</span>
             <span class="catalog-filter-dropdown__actions">
-              ${included ? `<span class="catalog-filter-state catalog-filter-state--include">${ICONS.check}</span>` : ''}
+              ${included ? `<span class="catalog-filter-state catalog-filter-state--include">icon('check', 13, { strokeWidth: 2.8 })</span>` : ''}
               ${excluded ? '<span class="catalog-filter-state catalog-filter-state--exclude">−</span>' : ''}
               <button type="button" data-theme-action="include" title="Включити">＋</button>
               <button type="button" data-theme-action="exclude" title="Виключити">−</button>

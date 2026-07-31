@@ -2,19 +2,9 @@ import { API } from '/static/js/helpers/api.js';
 import { comicVineImageUrl, escapeHtmlAttribute } from '/static/js/helpers/image.js';
 import { STAFF_ROLES, getRoleSortIndex } from '/static/js/helpers/staff.js';
 import { openAddReprintModal } from '/static/js/components/addReprintModal.js';
-import { openEditCharacterModal } from './EditCharacterModal.js';
-
-const ICON = {
-    hash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"></line><line x1="4" y1="15" x2="20" y2="15"></line><line x1="10" y1="3" x2="8" y2="21"></line><line x1="16" y1="3" x2="14" y2="21"></line></svg>',
-    link: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>',
-    type: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>',
-    calendar: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>',
-    alignLeft: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="17" y1="18" x2="3" y2="18"></line></svg>',
-    image: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>',
-    edit: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>',
-    trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
-    book: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>'
-};
+import { openEditCharacterModal } from '/static/js/components/modals/EditCharacterModal.js';
+import { currentUser } from '/static/js/shell.js';
+import { icon } from '../../helpers/icons.js';
 
 function parsePersonas(raw) {
     if (!raw) return [];
@@ -198,10 +188,10 @@ export class IssueEditor {
         });
     }
 
-    _imgFieldHTML(name, label, value, icon) {
+    _imgFieldHTML(name, label, value, labelIconHtml) {
         return `
             <div class="admin-form-group admin-form-group--full">
-                <label class="admin-label">${icon} ${label}</label>
+                <label class="admin-label">${labelIconHtml} ${label}</label>
                 <div class="gam-image-field-container" style="display: grid; grid-template-columns: 1fr 140px; gap: 16px; align-items: start; position: relative;">
                     <div class="gam-image-inputs" style="display: flex; flex-direction: column; gap: 8px;">
                         <input type="url" name="${name}" value="${value || ''}" placeholder="URL зображення..." class="admin-input gam-img-url-input">
@@ -211,7 +201,7 @@ export class IssueEditor {
                                 Локальний файл
                                 <input type="file" name="${name}_file" class="gam-img-file-input" style="display: none;" accept="image/webp">
                             </label>
-                            <button type="button" class="btn-admin btn-admin--danger gam-img-clear" style="display: none; padding: 8px 12px; align-items: center; justify-content: center; height: 34px;">${ICON.trash}</button>
+                            <button type="button" class="btn-admin btn-admin--danger gam-img-clear" style="display: none; padding: 8px 12px; align-items: center; justify-content: center; height: 34px;">${icon('trash', 14)}</button>
                         </div>
                         <div style="font-size: 0.7rem; color: #db5a5a; margin-top: 2px;">Дозволено лише формат <strong>.webp</strong></div>
                         <div class="gam-img-filename" style="font-size: 0.7rem; color: var(--text-muted); display: none; word-break: break-all; max-width: 250px;"></div>
@@ -403,10 +393,10 @@ export class IssueEditor {
                                             </div>
                                             <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
                                                 <button type="button" class="btn-admin btn-admin--secondary btn-edit-character-modal" data-index="${globalIdx}" style="padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; margin-bottom: 0;" title="Редагувати профіль персонажа">
-                                                    ${ICON.edit}
+                                                    ${icon('edit', 18)}
                                                 </button>
                                                 <button type="button" class="btn-admin btn-admin--danger btn-delete-appearance-item" data-type="${type.key}" data-index="${globalIdx}" style="padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; margin-bottom: 0;" title="Видалити появу">
-                                                    ${ICON.trash}
+                                                    ${icon('trash', 14)}
                                                 </button>
                                             </div>
                                         </div>
@@ -455,11 +445,11 @@ export class IssueEditor {
                                     <input type="text" class="admin-input appearance-item-comment" data-type="${type.key}" data-index="${globalIdx}" value="${escapeHtmlAttribute(item.comment || '')}" placeholder="Коментар" style="height: 32px; font-size: 12px; padding: 2px 8px; margin-bottom: 0;">
                                     
                                     <button type="button" class="btn-admin btn-admin--secondary btn-edit-entity-modal" data-type="${type.key}" data-index="${globalIdx}" style="padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 0;" title="Редагувати назву">
-                                        ${ICON.edit}
+                                        ${icon('edit', 18)}
                                     </button>
                                     
                                     <button type="button" class="btn-admin btn-admin--danger btn-delete-appearance-item" data-type="${type.key}" data-index="${globalIdx}" style="padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 0;">
-                                        ${ICON.trash}
+                                        ${icon('trash', 14)}
                                     </button>
                                 </div>
                             `;
@@ -993,10 +983,10 @@ export class IssueEditor {
                             </div>
                             <div style="display: flex; gap: 6px;">
                                 <button type="button" class="btn-admin btn-admin--secondary btn-edit-reprint" data-reprint-id="${r.id}" style="padding: 6px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                    ${ICON.edit}
+                                    ${icon('edit', 18)}
                                 </button>
                                 <button type="button" class="btn-admin btn-admin--danger btn-delete-reprint" data-link-id="${r.id}" style="padding: 6px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                    ${ICON.trash}
+                                    ${icon('trash', 14)}
                                 </button>
                             </div>
                         </div>
@@ -1194,7 +1184,7 @@ export class IssueEditor {
                     <input type="number" class="admin-input story-input-order" value="${story.order_num ?? 0}">
                 </div>
                 <button type="button" class="btn-admin btn-admin--danger btn-delete-story-row" style="height: 38px; display: flex; align-items: center; justify-content: center; padding: 0 12px; margin-bottom: 0;">
-                    ${ICON.trash}
+                    ${icon('trash', 14)}
                 </button>
                 <div class="admin-form-group admin-form-group--full" style="margin-top: 8px; border-top: 1px solid var(--border-s); padding-top: 8px;">
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
@@ -1281,7 +1271,7 @@ export class IssueEditor {
             <div class="ds-modal ds-modal--large" id="issue-editor-modal">
                 <div class="ds-modal-header">
                     <div class="ds-modal-title">
-                        ${ICON.edit}
+                        ${icon('edit', 18)}
                         Редагування випуску
                     </div>
                     <button class="ds-modal-close">&times;</button>
@@ -1299,43 +1289,43 @@ export class IssueEditor {
                         <div class="editor-tab-content is-active" id="tab-info">
                             <div class="admin-form-grid">
                                 <div class="admin-form-group">
-                                    <label class="admin-label">${ICON.hash} CV ID випуску</label>
+                                    <label class="admin-label">${icon('hash', 14)} CV ID випуску</label>
                                     <input type="number" name="cv_id" class="admin-input" value="${i.cv_id || ''}">
                                 </div>
                                 <div class="admin-form-group">
-                                    <label class="admin-label">${ICON.link} CV Slug випуску</label>
+                                    <label class="admin-label">${icon('link', 14)} CV Slug випуску</label>
                                     <input type="text" name="cv_slug" class="admin-input" value="${i.cv_slug || ''}">
                                 </div>
 
 
                                 <div class="admin-form-group">
-                                    <label class="admin-label">${ICON.hash} Номер випуску</label>
+                                    <label class="admin-label">${icon('hash', 14)} Номер випуску</label>
                                     <input type="text" name="issue_number" class="admin-input" value="${i.issue_number || ''}">
                                 </div>
 
                                 <div class="admin-form-group">
-                                    <label class="admin-label">${ICON.book} ID тому в БД</label>
+                                    <label class="admin-label">${icon('book', 14)} ID тому в БД</label>
                                     <input type="number" name="volume_id" class="admin-input" value="${i.volume_id || ''}">
                                 </div>
                                 <div class="admin-form-group">
-                                    <label class="admin-label">${ICON.calendar} Дата обкладинки (yyyy-mm-dd)</label>
+                                    <label class="admin-label">${icon('calendar', 14)} Дата обкладинки (yyyy-mm-dd)</label>
                                     <input type="text" name="cover_date" class="admin-input" value="${i.cover_date || ''}" placeholder="YYYY-MM-DD">
                                 </div>
 
                                 <div class="admin-form-group">
-                                    <label class="admin-label">${ICON.calendar} Дата виходу (yyyy-mm-dd)</label>
+                                    <label class="admin-label">${icon('calendar', 14)} Дата виходу (yyyy-mm-dd)</label>
                                     <input type="text" name="release_date" class="admin-input" value="${i.release_date || ''}" placeholder="YYYY-MM-DD">
                                 </div>
 
                                 <div class="admin-form-group">
-                                    <label class="admin-label">${ICON.book} Кількість сторінок</label>
+                                    <label class="admin-label">${icon('book', 14)} Кількість сторінок</label>
                                     <input type="text" name="pages" class="admin-input" value="${i.pages || ''}" placeholder="Наприклад, 32 стор.">
                                 </div>
 
-                                ${this._imgFieldHTML('image', 'Обкладинка випуску', i.image, ICON.image)}
+                                ${this._imgFieldHTML('image', 'Обкладинка випуску', i.image, icon('imagePlaceholder', 14))}
 
                                 <div class="admin-form-group admin-form-group--full">
-                                    <label class="admin-label">${ICON.alignLeft} Опис випуску</label>
+                                    <label class="admin-label">${icon('list', 14)} Опис випуску</label>
                                     <textarea name="description" class="admin-textarea">${i.description || ''}</textarea>
                                 </div>
                             </div>
@@ -1382,14 +1372,34 @@ export class IssueEditor {
                 </div>
                 <div class="ds-modal-footer">
                     <button class="btn-admin btn-admin--secondary" id="edit-cancel">Скасувати</button>
-                    <button class="btn-admin btn-admin--primary" id="edit-save">Зберегти зміни</button>
+                    ${(() => {
+                        const role = currentUser ? currentUser.role : null;
+                        if (role === 'admin') {
+                            return `
+                                <button class="btn-admin btn-admin--primary btn-admin--purple" id="edit-save-direct">Записати в БД</button>
+                                <button class="btn-admin btn-admin--primary btn-admin--green" id="edit-save-approve">Записати і прийняти</button>
+                            `;
+                        } else if (role === 'moderator' || role === 'editor') {
+                            return `
+                                <button class="btn-admin btn-admin--primary btn-admin--green" id="edit-save-approve">Записати і прийняти</button>
+                            `;
+                        } else {
+                            return `
+                                <input type="text" id="edit-propose-comment" class="admin-input" placeholder="Коментар до вашої правки..." style="margin-right: auto; max-width: 300px; font-size: 0.85rem; padding: 6px 10px; height: 32px;">
+                                <button class="btn-admin btn-admin--primary btn-admin--yellow" id="edit-save-propose" style="height: 32px; padding: 0 16px; font-size: 13px;">Запропонувати</button>
+                            `;
+                        }
+                    })()}
                 </div>
             </div>
         `;
 
         modal.querySelector('.ds-modal-close').addEventListener('click', () => this.close());
         modal.querySelector('#edit-cancel').addEventListener('click', () => this.close());
-        modal.querySelector('#edit-save').addEventListener('click', () => this.save());
+        
+        modal.querySelector('#edit-save-direct')?.addEventListener('click', () => this.save('direct'));
+        modal.querySelector('#edit-save-approve')?.addEventListener('click', () => this.save('approve'));
+        modal.querySelector('#edit-save-propose')?.addEventListener('click', () => this.save('propose'));
         modal.addEventListener('click', (e) => { if (e.target === modal) this.close(); });
 
         const tabBtns = modal.querySelectorAll('.editor-tab-btn');
@@ -1472,7 +1482,7 @@ export class IssueEditor {
         }
     }
 
-    async save() {
+    async save(actionType = 'direct') {
         const form = this.modal.querySelector('#edit-issue-form');
         const formData = new FormData(form);
         const data = Object.fromEntries(formData.entries());
@@ -1499,9 +1509,27 @@ export class IssueEditor {
         data.concepts = this.appearances.concepts;
         data.objects = this.appearances.objects;
 
-        const saveBtn = this.modal.querySelector('#edit-save');
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Збереження...';
+        let saveBtnId = '#edit-save-propose';
+        let btnText = 'Запропонувати';
+        if (actionType === 'direct') {
+            saveBtnId = '#edit-save-direct';
+            btnText = 'Записати в БД';
+        } else if (actionType === 'approve') {
+            saveBtnId = '#edit-save-approve';
+            btnText = 'Записати і прийняти';
+        }
+
+        const saveBtn = this.modal.querySelector(saveBtnId);
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Збереження...';
+        }
+
+        let comment = '';
+        if (actionType === 'propose') {
+            const commentInput = this.modal.querySelector('#edit-propose-comment');
+            if (commentInput) comment = commentInput.value.trim();
+        }
 
         try {
             const fileInput = form.querySelector('input[name="image_file"]');
@@ -1512,13 +1540,27 @@ export class IssueEditor {
                 data['image'] = uploadRes.url;
             }
 
-            await API.put(`/issues/${this.issue.id}`, data);
+            if (actionType === 'direct') {
+                await API.put(`/issues/${this.issue.id}`, data);
+            } else {
+                const autoApprove = actionType === 'approve';
+                await API.post('/edits', {
+                    entity_type: 'issue',
+                    entity_id: this.issue.id,
+                    patch_data: data,
+                    auto_approve: autoApprove,
+                    comment: comment
+                });
+            }
+
             this.close();
             if (this.onSave) this.onSave();
         } catch (err) {
             alert('Помилка збереження: ' + (err.message || 'Невідома помилка'));
-            saveBtn.disabled = false;
-            saveBtn.textContent = 'Зберегти зміни';
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = btnText;
+            }
         }
     }
 }

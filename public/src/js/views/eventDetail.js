@@ -4,20 +4,7 @@ import { currentUser } from '../shell.js';
 import { openAddIssueModal } from '../components/addIssueModal.js';
 import { formatDate } from '../helpers/lang.js';
 import { t } from '../helpers/i18n.js';
-
-const ICON = {
-    chevronRight: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
-    calendar: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>',
-    edit: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
-    plus: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>',
-    trash: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>',
-    image: '<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>',
-    type: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>',
-    alignLeft: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="17" y1="18" x2="3" y2="18"></line></svg>',
-    x: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
-    layers: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>',
-    book: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>',
-};
+import { icon } from '../helpers/icons.js';
 
 function getImportanceLabels() {
     return {
@@ -87,7 +74,7 @@ function issueRowHTML(issue, index, total, canModerate) {
             </td>
             <td>
                 <a class="event-issue-cover-link" href="#/issues/${issue.id}">
-                    ${cover ? `<img src="${escapeHtmlAttribute(cover)}" alt="" loading="lazy">` : `<span>${ICON.image}</span>`}
+                    ${cover ? `<img src="${escapeHtmlAttribute(cover)}" alt="" loading="lazy">` : `<span>${icon('imagePlaceholder', 42, { strokeWidth: 1.5 })}</span>`}
                 </a>
             </td>
             <td>
@@ -101,7 +88,7 @@ function issueRowHTML(issue, index, total, canModerate) {
             <td>${date ? escapeHtmlAttribute(date) : '<span class="event-muted">-</span>'}</td>
             ${canModerate ? `
                 <td>
-                    <button class="event-icon-btn event-remove-btn" type="button" data-link-id="${issue.link_id}" title="${t('remove_from_event')}">${ICON.trash}</button>
+                    <button class="event-icon-btn event-remove-btn" type="button" data-link-id="${issue.link_id}" title="${t('remove_from_event')}">${icon('trash', 15, { strokeWidth: 2.1 })}</button>
                 </td>
             ` : ''}
         </tr>
@@ -113,30 +100,30 @@ function editModalHTML(event) {
         <div class="ds-modal-overlay" id="event-edit-modal" style="display: none;">
             <div class="ds-modal ds-modal--large" id="event-edit-modal-box">
                 <div class="ds-modal-header">
-                    <div class="ds-modal-title">${ICON.edit} ${t('edit_event')}</div>
+                    <div class="ds-modal-title">${icon('edit', 16, { strokeWidth: 2.1 })} ${t('edit_event')}</div>
                     <button class="ds-modal-close" type="button" data-close-modal="event-edit-modal">&times;</button>
                 </div>
                 <form id="event-edit-form">
                     <div class="ds-modal-body">
                         <div class="admin-form-grid">
                             <div class="admin-form-group admin-form-group--full">
-                                <label class="admin-label">${ICON.type} ${t('name')}</label>
+                                <label class="admin-label">${icon('type', 14)} ${t('name')}</label>
                                 <input type="text" name="name" class="admin-input" value="${escapeHtmlAttribute(event.name || '')}" required>
                             </div>
                             <div class="admin-form-group admin-form-group--full">
-                                <label class="admin-label">${ICON.image} ${t('image_url')}</label>
+                                <label class="admin-label">${icon('imagePlaceholder', 42, { strokeWidth: 1.5 })} ${t('image_url')}</label>
                                 <input type="url" name="cv_img" class="admin-input" value="${escapeHtmlAttribute(event.cv_img || '')}">
                             </div>
                             <div class="admin-form-group">
-                                <label class="admin-label">${ICON.calendar} ${t('start_year')}</label>
+                                <label class="admin-label">${icon('calendar', 14, { strokeWidth: 2.1 })} ${t('start_year')}</label>
                                 <input type="number" name="start_year" class="admin-input" value="${event.start_year || ''}">
                             </div>
                             <div class="admin-form-group">
-                                <label class="admin-label">${ICON.calendar} ${t('end_year')}</label>
+                                <label class="admin-label">${icon('calendar', 14, { strokeWidth: 2.1 })} ${t('end_year')}</label>
                                 <input type="number" name="end_year" class="admin-input" value="${event.end_year || ''}">
                             </div>
                             <div class="admin-form-group admin-form-group--full">
-                                <label class="admin-label">${ICON.alignLeft} ${t('short_description')}</label>
+                                <label class="admin-label">${icon('list', 14)} ${t('short_description')}</label>
                                 <textarea name="description" class="admin-textarea" rows="5">${escapeHtmlAttribute(event.description || '')}</textarea>
                             </div>
                         </div>
@@ -193,13 +180,13 @@ export async function renderEventDetail(container, params = {}) {
             <section class="event-hero-band" ${cover ? `style="--event-bg:url('${escapeHtmlAttribute(cover)}')"` : ''}>
                 <div class="container event-hero">
                     <div class="event-cover">
-                        ${cover ? `<img src="${escapeHtmlAttribute(cover)}" alt="${escapeHtmlAttribute(event.name)}">` : `<div class="event-cover-empty">${ICON.image}</div>`}
+                        ${cover ? `<img src="${escapeHtmlAttribute(cover)}" alt="${escapeHtmlAttribute(event.name)}">` : `<div class="event-cover-empty">${icon('imagePlaceholder', 42, { strokeWidth: 1.5 })}</div>`}
                     </div>
                     <div class="event-hero-info">
                         <div class="event-kicker">${t('event')}</div>
                         <h1>${escapeHtmlAttribute(event.name || t('no_title'))}</h1>
                         <div class="event-meta">
-                            ${years ? `<span>${ICON.calendar} ${escapeHtmlAttribute(String(years))}</span>` : ''}
+                            ${years ? `<span>${icon('calendar', 14, { strokeWidth: 2.1 })} ${escapeHtmlAttribute(String(years))}</span>` : ''}
                             <span>${t('issues_count_label').replace('{count}', issues.length)}</span>
                         </div>
                         ${event.description ? `<div class="event-description">${event.description}</div>` : ''}
@@ -209,7 +196,7 @@ export async function renderEventDetail(container, params = {}) {
 
             ${canModerate ? `
                 <div class="volume-hero-admin-actions">
-                    <button class="btn-admin btn-admin--secondary" id="event-edit-btn" title="Редагувати">${ICON.edit}</button>
+                    <button class="btn-admin btn-admin--secondary" id="event-edit-btn" title="Редагувати">${icon('edit', 16, { strokeWidth: 2.1 })}</button>
                 </div>
             ` : ''}
 
@@ -221,7 +208,7 @@ export async function renderEventDetail(container, params = {}) {
                             <span>${issues.length}</span>
                         </div>
                         ${canModerate ? `
-                            <button class="readlist-btn" id="btn-add-issue" style="height: 34px; padding: 0 12px; font-size: 13px; gap: 6px; background: var(--bg-card); border: 1px solid var(--border);">${ICON.plus} ${t('add_issue')}</button>
+                            <button class="readlist-btn" id="btn-add-issue" style="height: 34px; padding: 0 12px; font-size: 13px; gap: 6px; background: var(--bg-card); border: 1px solid var(--border);">${icon('plus', 16, { strokeWidth: 2.3 })} ${t('add_issue')}</button>
                         ` : ''}
                     </div>
                     ${issues.length ? `

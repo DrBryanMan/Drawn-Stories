@@ -81,7 +81,7 @@ async def get_volume_detail(volume_id: int, request: Request):
                    (SELECT COUNT(*) FROM collection_issues ci WHERE ci.manga_chapter_id = manga_chapters.id) as collection_count
             FROM manga_chapters
             WHERE volume_id = %s
-            ORDER BY CAST(chapter_number AS REAL) ASC, chapter_number ASC
+            ORDER BY CASE WHEN chapter_number ~ '^[0-9]' THEN CAST(substring(chapter_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, chapter_number ASC
             """,
             [volume_id]
         )
@@ -111,7 +111,7 @@ async def get_volume_detail(volume_id: int, request: Request):
                    (SELECT COUNT(*) FROM collection_issues ci WHERE ci.issue_id = i.id) as collection_count
             FROM issues i
             WHERE i.volume_id = %s
-            ORDER BY CAST(i.issue_number AS REAL) ASC, i.issue_number ASC
+            ORDER BY CASE WHEN i.issue_number ~ '^[0-9]' THEN CAST(substring(i.issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, i.issue_number ASC
             """,
             [volume_id]
         )
@@ -691,7 +691,7 @@ async def get_issue_collections_membership(issue_id: int, type: str = "issue"):
             JOIN collections c ON c.id = ci.collection_id
             LEFT JOIN volumes v ON c.volume_id = v.id
             WHERE ci.manga_chapter_id = %s
-            ORDER BY CAST(c.issue_number AS REAL) ASC, COALESCE(c.release_date, c.cover_date) ASC
+            ORDER BY CASE WHEN c.issue_number ~ '^[0-9]' THEN CAST(substring(c.issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, COALESCE(c.release_date, c.cover_date) ASC
         """
     else:
         query = """
@@ -700,7 +700,7 @@ async def get_issue_collections_membership(issue_id: int, type: str = "issue"):
             JOIN collections c ON c.id = ci.collection_id
             LEFT JOIN volumes v ON c.volume_id = v.id
             WHERE ci.issue_id = %s
-            ORDER BY CAST(c.issue_number AS REAL) ASC, COALESCE(c.release_date, c.cover_date) ASC
+            ORDER BY CASE WHEN c.issue_number ~ '^[0-9]' THEN CAST(substring(c.issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, COALESCE(c.release_date, c.cover_date) ASC
         """
     collections = db.get_all(query, [issue_id])
     return {"data": collections}
@@ -844,7 +844,7 @@ async def get_volume_collections_from_issues(volume_id: int, request: Request):
             )
             { "AND (pv.lang = %s OR pv.lang IS NULL)" if vol_lang else "" }
         ) sub
-        ORDER BY parent_vol_name ASC, CAST(issue_number AS REAL) ASC, name ASC
+        ORDER BY parent_vol_name ASC, CASE WHEN issue_number ~ '^[0-9]' THEN CAST(substring(issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, name ASC
         """,
         [user_id] + vol_ids + vol_ids + ([vol_lang] if vol_lang else [])
     )
@@ -859,7 +859,7 @@ async def get_volume_collections_from_issues(volume_id: int, request: Request):
             WHERE ci.collection_id = %s 
               AND i.volume_id IN ({placeholders})
               AND i.issue_number IS NOT NULL
-            ORDER BY CAST(i.issue_number AS REAL) ASC
+            ORDER BY CASE WHEN i.issue_number ~ '^[0-9]' THEN CAST(substring(i.issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST
             """,
             [col["id"]] + vol_ids
         )

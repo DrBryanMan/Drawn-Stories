@@ -3,39 +3,9 @@ import { currentUser } from '../shell.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { openAddIssueModal } from '../components/addIssueModal.js';
 import { renderIssueGridCard } from '../components/cards/IssueGridCard.js';
-import { CollectionEditor } from '/admin/js/CollectionEditor.js';
+import { CollectionEditor } from '../components/modals/EditCollectionModal.js';
 import { formatDate } from '../helpers/lang.js';
-
-
-// ── Lucide SVG icons ──────────────────────────────
-const ICON = {
-    chevronLeft: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>',
-    chevronRight: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',   
-    building: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>',
-    calendar: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
-    hash: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>',
-    book: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>',
-    layers: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>',
-    plus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
-    trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
-    link: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
-    info: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>',
-    bookmark: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>',
-    refreshCw: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>',
-    sortAsc: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m11 12-4-4-4 4"/><path d="M7 16V8"/><path d="M14 9h8"/><path d="M14 15h5"/><path d="M14 21h2"/></svg>',
-    sortDesc: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m11 12-4 4-4-4"/><path d="M7 8v8"/><path d="M14 9h8"/><path d="M14 15h5"/><path d="M14 21h2"/></svg>',
-    edit: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
-    externalLink: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 22 3 22 10"></polyline><line x1="10" y1="14" x2="22" y2="3"></line></svg>',
-    shieldAlert: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
-    globe: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
-    clock: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
-};
-
-const THEME_ICON = {
-    type: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>',
-    genre: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
-    theme: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>',
-};
+import { icon } from '../helpers/icons.js';
 
 let issuesSortDir = 'asc'; // 'asc' or 'desc'
 let relatedPage = 1;
@@ -98,28 +68,28 @@ function getVerificationBadgeHTML(collection) {
     if (status === 'announced') {
         return `
             <span class="volume-badge volume-status-announced" title="Збірник анонсовано, дата релізу в майбутньому">
-                ${ICON.clock}
+                ${icon('clock', 13, { strokeWidth: 2.2 })}
                 Анонсовано
             </span>
         `;
     } else if (status === 'physical') {
         return `
             <span class="volume-badge volume-status-physical" title="Інформація підтверджена з фізичного примірника">
-                ${ICON.book}
+                ${icon('book', 13, { strokeWidth: 2.2 })}
                 З примірника
             </span>
         `;
     } else if (status === 'open_sources') {
         return `
             <span class="volume-badge volume-status-open-sources" title="Інформація взята з відкритих джерел">
-                ${ICON.globe}
+                ${icon('globe', 13, { strokeWidth: 2.2 })}
                 З інтернету
             </span>
         `;
     } else {
         return `
             <span class="volume-badge volume-status-unverified" title="Інформація ще не перевірена">
-                ${ICON.shieldAlert}
+                ${icon('shieldAlert', 13, { strokeWidth: 2.2 })}
                 Неперевірено
             </span>
         `;
@@ -150,7 +120,10 @@ export async function renderCollectionDetail(main, params = {}) {
     renderSkeleton(main);
 
     try {
-        const data = await API.get(`/collections/${collectionId}`);
+        const [data, edits] = await Promise.all([
+            API.get(`/collections/${collectionId}`),
+            fetchEntityEdits('collection', collectionId)
+        ]);
         const { collection, issues, themes = [], related_collections } = data;
 
         const title = escapeHtmlAttribute(collection.name || 'Збірник');
@@ -230,17 +203,17 @@ export async function renderCollectionDetail(main, params = {}) {
 
                             <div class="issue-readlist-controls" style="display: flex; gap: 8px; margin-top: 16px;">
                                 <button class="readlist-btn ${isOwned ? 'is-active' : ''} ${!currentUser ? 'readlist-btn--anon' : ''}" id="btn-toggle-collection" style="flex: 1; height: 42px; padding: 0 16px; gap: 8px; justify-content: center;">
-                                    ${isOwned ? ICON.trash : ICON.plus}
+                                    ${isOwned ? icon('trash', 13, { strokeWidth: 2.2 }) : icon('plus', 13, { strokeWidth: 2.2 })}
                                     <span style="font-weight: 600;">${isOwned ? 'Видалити з колекції' : 'Додати в колекцію'}</span>
                                 </button>
 
                                 ${isOwned ? `
                                     <button class="readlist-btn ${isBarter ? 'is-active' : ''} ${!currentUser ? 'readlist-btn--anon' : ''}" id="btn-toggle-barter" title="Бартер" style="width: 42px; height: 42px; padding: 0; justify-content: center; flex-shrink: 0;">
-                                        ${ICON.refreshCw}
+                                        ${icon('refreshCw', 14, { strokeWidth: 2.5 })}
                                     </button>
                                 ` : `
                                     <button class="readlist-btn ${isWanted ? 'is-active' : ''} ${!currentUser ? 'readlist-btn--anon' : ''}" id="btn-toggle-wishlist" title="У бажане" style="width: 42px; height: 42px; padding: 0; justify-content: center; flex-shrink: 0;">
-                                        ${ICON.bookmark}
+                                        ${icon('bookmark', 14, { strokeWidth: 2.5 })}
                                     </button>
                                 `}
                             </div>
@@ -254,12 +227,12 @@ export async function renderCollectionDetail(main, params = {}) {
                                         <div class="source-links">
                                             ${collection.cv_id ? `
                                                 <a href="https://comicvine.gamespot.com/${collection.cv_slug}/4000-${collection.cv_id}/" class="source-link-cv" target="_blank" rel="noreferrer">
-                                                    CV ${ICON.externalLink}
+                                                    CV ${icon('externalLink', 14, { strokeWidth: 2.2 })}
                                                 </a>
                                             ` : ''}
                                             ${collection.site_link ? `
                                                 <a href="${escapeHtmlAttribute(collection.site_link)}" class="source-link-site" target="_blank" rel="noreferrer">
-                                                    SITE ${ICON.externalLink}
+                                                    SITE ${icon('externalLink', 14, { strokeWidth: 2.2 })}
                                                 </a>
                                             ` : ''}
                                         </div>
@@ -280,7 +253,7 @@ export async function renderCollectionDetail(main, params = {}) {
                             <div class="volume-hero-badges">
                             ${collection.volume_id ? `
                                 <a href="#/volumes/${collection.volume_id}" class="volume-badge volume-volume-badge" title="Серія">
-                                ${ICON.book}
+                                ${icon('book', 13, { strokeWidth: 2.2 })}
                                 ${escapeHtmlAttribute(collection.volume_name_uk || collection.volume_name || '')}
                                 </a>
                                 ` : ''}
@@ -292,7 +265,7 @@ export async function renderCollectionDetail(main, params = {}) {
                                     const badgeClass = isFuture ? 'volume-year-badge--yellow' : 'volume-year-badge--green';
                                     return `
                                         <span class="volume-badge volume-year-badge ${badgeClass}" title="Дата виходу">
-                                            ${ICON.calendar}
+                                            ${icon('calendar', 13, { strokeWidth: 2.2 })}
                                             ${formatDate(dateStr, '—')}
                                         </span>
                                     `;
@@ -301,20 +274,9 @@ export async function renderCollectionDetail(main, params = {}) {
                             </div>
 
 
-                            ${isModerator ? `
-                                <div class="volume-hero-admin-actions">
-                                    <button class="btn-admin btn-admin--secondary" id="col-edit-btn" title="Редагувати">
-                                        <i class="bi bi-pencil-square"></i>
-                                    </button>
-                                    <button class="btn-admin btn-admin--danger" id="col-delete-btn" title="Видалити збірник">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                            ` : ''}
-
                             <div class="volume-synopsis">
                                 <div class="synopsis-header">
-                                    <h2 class="synopsis-title">Синопсис</h2>
+                                    <h2 class="synopsis-title">${t('synopsis')}</h2>
                                     <div class="synopsis-tabs">
                                         <button class="synopsis-tab ${activeTab === 'ua' ? 'is-active' : ''}" data-tab="ua">UA</button>
                                         <button class="synopsis-tab ${activeTab === 'en' ? 'is-active' : ''}" data-tab="en">EN</button>
@@ -346,6 +308,7 @@ export async function renderCollectionDetail(main, params = {}) {
                                 </div>
                             </div>
                         </div>
+                        ${renderEditorsHistoryBlock(edits, currentUser, { editButtonId: 'col-edit-btn', editTitle: 'Редагувати' })}
                     </div>
                 </section>
 
@@ -371,7 +334,7 @@ export async function renderCollectionDetail(main, params = {}) {
                                     if (!items.length) return '';
                                     return `
                                         <div class="volume-theme-group">
-                                            <span style="color: var(--text-muted); line-height: 0;">${THEME_ICON[type] || ''}</span>
+                                            <span style="color: var(--text-muted); line-height: 0;">${icon(type, 12, { strokeWidth: 2.2 })}</span>
                                             <span class="volume-theme-group-label">${groupLabels[type]}</span>
                                             <div class="volume-theme-chips-wrap">
                                                 ${items.map(theme => themeChipHTML(theme)).join('')}
@@ -390,7 +353,7 @@ export async function renderCollectionDetail(main, params = {}) {
                                 <h2 style="font-size: 18px; font-weight: 750; margin: 0;">Інші збірники серії</h2>
                                 <div style="display: flex; align-items: center; gap: 12px;">
                                     <button class="readlist-btn" id="btn-sort-related" title="Змінити напрямок" style="width: 34px; height: 34px; padding: 0;">
-                                        ${issuesSortDir === 'asc' ? ICON.sortAsc : ICON.sortDesc}
+                                        ${issuesSortDir === 'asc' ? icon('sortAsc', 14, { strokeWidth: 2.5 }) : icon('sortDesc', 14, { strokeWidth: 2.5 })}
                                     </button>
                                     <div id="related-pagination"></div>
                                 </div>
@@ -410,16 +373,16 @@ export async function renderCollectionDetail(main, params = {}) {
                             </div>
                             <div style="display: flex; gap: 8px; align-items: center;">
                                 <button class="readlist-btn" id="btn-show-contents" style="height: 34px; padding: 0 12px; font-size: 13px; gap: 6px; background: var(--bg-card); border: 1px solid var(--border);">
-                                    ${ICON.layers} Зміст
+                                    ${icon('layers', 14, { strokeWidth: 2.2 })} Зміст
                                 </button>
                                 ${(isModerator && collection.collection_issues_count > 0) ? `
                                     <button class="readlist-btn" id="btn-clear-issues" style="height: 34px; padding: 0 12px; font-size: 13px; gap: 6px; background: color-mix(in srgb, var(--red) 8%, var(--bg-card)); border: 1px solid color-mix(in srgb, var(--red) 35%, transparent); color: var(--red);" title="Очистити вміст збірника">
-                                        ${ICON.trash} ${collection.collection_issues_count}
+                                        ${icon('trash', 14, { strokeWidth: 2.5 })} ${collection.collection_issues_count}
                                     </button>
                                 ` : ''}
                                 ${(isModerator) ? `
                                     <button class="readlist-btn" id="btn-add-issue" style="height: 34px; padding: 0 12px; font-size: 13px; gap: 6px; background: var(--bg-card); border: 1px solid var(--border);">
-                                        ${ICON.plus} Додати випуск
+                                        ${icon('plus', 14, { strokeWidth: 2.5 })} Додати випуск
                                     </button>
                                 ` : ''}
                             </div>
@@ -445,7 +408,7 @@ export async function renderCollectionDetail(main, params = {}) {
             </div>
         `;
 
-        // --- Event Listeners ---
+        initEditorsHistoryBlock(main, edits);
 
         // Edit Button
         const editBtn = main.querySelector('#col-edit-btn');
@@ -591,9 +554,9 @@ export async function renderCollectionDetail(main, params = {}) {
                 const totalPages = Math.ceil(related_collections.length / RELATED_PER_PAGE);
                 pagContainer.innerHTML = `
                     <div style="display: flex; align-items: center; gap: 12px;">
-                        <button class="readlist-btn" id="rel-prev" ${relatedPage === 1 ? 'disabled' : ''} style="width: 32px; height: 32px; padding: 0;">${ICON.chevronLeft}</button>
+                        <button class="readlist-btn" id="rel-prev" ${relatedPage === 1 ? 'disabled' : ''} style="width: 32px; height: 32px; padding: 0;">${icon('chevronLeft', 16, { strokeWidth: 2.2 })}</button>
                         <span style="font-size: 13px; font-weight: 750; color: var(--text-2); min-width: 40px; text-align: center;">${relatedPage} / ${totalPages}</span>
-                        <button class="readlist-btn" id="rel-next" ${relatedPage === totalPages ? 'disabled' : ''} style="width: 32px; height: 32px; padding: 0;">${ICON.chevronRight}</button>
+                        <button class="readlist-btn" id="rel-next" ${relatedPage === totalPages ? 'disabled' : ''} style="width: 32px; height: 32px; padding: 0;">${icon('chevronRight', 16, { strokeWidth: 2.2 })}</button>
                     </div>
                 `;
                 pagContainer.querySelector('#rel-prev').onclick = () => { relatedPage--; renderRelated(); };
@@ -738,7 +701,7 @@ export async function renderCollectionDetail(main, params = {}) {
                     <div class="ds-modal-overlay" id="contents-modal-overlay" style="display: flex;">
                         <div class="ds-modal ds-modal--medium" id="contents-modal">
                             <div class="ds-modal-header">
-                                <div class="ds-modal-title">${ICON.layers} Зміст збірника</div>
+                                <div class="ds-modal-title">${icon('layers', 14, { strokeWidth: 2.2 })} Зміст збірника</div>
                                 <button class="ds-modal-close" id="contents-modal-close">&times;</button>
                             </div>
                             <div class="ds-modal-body">
@@ -753,7 +716,7 @@ export async function renderCollectionDetail(main, params = {}) {
                                     </ul>
                                 ` : `
                                     <div style="text-align: center; padding: 60px 20px; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;">
-                                        <div style="opacity: 0.5;">${ICON.layers}</div>
+                                        <div style="opacity: 0.5;">${icon('layers', 14, { strokeWidth: 2.2 })}</div>
                                         <p style="font-size: 16px; font-weight: 500; margin: 0;">Зміст наразі відсутній.</p>
                                     </div>
                                 `}

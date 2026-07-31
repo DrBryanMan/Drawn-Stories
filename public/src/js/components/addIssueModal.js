@@ -2,15 +2,7 @@
 import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 
-// ── Lucide SVG icons ──────────────────────────────
-const ICON = {
-    search: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>',
-    check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
-    book: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>',
-    x: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
-    plus: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
-    layers: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>'
-};
+import { icon } from '../helpers/icons.js';
 
 let _modal = null;
 let _config = null;
@@ -32,13 +24,13 @@ function ensureModal() {
         <div class="ds-modal ds-modal--large" id="add-issue-modal">
             <div class="ds-modal-header">
                 <div class="ds-modal-title" id="aim-title"></div>
-                <button class="ds-modal-close" id="aim-close-btn">${ICON.x}</button>
+                <button class="ds-modal-close" id="aim-close-btn">${icon('x', 20, { strokeWidth: 2.2 })}</button>
             </div>
             <div class="ds-modal-body" id="aim-body"></div>
             <div class="ds-modal-footer">
                 <button class="btn-aim btn-aim--secondary" id="aim-cancel-btn">Скасувати</button>
                 <button class="btn-aim btn-aim--primary" id="aim-confirm-btn" style="display: none;">
-                    ${ICON.plus} Додати вибрані (<span id="aim-selected-count">0</span>)
+                    ${icon('plus', 16, { strokeWidth: 2.5 })} Додати вибрані (<span id="aim-selected-count">0</span>)
                 </button>
             </div>
         </div>
@@ -188,7 +180,7 @@ export function openAddIssueModal(config) {
     const layout = config.layout || 'vertical';
     renderModalLayout(layout);
 
-    document.getElementById('aim-title').innerHTML = `${ICON.layers} ${config.title || 'Додати випуски'}`;
+    document.getElementById('aim-title').innerHTML = `${icon('layers', 16, { strokeWidth: 2.2 })} ${config.title || 'Додати випуски'}`;
     document.getElementById('aim-results').innerHTML = '';
     document.getElementById('aim-selection-hint').textContent = '';
     updateConfirmButton();
@@ -314,8 +306,8 @@ function renderResults(data) {
                 <div class="aim-card-img-wrap">
                     ${img 
                         ? `<img src="${img}" class="aim-card-img" loading="lazy">` 
-                        : `<div class="aim-card-placeholder">${ICON.book}</div>`}
-                    <div class="aim-card-check">${ICON.check}</div>
+                        : `<div class="aim-card-placeholder">${icon('book', 24, { strokeWidth: 1.5 })}</div>`}
+                    <div class="aim-card-check">${icon('check', 14, { strokeWidth: 3 })}</div>
                 </div>
                 <div class="aim-card-info">
                     <div class="aim-card-title" title="${escapeHtmlAttribute(issue.name || 'Без назви')}">

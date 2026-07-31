@@ -2,18 +2,7 @@ import { API } from '../helpers/api.js';
 import { currentUser } from '../shell.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { t } from '../helpers/i18n.js';
-
-const icon = (d, size = 16, strokeWidth = 2) =>
-  `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
-
-const ICON = {
-    search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
-    trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>',
-    plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
-    book: '<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',
-    layers: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
-    listPlus: '<path d="M11 12H3"/><path d="M16 6H3"/><path d="M16 18H3"/><path d="M18 10v6"/><path d="M15 13h6"/>'
-};
+import { icon } from '../helpers/icons.js';
 
 let allVolumes = [];
 let searchQuery = '';
@@ -50,7 +39,7 @@ export async function renderCollections(main, params) {
                 <div class="collection-controls">
                     <div style="display: flex; gap: 16px; align-items: center; flex: 1; flex-wrap: wrap;">
                         <div class="collection-search-wrap" style="flex: 1; max-width: 320px;">
-                            <span class="search-icon">${icon(ICON.search, 18, 2.5)}</span>
+                            <span class="search-icon">${icon('search', 18, 2.5)}</span>
                             <input type="text" id="collection-search" placeholder="${t('search_in_collection')}" value="${escapeHtmlAttribute(searchQuery)}">
                         </div>
                         <label class="collection-hide-missing-label" style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; color: var(--text-2, #4b5563); user-select: none;">
@@ -60,14 +49,14 @@ export async function renderCollections(main, params) {
                     </div>
                     <div class="collection-stats">
                         <div class="collection-stat-item">
-                            <span class="collection-stat-icon">${icon(ICON.book, 18, 2)}</span>
+                            <span class="collection-stat-icon">${icon('book', 18, 2)}</span>
                             <div class="collection-stat-details">
                                 <span class="collection-stat-label">${t('home_stats_volumes')}:</span>
                                 <span class="collection-stat-value" id="stat-series">0</span>
                             </div>
                         </div>
                         <div class="collection-stat-item">
-                            <span class="collection-stat-icon">${icon(ICON.layers, 18, 2)}</span>
+                            <span class="collection-stat-icon">${icon('layers', 18, 2)}</span>
                             <div class="collection-stat-details">
                                 <span class="collection-stat-label" id="stat-label-collections">${currentType === 'issue' ? t('releases') : t('collections')}:</span>
                                 <span class="collection-stat-value" id="stat-collections">0</span>
@@ -186,7 +175,7 @@ function renderResults(main, isMyCollection = true) {
     if (filtered.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                ${icon(ICON.layers, 48, 1.5)}
+                ${icon('layers', 48, 1.5)}
                 <h3>${t('list_empty')}</h3>
             </div>`;
         return;
@@ -211,7 +200,7 @@ function renderResults(main, isMyCollection = true) {
                             <div class="volume-progress-row">
                                 ${ownedCount < totalCount ? `
                                     <button class="volume-add-all-btn" data-volume-id="${volume.id}" title="${t('add_all')}">
-                                        ${icon(ICON.listPlus, 16)}
+                                        ${icon('listPlus', 16)}
                                     </button>
                                 ` : ''}
                                 <span class="volume-progress-text">${ownedCount}/${totalCount}</span>
@@ -246,7 +235,7 @@ function renderResults(main, isMyCollection = true) {
                                     <a href="${itemUrl}">
                                         ${item.image 
                                             ? `<img src="${normalizeImageUrl(item.image)}" alt="${escapeHtmlAttribute(item.name)}">` 
-                                            : `<div class="empty-thumb">${icon(ICON.book, 24)}</div>`}
+                                            : `<div class="empty-thumb">${icon('book', 24)}</div>`}
                                     </a>
                                     <div class="item-number">#${escapeHtmlAttribute(item.issue_number || '—')}</div>
                                     ${isMyCollection ? `
@@ -254,7 +243,7 @@ function renderResults(main, isMyCollection = true) {
                                             <button class="toggle-collection-btn ${isOwned ? 'btn-remove' : 'btn-add'}" 
                                                     data-id="${item.id}" 
                                                     title="${isOwned ? t('remove_from_collection') : t('add_to_collection')}">
-                                                ${isOwned ? icon(ICON.trash, 14) : icon(ICON.plus, 14)}
+                                                ${isOwned ? icon('trash', 14) : icon('plus', 14)}
                                             </button>
                                         </div>
                                     ` : ''}

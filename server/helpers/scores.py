@@ -5,8 +5,10 @@ server/helpers/scores.py
 
 from __future__ import annotations
 from typing import Any
+import difflib
 
-# ─── Рівні ────────────────────────────────────────────────────────────────────
+# ─── Рівні ───────────────────────────────────────────────────────────────────
+
 # Кожен запис: (мін. балів включно, назва рівня)
 LEVELS: list[tuple[int, str]] = [
     (0,    "Новачок"),
@@ -53,8 +55,9 @@ def _is_local_webp(value: str | None) -> bool:
 def calculate_edit_score(
     before: dict[str, Any],
     after: dict[str, Any],
-    themes_before: list[int],
-    themes_after: list[int],
+    themes_before: list[int] | None = None,
+    themes_after: list[int] | None = None,
+    entity_type: str = "volume",
 ) -> tuple[int, list[str]]:
     """
     Порівнює стан «до» та «після» правки та повертає:
@@ -64,25 +67,79 @@ def calculate_edit_score(
     Правила:
       • Заповнення порожнього поля   → +5 б.
       • Зміна існуючого поля         → +2 б.
-      • Зображення/банер webp (локально)  → +10 б. (замість 5/2 за поле)
+      • Зображення/банер/фото webp (локально) → +10 б. (замість 5/2 за поле)
       • lang                          → +2 б.
-      • publisher                     → +5 б. (лише якщо поле було порожнє)
-                                               або +2 б. (якщо змінили)
+      • publisher                     → +5 б. (лише якщо поле було порожнє) або +2 б.
       • themes — кожна нова тема      → +2 б.
-      • synopsis_ua / synopsis:
-          - новий синопсис → кількість слів > 2 символи, поділена на 2
-          - змінений синопсис → залежно від % змін (1-20%: +2 б., 21-30%: +5 б., 31-60%: +10 б., 61-100%: +20 б.)
+      • synopsis / description / bio:
+          - новий текст → кількість слів > 2 символи, поділена на 2
+          - змінений текст → залежно від % змін (1-20%: +2 б., 21-30%: +5 б., 31-60%: +10 б., 61-100%: +20 б.)
+      • Нові зв'язки (автори, випуски, персонажі, зв'язані томи) → +2 б. за кожен
+      • Нова версія персонажа (persona) → +3 б.
     """
     total = 0
     parts: list[str] = []
 
-    # Поля-зображення (image = cover, banner)
-    IMAGE_FIELDS = {"image", "banner"}
-    # Поля з особливою вартістю
-    SYNOPSIS_FIELDS = {"synopsis_ua", "synopsis"}
-    SKIP_FIELDS = {"themes", "theme_ids"} | SYNOPSIS_FIELDS | IMAGE_FIELDS
+    if themes_before is None:
+        themes_before = []
+    if themes_after is None:
+        themes_after = []
 
-    # ── 1. Звичайні поля ──────────────────────────────────────────────────────
+    # Поля-зображення
+    IMAGE_FIELDS = {"image", "cover_img", "photo", "logo", "banner", "portret_img", "costume_img", "portret_costume_img"}
+    # Великі текстові поля
+    TEXT_FIELDS = {"synopsis_ua", "synopsis", "description", "bio"}
+    # Поля списків / відносин
+    LIST_FIELDS = {"staff", "characters", "issues", "volumes", "creators", "related_collections"}
+    
+    SKIP_FIELDS = {"themes", "theme_ids", "personas"} | TEXT_FIELDS | IMAGE_FIELDS | LIST_FIELDS
+
+    FIELD_LABELS: dict[str, str] = {
+        "name": "оригінальну назву",
+        "name_uk": "українську назву",
+        "name_ro": "транслітеровану назву",
+        "name_native": "рідну назву",
+        "real_name": "оригінальне справжнє ім'я",
+        "real_name_uk": "українське справжнє ім'я",
+        "creators": "авторів / творців",
+        "franchise": "франшизу",
+        "earth": "всесвіт / землю",
+        "essence": "сутність / расу",
+        "origin": "походження",
+        "gender": "стать",
+        "start_year": "рік початку",
+        "lang": "мову",
+        "publisher": "видавництво",
+        "site_link": "посилання на джерело",
+        "pseudo": "псевдонім",
+        "occupation": "професію",
+        "birth": "дату народження",
+        "birth_place": "місце народження",
+        "website": "вебсайт",
+        "issue_number": "номер випуску",
+        "publication_date": "дату публікації",
+        "country": "країну",
+        "personas": "альтер-его / версії",
+        "aliases": "псевдоніми",
+        "image": "головне зображення",
+        "cover_img": "обкладинку / банер",
+        "portret_img": "портрет",
+        "costume_img": "костюм",
+        "portret_costume_img": "портрет у костюмі",
+        "logo": "логотип",
+        "photo": "фото",
+        "synopsis": "синопсис (EN)",
+        "synopsis_ua": "синопсис (UA)",
+        "description": "опис",
+        "bio": "біографію",
+        "staff": "персонал",
+        "characters": "персонажів",
+        "issues": "випуски",
+        "volumes": "томи",
+        "related_collections": "пов'язані колекції",
+    }
+
+    # ── 1. Звичайні текстові та числові поля ────────────────────────────────
     for field, new_val in after.items():
         if field in SKIP_FIELDS:
             continue
@@ -92,25 +149,25 @@ def calculate_edit_score(
         old_val = before.get(field)
         is_empty_before = old_val is None or old_val == ""
 
+        pts = 5 if is_empty_before else 2
         if field == "lang":
             pts = 2
-            label = "мову видання"
         elif field == "publisher":
             pts = 5 if is_empty_before else 2
-            label = "видавництво"
-        else:
-            pts = 5 if is_empty_before else 2
-            label = field
+
+        label = FIELD_LABELS.get(field, field)
 
         if old_val == new_val:
-            continue  # значення не змінилось
+            continue
 
         total += pts
         action = "додано" if is_empty_before else "змінено"
         parts.append(f"{action} {label} (+{pts} б.)")
 
-    # ── 2. Зображення / банер ─────────────────────────────────────────────────
+    # ── 2. Зображення / логотипи / банери ──────────────────────────────────
     for field in IMAGE_FIELDS:
+        if field not in after:
+            continue
         new_val = after.get(field)
         if not new_val:
             continue
@@ -130,11 +187,13 @@ def calculate_edit_score(
 
         total += pts
         action = "додано" if is_empty_before else "змінено"
-        label = "обкладинку" if field == "image" else "банер"
+        label = FIELD_LABELS.get(field, "зображення")
         parts.append(f"{action} {label} ({label_type}, +{pts} б.)")
 
-    # ── 3. Синопсис ───────────────────────────────────────────────────────────
-    for field in SYNOPSIS_FIELDS:
+    # ── 3. Опис / Синопсис / Біографія ───────────────────────────────────────
+    for field in TEXT_FIELDS:
+        if field not in after:
+            continue
         new_val = after.get(field)
         if not new_val:
             continue
@@ -142,12 +201,11 @@ def calculate_edit_score(
         if old_val == new_val:
             continue
 
+        label = FIELD_LABELS.get(field, field)
         if old_val:
-            # Редагування існуючого синопсису — перевіряємо відсоток змін
-            import difflib
             matcher = difflib.SequenceMatcher(None, str(old_val), str(new_val))
-            similarity = matcher.ratio()  # 1.0 = однакові, 0.0 = повністю різні
-            diff_ratio = 1.0 - similarity  # Частка зміненого тексту (0.0 .. 1.0)
+            similarity = matcher.ratio()
+            diff_ratio = 1.0 - similarity
             diff_percent = int(diff_ratio * 100)
 
             if diff_ratio > 0.60:
@@ -159,16 +217,32 @@ def calculate_edit_score(
             else:
                 pts = 2
 
-            parts.append(f"відредаговано синопсис ({diff_percent}% змін, +{pts} б.)")
+            parts.append(f"відредаговано {label} ({diff_percent}% змін, +{pts} б.)")
         else:
-            # Новий синопсис — підраховуємо слова
             words = _count_meaningful_words(str(new_val))
             pts = max(1, words // 2)
-            parts.append(f"додано синопсис ({words} сл., +{pts} б.)")
+            parts.append(f"додано {label} ({words} сл., +{pts} б.)")
 
         total += pts
 
-    # ── 4. Теми ───────────────────────────────────────────────────────────────
+    # ── 4. Списки та відношення (автори, персонажі, випуски тощо) ───────────
+    for field in LIST_FIELDS:
+        if field not in after:
+            continue
+        new_val = after.get(field) or []
+        old_val = before.get(field) or []
+        
+        if isinstance(new_val, list) and isinstance(old_val, list):
+            new_ids = set(x.get("id") if isinstance(x, dict) else x for x in new_val)
+            old_ids = set(x.get("id") if isinstance(x, dict) else x for x in old_val)
+            added = new_ids - old_ids
+            if added:
+                pts = len(added) * 2
+                total += pts
+                label = FIELD_LABELS.get(field, field)
+                parts.append(f"додано {label}: {len(added)} шт. (+{pts} б.)")
+
+    # ── 5. Теми ───────────────────────────────────────────────────────────────
     added_themes = set(themes_after) - set(themes_before)
     if added_themes:
         pts = len(added_themes) * 2
@@ -187,5 +261,13 @@ def build_reason_string(
 ) -> str:
     """Формує рядок reason для запису в score_history."""
     details = ", ".join(parts) if parts else "без деталей"
-    label = "тому" if entity_type == "volume" else entity_type
+    label_map = {
+        "volume": "тому",
+        "issue": "випуску",
+        "character": "персонажу",
+        "person": "персони",
+        "publisher": "видавництва",
+        "collection": "збірника"
+    }
+    label = label_map.get(entity_type, entity_type)
     return f"{action} правку {label} #{entity_id}: {details} (всього +{total} б.)"

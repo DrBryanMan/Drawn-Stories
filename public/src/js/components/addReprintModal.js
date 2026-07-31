@@ -2,13 +2,7 @@
 import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 
-const ICON = {
-    search: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>',
-    check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
-    book: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>',
-    x: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
-    plus: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>'
-};
+import { icon } from '../helpers/icons.js';
 
 let _modal = null;
 let _config = null;
@@ -28,8 +22,8 @@ function ensureModal() {
     el.innerHTML = `
         <div class="ds-modal ds-modal--large" id="add-reprint-modal">
             <div class="ds-modal-header">
-                <div class="ds-modal-title">${ICON.plus} Додати репринт</div>
-                <button class="ds-modal-close" id="arm-close-btn">${ICON.x}</button>
+                <div class="ds-modal-title">${icon('plus', 16, { strokeWidth: 2.5 })} Додати репринт</div>
+                <button class="ds-modal-close" id="arm-close-btn">${icon('x', 20, { strokeWidth: 2.2 })}</button>
             </div>
             <div class="ds-modal-body ds-modal-body--vertical">
                 <!-- 1. Фільтри пошуку (arm-filters) layout: 4 + 2 -->
@@ -106,7 +100,7 @@ function ensureModal() {
             <div class="ds-modal-footer">
                 <button class="btn-aim btn-aim--secondary" id="arm-cancel-btn">Скасувати</button>
                 <button class="btn-aim btn-aim--primary" id="arm-confirm-btn" disabled>
-                    ${ICON.plus} Додати репринт
+                    ${icon('plus', 16, { strokeWidth: 2.5 })} Додати репринт
                 </button>
             </div>
         </div>
@@ -164,7 +158,7 @@ function ensureModal() {
         } catch (err) {
             alert('Помилка збереження репринту: ' + err.message);
             confirmBtn.disabled = false;
-            confirmBtn.innerHTML = _config.reprintLinkId ? `Зберегти зміни` : `${ICON.plus} Додати репринт`;
+            confirmBtn.innerHTML = _config.reprintLinkId ? `Зберегти зміни` : `${icon('plus', 16, { strokeWidth: 2.5 })} Додати репринт`;
         }
     };
 
@@ -239,7 +233,7 @@ export function openAddReprintModal(config) {
         // Завантажуємо історії та показуємо панель налаштувань
         selectIssue(config.preselectedIssue);
     } else {
-        document.getElementById('arm-confirm-btn').innerHTML = `${ICON.plus} Додати репринт`;
+        document.getElementById('arm-confirm-btn').innerHTML = `${icon('plus', 16, { strokeWidth: 2.5 })} Додати репринт`;
         document.getElementById('arm-role-reprint').checked = true; // за замовчуванням обраний є репринтом
         document.getElementById('arm-selected-info').style.display = 'block';
         document.getElementById('arm-selected-info').innerHTML = 'Виберіть випуск-репринт зі списку результатів нижче';
@@ -349,8 +343,8 @@ function renderResults() {
                 <div class="arm-card-img-wrap">
                     ${img 
                         ? `<img src="${img}" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">` 
-                        : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: var(--text-muted);">${ICON.book}</div>`}
-                    <div class="arm-card-check">${ICON.check}</div>
+                        : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: var(--text-muted);">${icon('book', 24, { strokeWidth: 1.5 })}</div>`}
+                    <div class="arm-card-check">${icon('check', 14, { strokeWidth: 3 })}</div>
                 </div>
                 <div class="arm-card-details">
                     <div class="arm-card-title" title="${escapeHtmlAttribute(issue.name || 'Без назви')}">

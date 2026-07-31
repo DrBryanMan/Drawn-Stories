@@ -8,13 +8,9 @@ export const ORIGIN_TRANSLATIONS = {
   robot: { uk: 'Робот', en: 'Robot' },
   android: { uk: 'Андроїд', en: 'Android' },
   deity: { uk: 'Божество', en: 'Deity' },
-  god: { uk: 'Бог', en: 'God' },
-  goddess: { uk: 'Богиня', en: 'Goddess' },
   demon: { uk: 'Демон', en: 'Demon' },
   magic: { uk: 'Магічна істота', en: 'Magical Being' },
-  magical: { uk: 'Магічна істота', en: 'Magical Being' },
   atlantian: { uk: 'Атлант', en: 'Atlantean' },
-  atlantean: { uk: 'Атлант', en: 'Atlantean' },
   amazon: { uk: 'Амазонка', en: 'Amazon' },
   inhuman: { uk: 'Нелюд', en: 'Inhuman' },
   symbiote: { uk: 'Симбіот', en: 'Symbiote' },
@@ -22,7 +18,6 @@ export const ORIGIN_TRANSLATIONS = {
   zombie: { uk: 'Зомбі', en: 'Zombie' },
   clone: { uk: 'Клон', en: 'Clone' },
   meta: { uk: 'Мета-людина', en: 'Metahuman' },
-  metahuman: { uk: 'Мета-людина', en: 'Metahuman' }
 };
 
 /**

@@ -75,20 +75,8 @@ async function start() {
     .on('/user/:username/lists', (_path, params, query) => renderUserLists(main, params, query))
     .on('/user/:username/collection', (_path, params) => renderCollections(main, params))
     .on('/user/:username/favorites', (_path, params) => renderFavorites(main, params))
-    .on('/edits',         () => {
-        if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'moderator')) {
-            router.navigate('/');
-            return;
-        }
-        renderEdits(main);
-    })
-    .on('/edits/:id',     (_path, params) => {
-        if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'moderator')) {
-            router.navigate('/');
-            return;
-        }
-        renderEditDetail(main, params);
-    })
+    .on('/edits',         () => renderEdits(main))
+    .on('/edits/:id',     (_path, params) => renderEditDetail(main, params))
     .notFound(            () => renderHome(main))
     .listen();
 }

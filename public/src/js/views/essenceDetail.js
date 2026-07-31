@@ -5,16 +5,7 @@ import { t, l } from '../helpers/i18n.js';
 import { CharacterPicker } from '../components/CharacterPicker.js';
 import { renderEntityLink, initEntityExistenceHandlers } from '../helpers/entityExistence.js';
 import { openGlobalAddModal } from '../components/GlobalAddModal.js';
-
-const ICON = {
-  user:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
-  globe:        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
-  edit:         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
-  sparkles:     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>',
-  plus:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
-  trash:        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
-  layers:       '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>'
-};
+import { icon } from '../helpers/icons.js';
 
 function isModerator() {
   return currentUser?.role === 'moderator' || currentUser?.role === 'admin';
@@ -78,7 +69,7 @@ export async function renderEssenceDetail(container, params) {
             <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
               <a href="#/essences" class="btn-admin btn-admin--secondary">${t('to_essence_catalog')}</a>
               <button class="btn-admin btn-admin--primary" id="btn-create-missing-essence">
-                ${ICON.plus} ${t('create_essence_btn', { name: escapeHtmlAttribute(prettyName) })}
+                ${icon('plus', 14)} ${t('create_essence_btn', { name: escapeHtmlAttribute(prettyName) })}
               </button>
             </div>
           </div>
@@ -137,7 +128,7 @@ function buildEssenceTitleHTML(essence) {
       identifier: characterId,
       displayName: personName,
       className: 'essence-title-link',
-      innerHTML: `${ICON.user} <span>${escapeHtmlAttribute(personName)}</span>`
+      innerHTML: `${icon('user', 14)} <span>${escapeHtmlAttribute(personName)}</span>`
     });
   }
 
@@ -151,7 +142,7 @@ function buildEssenceTitleHTML(essence) {
       identifier: essenceSlug,
       displayName: personName,
       className: 'essence-title-link',
-      innerHTML: `${ICON.sparkles} <span>${escapeHtmlAttribute(personName)}</span>`
+      innerHTML: `${icon('sparkles', 16)} <span>${escapeHtmlAttribute(personName)}</span>`
     });
   }
 
@@ -166,7 +157,7 @@ function buildEssenceTitleHTML(essence) {
         identifier: essenceSlug,
         displayName: essenceName,
         className: 'essence-title-link',
-        innerHTML: `${ICON.sparkles} <span>${escapeHtmlAttribute(essenceName)}</span>`
+        innerHTML: `${icon('sparkles', 16)} <span>${escapeHtmlAttribute(essenceName)}</span>`
       });
     } else {
       // ніякого посилання
@@ -200,7 +191,7 @@ function buildEssenceMetaUnderTitleHTML(essence) {
 
     return `
       <a href="#/earths/${earthId}" class="essence-earth-badge" style="margin-top: 8px;">
-        ${ICON.globe} ${escapeHtmlAttribute(label)}
+        ${icon('globe', 14)} ${escapeHtmlAttribute(label)}
       </a>
     `;
   }
@@ -209,7 +200,7 @@ function buildEssenceMetaUnderTitleHTML(essence) {
   if (franchise) {
     return `
       <div class="essence-franchise-badge" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); background: var(--bg-hover, #f1f5f9); padding: 4px 10px; border-radius: 12px; margin-top: 8px;">
-        ${ICON.layers} ${escapeHtmlAttribute(franchise)}
+        ${icon('layers', 16)} ${escapeHtmlAttribute(franchise)}
       </div>
     `;
   }
@@ -257,21 +248,21 @@ function renderEssenceContent(container, essence) {
 
               ${isModerator() ? `
                 <button class="btn-admin btn-admin--secondary hero-edit-action-btn" id="btn-edit-essence" title="${escapeHtmlAttribute(t('edit_page'))}">
-                  ${ICON.edit}
+                  ${icon('edit', 16)}
                 </button>
               ` : ''}
             </div>
 
             <!-- Description -->
             <div class="essence-description-box">
-              <div class="essence-description-title">${ICON.sparkles} ${t('essence_description')}</div>
+              <div class="essence-description-title">${icon('sparkles', 16)} ${t('essence_description')}</div>
               <div>${essence.description ? escapeHtmlAttribute(essence.description).replace(/\n/g, '<br>') : `<i style="color: var(--text-muted);">${t('no_description')}</i>`}</div>
             </div>
 
             <!-- Other Essences / Characters -->
             ${essence.other_essences && essence.other_essences.length > 0 ? `
               <div class="essence-other-essences-box">
-                <div class="essence-other-title">${ICON.layers} ${t('related_characters')}</div>
+                <div class="essence-other-title">${icon('layers', 16)} ${t('related_characters')}</div>
                 <div class="essence-other-list">
                   ${essence.other_essences.map(item => {
                     const isObj = typeof item === 'object' && item !== null;
@@ -313,11 +304,11 @@ function renderEssenceContent(container, essence) {
                           ${imgUrl ? `
                             <img src="${escapeHtmlAttribute(imgUrl)}" alt="${escapeHtmlAttribute(charName)}" class="essence-other-card-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                             <div class="essence-version-fallback-icon" style="display: none; width:100%; height:100%; align-items:center; justify-content:center;">
-                              ${ICON.user}
+                              ${icon('user', 14)}
                             </div>
                           ` : `
                             <div class="essence-version-fallback-icon" style="display: flex; width:100%; height:100%; align-items:center; justify-content:center;">
-                              ${ICON.user}
+                              ${icon('user', 14)}
                             </div>
                           `}
                         </div>
@@ -373,7 +364,7 @@ function renderCategorySections(essence, isModerator) {
             const isActive = cat.key === activeTabKey;
             return `
               <button class="volume-tab-btn ${isActive ? 'is-active' : ''}" data-tab="${cat.key}">
-                ${ICON.layers} <span>${escapeHtmlAttribute(cat.title)}</span> ${count > 0 ? `<span style="opacity:0.85; font-size:0.8rem; margin-left:2px;">(${count})</span>` : ''}
+                ${icon('layers', 16)} <span>${escapeHtmlAttribute(cat.title)}</span> ${count > 0 ? `<span style="opacity:0.85; font-size:0.8rem; margin-left:2px;">(${count})</span>` : ''}
               </button>
             `;
           }).join('')}
@@ -521,12 +512,12 @@ function renderVersionCard(item, isModerator) {
           <button class="btn-edit-version essence-version-action-btn essence-version-action-btn--edit" 
             data-item="${escapeHtmlAttribute(JSON.stringify(item))}"
             title="${escapeHtmlAttribute(t('edit'))}">
-            ${ICON.edit}
+            ${icon('edit', 16)}
           </button>
           <button class="btn-remove-version essence-version-action-btn essence-version-action-btn--delete" 
             data-id="${item.relation_id || item.character_id}" 
             title="${escapeHtmlAttribute(t('remove'))}">
-            ${ICON.trash}
+            ${icon('trash', 14)}
           </button>
         </div>
       ` : ''}
@@ -540,7 +531,7 @@ function renderModalsHTML(essence) {
     <div class="ds-modal-overlay" id="edit-essence-modal" style="display: none;">
       <div class="ds-modal ds-modal--large" id="edit-essence-modal-box">
         <div class="ds-modal-header">
-          <div class="ds-modal-title">${ICON.edit} ${t('edit_essence_title')}</div>
+          <div class="ds-modal-title">${icon('edit', 16)} ${t('edit_essence_title')}</div>
           <button class="ds-modal-close" data-close-modal>&times;</button>
         </div>
         <div class="ds-modal-body">
@@ -574,7 +565,7 @@ function renderModalsHTML(essence) {
               <input type="text" name="franchise" class="admin-input" value="${escapeHtmlAttribute(essence.franchise || '')}">
             </div>
             <div class="admin-form-group admin-form-group--full">
-              <label class="admin-label">${ICON.user} ${t('main_character')}</label>
+              <label class="admin-label">${icon('user', 14)} ${t('main_character')}</label>
               <input type="hidden" name="character_id" id="edit-essence-char-id" value="${essence.character_id || ''}">
               <div id="edit-essence-char-picker"></div>
             </div>
@@ -589,7 +580,7 @@ function renderModalsHTML(essence) {
 
             <!-- Group: Пов'язані сутності (Other Essences) -->
             <div class="admin-form-section-title" style="grid-column: span 2; font-weight: 800; border-bottom: 1px solid var(--border-s); padding-bottom: 4px; margin-top: 12px; text-transform: uppercase; font-size: 12px; color: var(--accent); display: flex; align-items: center; gap: 6px;">
-              ${ICON.layers} ${t('other_essences_section')}
+              ${icon('layers', 16)} ${t('other_essences_section')}
             </div>
 
             <div class="admin-form-group admin-form-group--full" style="grid-column: span 2;">
@@ -599,7 +590,7 @@ function renderModalsHTML(essence) {
                 <div class="other-essence-add-form" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:12px; background:var(--bg-2); border-radius:6px; border:1px dashed var(--border-s);">
                   <div style="grid-column: span 2;">
                     <label class="admin-label" style="font-size: 11px; font-weight: bold; color: var(--text-muted); display:flex; align-items:center; gap:4px; margin-bottom:4px;">
-                      ${ICON.user} ${t('link_character_optional')}
+                      ${icon('user', 14)} ${t('link_character_optional')}
                     </label>
                     <input type="hidden" id="edit-other-ess-char-id" value="">
                     <div id="edit-other-ess-char-picker"></div>
@@ -628,7 +619,7 @@ function renderModalsHTML(essence) {
     <div class="ds-modal-overlay" id="add-version-modal" style="display: none;">
       <div class="ds-modal" id="add-version-modal-box">
         <div class="ds-modal-header">
-          <div class="ds-modal-title">${ICON.plus} ${t('add_version_title')}</div>
+          <div class="ds-modal-title">${icon('plus', 14)} ${t('add_version_title')}</div>
           <button class="ds-modal-close" data-close-modal>&times;</button>
         </div>
         <div class="ds-modal-body">
@@ -663,7 +654,7 @@ function renderModalsHTML(essence) {
 
             <!-- Target Essence Slug (Для типу essence) -->
             <div class="admin-form-group admin-form-group--full" id="add-ver-slug-group" style="display: none;">
-              <label class="admin-label">${ICON.sparkles} ${t('target_essence_slug')} *</label>
+              <label class="admin-label">${icon('sparkles', 16)} ${t('target_essence_slug')} *</label>
               <input type="text" name="target_essence_slug" id="add-ver-target-slug" class="admin-input" placeholder="spider-man-616">
               <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
                 ${t('auto_format_slug_tip')}
@@ -672,7 +663,7 @@ function renderModalsHTML(essence) {
 
             <!-- Character Picker (Для типів character та team) -->
             <div class="admin-form-group admin-form-group--full" id="add-ver-char-group">
-              <label class="admin-label">${ICON.user} ${t('system_character_team')} *</label>
+              <label class="admin-label">${icon('user', 14)} ${t('system_character_team')} *</label>
               <input type="hidden" name="character_id" id="add-version-char-id" value="">
               <div id="add-version-char-picker"></div>
             </div>
@@ -706,7 +697,7 @@ function renderModalsHTML(essence) {
     <div class="ds-modal-overlay" id="edit-version-modal" style="display: none;">
       <div class="ds-modal" id="edit-version-modal-box">
         <div class="ds-modal-header">
-          <div class="ds-modal-title">${ICON.edit} ${t('edit_version_title')}</div>
+          <div class="ds-modal-title">${icon('edit', 16)} ${t('edit_version_title')}</div>
           <button class="ds-modal-close" data-close-modal>&times;</button>
         </div>
         <div class="ds-modal-body">
@@ -740,8 +731,8 @@ function renderModalsHTML(essence) {
             </div>
 
             <div class="admin-form-group admin-form-group--full" id="edit-ver-slug-group">
-              <label class="admin-label">${ICON.sparkles} ${t('target_essence_slug')}</label>
-              <label class="admin-label">${ICON.user} ${t('system_character_team')}</label>
+              <label class="admin-label">${icon('sparkles', 16)} ${t('target_essence_slug')}</label>
+              <label class="admin-label">${icon('user', 14)} ${t('system_character_team')}</label>
               <input type="hidden" name="character_id" id="edit-version-char-id" value="">
               <div id="edit-version-char-picker"></div>
             </div>
@@ -846,7 +837,7 @@ function initModeratorHandlers(container, essence) {
             ${img ? `<img src="${escapeHtmlAttribute(img)}" style="width:100%;height:100%;object-fit:cover;">` : ICON.user}
           </span>
           <span>${escapeHtmlAttribute(charName)} ${essLabel ? `<small style="color:#15803d; font-weight:700; font-style:italic;">(${t('currently_essence', { name: escapeHtmlAttribute(essLabel) })})</small>` : ''}</span>
-          <button type="button" class="other-ess-edit-btn" data-idx="${idx}" style="background:none; border:none; cursor:pointer; color:var(--text-muted); padding:2px;" title="${escapeHtmlAttribute(t('edit'))}">${ICON.edit}</button>
+          <button type="button" class="other-ess-edit-btn" data-idx="${idx}" style="background:none; border:none; cursor:pointer; color:var(--text-muted); padding:2px;" title="${escapeHtmlAttribute(t('edit'))}">${icon('edit', 16)}</button>
           <button type="button" class="other-ess-remove-btn" data-idx="${idx}" style="background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:14px; font-weight:bold; padding:2px;" title="${escapeHtmlAttribute(t('remove'))}">&times;</button>
         </div>
       `;

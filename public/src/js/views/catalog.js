@@ -29,10 +29,6 @@ const getSortOptions = () => [
   { value: 'recent', label: t('sort_recent') },
   { value: 'date', label: t('sort_date') },
 ];
-const SORT_ORDER_ICONS = {
-  asc: '<path d="M5 6h6M5 12h10M5 18h14"/>',
-  desc: '<path d="M5 6h14M5 12h10M5 18h6"/>',
-};
 const getSortOrderTitles = () => ({
   name: {
     asc: t('sort_order_name_asc') || 'За зростанням: від А до Я',
@@ -109,12 +105,12 @@ function syncUrl() {
 
 export async function renderCatalog(main, query = {}) {
   searchQuery = query.search || '';
-  currentContentType = query.content_type || '';
-  currentViewType = query.view_type || 'series';
-  currentCollectionOnly = query.collection === 'true';
+  currentContentType = query.content_type || query.type || '';
+  currentViewType = query.view_type || (query.mode === 'issues' ? 'issues' : 'series');
+  currentCollectionOnly = query.collection === 'true' || query.mode === 'collections';
   
   currentSortField = query.sort || DEFAULT_SORT_FIELD;
-  currentSortOrder = query.order_dir || DEFAULT_SORT_ORDER;
+  currentSortOrder = query.order_dir || query.order || DEFAULT_SORT_ORDER;
 
   let filtersOpen = readStoredFiltersPanelState();
 
@@ -123,23 +119,27 @@ export async function renderCatalog(main, query = {}) {
   paginator.setNextCursor(null);
 
   currentPublishers = [];
-  if (query.publisher_ids) {
+  const pubParam = query.publisher_ids || query.publisher;
+  if (pubParam) {
     try {
-      const ids = query.publisher_ids.split(',');
+      const ids = pubParam.split(',');
       currentPublishers = await Promise.all(ids.map(async (id) => {
         const res = await API.get(`/publishers/${id}`);
-        return { id: Number(id), name: res.publisher.name };
+        const p = res.publisher || res;
+        return { id: Number(id), name: p.name || p.title || '' };
       }));
     } catch (e) { console.error('Failed to load initial publishers', e); }
   }
 
   currentThemes = [];
-  if (query.theme_ids) {
+  const themeParam = query.theme_ids || query.theme;
+  if (themeParam) {
     try {
-      const ids = query.theme_ids.split(',');
+      const ids = themeParam.split(',');
       currentThemes = await Promise.all(ids.map(async (id) => {
         const res = await API.get(`/themes/${id}`);
-        return { id: Number(id), name: res.theme.ua_name || res.theme.name, type: res.theme.type };
+        const tObj = res.theme || res;
+        return { id: Number(id), name: tObj.ua_name || tObj.name || tObj.title || '', type: tObj.type };
       }));
     } catch (e) { console.error('Failed to load initial themes', e); }
   }
@@ -150,18 +150,21 @@ export async function renderCatalog(main, query = {}) {
       const ids = query.exclude_theme_ids.split(',');
       currentExcludedThemes = await Promise.all(ids.map(async (id) => {
         const res = await API.get(`/themes/${id}`);
-        return { id: Number(id), name: res.theme.ua_name || res.theme.name, type: res.theme.type };
+        const tObj = res.theme || res;
+        return { id: Number(id), name: tObj.ua_name || tObj.name || tObj.title || '', type: tObj.type };
       }));
     } catch (e) { console.error('Failed to load initial excluded themes', e); }
   }
 
   currentMagazines = [];
-  if (query.magazine_ids) {
+  const magParam = query.magazine_ids || query.magazine;
+  if (magParam) {
     try {
-      const ids = query.magazine_ids.split(',');
+      const ids = magParam.split(',');
       currentMagazines = await Promise.all(ids.map(async (id) => {
         const res = await API.get(`/volumes/${id}`);
-        return { id: Number(id), name: res.volume.name };
+        const vObj = res.volume || res;
+        return { id: Number(id), name: vObj.name || vObj.title || '' };
       }));
       if (currentMagazines.length > 0) {
         currentContentType = 'manga';
@@ -169,8 +172,11 @@ export async function renderCatalog(main, query = {}) {
     } catch (e) { console.error('Failed to load initial magazines', e); }
   }
 
-  currentLanguages = query.langs ? query.langs.split(',') : [];
-  currentSources = query.sources ? query.sources.split(',') : [];
+  const rawLangs = query.langs || query.lang;
+  currentLanguages = rawLangs ? rawLangs.split(',') : [];
+
+  const rawSources = query.sources || query.source;
+  currentSources = rawSources ? rawSources.split(',') : [];
   currentExcludedSources = query.exclude_sources ? query.exclude_sources.split(',') : [];
 
   main.innerHTML = `
@@ -270,7 +276,7 @@ export async function renderCatalog(main, query = {}) {
       sortSelect.title = selectedSort.label;
     }
     if (sortLabel) sortLabel.textContent = selectedSort.label;
-    if (orderIcon) orderIcon.innerHTML = SORT_ORDER_ICONS[currentSortOrder];
+    if (orderIcon) orderIcon.innerHTML = currentSortOrder === 'asc' ? '<path d="M5 6h6M5 12h10M5 18h14"/>' : '<path d="M5 6h14M5 12h10M5 18h6"/>';
     if (orderBtn) {
       orderBtn.title = title;
       orderBtn.setAttribute('aria-label', title);

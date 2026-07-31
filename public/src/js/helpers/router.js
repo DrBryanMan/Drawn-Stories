@@ -30,6 +30,12 @@ export class Router {
     this.#currentPath = path;
 
     const query = {};
+    if (location.search) {
+      const searchParams = new URLSearchParams(location.search);
+      for (const [key, value] of searchParams.entries()) {
+        query[key] = value;
+      }
+    }
     if (search) {
       const searchParams = new URLSearchParams(search);
       for (const [key, value] of searchParams.entries()) {

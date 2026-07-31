@@ -5,29 +5,8 @@ import { t, l, getCurrentLanguage } from '../helpers/i18n.js';
 import { parseAliases } from '../helpers/lang.js';
 import { translateOrigin } from '../helpers/character.js';
 import { openEditCharacterModal } from '../components/modals/EditCharacterModal.js';
-
-// ── Lucide Monotone Icons ────────────────────────────
-const ICON = {
-  user:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
-  book:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>',
-  layers:       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
-  sparkles:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>',
-  calendar:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>',
-  globe:        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
-  building:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>',
-  externalLink: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
-  edit:         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
-  image:        '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>',
-  users:        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-  male:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="m21 3-6.75 6.75"/><circle cx="10" cy="14" r="6"/></svg>',
-  female:       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15v7"/><path d="M9 19h6"/><circle cx="12" cy="9" r="6"/></svg>',
-  dna:          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5C5 9.5 6 9 7 9s2 .5 2.5 1.5M19.5 13.5c-.5 1-1.5 1.5-2.5 1.5s-2-.5-2.5-1.5M6 6c1.5 0 3 1.5 3 3M18 18c-1.5 0-3-1.5-3-3M3 21l18-18M9 9l6 6"/></svg>',
-  tag:          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.39.39 1.02.39 1.41 0l7.59-7.59c.39-.39.39-1.02 0-1.41L12 2zM7 7h.01"/></svg>'
-};
-
-function isModerator() {
-  return currentUser?.role === 'moderator' || currentUser?.role === 'admin';
-}
+import { fetchEntityEdits, renderEditorsHistoryBlock, initEditorsHistoryBlock } from '../components/editorsHistoryBlock.js';
+import { icon } from '../helpers/icons.js';
 
 function genderText(g) {
   if (g === 1) return t('gender_male') || 'Чоловік';
@@ -77,10 +56,13 @@ export async function renderCharacterDetail(container, params) {
   `;
 
   try {
-    const char = await API.get(`/characters/${characterId}`);
+    const [char, edits] = await Promise.all([
+      API.get(`/characters/${characterId}`),
+      fetchEntityEdits('character', characterId)
+    ]);
     const charTitle = l(char, 'name', NAME_RULES) || char.name;
     document.title = `${charTitle} — Drawn Stories`;
-    renderCharacterContent(container, char, params);
+    renderCharacterContent(container, char, params, edits);
   } catch (err) {
     console.error(err);
     container.innerHTML = `
@@ -94,7 +76,7 @@ export async function renderCharacterDetail(container, params) {
   }
 }
 
-function renderCharacterContent(container, char, params) {
+function renderCharacterContent(container, char, params, edits = []) {
   const displayName = l(char, 'name', NAME_RULES) || char.name;
   const rawSubName = l(char, 'subname', { uk: ['real_name', 'name'], en: ['real_name', 'real_name_uk'] });
   const subName = rawSubName && rawSubName !== displayName ? rawSubName : null;
@@ -114,7 +96,7 @@ function renderCharacterContent(container, char, params) {
   const essSlug = char.essence;
   const essName = char.essence_info ? (l(char.essence_info, 'essence_name', { uk: ['essence_name_uk', 'essence_name'], en: ['essence_name'] }) || essSlug) : essSlug;
   const essLinkHTML = essSlug ? `<a href="#/essences/${escapeHtmlAttribute(essSlug)}">${escapeHtmlAttribute(essName)}</a>` : '';
-  const charEssenceFact = essSlug ? factItemHTML(ICON.sparkles, t('essence'), essLinkHTML) : '';
+  const charEssenceFact = essSlug ? factItemHTML(icon('sparkles'), t('essence'), essLinkHTML) : '';
 
   const volumes = char.volumes || [];
   const issues = char.issues || [];
@@ -148,7 +130,7 @@ function renderCharacterContent(container, char, params) {
                 <div class="character-detail-avatar-frame">
                   ${pImg 
                     ? `<img src="${escapeHtmlAttribute(pImg)}" alt="${escapeHtmlAttribute(pTitle)}">`
-                    : `<div class="character-detail-avatar-empty">${ICON.user}<span>${t('no_photo')}</span></div>`
+                    : `<div class="character-detail-avatar-empty">${icon('user', 14)}<span>${t('no_photo')}</span></div>`
                   }
                 </div>
               </div>
@@ -163,7 +145,7 @@ function renderCharacterContent(container, char, params) {
                 <div class="character-detail-badges" style="margin-top: 14px;">
                   ${persona.first_appearance || persona.issue_id ? `
                     <a href="${persona.issue_id ? `#/issues/${persona.issue_id}` : 'javascript:void(0)'}" class="character-badge">
-                      ${ICON.sparkles} ${t('first_appearance')}: ${escapeHtmlAttribute(persona.first_appearance || `#${persona.issue_id}`)}
+                      ${icon('sparkles', 14)} ${t('first_appearance')}: ${escapeHtmlAttribute(persona.first_appearance || `#${persona.issue_id}`)}
                     </a>
                   ` : ''}
                 </div>
@@ -182,7 +164,7 @@ function renderCharacterContent(container, char, params) {
         </div>
       `;
 
-      setupEventListeners(container, char, personaVolumes, personaIssues, []);
+      setupEventListeners(container, char, personaVolumes, personaIssues, [], edits);
       return;
     }
   }
@@ -197,7 +179,7 @@ function renderCharacterContent(container, char, params) {
             <div class="character-detail-avatar-frame">
               ${activeImage 
                 ? `<img id="char-main-img" src="${escapeHtmlAttribute(activeImage)}" alt="${escapeHtmlAttribute(displayName)}">`
-                : `<div class="character-detail-avatar-empty">${ICON.image}<span>${t('no_photo')}</span></div>`
+                : `<div class="character-detail-avatar-empty">${icon('imagePlaceholder', 32, { strokeWidth: 1.5 })}<span>${t('no_photo')}</span></div>`
               }
             </div>
             ${images.length > 1 ? `
@@ -213,21 +195,25 @@ function renderCharacterContent(container, char, params) {
 
           <!-- Info Column -->
           <div class="character-detail-info">
-            <!-- Over title simple metadata -->
-            <div class="character-detail-over-title" style="display: flex; gap: 8px; font-size: 13px; font-weight: 500; color: var(--text-2);">
-              ${char.essence ? `<span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="${escapeHtmlAttribute(t('essence'))}">${ICON.sparkles} ${essLinkHTML}</span> • ` : ''}
-              ${char.franchise ? `<span style="display: inline-flex; align-items: center; gap: 4px;" title="${escapeHtmlAttribute(t('franchise'))}">${ICON.book} ${escapeHtmlAttribute(char.franchise)}</span>` : ''}
-              ${char.earth ? ` • <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="${escapeHtmlAttribute(t('universe'))}">${ICON.globe} ${escapeHtmlAttribute(char.earth)}</span>` : ''}
-            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
+              <div>
+                <!-- Over title simple metadata -->
+                <div class="character-detail-over-title" style="display: flex; gap: 8px; font-size: 13px; font-weight: 500; color: var(--text-2);">
+                  ${char.essence ? `<span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="${escapeHtmlAttribute(t('essence'))}">${icon('sparkles', 14)} ${essLinkHTML}</span> • ` : ''}
+                  ${char.franchise ? `<span style="display: inline-flex; align-items: center; gap: 4px;" title="${escapeHtmlAttribute(t('franchise'))}">${icon('book', 14)} ${escapeHtmlAttribute(char.franchise)}</span>` : ''}
+                  ${char.earth ? ` • <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="${escapeHtmlAttribute(t('universe'))}">${icon('globe', 14)} ${escapeHtmlAttribute(char.earth)}</span>` : ''}
+                </div>
 
-            <h1>${escapeHtmlAttribute(displayName)}</h1>
-            ${subName ? `<div class="character-detail-subname">${escapeHtmlAttribute(subName)}</div>` : ''}
+                <h1>${escapeHtmlAttribute(displayName)}</h1>
+                ${subName ? `<div class="character-detail-subname">${escapeHtmlAttribute(subName)}</div>` : ''}
+              </div>
+            </div>
 
             <!-- Badges Row -->
             <div class="character-detail-badges" style="margin-top: 12px;">
-              ${char.origin ? `<span class="character-badge" title="${escapeHtmlAttribute(t('species'))}">${ICON.tag} ${escapeHtmlAttribute(translateOrigin(char.origin))}</span>` : ''}
-              ${char.gender === 1 ? `<span class="character-badge gender-male" title="${escapeHtmlAttribute(t('gender'))}">${ICON.male} ${t('gender_male')}</span>` : ''}
-              ${char.gender === 2 ? `<span class="character-badge gender-female" title="${escapeHtmlAttribute(t('gender'))}">${ICON.female} ${t('gender_female')}</span>` : ''}
+              ${char.origin ? `<span class="character-badge" title="${escapeHtmlAttribute(t('species'))}">${icon('tag', 14)} ${escapeHtmlAttribute(translateOrigin(char.origin))}</span>` : ''}
+              ${char.gender === 1 ? `<span class="character-badge gender-male" title="${escapeHtmlAttribute(t('gender'))}">${icon('male', 14)} ${t('gender_male')}</span>` : ''}
+              ${char.gender === 2 ? `<span class="character-badge gender-female" title="${escapeHtmlAttribute(t('gender'))}">${icon('female', 14)} ${t('gender_female')}</span>` : ''}
             </div>
 
             <!-- Personas Cards Section in Hero -->
@@ -238,23 +224,18 @@ function renderCharacterContent(container, char, params) {
                     ${personas.map((p, pIdx) => {
                       const pName = l(p, 'name', { uk: ['name_uk', 'name'], en: ['name'] });
                       const pSubName = getCurrentLanguage() === 'uk' && p.name_uk && p.name !== p.name_uk ? p.name : null;
+                      const pImg = p.image ? normalizeImageUrl(p.image) : null;
                       return `
                         <a href="#/characters/${char.id}/persona/${pIdx}" class="character-persona-card">
-                          <div class="character-persona-cover">
-                            ${p.image 
-                              ? `<img src="${escapeHtmlAttribute(normalizeImageUrl(p.image))}" alt="${escapeHtmlAttribute(p.name)}">`
-                              : `<div class="character-persona-cover-empty">${ICON.user}</div>`
+                          <div class="character-persona-avatar">
+                            ${pImg 
+                              ? `<img src="${escapeHtmlAttribute(pImg)}" alt="${escapeHtmlAttribute(pName)}">`
+                              : `<div class="character-detail-avatar-empty">${icon('user', 14)}</div>`
                             }
                           </div>
                           <div class="character-persona-info">
-                            <span class="character-persona-name">${escapeHtmlAttribute(pName)}</span>
-                            ${pSubName ? `<span class="character-persona-subname">${escapeHtmlAttribute(pSubName)}</span>` : ''}
-                            ${p.first_appearance || p.issue_id ? `
-                              <div class="character-persona-first-app">
-                                <span style="color: #6486d6ff;">${t('first_appearance')}:</span><br>
-                                <strong>${escapeHtmlAttribute(p.first_appearance || `#${p.issue_id}`)}</strong>
-                              </div>
-                            ` : ''}
+                            <div class="character-persona-name">${escapeHtmlAttribute(pName)}</div>
+                            ${pSubName ? `<div class="character-persona-subname">${escapeHtmlAttribute(pSubName)}</div>` : ''}
                           </div>
                         </a>
                       `;
@@ -262,14 +243,9 @@ function renderCharacterContent(container, char, params) {
                 </div>
               </div>
             ` : ''}
-
-            <!-- Actions (Edit button) -->
-            ${isModerator() ? `
-              <button class="personnel-detail-action-btn hero-edit-action-btn" id="char-edit-btn" title="${escapeHtmlAttribute(t('edit'))}">
-                ${ICON.edit}
-              </button>
-            ` : ''}
           </div>
+
+          ${renderEditorsHistoryBlock(edits, currentUser, { editButtonId: 'char-edit-btn', editTitle: t('edit') })}
         </div>
       </section>
 
@@ -281,11 +257,11 @@ function renderCharacterContent(container, char, params) {
               ${t('tab_overview')}
             </button>
             <button class="personnel-detail-tab-btn" data-tab="appearances" role="tab">
-              ${ICON.book} ${t('tab_appearances')} <span class="tab-count">${totalAppearances.toLocaleString()}</span>
+              ${icon('book', 14)} ${t('tab_appearances')} <span class="tab-count">${totalAppearances.toLocaleString()}</span>
             </button>
             ${teams.length > 0 ? `
               <button class="personnel-detail-tab-btn" data-tab="teams" role="tab">
-                ${ICON.users} ${t('tab_teams')} <span class="tab-count">${teams.length}</span>
+                ${icon('users', 14)} ${t('tab_teams')} <span class="tab-count">${teams.length}</span>
               </button>
             ` : ''}
           </div>
@@ -300,7 +276,7 @@ function renderCharacterContent(container, char, params) {
             <!-- Sidebar Custom Character Info Block -->
             <aside>
               <div class="character-detail-info-block">
-                <div class="character-detail-info-block-title">${ICON.user} ${t('details')}</div>
+                <div class="character-detail-info-block-title">${icon('user', 14)} ${t('details')}</div>
                 <ul class="character-detail-fact-list">
                   ${charEssenceFact}
                   ${(() => {
@@ -322,7 +298,7 @@ function renderCharacterContent(container, char, params) {
                           <span class="volume-staff-avatar" style="width: 32px;">
                             ${pImg 
                               ? `<img src="${escapeHtmlAttribute(pImg)}" alt="${escapeHtmlAttribute(pDisplayName)}" loading="lazy">` 
-                              : `<div class="volume-staff-avatar-empty" style="font-size: 11px;">${ICON.user}</div>`}
+                              : `<div class="volume-staff-avatar-empty" style="font-size: 11px;">${icon('user')}</div>`}
                           </span>
                           <span class="volume-staff-content">
                             <span class="volume-staff-name" style="font-size: 13px; font-weight: 700;">${escapeHtmlAttribute(pDisplayName)}</span>
@@ -331,20 +307,20 @@ function renderCharacterContent(container, char, params) {
                       `;
                     }).join('');
 
-                    return factItemHTML(ICON.user, t('creators_label'), `${cardsHTML}`);
+                    return factItemHTML(icon('user'), t('creators_label'), `${cardsHTML}`);
                   })()}
-                  ${factItemHTML(char.gender === 1 ? ICON.male : ICON.female, t('gender'), genderText(char.gender))}
-                  ${factItemHTML(ICON.building, t('publisher'), pubInfo ? `<a href="#/publishers/${pubInfo.id}">${escapeHtmlAttribute(pubInfo.name)}</a>` : null)}
-                  ${factItemHTML(ICON.tag, t('origin_label'), escapeHtmlAttribute(translateOrigin(char.origin)))}
-                  ${factItemHTML(ICON.book, t('franchise'), escapeHtmlAttribute(char.franchise))}
-                  ${factItemHTML(ICON.globe, t('universe_earth'), escapeHtmlAttribute(char.earth))}
-                  ${factItemHTML(ICON.calendar, t('birth'), escapeHtmlAttribute(char.birth))}
-                  ${factItemHTML(ICON.calendar, t('death'), escapeHtmlAttribute(char.death))}
-                  ${factItemHTML(ICON.calendar, t('first_appearance'), firstApp 
+                  ${factItemHTML(char.gender === 1 ? icon('male') : icon('female'), t('gender'), genderText(char.gender))}
+                  ${factItemHTML(icon('building'), t('publisher'), pubInfo ? `<a href="#/publishers/${pubInfo.id}">${escapeHtmlAttribute(pubInfo.name)}</a>` : null)}
+                  ${factItemHTML(icon('tag'), t('origin_label'), escapeHtmlAttribute(translateOrigin(char.origin)))}
+                  ${factItemHTML(icon('book'), t('franchise'), escapeHtmlAttribute(char.franchise))}
+                  ${factItemHTML(icon('globe'), t('universe_earth'), escapeHtmlAttribute(char.earth))}
+                  ${factItemHTML(icon('calendar'), t('birth'), escapeHtmlAttribute(char.birth))}
+                  ${factItemHTML(icon('calendar'), t('death'), escapeHtmlAttribute(char.death))}
+                  ${factItemHTML(icon('calendar'), t('first_appearance'), firstApp 
                     ? `<a href="#/issues/${firstApp.id}">${escapeHtmlAttribute(firstApp.volume_name_uk || firstApp.volume_name)} #${firstApp.issue_number}</a>`
                     : (char.first_appearance ? `#${char.first_appearance}` : null))}
-                  ${factItemHTML(ICON.sparkles, t('aliases'), aliases.length ? escapeHtmlAttribute(aliases.join(', ')) : null)}
-                  ${factItemHTML(ICON.externalLink, "ComicVine", char.cv_slug ? `<a href="https://comicvine.gamespot.com/${char.cv_slug}/4005-${char.cv_id}/" target="_blank" rel="noopener">${escapeHtmlAttribute(String(char.cv_id || 'CV'))} ${ICON.externalLink}</a>` : null)}
+                  ${factItemHTML(icon('sparkles'), t('aliases'), aliases.length ? escapeHtmlAttribute(aliases.join(', ')) : null)}
+                  ${factItemHTML(icon('externalLink'), "ComicVine", char.cv_slug ? `<a href="https://comicvine.gamespot.com/${char.cv_slug}/4005-${char.cv_id}/" target="_blank" rel="noopener">${escapeHtmlAttribute(String(char.cv_id || 'CV'))} ${icon('externalLink', 12)}</a>` : null)}
                 </ul>
               </div>
             </aside>
@@ -393,7 +369,7 @@ function renderCharacterContent(container, char, params) {
                 const tName = escapeHtmlAttribute(t.name_uk || t.name);
                 return `
                   <a href="#/teams/${t.id}" class="char-team-card">
-                    <div class="char-team-avatar">${ICON.users}</div>
+                    <div class="char-team-avatar">${icon('users', 14)}</div>
                     <div class="char-team-name">${tName}</div>
                   </a>
                 `;
@@ -406,7 +382,7 @@ function renderCharacterContent(container, char, params) {
   `;
 
   // Attach event listeners
-  setupEventListeners(container, char, volumes, issues, mangaChapters);
+  setupEventListeners(container, char, volumes, issues, mangaChapters, edits);
 }
 
 function renderAppearancesHTML(volumes, issues, mangaChapters) {
@@ -458,7 +434,7 @@ function renderAppearancesHTML(volumes, issues, mangaChapters) {
                 ${escapeHtmlAttribute(group.title)}
               </a>
               <a href="#/volumes/${group.id}" class="entity-section-link">
-                ${t('go_to_series')} ${ICON.chevronRight || '→'}
+                ${t('go_to_series')} ${icon('chevronRight', 14)}
               </a>
             </div>
             <div class="entity-releases-grid">
@@ -475,7 +451,7 @@ function renderAppearancesHTML(volumes, issues, mangaChapters) {
               ${escapeHtmlAttribute(group.title)}
             </a>
             <a href="#/volumes/${group.id}" class="entity-section-link">
-              ${t('go_to_series')} ${ICON.chevronRight || '→'}
+              ${t('go_to_series')} ${icon('chevronRight', 14)}
             </a>
           </div>
           <div class="entity-releases-grid">
@@ -513,7 +489,7 @@ function renderVolumeCardHTML(vol) {
   return `
     <a href="#/volumes/${vol.id}" class="entity-release-card">
       <div class="entity-release-cover">
-        ${cover ? `<img src="${escapeHtmlAttribute(cover)}" alt="${title}" loading="lazy">` : `<div class="entity-release-cover-empty">${ICON.image}</div>`}
+        ${cover ? `<img src="${escapeHtmlAttribute(cover)}" alt="${title}" loading="lazy">` : `<div class="entity-release-cover-empty">${icon('imagePlaceholder', 32, { strokeWidth: 1.5 })}</div>`}
         <span class="entity-role-badge">${countText}</span>
       </div>
       <div class="entity-release-body">
@@ -534,7 +510,7 @@ function renderIssueCardHTML(issue) {
   return `
     <a href="#/issues/${issue.id}" class="entity-release-card">
       <div class="entity-release-cover">
-        ${cover ? `<img src="${escapeHtmlAttribute(cover)}" alt="${displayTitle}" loading="lazy">` : `<div class="entity-release-cover-empty">${ICON.image}</div>`}
+        ${cover ? `<img src="${escapeHtmlAttribute(cover)}" alt="${displayTitle}" loading="lazy">` : `<div class="entity-release-cover-empty">${icon('imagePlaceholder', 32, { strokeWidth: 1.5 })}</div>`}
         ${issue.role ? `<span class="entity-role-badge">${escapeHtmlAttribute(issue.role)}</span>` : ''}
       </div>
       <div class="entity-release-body">
@@ -552,7 +528,7 @@ function renderMangaChapterCardHTML(mc) {
   return `
     <a href="#/manga-chapters/${mc.id}" class="entity-release-card">
       <div class="entity-release-cover">
-        <div class="entity-release-cover-empty">${ICON.book}</div>
+        <div class="entity-release-cover-empty">${icon('book', 14)}</div>
         ${mc.role ? `<span class="entity-role-badge">${escapeHtmlAttribute(mc.role)}</span>` : ''}
       </div>
       <div class="entity-release-body">
@@ -565,7 +541,7 @@ function renderMangaChapterCardHTML(mc) {
 
 
 
-function setupEventListeners(container, char, volumes, issues, mangaChapters) {
+function setupEventListeners(container, char, volumes, issues, mangaChapters, edits) {
   // Image switcher
   const mainImg = container.querySelector('#char-main-img');
   container.querySelectorAll('.character-img-thumb').forEach(btn => {
@@ -606,15 +582,15 @@ function setupEventListeners(container, char, volumes, issues, mangaChapters) {
   });
 
   // Modal controls
-  if (isModerator()) {
-    container.querySelector('#char-edit-btn')?.addEventListener('click', () => {
-      openEditCharacterModal(char, (updated) => {
-        if (updated === null) {
-          window.location.hash = '#/characters';
-        } else {
-          renderCharacterDetail(container, { id: char.id });
-        }
-      });
+  container.querySelector('#char-edit-btn')?.addEventListener('click', () => {
+    openEditCharacterModal(char, (updated) => {
+      if (updated === null) {
+        window.location.hash = '#/characters';
+      } else {
+        renderCharacterDetail(container, { id: char.id });
+      }
     });
-  }
+  });
+
+  initEditorsHistoryBlock(container, edits);
 }

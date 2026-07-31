@@ -1,13 +1,6 @@
 import { API } from '/static/js/helpers/api.js';
 import { comicVineImageUrl, escapeHtmlAttribute } from '/static/js/helpers/image.js';
-
-const ICON = {
-    x: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
-    plus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
-    search: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>',
-    layers: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>',
-    arrowLeft: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>'
-};
+import { icon } from '/static/js/helpers/icons.js';
 
 export class MagazineChapterAdder {
     constructor(issue, chapters, onSuccess) {
@@ -143,8 +136,8 @@ export class MagazineChapterAdder {
             <div class="ds-modal-overlay" id="chapter-adder-overlay">
                 <div class="ds-modal ds-modal--large" id="chapter-adder-modal">
                     <div class="ds-modal-header">
-                        <div class="ds-modal-title" id="chapter-adder-title">${ICON.plus} Додати серії</div>
-                        <button class="ds-modal-close" id="chapter-adder-close">${ICON.x}</button>
+                        <div class="ds-modal-title" id="chapter-adder-title">${icon('plus', 14, { strokeWidth: 2.5 })} Додати серії</div>
+                        <button class="ds-modal-close" id="chapter-adder-close">${icon('x', 16)}</button>
                     </div>
                     <div class="ds-modal-body" id="chapter-adder-body">
                         <!-- Content will be rendered dynamically here -->
@@ -210,13 +203,13 @@ export class MagazineChapterAdder {
         if (!container) return;
 
         if (viewMode === 'select-series') {
-            document.getElementById('chapter-adder-title').innerHTML = `${ICON.plus} Додати серії`;
+            document.getElementById('chapter-adder-title').innerHTML = `${icon('plus', 14, { strokeWidth: 2.5 })} Додати серії`;
             this.renderSelectSeriesView(container);
         } else if (viewMode === 'select-chapter') {
             const name = this.selectedVolume.name_uk || this.selectedVolume.name || 'Серія';
             document.getElementById('chapter-adder-title').innerHTML = `
                 <button id="adder-back-btn" class="btn-admin btn-admin--secondary" style="padding: 4px 8px; margin-right: 12px; height: auto; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 0;">
-                    ${ICON.arrowLeft} Назад
+                    ${icon('arrowLeft', 16)} Назад
                 </button>
                 Вибір розділу для: ${escapeHtmlAttribute(name)}
             `;
@@ -227,7 +220,7 @@ export class MagazineChapterAdder {
         } else if (viewMode === 'create-chapter') {
             document.getElementById('chapter-adder-title').innerHTML = `
                 <button id="adder-back-to-ch-btn" class="btn-admin btn-admin--secondary" style="padding: 4px 8px; margin-right: 12px; height: auto; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 0;">
-                    ${ICON.arrowLeft} Назад
+                    ${icon('arrowLeft', 16)} Назад
                 </button>
                 Створити новий розділ
             `;
@@ -249,7 +242,7 @@ export class MagazineChapterAdder {
             
             <div class="search-filters-row" style="display: flex; gap: 12px; flex-shrink: 0; width: 100%;">
                 <div style="flex-grow: 1; position: relative;">
-                    <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;">${ICON.search}</span>
+                    <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;">${icon('search', 16)}</span>
                     <input type="text" id="series-search-input" placeholder="Шукати за назвою..." value="${escapeHtmlAttribute(this.searchText)}" style="width: 100%; padding: 10px 12px 10px 36px; border: 1px solid var(--border); border-radius: var(--r); background: var(--bg-input); color: var(--text);">
                 </div>
                 <input type="number" id="series-mal-input" placeholder="MAL ID" value="${escapeHtmlAttribute(this.malIdText)}" style="width: 120px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r); background: var(--bg-input); color: var(--text);">
@@ -395,7 +388,7 @@ export class MagazineChapterAdder {
                     <div style="aspect-ratio: 2 / 3; position: relative; background: var(--bg-body); overflow: hidden; flex-shrink: 0;">
                         ${image 
                             ? `<img src="${escapeHtmlAttribute(image)}" alt="${title}" style="width: 100%; height: 100%; object-fit: cover;">`
-                            : '<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>'}
+                            : `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--text-muted);">${icon('imagePlaceholder', 32, { strokeWidth: 1.5 })}</div>`}
                         ${isAdded ? `
                             <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: bold; text-transform: uppercase; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">
                                 Вже додано
@@ -473,7 +466,7 @@ export class MagazineChapterAdder {
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
                         <h4 style="margin: 0; font-size: 15px; font-weight: 600; color: var(--text-main);">Виберіть розділ серії:</h4>
                         <button id="btn-to-create-chapter" class="btn-admin btn-admin--secondary" style="height: 30px; font-size: 12px; padding: 0 10px; gap: 4px; margin-bottom: 0;">
-                            ${ICON.plus} Створити новий
+                            ${icon('plus', 14, { strokeWidth: 2.5 })} Створити новий
                         </button>
                     </div>
                     <div id="chapters-list-container" style="flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 4px;">
@@ -506,7 +499,7 @@ export class MagazineChapterAdder {
                     </div>
                     
                     <button id="submit-add-chapter" class="btn-admin btn-admin--primary" disabled style="width: 100%; font-weight: bold; cursor: not-allowed; opacity: 0.5; margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 0;">
-                        ${ICON.plus} Додати до випуску
+                        ${icon('plus', 14, { strokeWidth: 2.5 })} Додати до випуску
                     </button>
                 </div>
             </div>

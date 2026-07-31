@@ -1,11 +1,6 @@
 import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
-
-// ── Lucide SVG icons ────────────────────────────────
-const ICON = {
-    chevronRight:   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>',
-    layers:     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M21 12H3"/><path d="M12 3v18"/></svg>'
-};
+import { icon } from '../helpers/icons.js';
 
 export async function renderMagazineDetail(main, params = {}) {
     const magazineId = Number(params.id);
@@ -119,7 +114,7 @@ export async function renderMagazineDetail(main, params = {}) {
                     <section class="related-collections-section block">
                         <div class="block-header">
                             <h2>
-                                ${ICON.layers}
+                                ${icon('layers', 16, { strokeWidth: 2.2 })}
                                 Нові випуски
                                 <span id="issues-pag-label"></span>
                             </h2>
@@ -128,7 +123,7 @@ export async function renderMagazineDetail(main, params = {}) {
                                 ${(data.issues_count || allIssues.length) > 6 ? `
                                     <a href="#/magazines/${magazineId}/all?tab=issues" class="section-link">
                                         Всі випуски (${data.issues_count || allIssues.length})
-                                        ${ICON.chevronRight}
+                                        ${icon('chevronRight', 14, { strokeWidth: 2.5 })}
                                     </a>
                                 ` : ''}
                             </div>
@@ -151,7 +146,7 @@ export async function renderMagazineDetail(main, params = {}) {
                                 ${(data.series_count || series.length) > 6 ? `
                                     <a href="#/magazines/${magazineId}/all?tab=series" class="section-link">
                                         Всі серії (${data.series_count || series.length})
-                                        ${ICON.chevronRight}
+                                        ${icon('chevronRight', 14, { strokeWidth: 2.5 })}
                                     </a>
                                 ` : ''}
                             </div>

@@ -53,10 +53,10 @@
 /* Details Grid */
 .edit-details-grid {
     display: grid;
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 20px;
     margin-bottom: 20px;
-    align-items: start;
+    align-items: stretch;
 }
 
 @media (max-width: 992px) {
@@ -71,6 +71,8 @@
     border-radius: var(--r-lg);
     padding: 24px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
 }
 
 .edit-detail-block-title {
@@ -147,14 +149,25 @@
 /* People Cards Column (Author & Moderator) */
 .people-cards-column {
     display: flex;
-    flex-direction: column;
-    gap: 0;
+    flex-direction: row;
+    gap: 16px;
+    align-items: flex-start;
+    flex: 1;
+}
+
+@media (max-width: 576px) {
+    .people-cards-column {
+        flex-direction: column;
+        gap: 12px;
+    }
 }
 
 .people-section {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    flex: 1;
+    min-width: 0;
 }
 
 .people-section-title {
@@ -166,9 +179,7 @@
 }
 
 .people-divider {
-    border: 0;
-    border-top: 1px solid var(--border-s);
-    margin: 16px 0;
+    display: none;
 }
 
 .person-card {

@@ -125,8 +125,11 @@ async function fetchAndRenderPublishers(filterBar) {
       };
 
       const badges = pub.work_type 
-        ? pub.work_type.split(',').map(s => {
+        ? pub.work_type.split(',').flatMap(s => {
             const trimmed = s.trim().toLowerCase();
+            if (trimmed === 'mixed') {
+              return [workTypeMap['manga'] || 'Манґа', workTypeMap['comics'] || 'Комікси'];
+            }
             return workTypeMap[trimmed] || s.trim();
           }) 
         : ['—'];
@@ -187,8 +190,8 @@ async function fetchAndRenderPublishers(filterBar) {
           <div class="pub-footer">
             <div class="pub-total">${t('total_published')}: <strong>${pub.volume_count || 0}</strong></div>
             <div style="display:flex;gap:6px;">
-              <a href="#/publishers/${pub.id}" class="pub-btn">Детальніше</a>
-              <a href="#/catalog?publisher_ids=${pub.id}" class="pub-btn">${t('go_to_publisher')}</a>
+              <a href="#/publishers/${pub.id}" class="pub-btn">${t('publisher_detail')}</a>
+              <a href="#/catalog?publisher_ids=${pub.id}" class="pub-btn">${t('publisher_filter')}</a>
             </div>
           </div>
         </div>

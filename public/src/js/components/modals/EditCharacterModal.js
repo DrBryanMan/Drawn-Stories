@@ -1,17 +1,12 @@
 import { API } from '../../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../../helpers/image.js';
 import { openAddIssueModal } from '../addIssueModal.js';
-import { translateOrigin } from '../../helpers/character.js';
+import { translateOrigin, ORIGIN_TRANSLATIONS } from '../../helpers/character.js';
 import { EssencePicker } from '../EssencePicker.js';
-import { t } from '../../helpers/i18n.js';
+import { t, getCurrentLanguage } from '../../helpers/i18n.js';
+import { currentUser } from '../../shell.js';
 
-const ICON = {
-  user:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
-  book:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>',
-  edit:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
-  image:        '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>',
-  sparkles:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>'
-};
+import { icon } from '../../helpers/icons.js';
 
 function parsePersonas(data) {
   if (Array.isArray(data)) return data;
@@ -47,6 +42,7 @@ export function openEditCharacterModal(char, onUpdate) {
     justify-content: center; z-index: 10000;
   `;
 
+  const isPrivileged = currentUser && (currentUser.role === 'admin' || currentUser.role === 'moderator');
   const personas = parsePersonas(char.personas);
   const genderOptions = `
     <option value="" ${!char.gender ? 'selected' : ''}>${t('gender_unspecified')}</option>
@@ -54,10 +50,36 @@ export function openEditCharacterModal(char, onUpdate) {
     <option value="2" ${char.gender === 2 ? 'selected' : ''}>${t('gender_female')}</option>
   `;
 
+  const currentLang = getCurrentLanguage();
+  const currentCharOrigin = (char.origin || '').trim().toLowerCase();
+  let isCurrentOriginMatched = !currentCharOrigin;
+
+  const originOptionsArr = [
+    `<option value="" ${!currentCharOrigin ? 'selected' : ''}>— ${t('unspecified') || 'Не вказано'} —</option>`
+  ];
+
+  Object.entries(ORIGIN_TRANSLATIONS).forEach(([key, trans]) => {
+    const isSelected = !isCurrentOriginMatched && (
+      currentCharOrigin === key.toLowerCase() ||
+      currentCharOrigin === (trans.uk || '').toLowerCase() ||
+      currentCharOrigin === (trans.en || '').toLowerCase()
+    );
+
+    if (isSelected) isCurrentOriginMatched = true;
+    const label = trans[currentLang] || trans.uk || key;
+    originOptionsArr.push(`<option value="${key}" ${isSelected ? 'selected' : ''}>${label}</option>`);
+  });
+
+  if (!isCurrentOriginMatched && char.origin) {
+    originOptionsArr.push(`<option value="${escapeHtmlAttribute(char.origin)}" selected>${escapeHtmlAttribute(char.origin)}</option>`);
+  }
+
+  const originOptions = originOptionsArr.join('');
+
   modal.innerHTML = `
-    <div class="ds-modal ds-modal--large" style="max-height: 90vh; overflow-y: auto; background: var(--bg-card); width: 680px;">
+    <div class="ds-modal ds-modal--large">
       <div class="ds-modal-header">
-        <div class="ds-modal-title">${ICON.edit} ${t('edit_character_title')}</div>
+        <div class="ds-modal-title">${icon('edit', 14)} ${t('edit_character_title')}</div>
         <button class="ds-modal-close" type="button" id="universal-char-close-btn">&times;</button>
       </div>
       <form id="universal-char-edit-form">
@@ -92,7 +114,7 @@ export function openEditCharacterModal(char, onUpdate) {
             </div>
             <div class="admin-form-group">
               <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">${t('origin_species')}</label>
-              <input type="text" name="origin" class="admin-input" value="${escapeHtmlAttribute(char.origin || '')}">
+              <select name="origin" class="admin-input">${originOptions}</select>
             </div>
             <div class="admin-form-group">
               <label class="admin-label" style="font-size: 12px; font-weight: bold; color: var(--text-muted);">${t('gender')}</label>
@@ -140,6 +162,7 @@ export function openEditCharacterModal(char, onUpdate) {
               <div id="universal-char-essence-picker"></div>
             </div>
 
+            ${isPrivileged ? `
             <!-- Group: Окремі особистості (Personas) -->
             <div class="admin-form-section-title" style="grid-column: span 2; font-weight: 800; border-bottom: 1px solid var(--border-s); padding-bottom: 4px; margin-top: 8px; text-transform: uppercase; font-size: 12px; color: var(--accent);">${t('group_personas')}</div>
 
@@ -156,7 +179,7 @@ export function openEditCharacterModal(char, onUpdate) {
                     <div style="display: flex; gap: 8px;">
                       <input type="text" id="universal-persona-app" class="admin-input" placeholder="${escapeHtmlAttribute(t('first_appearance_placeholder'))}" style="flex: 1;" autocomplete="off">
                       <button type="button" id="universal-persona-issue-btn" class="btn-admin btn-admin--secondary" style="white-space: nowrap; display: flex; align-items: center; gap: 6px;">
-                        ${ICON.book} ${t('database_btn')}
+                        ${icon('book', 14)} ${t('database_btn')}
                       </button>
                     </div>
                     <div class="persona-issue-dropdown" id="universal-persona-issue-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--bg-card); border:1px solid var(--border-s); border-radius:4px; max-height:160px; overflow-y:auto; z-index:10005;"></div>
@@ -168,13 +191,33 @@ export function openEditCharacterModal(char, onUpdate) {
               </div>
               <input type="hidden" name="personas" id="universal-personas-hidden" value="${escapeHtmlAttribute(JSON.stringify(personas))}">
             </div>
+            ` : ''}
           </div>
         </div>
         <div class="ds-modal-footer" style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-top:1px solid var(--border-s);">
-          <button type="button" class="btn-admin btn-admin--danger" id="universal-char-delete-btn">${t('delete_from_db')}</button>
-          <div style="display:flex; gap:8px;">
+          ${currentUser && currentUser.role === 'admin' ? `
+            <button type="button" class="btn-admin btn-admin--danger" id="universal-char-delete-btn">${t('delete_from_db')}</button>
+          ` : '<div></div>'}
+          <div style="display:flex; gap:8px; align-items:center;">
             <button class="btn-admin btn-admin--secondary" type="button" id="universal-char-cancel-btn">${t('cancel')}</button>
-            <button class="btn-admin btn-admin--primary" type="submit">${t('save_changes')}</button>
+            ${(() => {
+              const role = currentUser ? currentUser.role : null;
+              if (role === 'admin') {
+                return `
+                  <button type="button" class="btn-admin btn-admin--primary btn-admin--purple" id="universal-char-save-direct">Записати в БД</button>
+                  <button type="button" class="btn-admin btn-admin--primary" id="universal-char-save-approve" style="background: var(--green);">Записати і прийняти</button>
+                `;
+              } else if (role === 'moderator' || role === 'editor') {
+                return `
+                  <button type="button" class="btn-admin btn-admin--primary" id="universal-char-save-approve" style="background: var(--green);">Записати і прийняти</button>
+                `;
+              } else {
+                return `
+                  <input type="text" id="universal-char-propose-comment" class="admin-input" placeholder="Коментар до правки..." style="max-width: 220px; font-size: 12px; height: 32px; margin-bottom: 0;">
+                  <button type="button" class="btn-admin btn-admin--primary" id="universal-char-save-propose" style="background: var(--yellow);">Запропонувати</button>
+                `;
+              }
+            })()}
           </div>
         </div>
       </form>
@@ -357,7 +400,7 @@ export function openEditCharacterModal(char, onUpdate) {
     }
     personaSelectedIssue.innerHTML = `
       <div style="display:inline-flex; align-items:center; gap:6px; padding:4px 8px; background:var(--bg-card); border:1px solid var(--border-s); border-radius:4px; font-size:11px; margin-top:4px;">
-        ${ICON.book} <span>Випуск #${selectedPersonaIssue.id}: ${escapeHtmlAttribute(selectedPersonaIssue.title)}</span>
+        ${icon('book', 14)} <span>Випуск #${selectedPersonaIssue.id}: ${escapeHtmlAttribute(selectedPersonaIssue.title)}</span>
         <button type="button" id="remove-persona-issue-btn-u" style="background:none; border:none; cursor:pointer; font-weight:bold;">&times;</button>
       </div>
     `;
@@ -519,13 +562,13 @@ export function openEditCharacterModal(char, onUpdate) {
     updatePersonasState();
   });
 
-  updatePersonasState();
+  if (isPrivileged && personasList) {
+    updatePersonasState();
+  }
 
   // Save changes
   const form = modal.querySelector('#universal-char-edit-form');
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
+  const handleSave = async (actionType = 'approve') => {
     const formData = new FormData(form);
     const data = {
       name: formData.get('name').trim(),
@@ -541,18 +584,45 @@ export function openEditCharacterModal(char, onUpdate) {
       image: formData.get('image').trim() || null,
       portret_img: formData.get('portret_img').trim() || null,
       costume_img: formData.get('costume_img').trim() || null,
-      portret_costume_img: formData.get('portret_costume_img').trim() || null,
-      personas: JSON.stringify(personas)
+      portret_costume_img: formData.get('portret_costume_img').trim() || null
     };
 
+    if (isPrivileged) {
+      data.personas = JSON.stringify(personas);
+    }
+
+    if (!data.name) {
+      alert(t('original_name') + ' ' + t('required'));
+      return;
+    }
+
+    const commentInput = modal.querySelector('#universal-char-propose-comment');
+    const comment = commentInput ? commentInput.value.trim() : '';
+
     try {
-      await API.put(`/characters/${char.id}`, data);
+      if (actionType === 'direct') {
+        await API.put(`/characters/${char.id}`, data);
+      } else {
+        const autoApprove = actionType === 'approve';
+        await API.post('/edits', {
+          entity_type: 'character',
+          entity_id: char.id,
+          patch_data: data,
+          auto_approve: autoApprove,
+          comment: comment
+        });
+      }
       close();
       if (onUpdate) onUpdate(data);
     } catch (err) {
       alert(t('error_saving', { error: err.message || err }));
     }
-  });
+  };
+
+  form.addEventListener('submit', (e) => e.preventDefault());
+  modal.querySelector('#universal-char-save-direct')?.addEventListener('click', () => handleSave('direct'));
+  modal.querySelector('#universal-char-save-approve')?.addEventListener('click', () => handleSave('approve'));
+  modal.querySelector('#universal-char-save-propose')?.addEventListener('click', () => handleSave('propose'));
 
   // Delete Character Button
   modal.querySelector('#universal-char-delete-btn').addEventListener('click', async () => {

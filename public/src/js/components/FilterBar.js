@@ -1,16 +1,6 @@
 import { escapeHtmlAttribute } from '../helpers/image.js';
 import { t } from '../helpers/i18n.js';
-
-// Custom icons for the list select options (matching volumeDetail.js)
-const LIST_ICONS = {
-    'all': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>',
-    'Planned': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-    'Reading': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
-    'Completed': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
-    'On Hold': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="10" y1="15" x2="10" y2="9"/><line x1="14" y1="15" x2="14" y2="9"/></svg>',
-    'Dropped': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
-    'favorites': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>'
-};
+import { icon } from '../helpers/icons.js';
 
 const LIST_COLORS = {
     'all': { color: 'var(--status-default)', bg: 'var(--bg-card)', borderColor: 'var(--border-s)' },
@@ -40,7 +30,7 @@ function renderSearch(showSearch, searchPlaceholder, searchValue) {
         <div class="filter-section search-section">
             <div class="search-inner">
                 <span class="search-icon">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    ${icon('search', 15, { strokeWidth: 2.5 })}
                 </span>
                 <input type="text" placeholder="${escapeHtmlAttribute(searchPlaceholder)}" class="search-input-pill" data-filter-bar-search value="${escapeHtmlAttribute(searchValue)}" autocomplete="off">
             </div>
@@ -53,7 +43,7 @@ function renderExtraSelect(showExtraSelect, extraSelectId, extraSelectValue, ext
     if (!showExtraSelect) return '';
     const defaultOpt = extraSelectOptions.find(o => o.value === extraSelectValue) || extraSelectOptions[0] || { value: '', label: '' };
     const defaultOptMeta = LIST_COLORS[defaultOpt.value] || { color: '#64748b', bg: 'var(--bg-card)', borderColor: 'var(--border-s)' };
-    const defaultOptIcon = LIST_ICONS[defaultOpt.value] || '';
+    const defaultOptIcon = icon(defaultOpt.value, 14, { strokeWidth: 2.2 });
 
     return `
         <div class="filter-group">
@@ -64,15 +54,15 @@ function renderExtraSelect(showExtraSelect, extraSelectId, extraSelectValue, ext
                         <span class="select-label">${escapeHtmlAttribute(defaultOpt.label)}</span>
                     </span>
                     <span class="select-chevron-v">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg>
+                        ${icon('chevronUpDown', 14)}
                     </span>
                 </button>
                 ${extraSelectOptions.map(opt => {
                     const meta = LIST_COLORS[opt.value] || { color: '#64748b' };
-                    const icon = LIST_ICONS[opt.value] || '';
+                    const optIconHtml = icon(opt.value, 14, { strokeWidth: 2.2 });
                     return `
                         <option value="${opt.value}"${opt.value === extraSelectValue ? ' selected' : ''}>
-                            <span class="readlist-icon" style="color: ${meta.color}">${icon}</span>
+                            <span class="readlist-icon" style="color: ${meta.color}">${optIconHtml}</span>
                             <span>${escapeHtmlAttribute(opt.label)}</span>
                         </option>
                     `;
@@ -120,19 +110,7 @@ function renderSort(showSort, sortId, sortValue, sortOptions, showSortOrder, sor
 // ── Рендеринг кнопки відкриття панелі фільтрів ───────────────
 function renderFiltersBtn(showFiltersBtn, filtersBtnId, filtersBtnActive) {
     if (!showFiltersBtn) return '';
-    const svgIcon = filtersBtnActive ? `
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="5" y="4" width="14" height="16" rx="2"/>
-            <path d="M10 4v16"/>
-            <path d="m13 9 3 3-3 3"/>
-        </svg>
-    ` : `
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="5" y="4" width="14" height="16" rx="2"/>
-            <path d="M10 4v16"/>
-            <path d="m16 9-3 3 3 3"/>
-        </svg>
-    `;
+    const svgIcon = icon(filtersBtnActive ? 'sidebarOpen' : 'sidebarClose', 18);
     return `
         <button class="filter-btn-icon btn-filters-panel ${filtersBtnActive ? 'is-active' : ''}" id="${escapeHtmlAttribute(filtersBtnId)}" title="Фільтри" aria-expanded="${filtersBtnActive}">
             ${svgIcon}
@@ -331,19 +309,7 @@ export function mountFilterBar(container, {
             if (filtersBtn) {
                 filtersBtn.classList.toggle('is-active', active);
                 filtersBtn.setAttribute('aria-expanded', String(active));
-                filtersBtn.innerHTML = active ? `
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="5" y="4" width="14" height="16" rx="2"/>
-                        <path d="M10 4v16"/>
-                        <path d="m13 9 3 3-3 3"/>
-                    </svg>
-                ` : `
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="5" y="4" width="14" height="16" rx="2"/>
-                        <path d="M10 4v16"/>
-                        <path d="m16 9-3 3 3 3"/>
-                    </svg>
-                `;
+                filtersBtn.innerHTML = icon(active ? 'sidebarOpen' : 'sidebarClose', 18);
             }
         }
     };

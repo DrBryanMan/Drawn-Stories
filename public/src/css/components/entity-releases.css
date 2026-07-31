@@ -54,14 +54,12 @@
 /* Grids: inside a section (bordered columns) vs standalone grid */
 .entity-recent-section .entity-releases-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 1;
+  grid-template-columns: repeat(5, 1fr);
 }
 
 .entity-releases-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 16px;
 }
 
 /* Release Cards */

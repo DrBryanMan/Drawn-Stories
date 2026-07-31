@@ -1,15 +1,7 @@
 import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { formatDate } from '../helpers/lang.js';
-
-const ICON = {
-    calendar:     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
-    hash:         '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>',
-    book:         '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>',
-    image:        '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>',
-    smallImage:   '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>',
-    edit:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
-};
+import { icon } from '../helpers/icons.js';
 
 function translateCharacterRole(role) {
     const roles = {
@@ -54,7 +46,7 @@ export async function renderMangaChapterDetail(main, params = {}) {
                         <div class="volume-cover-column">
                             ${coverUrl
                                 ? `<img class="volume-cover" src="${escapeHtmlAttribute(coverUrl)}" alt="${title}">`
-                                : `<div class="volume-cover volume-cover--empty">${ICON.image}</div>`}
+                                : `<div class="volume-cover volume-cover--empty">${icon('imagePlaceholder', 36, { strokeWidth: 1.5 })}</div>`}
                         </div>
 
                         <div class="volume-hero-info">
@@ -62,16 +54,16 @@ export async function renderMangaChapterDetail(main, params = {}) {
                             
                             <div class="volume-meta-pills" style="margin-top: 12px;">
                                 <span class="volume-meta-pill" title="Том">
-                                    ${ICON.book}
+                                    ${icon('book', 13, { strokeWidth: 2.2 })}
                                     <a href="#/volumes/${chapter.volume_id}" style="color: inherit; text-decoration: none;">${volName}</a>
                                 </span>
                                 <span class="volume-meta-pill" title="Номер розділу">
-                                    ${ICON.hash}
+                                    ${icon('hash', 13, { strokeWidth: 2.2 })}
                                     Розділ #${chapter.chapter_number}
                                 </span>
                                 ${chapter.release_date ? `
                                     <span class="volume-meta-pill" title="Дата релізу">
-                                        ${ICON.calendar}
+                                        ${icon('calendar', 13, { strokeWidth: 2.2 })}
                                         ${formatDate(chapter.release_date)}
                                     </span>
                                 ` : ''}
@@ -118,7 +110,7 @@ export async function renderMangaChapterDetail(main, params = {}) {
                                                 <div style="aspect-ratio: 1; overflow: hidden; background: var(--bg-body); display: flex; align-items: center; justify-content: center;">
                                                     ${charCover 
                                                         ? `<img src="${escapeHtmlAttribute(charCover)}" alt="${escapeHtmlAttribute(char.name_uk || char.name)}" style="width: 100%; height: 100%; object-fit: cover;">`
-                                                        : `<div style="opacity: 0.3;">${ICON.smallImage}</div>`}
+                                                        : `<div style="opacity: 0.3;">${icon('imagePlaceholder', 20, { strokeWidth: 1.5 })}</div>`}
                                                 </div>
                                                 <div style="padding: 12px; display: flex; flex-direction: column; gap: 4px;">
                                                     <span style="font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">

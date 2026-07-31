@@ -180,7 +180,7 @@ async def get_issue_detail(issue_id: int):
             SELECT id, issue_number, name, image
             FROM issues
             WHERE volume_id = %s
-            ORDER BY CAST(issue_number AS REAL) ASC, issue_number ASC
+            ORDER BY CASE WHEN issue_number ~ '^[0-9]' THEN CAST(substring(issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, issue_number ASC
             """,
             [volume_id],
         )
@@ -664,7 +664,7 @@ async def get_issues(
         FROM issues i
         LEFT JOIN volumes v ON i.volume_id = v.id
         {where}
-        ORDER BY COALESCE(v.name_uk, v.name) ASC, CAST(i.issue_number AS FLOAT) ASC, i.issue_number ASC
+        ORDER BY COALESCE(v.name_uk, v.name) ASC, CASE WHEN i.issue_number ~ '^[0-9]' THEN CAST(substring(i.issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, i.issue_number ASC
         LIMIT %s
     """
     items = db.get_all(query, params + [limit])

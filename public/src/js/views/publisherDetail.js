@@ -7,38 +7,42 @@ import { getPublisherColor } from '../helpers/publisher.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { t } from '../helpers/i18n.js';
 import { parseAliases } from '../helpers/lang.js';
-
-let currentVolType = 'volumes'; // 'volumes' | 'collections'
-let volumesSearchQuery = '';
-
-// ── Lucide icons ──────────────────────────────────────
-const ICON = {
-  calendar:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>',
-  mapPin:       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
-  globe:        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
-  layers:       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
-  externalLink: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
-  book:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>',
-  chevronRight: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
-  check:        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
-  circle:       '<svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="12"/></svg>',
-  image:        '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>',
-  edit:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
-  filter:       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>',
-};
+import { openEditPublisherModal } from '../components/modals/EditPublisherModal.js';
+import { fetchEntityEdits, renderEditorsHistoryBlock, initEditorsHistoryBlock } from '../components/editorsHistoryBlock.js';
+import { icon } from '../helpers/icons.js';
 
 // ── Paginator instance (for volumes tab) ─────────────
 const volumesPaginator = createPaginator({ pageSize: 24 });
+let currentVolType = 'volumes';
+let volumesSearchQuery = '';
 
 // ── Helpers ───────────────────────────────────────────
 function isModerator() {
   return currentUser?.role === 'moderator' || currentUser?.role === 'admin';
 }
 
-function workTypeLabel(workType) {
+function getWorkTypeText(workType) {
   if (!workType) return null;
-  const map = { manga: 'Манґа', comics: 'Комікси', mixed: 'Змішане' };
-  return workType.split(',').map(s => map[s.trim().toLowerCase()] || s.trim()).join(', ');
+  const map = { manga: 'Манґа', comics: 'Комікси' };
+  const items = workType.split(',').flatMap(s => {
+    const trimmed = s.trim().toLowerCase();
+    if (trimmed === 'mixed') return ['Манґа', 'Комікси'];
+    return [map[trimmed] || s.trim()];
+  });
+  return items.join(', ');
+}
+
+function workTypeBadgesHTML(workType) {
+  if (!workType) return '';
+  const map = { manga: 'Манґа', comics: 'Комікси' };
+  const items = workType.split(',').flatMap(s => {
+    const trimmed = s.trim().toLowerCase();
+    if (trimmed === 'mixed') return ['Манґа', 'Комікси'];
+    return [map[trimmed] || s.trim()];
+  });
+  return items.map(label => 
+    `<span class="pub-detail-type-badge">${icon('layers', 14, { strokeWidth: 2.1 })} ${escapeHtmlAttribute(label)}</span>`
+  ).join(' ');
 }
 
 function statusBadgeHTML(pub) {
@@ -79,7 +83,7 @@ function volumeReleaseCardHTML(vol) {
   const issueCount = vol.issue_count || 0;
   const coverHtml = imgUrl
     ? `<img src="${escapeHtmlAttribute(imgUrl)}" alt="${title}" loading="lazy">`
-    : `<div class="entity-release-cover-empty">${ICON.image}</div>`;
+    : `<div class="entity-release-cover-empty">${icon('imagePlaceholder', 36, { strokeWidth: 1.5 })}</div>`;
 
   return `
     <a href="#/volumes/${vol.id}" class="entity-release-card">
@@ -100,7 +104,7 @@ function issueReleaseCardHTML(issue) {
   const displayTitle = numText ? `${volName} ${numText}` : volName;
   const coverHtml = imgUrl
     ? `<img src="${escapeHtmlAttribute(imgUrl)}" alt="${title}" loading="lazy">`
-    : `<div class="entity-release-cover-empty">${ICON.image}</div>`;
+    : `<div class="entity-release-cover-empty">${icon('imagePlaceholder', 36, { strokeWidth: 1.5 })}</div>`;
 
   return `
     <a href="#/issues/${issue.id}" class="entity-release-card">
@@ -121,7 +125,7 @@ function collectionReleaseCardHTML(coll) {
   const displayTitle = numText ? `${volName} ${numText}` : volName;
   const coverHtml = imgUrl
     ? `<img src="${escapeHtmlAttribute(imgUrl)}" alt="${title}" loading="lazy">`
-    : `<div class="entity-release-cover-empty">${ICON.image}</div>`;
+    : `<div class="entity-release-cover-empty">${icon('imagePlaceholder', 36, { strokeWidth: 1.5 })}</div>`;
 
   return `
     <a href="#/collections/${coll.id}" class="entity-release-card">
@@ -131,107 +135,6 @@ function collectionReleaseCardHTML(coll) {
         <div class="entity-release-sub">${title}</div>
       </div>
     </a>
-  `;
-}
-
-function openModal(id) {
-  const el = document.getElementById(id);
-  if (el) {
-    el.style.display = 'flex';
-    document.body.classList.add('modal-open');
-  }
-}
-
-function closeModal(id) {
-  const el = document.getElementById(id);
-  if (el) {
-    el.style.display = 'none';
-    const openModals = document.querySelectorAll('.ds-modal-overlay[style*="display: flex"], .ds-modal-overlay[style*="display: block"]');
-    if (openModals.length === 0) {
-      document.body.classList.remove('modal-open');
-    }
-  }
-}
-
-function editModalHTML(pub) {
-  const statusOptions = `
-    <option value="active" ${pub.status === 'active' || pub.status === 'активне' || pub.status === 'активна' ? 'selected' : ''}>Активне</option>
-    <option value="inactive" ${pub.status === 'inactive' || pub.status === 'неактивне' || pub.status === 'неактивна' ? 'selected' : ''}>Неактивне</option>
-  `;
-  
-  const typeOptions = `
-    <option value="comics" ${pub.work_type === 'comics' ? 'selected' : ''}>Комікси</option>
-    <option value="manga" ${pub.work_type === 'manga' ? 'selected' : ''}>Манґа</option>
-    <option value="mixed" ${pub.work_type === 'mixed' ? 'selected' : ''}>Змішане</option>
-  `;
-
-  return `
-    <div class="ds-modal-overlay" id="pub-edit-modal" style="display: none;">
-      <div class="ds-modal ds-modal--large" id="pub-edit-modal-box">
-        <div class="ds-modal-header">
-          <div class="ds-modal-title">${ICON.edit} Редагувати видавництво</div>
-          <button class="ds-modal-close" type="button" data-close-modal="pub-edit-modal">&times;</button>
-        </div>
-        <form id="pub-edit-form">
-          <div class="ds-modal-body">
-            <div class="admin-form-grid">
-              <div class="admin-form-group admin-form-group--full">
-                <label class="admin-label">Назва</label>
-                <input type="text" name="name" class="admin-input" value="${escapeHtmlAttribute(pub.name || '')}" required>
-              </div>
-              <div class="admin-form-group">
-                <label class="admin-label">Статус</label>
-                <select name="status" class="admin-input">${statusOptions}</select>
-              </div>
-              <div class="admin-form-group">
-                <label class="admin-label">Тип роботи</label>
-                <select name="work_type" class="admin-input">${typeOptions}</select>
-              </div>
-              <div class="admin-form-group">
-                <label class="admin-label">Рік заснування</label>
-                <input type="text" name="founded_date" class="admin-input" value="${escapeHtmlAttribute(pub.founded_date || '')}">
-              </div>
-              <div class="admin-form-group">
-                <label class="admin-label">Веб-сайт</label>
-                <input type="url" name="website" class="admin-input" value="${escapeHtmlAttribute(pub.website || '')}">
-              </div>
-              <div class="admin-form-group">
-                <label class="admin-label">Країна</label>
-                <input type="text" name="country" class="admin-input" value="${escapeHtmlAttribute(pub.country || '')}">
-              </div>
-              <div class="admin-form-group">
-                <label class="admin-label">Місто</label>
-                <input type="text" name="place" class="admin-input" value="${escapeHtmlAttribute(pub.place || '')}">
-              </div>
-              <div class="admin-form-group admin-form-group--full">
-                <label class="admin-label">Адреса</label>
-                <input type="text" name="address" class="admin-input" value="${escapeHtmlAttribute(pub.address || '')}">
-              </div>
-              <div class="admin-form-group admin-form-group--full">
-                <label class="admin-label">URL зображення (логотипу)</label>
-                <input type="url" name="image" class="admin-input" value="${escapeHtmlAttribute(pub.image || '')}">
-              </div>
-              <div class="admin-form-group admin-form-group--full">
-                <label class="admin-label">Псевдоніми (через кому)</label>
-                <input type="text" name="aliases" class="admin-input" value="${escapeHtmlAttribute(pub.aliases || '')}">
-              </div>
-              <div class="admin-form-group">
-                <label class="admin-label">ComicVine ID</label>
-                <input type="number" name="cv_id" class="admin-input" value="${pub.cv_id || ''}">
-              </div>
-              <div class="admin-form-group">
-                <label class="admin-label">ComicVine Slug</label>
-                <input type="text" name="cv_slug" class="admin-input" value="${escapeHtmlAttribute(pub.cv_slug || '')}">
-              </div>
-            </div>
-          </div>
-          <div class="ds-modal-footer">
-            <button class="btn-admin btn-admin--secondary" type="button" data-close-modal="pub-edit-modal">Скасувати</button>
-            <button class="btn-admin btn-admin--primary" type="submit">Зберегти зміни</button>
-          </div>
-        </form>
-      </div>
-    </div>
   `;
 }
 
@@ -280,51 +183,24 @@ export async function renderPublisherDetail(container, params) {
 
     document.title = `${pub.name} — Drawn Stories`;
 
-    container.innerHTML = buildDetailHTML(pub);
+    const edits = await fetchEntityEdits('publisher', id);
+
+    container.innerHTML = buildDetailHTML(pub, edits);
 
     initTabs(container, pub, id);
     volumesPaginator.reset();
 
-    // Bind modal controls
-    if (isModerator()) {
-      container.querySelector('#pub-edit-btn')?.addEventListener('click', () => openModal('pub-edit-modal'));
-      
-      container.querySelectorAll('[data-close-modal]').forEach(btn => {
-        btn.addEventListener('click', () => closeModal(btn.dataset.closeModal));
-      });
+    // Edit button click
+    container.querySelector('#pub-edit-btn')?.addEventListener('click', () => {
+      openEditPublisherModal(pub, () => renderPublisherDetail(container, params));
+    });
 
-      container.querySelector('#pub-edit-form')?.addEventListener('submit', async event => {
-        event.preventDefault();
-        const form = new FormData(event.currentTarget);
-        try {
-          await API.put(`/publishers/${id}`, {
-            name: form.get('name')?.trim(),
-            status: form.get('status')?.trim(),
-            work_type: form.get('work_type')?.trim(),
-            founded_date: form.get('founded_date')?.trim() || null,
-            website: form.get('website')?.trim() || null,
-            country: form.get('country')?.trim() || null,
-            place: form.get('place')?.trim() || null,
-            address: form.get('address')?.trim() || null,
-            image: form.get('image')?.trim() || null,
-            aliases: form.get('aliases')?.trim() || null,
-            cv_id: form.get('cv_id') ? Number(form.get('cv_id')) : null,
-            cv_slug: form.get('cv_slug')?.trim() || null,
-          });
-          closeModal('pub-edit-modal');
-          // Re-render page
-          await renderPublisherDetail(container, params);
-        } catch (e) {
-          alert('Помилка при збереженні: ' + e.message);
-        }
-      });
-    }
-
+    initEditorsHistoryBlock(container, edits);
   } catch (err) {
     container.innerHTML = `
       <div class="container" style="padding-top: 40px;">
         <div class="pub-detail-empty">
-          ${ICON.image}
+          ${icon('imagePlaceholder', 36, { strokeWidth: 1.5 })}
           <h3>Видавництво не знайдено</h3>
           <p>${escapeHtmlAttribute(err.message)}</p>
           <a href="#/publishers" class="pub-detail-action-btn" style="margin-top:8px;">← Назад до видавництв</a>
@@ -335,12 +211,12 @@ export async function renderPublisherDetail(container, params) {
 }
 
 // ── Build HTML ────────────────────────────────────────
-function buildDetailHTML(pub) {
+function buildDetailHTML(pub, edits = []) {
   const latestVolumes = pub.latest_volumes || [];
   const latestIssues = pub.latest_issues || [];
   const latestCollections = pub.latest_collections || [];
 
-  const wt = workTypeLabel(pub.work_type);
+  const workTypeText = getWorkTypeText(pub.work_type);
   const volumeCount = pub.volume_count || 0;
 
   // Location string
@@ -366,30 +242,27 @@ function buildDetailHTML(pub) {
 
             <div class="pub-detail-badges-row">
               ${statusBadgeHTML(pub)}
-              ${wt ? `<span class="pub-detail-type-badge">${ICON.layers} ${escapeHtmlAttribute(wt)}</span>` : ''}
+              ${workTypeBadgesHTML(pub.work_type)}
             </div>
 
             <div class="pub-detail-meta-row">
-              ${pub.founded_date ? `<span class="pub-detail-meta-item">${ICON.calendar} засновано: <strong>${escapeHtmlAttribute(pub.founded_date)}</strong></span>` : ''}
-              ${location ? `<span class="pub-detail-meta-item">${ICON.mapPin} ${escapeHtmlAttribute(location)}</span>` : ''}
+              ${pub.founded_date ? `<span class="pub-detail-meta-item">${icon('calendar', 14, { strokeWidth: 2.1 })} засновано: <strong>${escapeHtmlAttribute(pub.founded_date)}</strong></span>` : ''}
+              ${location ? `<span class="pub-detail-meta-item">${icon('mapPin', 14, { strokeWidth: 2.1 })} ${escapeHtmlAttribute(location)}</span>` : ''}
             </div>
 
             <div class="pub-detail-actions">
               <a href="#/catalog?publisher_ids=${pub.id}" class="pub-detail-action-btn pub-detail-action-btn--primary">
-                ${ICON.book} Всі серії у каталозі
+                ${icon('book', 14, { strokeWidth: 2.1 })} Всі серії у каталозі
               </a>
               ${pub.website ? `
                 <a href="${escapeHtmlAttribute(pub.website)}" class="pub-detail-action-btn" target="_blank" rel="noopener noreferrer">
-                  ${ICON.globe} Сайт ${ICON.externalLink}
+                  ${icon('globe', 14, { strokeWidth: 2.1 })} Сайт ${icon('externalLink', 12, { strokeWidth: 2.2 })}
                 </a>
-              ` : ''}
-              ${isModerator() ? `
-                <button class="pub-detail-action-btn" id="pub-edit-btn">
-                  ${ICON.edit} Редагувати
-                </button>
               ` : ''}
             </div>
           </div>
+
+          ${renderEditorsHistoryBlock(edits, currentUser, { editButtonId: 'pub-edit-btn', editTitle: 'Редагувати' })}
         </div>
       </section>
 
@@ -401,7 +274,7 @@ function buildDetailHTML(pub) {
               Огляд
             </button>
             <button class="pub-detail-tab-btn" data-tab="volumes" role="tab" aria-selected="false">
-              ${ICON.book} Серії <span class="tab-count">${volumeCount.toLocaleString('uk-UA')}</span>
+              Серії <span class="tab-count">${volumeCount.toLocaleString('uk-UA')}</span>
             </button>
           </div>
         </div>
@@ -418,14 +291,14 @@ function buildDetailHTML(pub) {
                 <div class="pub-detail-info-block-title">Інформація</div>
                 <ul class="pub-detail-fact-list">
                   ${factItemHTML('Статус', statusBadgeHTML(pub))}
-                  ${factItemHTML('Тип', wt ? escapeHtmlAttribute(wt) : null)}
+                  ${factItemHTML('Тип', workTypeText ? escapeHtmlAttribute(workTypeText) : null)}
                   ${factItemHTML('Засновано', pub.founded_date ? escapeHtmlAttribute(pub.founded_date) : null)}
                   ${factItemHTML('Країна', pub.country ? escapeHtmlAttribute(pub.country) : null)}
                   ${factItemHTML('Місто', pub.place ? escapeHtmlAttribute(pub.place) : null)}
                   ${factItemHTML('Адреса', pub.address ? escapeHtmlAttribute(pub.address) : null)}
-                  ${factItemHTML('Сайт', pub.website ? `<a href="${escapeHtmlAttribute(pub.website)}" target="_blank" rel="noopener">${escapeHtmlAttribute(pub.website)} ${ICON.externalLink}</a>` : null)}
+                  ${factItemHTML('Сайт', pub.website ? `<a href="${escapeHtmlAttribute(pub.website)}" target="_blank" rel="noopener">${escapeHtmlAttribute(pub.website)} ${icon('externalLink', 12, { strokeWidth: 2.2 })}</a>` : null)}
                   ${factItemHTML('Псевдоніми', aliases.length ? escapeHtmlAttribute(aliases.join(', ')) : null)}
-                  ${factItemHTML('CV ID', pub.cv_id ? `<a href="https://comicvine.gamespot.com/publisher/${pub.cv_slug || pub.cv_id}/" target="_blank" rel="noopener">${escapeHtmlAttribute(String(pub.cv_id))} ${ICON.externalLink}</a>` : null)}
+                  ${factItemHTML('CV ID', pub.cv_id ? `<a href="https://comicvine.gamespot.com/publisher/${pub.cv_slug || pub.cv_id}/" target="_blank" rel="noopener">${escapeHtmlAttribute(String(pub.cv_id))} ${icon('externalLink', 12, { strokeWidth: 2.2 })}</a>` : null)}
                 </ul>
               </div>
             </aside>
@@ -437,7 +310,7 @@ function buildDetailHTML(pub) {
                 <div class="entity-section-header">
                   <span class="entity-section-title">Нові серії</span>
                   <a href="#/catalog?publisher_ids=${pub.id}" class="entity-section-link">
-                    Всі серії ${ICON.chevronRight}
+                    Всі серії ${icon('chevronRight', 14, { strokeWidth: 2.2 })}
                   </a>
                 </div>
                 ${latestVolumes.length > 0
@@ -451,7 +324,7 @@ function buildDetailHTML(pub) {
                 <div class="entity-section-header">
                   <span class="entity-section-title">Крайні випуски</span>
                   <a href="#/catalog?publisher_ids=${pub.id}&mode=issues" class="entity-section-link">
-                    Всі випуски ${ICON.chevronRight}
+                    Всі випуски ${icon('chevronRight', 14, { strokeWidth: 2.2 })}
                   </a>
                 </div>
                 ${latestIssues.length > 0
@@ -465,7 +338,7 @@ function buildDetailHTML(pub) {
                 <div class="entity-section-header">
                   <span class="entity-section-title">Нові збірники</span>
                   <a href="#/catalog?publisher_ids=${pub.id}&mode=collections" class="entity-section-link">
-                    Всі збірники ${ICON.chevronRight}
+                    Всі збірники ${icon('chevronRight', 14, { strokeWidth: 2.2 })}
                   </a>
                 </div>
                 ${latestCollections.length > 0
@@ -488,9 +361,6 @@ function buildDetailHTML(pub) {
           </div>
         </div>
       </div>
-
-      <!-- Edit Modal Overlay -->
-      ${isModerator() ? editModalHTML(pub) : ''}
     </div>
   `;
 }
@@ -610,7 +480,7 @@ async function fetchAndRenderVolumes(container, publisherId, filterBar) {
     if (items.length === 0) {
       grid.innerHTML = `
         <div class="pub-detail-empty" style="grid-column: 1 / -1;">
-          ${ICON.book}
+          ${icon('book', 14, { strokeWidth: 2.1 })}
           <h3>Серій не знайдено</h3>
           <p>У цього видавництва поки немає серій у каталозі</p>
         </div>
@@ -637,7 +507,7 @@ async function fetchAndRenderVolumes(container, publisherId, filterBar) {
   } catch (err) {
     grid.innerHTML = `
       <div class="pub-detail-empty" style="grid-column: 1 / -1;">
-        ${ICON.image}
+        ${icon('imagePlaceholder', 36, { strokeWidth: 1.5 })}
         <h3>Помилка завантаження</h3>
         <p>${escapeHtmlAttribute(err.message)}</p>
       </div>

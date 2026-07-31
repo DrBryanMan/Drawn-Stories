@@ -3,16 +3,7 @@ import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { currentUser } from '../shell.js';
 import { MagazineChapterAdder } from '/admin/js/MagazineChapterAdder.js';
 import { MagazineChapterEditor } from '/admin/js/MagazineChapterEditor.js';
-
-// ── Lucide SVG icons ────────────────────────────────
-const ICON = {
-    list: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
-    chevronLeft: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>`,
-    chevronRight: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`,
-    calendar: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
-    book: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>`,
-    layers: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M21 12H3"/><path d="M12 3v18"/></svg>`
-};
+import { icon } from '../helpers/icons.js';
 
 export async function renderMagazineIssueDetail(main, params = {}) {
     const issueId = Number(params.id);
@@ -134,7 +125,7 @@ export async function renderMagazineIssueDetail(main, params = {}) {
         if (issue.pages) {
             pagesHtml = `
                 <span class="volume-badge volume-lang-badge">
-                    ${ICON.book}
+                    ${icon('book', 13, { strokeWidth: 2.2 })}
                     ${issue.pages} сторінок
                 </span>
             `;
@@ -143,7 +134,7 @@ export async function renderMagazineIssueDetail(main, params = {}) {
             if (calculatedPages > 0) {
                 pagesHtml = `
                     <span class="volume-badge volume-lang-badge" style="color: var(--text-muted); font-style: italic;" title="Відома кількість сторінок з розділів">
-                        ${ICON.book}
+                        ${icon('book', 13, { strokeWidth: 2.2 })}
                         ${calculatedPages} сторінок *
                     </span>
                 `;
@@ -328,13 +319,13 @@ export async function renderMagazineIssueDetail(main, params = {}) {
                             </div>
                             <div class="issue-hero-badges" style="margin-top: 15px;">
                                 <a href="#/magazines/${issue.magazine_id}" title="Журнал" class="volume-badge volume-series-badge" style="color: var(--primary); text-decoration: none; font-weight: 600;">
-                                    ${ICON.book} ${magazineName}
+                                    ${icon('book', 13, { strokeWidth: 2.2 })} ${magazineName}
                                 </a>
                                 <span class="volume-badge volume-cover-date-badge" title="Дата обкладинки">
-                                    ${ICON.calendar} ${coverDate}
+                                    ${icon('calendar', 14, { strokeWidth: 2.2 })} ${coverDate}
                                 </span>
                                 <span class="volume-badge volume-year-badge" title="Дата релізу">
-                                    ${ICON.calendar} ${releaseDate}
+                                    ${icon('calendar', 14, { strokeWidth: 2.2 })} ${releaseDate}
                                 </span>
                                 ${pagesHtml}
                             </div>
@@ -347,7 +338,7 @@ export async function renderMagazineIssueDetail(main, params = {}) {
                     <section class="related-collections-section block">
                         <div class="block-header">
                             <h2>
-                                ${ICON.layers} Всі випуски журналу
+                                ${icon('layers', 20, { strokeWidth: 2.2 })} Всі випуски журналу
                                 <span id="issues-pag-label"></span>
                             </h2>
                             <div style="display: flex; align-items: center; gap: 12px;">
@@ -355,17 +346,17 @@ export async function renderMagazineIssueDetail(main, params = {}) {
                             </div>
                         </div>
                         <div style="position: relative;">
-                            <button class="outer-nav-btn outer-nav-btn--prev" id="btn-issues-prev" title="Попередня">${ICON.chevronLeft}</button>
+                            <button class="outer-nav-btn outer-nav-btn--prev" id="btn-issues-prev" title="Попередня">${icon('chevronLeft', 24, { strokeWidth: 2.5 })}</button>
                             <div class="related-list" id="magazine-issues-list-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 1em;">
                             </div>
-                            <button class="outer-nav-btn outer-nav-btn--next" id="btn-issues-next" title="Наступна">${ICON.chevronRight}</button>
+                            <button class="outer-nav-btn outer-nav-btn--next" id="btn-issues-next" title="Наступна">${icon('chevronRight', 24, { strokeWidth: 2.5 })}</button>
                         </div>
                     </section>
 
                     <section class="volume-issues-section block">
                         <div class="block-header">
                             <h2>
-                                ${ICON.list}
+                                ${icon('list', 20)}
                                 Серії в номері
                             </h2>
                             ${isModerator ? `
@@ -513,7 +504,7 @@ export async function renderMagazineIssueDetail(main, params = {}) {
 
             datepickerContainer.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">${ICON.calendar} Рік:</span>
+                    <span style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">${icon('calendar', 14, { strokeWidth: 2.2 })} Рік:</span>
                     <select id="issues-yearpicker" style="background: var(--bg-card); border: 1px solid var(--border-s); border-radius: 6px; color: var(--text); padding: 4px 8px; font-size: 13px; outline: none; height: 32px;">
                         <option value="">Всі роки</option>
                         ${yearOptions}

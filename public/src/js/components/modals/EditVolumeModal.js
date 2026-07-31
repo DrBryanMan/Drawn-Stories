@@ -3,27 +3,9 @@ import { LANG_MAP } from '/static/js/helpers/lang.js';
 import { comicVineImageUrl, escapeHtmlAttribute } from '/static/js/helpers/image.js';
 import { STAFF_ROLES, getRoleSortIndex } from '/static/js/helpers/staff.js';
 import * as Utils from './editorUtils.js';
-import { openEditCharacterModal } from './EditCharacterModal.js';
+import { openEditCharacterModal } from '/static/js/components/modals/EditCharacterModal.js';
 import { currentUser } from '/static/js/shell.js';
-
-const ICON = {
-    hash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"></line><line x1="4" y1="15" x2="20" y2="15"></line><line x1="10" y1="3" x2="8" y2="21"></line><line x1="16" y1="3" x2="14" y2="21"></line></svg>',
-    link: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>',
-    link2: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg>',
-    database: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>',
-    type: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>',
-    globe: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>',
-    calendar: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>',
-    languages: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>',
-    alignLeft: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="17" y1="18" x2="3" y2="18"></line></svg>',
-    building: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="9" y1="22" x2="9" y2="18"></line><line x1="15" y1="22" x2="15" y2="18"></line><line x1="18" y1="22" x2="18" y2="18"></line><line x1="6" y1="22" x2="6" y2="18"></line><line x1="9" y1="6" x2="9" y2="6"></line><line x1="15" y1="6" x2="15" y2="6"></line><line x1="9" y1="10" x2="9" y2="10"></line><line x1="15" y1="10" x2="15" y2="10"></line><line x1="9" y1="14" x2="9" y2="14"></line><line x1="15" y1="14" x2="15" y2="14"></line></svg>',
-    tags: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 10 10-10 10-10-10L12 2Z"></path><path d="m7 7 3 3"></path><path d="m7 17 3-3"></path></svg>',
-    image: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>',
-    layout: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>',
-    externalLink: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 22 3 22 10"></polyline><line x1="10" y1="14" x2="22" y2="3"></line></svg>',
-    edit: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>',
-    trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>'
-};
+import { icon } from '../../helpers/icons.js';
 
 export class VolumeEditor {
     constructor(volume, onSave) {
@@ -130,14 +112,14 @@ export class VolumeEditor {
         });
     }
 
-    _imgFieldHTML(name, label, value, icon, isBanner = false) {
+    _imgFieldHTML(name, label, value, labelIconHtml, isBanner = false) {
         const previewWidth = isBanner ? '280px' : '140px';
         const previewHeight = isBanner ? '120px' : '180px';
         const gridTemplate = isBanner ? '1fr' : '1fr 140px';
         
         return `
             <div class="admin-form-group admin-form-group--full">
-                <label class="admin-label">${icon} ${label}</label>
+                <label class="admin-label">${labelIconHtml} ${label}</label>
                 <div class="gam-image-field-container" style="display: grid; grid-template-columns: ${gridTemplate}; gap: 16px; align-items: start; position: relative;">
                     <div class="gam-image-inputs" style="display: flex; flex-direction: column; gap: 8px; ${isBanner ? `padding-right: ${parseInt(previewWidth) + 16}px; min-height: ${previewHeight};` : ''}">
                         <input type="url" name="${name}" value="${value || ''}" placeholder="URL зображення..." class="admin-input gam-img-url-input">
@@ -147,7 +129,7 @@ export class VolumeEditor {
                                 Локальний файл
                                 <input type="file" name="${name}_file" class="gam-img-file-input" style="display: none;" accept="image/webp">
                             </label>
-                            <button type="button" class="btn-admin btn-admin--danger gam-img-clear" style="display: none; padding: 8px 12px; align-items: center; justify-content: center; height: 34px;">${ICON.trash}</button>
+                            <button type="button" class="btn-admin btn-admin--danger gam-img-clear" style="display: none; padding: 8px 12px; align-items: center; justify-content: center; height: 34px;">${icon('trash', 14)}</button>
                         </div>
                         <div style="font-size: 0.7rem; color: #db5a5a; margin-top: 2px;">Дозволено лише формат <strong>.webp</strong></div>
                         <div class="gam-img-filename" style="font-size: 0.7rem; color: var(--text-muted); display: none; word-break: break-all; max-width: 250px;"></div>
@@ -620,7 +602,7 @@ export class VolumeEditor {
             <div class="ds-modal ds-modal--large" id="volume-editor-modal">
                 <div class="ds-modal-header">
                     <div class="ds-modal-title">
-                        ${ICON.edit}
+                        ${icon('edit', 18)}
                         Редагування тому
                     </div>
                     <button class="ds-modal-close">&times;</button>
@@ -637,60 +619,60 @@ export class VolumeEditor {
                         <div class="editor-tab-content is-active" id="tab-info">
                             <div class="admin-form-grid">
                                 <div class="admin-form-group${groupClass}">
-                                    <label class="admin-label">${ICON.hash} CV ID</label>
+                                    <label class="admin-label">${icon('hash', 14)} CV ID</label>
                                     <input type="number" name="cv_id" class="admin-input" value="${v.cv_id || ''}"${readOnlyAttr}>
                                 </div>
                                 <div class="admin-form-group${groupClass}">
-                                    <label class="admin-label">${ICON.link} CV Slug</label>
+                                    <label class="admin-label">${icon('link', 14)} CV Slug</label>
                                     <input type="text" name="cv_slug" class="admin-input" value="${v.cv_slug || ''}"${readOnlyAttr}>
                                 </div>
                                 
                                 <div class="admin-form-group${groupClass}">
-                                    <label class="admin-label">${ICON.database} MAL ID</label>
+                                    <label class="admin-label">${icon('globe', 14)} MAL ID</label>
                                     <input type="number" name="mal_id" class="admin-input" value="${v.mal_id || ''}" placeholder="напр. 123456"${readOnlyAttr}>
                                 </div>
                                 <div class="admin-form-group${groupClass}">
-                                    <label class="admin-label">${ICON.link2} Hikka Slug</label>
+                                    <label class="admin-label">${icon('link', 14)} Hikka Slug</label>
                                     <input type="text" name="hikka_slug" class="admin-input" value="${v.hikka_slug || ''}" placeholder="напр. berserk-ek0mv"${readOnlyAttr}>
                                 </div>
 
                                 <div class="admin-form-group${groupClass}">
-                                    <label class="admin-label">${ICON.hash} LocG ID</label>
+                                    <label class="admin-label">${icon('hash', 14)} LocG ID</label>
                                     <input type="number" name="locg_id" class="admin-input" value="${v.locg_id || ''}"${readOnlyAttr}>
                                 </div>
                                 <div class="admin-form-group${groupClass}">
-                                    <label class="admin-label">${ICON.link} LocG Slug</label>
+                                    <label class="admin-label">${icon('link', 14)} LocG Slug</label>
                                     <input type="text" name="locg_slug" class="admin-input" value="${v.locg_slug || ''}"${readOnlyAttr}>
                                 </div>
 
                                 <div class="admin-form-group">
-                                    <label class="admin-label">${ICON.calendar} Рік початку</label>
+                                    <label class="admin-label">${icon('calendar', 14)} Рік початку</label>
                                     <input type="number" name="start_year" class="admin-input" value="${v.start_year || ''}">
                                 </div>
                                 <div class="admin-form-group">
-                                    <label class="admin-label">${ICON.type} Назва</label>
+                                    <label class="admin-label">${icon('type', 14)} Назва</label>
                                     <input type="text" name="name" class="admin-input" value="${v.name || ''}">
                                 </div>
 
                                 <div class="admin-form-group">
-                                    <label class="admin-label">${ICON.type} Рідна назва</label>
+                                    <label class="admin-label">${icon('type', 14)} Рідна назва</label>
                                     <input type="text" name="name_native" class="admin-input" value="${v.name_native || ''}">
                                 </div>
                                 <div class="admin-form-group">
-                                    <label class="admin-label">${ICON.type} Назва UA</label>
+                                    <label class="admin-label">${icon('type', 14)} Назва UA</label>
                                     <input type="text" name="name_uk" class="admin-input" value="${v.name_uk || ''}">
                                 </div>
 
-                                ${this._imgFieldHTML('image', 'Обкладинка', v.image, ICON.image)}
-                                ${this._imgFieldHTML('cover_img', 'Банер', v.cover_img, ICON.layout, true)}
+                                ${this._imgFieldHTML('image', 'Обкладинка', v.image, icon('imagePlaceholder', 14))}
+                                ${this._imgFieldHTML('cover_img', 'Банер', v.cover_img, icon('layout', 14), true)}
 
                                 <div class="admin-form-group${groupClass}">
-                                    <label class="admin-label">${ICON.externalLink} Посилання на сайт джерела</label>
+                                    <label class="admin-label">${icon('externalLink', 14)} Посилання на сайт джерела</label>
                                     <input type="url" name="site_link" class="admin-input" value="${v.site_link || ''}" placeholder="https://..."${readOnlyAttr}>
                                 </div>
 
                                 <div class="admin-form-group admin-form-group--full">
-                                    <label class="admin-label">${ICON.languages} Мова</label>
+                                    <label class="admin-label">${icon('languages', 14)} Мова</label>
                                     <input type="hidden" name="lang" id="lang-hidden" value="${v.lang || ''}">
                                     <div id="lang-chips" style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.2rem;">
                                         <span class="lang-chip${!v.lang ? ' lang-chip--active' : ''}"
@@ -703,22 +685,22 @@ export class VolumeEditor {
                                 </div>
 
                                 <div class="admin-form-group admin-form-group--full">
-                                    <label class="admin-label">${ICON.alignLeft} Синопсис (UA)</label>
+                                    <label class="admin-label">${icon('list', 14)} Синопсис (UA)</label>
                                     <textarea name="synopsis_ua" class="admin-textarea">${v.synopsis_ua || ''}</textarea>
                                 </div>
 
                                 <div class="admin-form-group admin-form-group--full">
-                                    <label class="admin-label">${ICON.alignLeft} Синопсис (EN)</label>
+                                    <label class="admin-label">${icon('list', 14)} Синопсис (EN)</label>
                                     <textarea name="synopsis" class="admin-textarea">${v.synopsis || ''}</textarea>
                                 </div>
 
                                 <div class="admin-form-group admin-form-group--full">
-                                    <label class="admin-label">${ICON.alignLeft} Опис</label>
+                                    <label class="admin-label">${icon('list', 14)} Опис</label>
                                     <textarea name="description" class="admin-textarea">${v.description || ''}</textarea>
                                 </div>
 
                                 <div class="admin-form-group admin-form-group--full">
-                                    <label class="admin-label">${ICON.building} Видавництво</label>
+                                    <label class="admin-label">${icon('building', 14)} Видавництво</label>
                                     <div id="vol-pub-search-container">
                                         ${Utils.publisherSearchHTML({
                                             publisherId: v.publisher || '',
@@ -727,13 +709,13 @@ export class VolumeEditor {
                                             hiddenId: 'vol-pub-id',
                                             resultsId: 'vol-pub-results',
                                             chipId: 'vol-pub-chip',
-                                            ICON: ICON
+                                            icon: icon
                                         })}
                                     </div>
                                 </div>
 
                                 <div class="admin-form-group admin-form-group--full">
-                                    <label class="admin-label">${ICON.tags} Теми</label>
+                                    <label class="admin-label">${icon('tag', 14)} Теми</label>
                                     <input type="text" id="theme-search" class="admin-input" placeholder="Пошук тем..." style="margin-bottom:0.5rem; width:100%;"
                                         oninput="window._emFilterThemesVol(this.value)">
                                     <div id="themes-list" class="themes-checkbox-list">

@@ -1,11 +1,6 @@
 import { API } from '/static/js/helpers/api.js';
 import { comicVineImageUrl } from '/static/js/helpers/image.js';
-
-const ICON = {
-    search: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>',
-    info: '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>',
-    alert: '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>'
-};
+import { icon } from '/static/js/helpers/icons.js';
 
 export class VolumePicker {
     constructor(options = {}) {
@@ -65,7 +60,7 @@ export class VolumePicker {
             <div class="ds-modal ds-modal--large" id="volume-picker-modal">
                 <div class="ds-modal-header">
                     <div class="ds-modal-title">
-                        ${ICON.search}
+                        ${icon('search', 24)}
                         ${this.title}
                     </div>
                     <button class="ds-modal-close">&times;</button>
@@ -76,7 +71,7 @@ export class VolumePicker {
                     </div>
                     <div id="vp-results" class="volume-picker-results">
                         <div class="volume-picker-empty">
-                            ${ICON.info}
+                            ${icon('info', 40, { strokeWidth: 1.5 })}
                             <p>Почніть вводити назву або ID для пошуку</p>
                         </div>
                     </div>
@@ -227,7 +222,7 @@ export class VolumePicker {
 
         resultsEl.innerHTML = `
             <div class="volume-picker-empty">
-                ${ICON.info}
+                ${icon('info', 40, { strokeWidth: 1.5 })}
                 <p>Почніть вводити назву або будь-який ID для пошуку</p>
             </div>
         `;
@@ -276,7 +271,7 @@ export class VolumePicker {
             if (items.length === 0) {
                 resultsEl.innerHTML = `
                     <div class="volume-picker-empty">
-                        ${ICON.alert}
+                        ${icon('alert', 40, { strokeWidth: 1.5 })}
                         <p>Нічого не знайдено за вашим запитом</p>
                     </div>
                 `;
@@ -314,7 +309,7 @@ export class VolumePicker {
             if (errorMsg === 'Not Found') errorMsg = 'Помилка: Ендпоінт пошуку не знайдено на сервері';
             else if (errorMsg === 'Method Not Allowed') errorMsg = 'Помилка: цей метод запиту не дозволений сервером';
             resultsEl.innerHTML = `<div class="volume-picker-empty">
-                ${ICON.alert}
+                ${icon('alert', 40, { strokeWidth: 1.5 })}
                 <p>${errorMsg}</p>
             </div>`;
         }

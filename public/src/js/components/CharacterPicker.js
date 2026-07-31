@@ -1,12 +1,7 @@
 /* public/src/js/components/CharacterPicker.js */
 import { API } from '../helpers/api.js';
 import { normalizeImageUrl } from '../helpers/image.js';
-
-const ICON = {
-  search: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
-  earth: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`,
-  x: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
-};
+import { icon } from '../helpers/icons.js';
 
 let _FuseModule = null;
 
@@ -310,7 +305,7 @@ export class CharacterPicker {
           <img src="${normalizeImageUrl(img)}" class="character-badge-avatar" alt="">
           <span>${escapeHtml(name)}</span>
           ${earthBadge}
-          <button type="button" class="character-badge-remove" data-remove-id="${c.id}" title="Видалити">${ICON.x}</button>
+          <button type="button" class="character-badge-remove" data-remove-id="${c.id}" title="Видалити">${icon('x', 14)}</button>
         </div>
       `;
     }).join('');

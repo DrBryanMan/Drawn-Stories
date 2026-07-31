@@ -3,10 +3,12 @@ import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { currentUser } from '../shell.js';
 import { Bookmarks } from '../helpers/bookmarks.js';
 import { openScrapeProgressModal } from '../components/ScrapeProgressModal.js';
-import { IssueEditor } from '/admin/js/IssueEditor.js';
+import { IssueEditor } from '../components/modals/EditIssueModal.js';
 import { formatDate } from '../helpers/lang.js';
 import { translateStaffRole, getRoleSortIndex } from '../helpers/staff.js';
 import { t } from '../helpers/i18n.js';
+import { fetchEntityEdits, renderEditorsHistoryBlock, initEditorsHistoryBlock } from '../components/editorsHistoryBlock.js';
+import { icon } from '../helpers/icons.js';
 
 
 function parsePersonas(raw) {
@@ -21,31 +23,6 @@ function parsePersonas(raw) {
     return [];
 }
 
-// ── Lucide SVG icons ──────────────────────────────
-const ICON = {
-    user:         '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
-    chevronRight: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
-    chevronLeft:  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>',
-    building:     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>',
-    calendar:     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
-    hash:         '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>',
-    book:         '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>',
-    layers:       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 17 22 12"></polyline></svg>',
-    externalLink: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
-    image:        '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>',
-    smallImage:   '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>',
-    route:        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7H6.5a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>',
-    heart:        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>',
-    bookmark:     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>',
-    plus:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
-    trash:        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
-    refreshCw:    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M16 3h5v5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 21H3v-5"/></svg>',
-    edit:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
-    users:        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-    mapPin:       '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
-    box:          '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
-    helpCircle:   '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-};
 
 const EVENT_IMPORTANCE_LABELS = {
     prologue: t('event_prologue'),
@@ -108,7 +85,7 @@ function renderStaffGroups(personsList) {
         const personImg = person.image ? normalizeImageUrl(person.image) : '';
         const imgHTML = personImg
             ? `<img class="issue-staff-avatar" src="${escapeHtmlAttribute(personImg)}" alt="${escapeHtmlAttribute(person.name)}">`
-            : `<div class="issue-staff-avatar--empty">${ICON.smallImage}</div>`;
+            : `<div class="issue-staff-avatar--empty">${icon('imagePlaceholder', 20, { strokeWidth: 1.5 })}</div>`;
         const rolesJoined = person.roles.map(r => translateStaffRole(r)).join(', ');
         return `
             <a class="issue-staff-card" href="#/persons/${person.id || person.person_id}">
@@ -181,7 +158,7 @@ function readlistUIHTML() {
                 </select>
             </div>
             <button class="readlist-btn ${!currentUser ? 'readlist-btn--anon' : ''}" id="readlist-favorite-btn" title="${currentUser ? t('add_to_fav') : t('add_to_bookmarks')}" style="width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                ${currentUser ? ICON.heart : ICON.bookmark}
+                ${currentUser ? icon('heart', 16, { strokeWidth: 2.2 }) : icon('bookmark', 16, { strokeWidth: 2.2 })}
             </button>
         </div>
     `;
@@ -195,16 +172,16 @@ function collectionUIHTML(status, barter) {
     return `
         <div class="volume-readlist-controls" id="collection-controls-wrap" style="margin-top: 8px; margin-bottom: 8px; width: 100%; display: flex; gap: 8px;">
             <button class="readlist-btn ${isOwned ? 'is-active' : ''} ${!currentUser ? 'readlist-btn--anon' : ''}" id="btn-toggle-collection" style="flex: 1; height: 42px; padding: 0 16px; gap: 8px; justify-content: center;">
-                ${isOwned ? ICON.trash : ICON.plus}
+                ${isOwned ? icon('trash', 14, { strokeWidth: 2.5 }) : icon('plus', 14, { strokeWidth: 2.5 })}
                 <span style="font-weight: 600;">${isOwned ? t('collection_remove') : t('collection_add')}</span>
             </button>
             ${isOwned ? `
                 <button class="readlist-btn ${isBarter ? 'is-active' : ''} ${!currentUser ? 'readlist-btn--anon' : ''}" id="btn-toggle-barter" title="${t('barter')}" style="width: 42px; height: 42px; padding: 0; justify-content: center; flex-shrink: 0;">
-                    ${ICON.refreshCw}
+                    ${icon('refreshCw', 14, { strokeWidth: 2.5 })}
                 </button>
             ` : `
                 <button class="readlist-btn ${isWanted ? 'is-active' : ''} ${!currentUser ? 'readlist-btn--anon' : ''}" id="btn-toggle-wishlist" title="${t('wishlist')}" style="width: 42px; height: 42px; padding: 0; justify-content: center; flex-shrink: 0;">
-                    ${ICON.bookmark}
+                    ${icon('bookmark', 16, { strokeWidth: 2.2 })}
                 </button>
             `}
         </div>
@@ -282,12 +259,12 @@ function navCardHTML(issue, direction) {
 function contextIssueNavCard(issue, direction) {
     const isNext = direction === 'next';
     const label = isNext ? t('nav_next') : t('nav_prev');
-    const arrow = isNext ? ICON.chevronRight : ICON.chevronLeft;
+    const arrow = isNext ? icon('chevronRight', 16, { strokeWidth: 2.2 }) : icon('chevronLeft', 16, { strokeWidth: 2.2 });
 
     if (!issue) {
         return `
             <div class="issue-context-issue-card issue-context-issue-card--${direction} is-disabled">
-                <div class="issue-context-issue-cover--empty">${ICON.smallImage}</div>
+                <div class="issue-context-issue-cover--empty">${icon('imagePlaceholder', 20, { strokeWidth: 1.5 })}</div>
                 <div class="issue-context-issue-body">
                     <span>${label}</span>
                     <strong>${t('none')}</strong>
@@ -305,7 +282,7 @@ function contextIssueNavCard(issue, direction) {
         <a class="issue-context-issue-card issue-context-issue-card--${direction}" href="#/issues/${issue.id}" title="${escapeHtmlAttribute(label)}">
             ${cover
                 ? `<img class="issue-context-issue-cover" src="${escapeHtmlAttribute(cover)}" alt="" loading="lazy">`
-                : `<div class="issue-context-issue-cover--empty">${ICON.smallImage}</div>`}
+                : `<div class="issue-context-issue-cover--empty">${icon('imagePlaceholder', 20, { strokeWidth: 1.5 })}</div>`}
             <div class="issue-context-issue-body">
                 <span>${label}</span>
                 ${num ? `<em>${num}</em>` : ''}
@@ -358,11 +335,11 @@ function collectionCardHTML(col) {
         <a class="issue-collection-card" href="#/collections/${col.id}">
             ${cover
                 ? `<img class="issue-collection-cover" src="${escapeHtmlAttribute(cover)}" alt="${name}" loading="lazy">`
-                : `<div class="issue-collection-cover--empty">${ICON.smallImage}</div>`}
+                : `<div class="issue-collection-cover--empty">${icon('imagePlaceholder', 20, { strokeWidth: 1.5 })}</div>`}
             <div class="issue-collection-body">
                 <div class="issue-collection-name">${name}</div>
                 ${volumeLabel ? `<div class="issue-collection-volume">${escapeHtmlAttribute(volumeLabel)}</div>` : ''}
-                ${date ? `<div class="issue-collection-date">${ICON.calendar} ${escapeHtmlAttribute(date)}</div>` : ''}
+                ${date ? `<div class="issue-collection-date">${icon('calendar', 13, { strokeWidth: 2.2 })} ${escapeHtmlAttribute(date)}</div>` : ''}
             </div>
         </a>
     `;
@@ -397,12 +374,13 @@ export async function renderIssueDetail(container, params = {}) {
 
     renderSkeleton(container);
 
-    let data, readlistStatus, ratingData;
+    let data, readlistStatus, ratingData, edits;
     try {
-        [data, readlistStatus, ratingData] = await Promise.all([
+        [data, readlistStatus, ratingData, edits] = await Promise.all([
             API.get(`/issues/${issueId}`),
             API.get(`/user/readlist/issue/${issueId}`),
-            API.get(`/ratings/issue/${issueId}`)
+            API.get(`/ratings/issue/${issueId}`),
+            fetchEntityEdits('issue', issueId)
         ]);
     } catch (err) {
         container.innerHTML = `
@@ -450,33 +428,33 @@ export async function renderIssueDetail(container, params = {}) {
     // ── Cover ─────────────────────────────────────
     const coverHTML = coverUrl
         ? `<img class="issue-cover" src="${escapeHtmlAttribute(coverUrl)}" alt="${escapeHtmlAttribute(displayTitle)}">`
-        : `<div class="issue-cover--empty">${ICON.image}</div>`;
+        : `<div class="issue-cover--empty">${icon('imagePlaceholder', 36, { strokeWidth: 1.5 })}</div>`;
 
     // ── Badges ────────────────────────────────────
     const volumeBadge = issue.volume_id
         ? `<a href="#/volumes/${issue.volume_id}" class="volume-badge volume-series-badge" title="${t('series')}">
-               ${ICON.book}
+               ${icon('book', 13, { strokeWidth: 2.2 })}
                ${escapeHtmlAttribute(volumeName)}
            </a>`
         : '';
 
     const coverDateBadge = coverDate
         ? `<span class="volume-badge volume-cover-date-badge" title="${t('cover_date')}">
-               ${ICON.calendar}
+               ${icon('calendar', 13, { strokeWidth: 2.2 })}
                ${t('cover')}: ${escapeHtmlAttribute(coverDate)}
            </span>`
         : '';
 
     const releaseDateBadge = releaseDate
         ? `<span class="volume-badge volume-release-date-badge" title="${t('release_date')}">
-               ${ICON.calendar}
+               ${icon('calendar', 13, { strokeWidth: 2.2 })}
                ${t('release')}: ${escapeHtmlAttribute(releaseDate)}
            </span>`
         : '';
 
     const pagesBadge = issue.pages
         ? `<span class="volume-badge volume-pages-badge" title="${t('pages_count')}">
-               ${ICON.book}
+               ${icon('book', 13, { strokeWidth: 2.2 })}
                ${t('pages')}: ${escapeHtmlAttribute(issue.pages)}
            </span>`
         : '';
@@ -497,7 +475,7 @@ export async function renderIssueDetail(container, params = {}) {
                    <a class="issue-ext-link issue-ext-link--cv"
                       href="${escapeHtmlAttribute(cvUrl)}"
                       target="_blank" rel="noopener noreferrer">
-                       ComicVine ${ICON.externalLink}
+                       ComicVine ${icon('externalLink', 12, { strokeWidth: 2.2 })}
                    </a>
                </div>
            </div>`
@@ -646,7 +624,7 @@ export async function renderIssueDetail(container, params = {}) {
                     : `${story.order_num}-${t('label_story_ord')}`;
                 badgeHTML = `
                     <a class="issue-story-detail-badge" href="#/issues/${story.original_issue_id}">
-                        <span class="reprint-icon">${ICON.book}</span>
+                        <span class="reprint-icon">${icon('book', 13, { strokeWidth: 2.2 })}</span>
                         <span>${t('reprint_of')} ${storyLabel} ${t('from')} ${escapeHtmlAttribute(story.original_volume_name)} #${escapeHtmlAttribute(story.original_issue_number)}</span>
                     </a>
                 `;
@@ -681,7 +659,7 @@ export async function renderIssueDetail(container, params = {}) {
                             ? `<div class="story-appearance-avatar-wrap">
                                    <img class="story-appearance-avatar default-avatar" src="${escapeHtmlAttribute(normalizeImageUrl(singleImg))}" alt="${escapeHtmlAttribute(c.name)}">
                                </div>`
-                            : `<div class="story-appearance-avatar--empty">${ICON.smallImage}</div>`;
+                            : `<div class="story-appearance-avatar--empty">${icon('imagePlaceholder', 20, { strokeWidth: 1.5 })}</div>`;
                     }
                     
                     const details = [];
@@ -714,7 +692,7 @@ export async function renderIssueDetail(container, params = {}) {
                             const pName = p.name_uk || p.name;
                             personaBadgeHTML = `
                                 <a href="#/characters/${c.id}/persona/${c.persona_idx}" class="story-appearance-persona-link" style="font-size: 11px; color: var(--accent); font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; margin-top: 2px;" title="Особистість: ${escapeHtmlAttribute(pName)}">
-                                    ${ICON.user || ''} ${escapeHtmlAttribute(pName)}
+                                    ${icon('user', 12)} ${escapeHtmlAttribute(pName)}
                                 </a>
                             `;
                         }
@@ -766,7 +744,7 @@ export async function renderIssueDetail(container, params = {}) {
                         teamGroupsHTML.push(`
                             <div class="story-appearance-team-group" style="border-left: 3px solid var(--accent-glow); padding-left: 12px;">
                                 <div class="story-appearance-team-header" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                                    <span style="color: var(--primary); display: flex; align-items: center;">${ICON.users}</span>
+                                    <span style="color: var(--primary); display: flex; align-items: center;">${icon('users', 20, { strokeWidth: 1.5 })}</span>
                                     <a href="#/teams/${team.id}" class="story-appearance-team-title" style="font-weight: bold; font-size: 14px; text-decoration: none; color: var(--text); transition: color 0.2s;">
                                         ${escapeHtmlAttribute(team.name_uk || team.name)}
                                     </a>
@@ -897,7 +875,7 @@ export async function renderIssueDetail(container, params = {}) {
                ${collections.map(collectionCardHTML).join('')}
            </div>`
         : `<div class="issue-empty-collections">
-               ${ICON.layers}
+               ${icon('layers', 14, { strokeWidth: 2.2 })}
                <p style="margin-top: 10px;">${t('no_collections')}</p>
            </div>`;
 
@@ -992,7 +970,7 @@ export async function renderIssueDetail(container, params = {}) {
                         
                         <div class="volume-ratings" style="margin-top: 12px; display: grid; grid-template-columns: 1fr; border: 1px solid var(--border-s); background: var(--bg-card); padding: .2em; border-radius: var(--r);">
                             <div class="rating-item rating-main" title="Середня оцінка користувачів: ${ratingData.average || 0} (${ratingData.count} оцінок)">
-                                ${ICON.bookmark}
+                                ${icon('bookmark', 16, { strokeWidth: 2.2 })}
                                 <span class="rating-value" style="font-family: var(--font-mono); font-size: 16px; font-weight: 600; color: var(--accent);">${ratingData.average ? ratingData.average.toFixed(1) : '—'}</span>
                             </div>
                         </div>
@@ -1097,20 +1075,7 @@ export async function renderIssueDetail(container, params = {}) {
                 </div>
             </div>
 
-            ${isModerator ? `
-                <div class="volume-hero-admin-actions">
-                    <button class="btn-admin btn-admin--secondary" id="issue-edit-btn" title="${t('edit')}">
-                        ${ICON.edit}
-                    </button>
-                    <button class="btn-admin btn-admin--danger" id="issue-delete-btn" title="${t('delete_issue')}">
-                        ${ICON.trash}
-                    </button>
-                    <button class="btn-admin btn-admin--secondary" id="issue-scrape-appearances-btn" title="${t('scrape_staff_appearances_cv')}">
-                        ${ICON.refreshCw}
-                        <span>${t('scrape_staff_appearances')}</span>
-                    </button>
-                </div>
-            ` : ''}
+            ${renderEditorsHistoryBlock(edits, currentUser, { editButtonId: 'issue-edit-btn', editTitle: t('edit') })}
         </div>
     `;
 
@@ -1434,6 +1399,8 @@ export async function renderIssueDetail(container, params = {}) {
     };
     
     initCollectionHandlers();
+
+    initEditorsHistoryBlock(container, edits);
 
     if (isModerator) {
         const scrapeBtn = container.querySelector('#issue-scrape-appearances-btn');

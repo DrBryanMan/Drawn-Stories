@@ -16,11 +16,6 @@ const SORT_OPTIONS = [
   { value: 'release_date', label: t('sort_date') || 'За датою початку' },
 ];
 
-const SORT_ORDER_ICONS = {
-  asc: '<path d="M5 6h6M5 12h10M5 18h14"/>',
-  desc: '<path d="M5 6h14M5 12h10M5 18h6"/>',
-};
-
 const SORT_ORDER_TITLES = {
   created_at: {
     asc: t('sort_order_recent_asc') || 'За зростанням: старіші додані спочатку',
@@ -132,7 +127,7 @@ export async function renderMangaChaptersCatalog(main, query = {}) {
       sortSelect.title = selectedSort.label;
     }
     if (sortLabel) sortLabel.textContent = selectedSort.label;
-    if (orderIcon) orderIcon.innerHTML = SORT_ORDER_ICONS[currentSortOrder];
+    if (orderIcon) orderIcon.innerHTML = currentSortOrder === 'asc' ? '<path d="M5 6h6M5 12h10M5 18h14"/>' : '<path d="M5 6h14M5 12h10M5 18h6"/>';
     if (orderBtn) {
       orderBtn.title = title;
       orderBtn.setAttribute('aria-label', title);

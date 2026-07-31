@@ -5,38 +5,17 @@
 import { API } from '../helpers/api.js';
 import { createWantedCard } from './wantedCard.js';
 import { createPaginator } from '../components/Pagination.js';
-
-// ── Icons ─────────────────────────────────────────────────
-const icon = (d, size = 16) =>
-  `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
-
-const ICONS = {
-  target:    '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
-  home:      '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
-  lock:      '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
-  volumes:   '<path d="M4 19.5V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-1.5Z"/><path d="M8 7h6"/><path d="M8 11h8"/>',
-  issues:    '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
-  characters:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
-  personnel: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
-  publishers:'<rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/>',
-  collections:'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>',
-  check:     '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
-  warning:   '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
-  search:    '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
-  plus:      '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
-  package:   '<path d="M12.89 2.24a2 2 0 0 0-1.78 0L3.5 6.13a2 2 0 0 0-1.1 1.77v8.2a2 2 0 0 0 1.1 1.77l7.61 3.89a2 2 0 0 0 1.78 0l7.61-3.89a2 2 0 0 0 1.1-1.77V7.9a2 2 0 0 0-1.1-1.77ZM21 8.5l-9 4.5-9-4.5M12 22.5v-14M12 13l9-4.5M12 13l-9-4.5"/>',
-  book:      '<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>',
-};
+import { icon } from '../helpers/icons.js';
 
 // ── Sections config ───────────────────────────────────────
 const SECTIONS = [
-  { key: 'volumes',     label: 'Томи',        icon: ICONS.volumes },
-  { key: 'collections', label: 'Збірники',    icon: ICONS.collections },
-  { key: 'issues',      label: 'Випуски',     icon: ICONS.issues },
-  { key: 'characters',  label: 'Персонажі',   icon: ICONS.characters },
-  { key: 'personnel',   label: 'Персонал',    icon: ICONS.personnel },
-  { key: 'publishers',  label: 'Видавництва', icon: ICONS.publishers },
-  { key: 'add',         label: 'Додавання',   icon: ICONS.plus },
+  { key: 'volumes',     label: 'Томи',        iconName: 'volumes' },
+  { key: 'collections', label: 'Збірники',    iconName: 'collections' },
+  { key: 'issues',      label: 'Випуски',     iconName: 'issues' },
+  { key: 'characters',  label: 'Персонажі',   iconName: 'characters' },
+  { key: 'personnel',   label: 'Персонал',    iconName: 'personnel' },
+  { key: 'publishers',  label: 'Видавництва', iconName: 'publishers' },
+  { key: 'add',         label: 'Додавання',   iconName: 'plus' },
 ];
 
 // ── Volume categories ─────────────────────────────────────
@@ -201,7 +180,7 @@ export async function renderWanted(root) {
 function showAccessDenied(root) {
   root.innerHTML = `
     <div class="wanted-access-denied">
-      ${icon(ICONS.lock, 48)}
+      ${icon('lock', 48)}
       <h1>Доступ заборонено</h1>
       <p>Ця сторінка доступна лише для адміністраторів та модераторів.</p>
       <a href="/">← Повернутися на головну</a>
@@ -218,7 +197,7 @@ function buildLayout() {
         data-section="${s.key}"
       >
         <span class="wanted-nav-item-left">
-          ${icon(s.icon, 15)}
+          ${icon(s.iconName, 15)}
           <span>${s.label}</span>
         </span>
         ${countHtml}
@@ -231,17 +210,17 @@ function buildLayout() {
       <aside class="wanted-sidebar">
         <div class="wanted-sidebar-header">
           <div class="wanted-sidebar-title">
-            ${icon(ICONS.target, 20)}
+            ${icon('target', 20)}
             Wanted
           </div>
           <a class="wanted-sidebar-link" href="/">
-            ${icon(ICONS.home, 13)}
+            ${icon('home', 13)}
             Drawn Stories
           </a>
         </div>
 
         <div id="wanted-total-badge" class="wanted-total-badge" style="display:none">
-          ${icon(ICONS.warning, 14)}
+          ${icon('warning', 14)}
           <span id="wanted-total-count">0</span> проблем загалом
         </div>
 
@@ -330,7 +309,7 @@ async function renderSection(root) {
   content.innerHTML = `
     <div class="wanted-section-header">
       <div class="wanted-section-title">
-        ${icon(sectionConfig?.icon || ICONS.volumes, 22)}
+        ${icon(sectionConfig?.iconName || 'volumes', 22)}
         ${sectionConfig?.label || state.section}
       </div>
     </div>
@@ -407,7 +386,7 @@ function buildToolbar(showContentType = false) {
       <div class="filter-section search-section">
         <div class="search-inner">
           <span class="search-icon">
-            ${icon(ICONS.search, 15)}
+            ${icon('search', 15)}
           </span>
           <input
             type="text"
@@ -519,7 +498,7 @@ async function loadItems(content) {
     renderPagination(paginationEl, data);
   } catch (err) {
     area.innerHTML = `<div class="wanted-empty">
-      ${icon(ICONS.warning, 32)}
+      ${icon('warning', 32)}
       <div class="wanted-empty-title">Помилка завантаження</div>
       <div class="wanted-empty-desc">${escHtml(err.message)}</div>
     </div>`;
@@ -552,7 +531,7 @@ function renderCards(items) {
 function renderEmpty() {
   return `
     <div class="wanted-empty">
-      ${icon(ICONS.check, 40)}
+      ${icon('check', 40)}
       <div class="wanted-empty-title">Немає проблем!</div>
       <div class="wanted-empty-desc">Усі записи в цій категорії заповнені.</div>
     </div>
@@ -591,7 +570,7 @@ function buildAddPanel(config) {
   return `
     <div class="wanted-section-header">
       <div class="wanted-section-title">
-        ${icon(config?.icon || ICONS.plus, 22)}
+        ${icon(config?.iconName || 'plus', 22)}
         ${config?.label || 'Додавання'}
       </div>
       <div class="wanted-section-desc">Додавання нових об'єктів до бази даних за допомогою парсерів</div>
@@ -603,7 +582,7 @@ function buildAddPanel(config) {
         <!-- Додати випуск -->
         <div class="wanted-add-card" id="card-add-issue">
           <div class="wanted-add-card-title">
-            ${icon(ICONS.issues, 18)}
+            ${icon('issues', 18)}
             Додати випуск (ComicVine)
           </div>
           <div class="wanted-add-card-desc">
@@ -619,7 +598,7 @@ function buildAddPanel(config) {
         <!-- Додати том -->
         <div class="wanted-add-card" id="card-add-volume">
           <div class="wanted-add-card-title">
-            ${icon(ICONS.volumes, 18)}
+            ${icon('volumes', 18)}
             Додати том (ComicVine)
           </div>
           <div class="wanted-add-card-desc">
@@ -635,7 +614,7 @@ function buildAddPanel(config) {
         <!-- Всі випуски тому -->
         <div class="wanted-add-card" id="card-add-volume-issues">
           <div class="wanted-add-card-title">
-            ${icon(ICONS.package, 18)}
+            ${icon('package', 18)}
             Всі випуски тому (ComicVine)
           </div>
           <div class="wanted-add-card-desc">
@@ -651,7 +630,7 @@ function buildAddPanel(config) {
         <!-- Додати манґу -->
         <div class="wanted-add-card" id="card-add-manga">
           <div class="wanted-add-card-title">
-            ${icon(ICONS.book, 18)}
+            ${icon('book', 18)}
             Додати манґу / манхву (Hikka)
           </div>
           <div class="wanted-add-card-desc">
@@ -667,7 +646,7 @@ function buildAddPanel(config) {
         <!-- Додати персонажа -->
         <div class="wanted-add-card" id="card-add-character">
           <div class="wanted-add-card-title">
-            ${icon(ICONS.characters, 18)}
+            ${icon('characters', 18)}
             Додати персонажа (ComicVine)
           </div>
           <div class="wanted-add-card-desc">
@@ -683,7 +662,7 @@ function buildAddPanel(config) {
         <!-- Додати персону -->
         <div class="wanted-add-card" id="card-add-person">
           <div class="wanted-add-card-title">
-            ${icon(ICONS.personnel, 18)}
+            ${icon('personnel', 18)}
             Додати персону / автора (ComicVine)
           </div>
           <div class="wanted-add-card-desc">
@@ -699,7 +678,7 @@ function buildAddPanel(config) {
         <!-- Додати видавництво -->
         <div class="wanted-add-card" id="card-add-publisher-volumes">
           <div class="wanted-add-card-title">
-            ${icon(ICONS.publishers, 18)}
+            ${icon('publishers', 18)}
             Зв'язати томи видавництва (ComicVine)
           </div>
           <div class="wanted-add-card-desc">

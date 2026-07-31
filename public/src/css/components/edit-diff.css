@@ -1,0 +1,154 @@
+/* Edit Diff Component Styles */
+
+.diff-row, .diff-field-block {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-s);
+}
+
+.diff-row:last-child, .diff-field-block:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.diff-row-header, .diff-field-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-oswald);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.diff-field-icon, .diff-field-title svg {
+    color: var(--accent);
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+}
+
+.diff-values-grid, .diff-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+@media (max-width: 768px) {
+    .diff-values-grid, .diff-columns {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+}
+
+.diff-val, .diff-col {
+    position: relative;
+    background: var(--bg-body);
+    border: 1px solid var(--border-s);
+    border-radius: var(--r);
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--text-2);
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.diff-val--before, .diff-col--before {
+    border-left: 4px solid color-mix(in srgb, #dc2626 40%, transparent);
+    border-color: color-mix(in srgb, #dc2626 30%, transparent);
+    background: color-mix(in srgb, #dc2626 5%, transparent);
+}
+
+.diff-val--after, .diff-col--after {
+    border-left: 4px solid color-mix(in srgb, #059669 40%, transparent);
+    border-color: color-mix(in srgb, #059669 30%, transparent);
+    background: color-mix(in srgb, #059669 5%, transparent);
+}
+
+.diff-val-tag, .diff-col-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+    line-height: 1;
+}
+
+.diff-val--before .diff-val-tag, .diff-col--before .diff-col-label {
+    color: #dc2626;
+}
+
+.diff-val--after .diff-val-tag, .diff-col--after .diff-col-label {
+    color: #059669;
+}
+
+.diff-val-content, .diff-col-value {
+    word-break: break-word;
+    white-space: pre-wrap;
+    line-height: 1.5;
+    color: var(--text);
+}
+
+.diff-val-content em, .diff-col-value em {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.edit-img-link, .edit-site-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-family: var(--font-monos);
+    font-size: 11px;
+    word-break: break-all;
+}
+
+.edit-img-link:hover, .edit-site-link:hover {
+    text-decoration: underline;
+}
+
+/* Diff Theme Chips styling */
+.diff-theme-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.diff-theme-chip {
+    background: var(--bg-card);
+    border: 1px solid var(--border-s);
+    border-radius: var(--r);
+    padding: 3px 8px;
+    font-size: 11px;
+    font-family: var(--font-monos);
+    color: var(--text-2);
+    font-weight: 500;
+}
+
+/* Image Previews styling */
+.diff-image-preview-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.diff-image-preview {
+    max-width: 140px;
+    max-height: 180px;
+    object-fit: cover;
+    border-radius: var(--r);
+    border: 1px solid var(--border-s);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
+}
+
+.diff-image-preview--banner {
+    max-width: 280px;
+    max-height: 100px;
+}

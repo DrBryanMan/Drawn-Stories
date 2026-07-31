@@ -1,12 +1,7 @@
 /* public/src/js/components/EssencePicker.js */
 import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
-
-const ICON = {
-  search: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
-  sparkles: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>`,
-  x: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
-};
+import { icon } from '../helpers/icons.js';
 
 /**
  * EssencePicker — компонент для вибору сутності з БД (з пошуком за назвою чи слагом).
@@ -177,7 +172,7 @@ export class EssencePicker {
       return `
         <div class="essence-picker-item" data-slug="${escapeHtmlAttribute(item.slug)}" style="display: flex; align-items: center; gap: 8px; padding: 6px 12px; cursor: pointer; border-bottom: 1px solid var(--border-s); font-size: 12px; background: ${isSelected ? 'var(--bg-2)' : 'transparent'};">
           <div style="width: 24px; height: 24px; border-radius: 4px; overflow: hidden; background: var(--bg-2); display: flex; align-items: center; justify-content: center;">
-            ${img ? `<img src="${escapeHtmlAttribute(img)}" style="width:100%;height:100%;object-fit:cover;">` : ICON.sparkles}
+            ${img ? `<img src="${escapeHtmlAttribute(img)}" style="width:100%;height:100%;object-fit:cover;">` : icon('sparkles', 14)}
           </div>
           <div style="display: flex; flex-direction: column; min-width: 0; flex: 1;">
             <span style="font-weight: 600; color: var(--text);">${escapeHtmlAttribute(name)}</span>
@@ -223,7 +218,7 @@ export class EssencePicker {
       this.badgeContainer.innerHTML = `
         <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; background: var(--bg-2); border: 1px solid var(--border-s); border-radius: 6px; font-size: 12px;">
           <span style="width: 16px; height: 16px; border-radius: 3px; overflow: hidden; display: inline-block;">
-            ${img ? `<img src="${escapeHtmlAttribute(img)}" style="width:100%;height:100%;object-fit:cover;">` : ICON.sparkles}
+            ${img ? `<img src="${escapeHtmlAttribute(img)}" style="width:100%;height:100%;object-fit:cover;">` : icon('sparkles', 14)}
           </span>
           <span style="font-weight: 600;">${escapeHtmlAttribute(name)}</span>
           <span style="font-size: 10px; color: var(--text-muted);">(${escapeHtmlAttribute(slug)})</span>

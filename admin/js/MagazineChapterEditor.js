@@ -1,10 +1,6 @@
 import { API } from '/static/js/helpers/api.js';
 import { escapeHtmlAttribute } from '/static/js/helpers/image.js';
-
-const ICON = {
-    x: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
-    edit: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>'
-};
+import { icon } from '/static/js/helpers/icons.js';
 
 export class MagazineChapterEditor {
     constructor(issueId, chapterInfo, onSuccess) {
@@ -78,8 +74,8 @@ export class MagazineChapterEditor {
             <div class="ds-modal-overlay" id="chapter-editor-overlay">
                 <div class="ds-modal ds-modal--large" id="chapter-editor-modal">
                     <div class="ds-modal-header">
-                        <div class="ds-modal-title" id="chapter-editor-title">${ICON.edit} Редагувати розділ</div>
-                        <button class="ds-modal-close" id="chapter-editor-close">${ICON.x}</button>
+                        <div class="ds-modal-title" id="chapter-editor-title">${icon('edit', 14)} Редагувати розділ</div>
+                        <button class="ds-modal-close" id="chapter-editor-close">${icon('x', 16)}</button>
                     </div>
                     <div class="ds-modal-body">
                         

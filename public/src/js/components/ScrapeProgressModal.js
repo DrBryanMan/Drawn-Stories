@@ -1,11 +1,4 @@
-/* public/src/js/components/ScrapeProgressModal.js */
-
-const ICON = {
-    x: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
-    refreshCw: '<svg class="spin-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 21H3v-5"/><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M16 3h5v5"/></svg>',
-    check: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
-    alertTriangle: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
-};
+import { icon } from '../helpers/icons.js';
 
 let _modal = null;
 let _eventSource = null;
@@ -31,11 +24,11 @@ export function openScrapeProgressModal(type, id) {
         <div class="ds-modal scrape-progress-modal" id="scrape-progress-modal">
             <div class="ds-modal-header">
                 <div class="ds-modal-title">${titleText}</div>
-                <button class="ds-modal-close" id="spm-close-x-btn" style="display: none;">${ICON.x}</button>
+                <button class="ds-modal-close" id="spm-close-x-btn" style="display: none;">${icon('x', 20, { strokeWidth: 2.2 })}</button>
             </div>
             <div class="ds-modal-body">
                 <div class="spm-status-bar">
-                    <span class="spm-status-icon">${ICON.refreshCw}</span>
+                    <span class="spm-status-icon">${icon('refreshCw', 20, { strokeWidth: 2.2, class: 'spin-icon' })}</span>
                     <span class="spm-status-text">Ініціалізація підключення...</span>
                 </div>
                 <div class="scrape-terminal" id="spm-terminal">
@@ -84,12 +77,12 @@ export function openScrapeProgressModal(type, id) {
         closeXBtn.style.display = 'block';
 
         if (success) {
-            statusIcon.innerHTML = ICON.check;
+            statusIcon.innerHTML = icon('check', 20, { strokeWidth: 2.5 });
             statusIcon.className = 'spm-status-icon spm-status-success';
             statusText.textContent = 'Парсинг успішно завершено!';
             appendLog('Процес завершено успішно.', 'success');
         } else {
-            statusIcon.innerHTML = ICON.alertTriangle;
+            statusIcon.innerHTML = icon('warning', 20, { strokeWidth: 2.2 });
             statusIcon.className = 'spm-status-icon spm-status-error';
             statusText.textContent = 'Сталася помилка під час парсингу';
             appendLog('Процес перервано через помилку.', 'error');

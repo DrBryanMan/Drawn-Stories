@@ -29,17 +29,20 @@ def get_current_user(request: Request):
     return user
 
 @router.get("")
-async def get_edit_requests(request: Request, status: Optional[str] = None):
-    user = get_current_user(request)
-    if not user or user["role"] not in ("admin", "moderator"):
-        raise HTTPException(status_code=403, detail="Недостатньо прав")
-        
+async def get_edit_requests(
+    request: Request,
+    status: Optional[str] = None,
+    entity_type: Optional[str] = None,
+    entity_id: Optional[int] = None
+):
     db = get_db()
     
     query = """
         SELECT er.*, u.username as proposer_username, u.score as proposer_score, m.username as moderator_username,
-               v.name as volume_name, v.name_uk as volume_name_uk,
-               v.image as volume_cv_img, NULL as volume_hikka_img,
+               COALESCE(v.name, i.name, c.name, p.name, pub.name, col.name) as volume_name,
+               COALESCE(v.name_uk, i.name_uk, c.name_uk, p.name_uk) as volume_name_uk,
+               COALESCE(v.image, i.image, c.image, p.image, pub.image, col.image) as volume_cv_img,
+               NULL as volume_hikka_img,
                COALESCE((
                    SELECT SUM(sh.delta)
                    FROM score_history sh
@@ -49,12 +52,26 @@ async def get_edit_requests(request: Request, status: Optional[str] = None):
         JOIN users u ON er.user_id = u.id
         LEFT JOIN users m ON er.moderator_id = m.id
         LEFT JOIN volumes v ON er.entity_type = 'volume' AND er.entity_id = v.id
+        LEFT JOIN issues i ON er.entity_type = 'issue' AND er.entity_id = i.id
+        LEFT JOIN characters c ON er.entity_type = 'character' AND er.entity_id = c.id
+        LEFT JOIN persons p ON er.entity_type = 'person' AND er.entity_id = p.id
+        LEFT JOIN publishers pub ON er.entity_type = 'publisher' AND er.entity_id = pub.id
+        LEFT JOIN collections col ON er.entity_type = 'collection' AND er.entity_id = col.id
+        WHERE 1=1
     """
     params = []
     
     if status:
-        query += " WHERE er.status = %s"
+        query += " AND er.status = %s"
         params.append(status)
+
+    if entity_type:
+        query += " AND er.entity_type = %s"
+        params.append(entity_type)
+
+    if entity_id is not None:
+        query += " AND er.entity_id = %s"
+        params.append(entity_id)
         
     query += " ORDER BY er.created_at DESC"
     
@@ -71,37 +88,42 @@ async def get_edit_requests(request: Request, status: Optional[str] = None):
         
     return result
 
-def get_volume_current_state(db, volume_id: int):
-    vol = db.get_one("SELECT * FROM volumes WHERE id = %s", [volume_id])
-    if not vol:
+def get_entity_current_state(db, entity_type: str, entity_id: int):
+    ENTITY_TABLES = {
+        "volume": "volumes",
+        "issue": "issues",
+        "character": "characters",
+        "person": "persons",
+        "publisher": "publishers",
+        "collection": "collections"
+    }
+    table = ENTITY_TABLES.get(entity_type)
+    if not table:
         return None
 
-    # Теми з назвами
-    themes = db.get_all("""
-        SELECT t.id, COALESCE(t.ua_name, t.name) as name
-        FROM volume_themes vt
-        JOIN themes t ON t.id = vt.theme_id
-        WHERE vt.volume_id = %s
-    """, [volume_id])
-    theme_ids = [t["id"] for t in themes]
-    themes_list = [{"id": t["id"], "name": t["name"]} for t in themes]
+    row = db.get_one(f"SELECT * FROM {table} WHERE id = %s", [entity_id])
+    if not row:
+        return None
 
-    # Персонал
-    staff = db.get_all("SELECT person_id, role FROM volume_persons WHERE volume_id = %s", [volume_id])
-    staff_list = [{"person_id": s["person_id"], "role": s["role"]} for s in staff]
-
-    # Персонажі
-    chars = db.get_all("SELECT character_id, role FROM volume_characters WHERE volume_id = %s", [volume_id])
-    chars_list = [{"character_id": c["character_id"], "role": c["role"]} for c in chars]
-
-    state = dict(vol)
+    state = dict(row)
     for key in ["id", "created_at", "updated_at"]:
         state.pop(key, None)
 
-    state["theme_ids"] = theme_ids
-    state["themes"] = themes_list
-    state["staff"] = staff_list
-    state["characters"] = chars_list
+    if entity_type == "volume":
+        themes = db.get_all("""
+            SELECT t.id, COALESCE(t.ua_name, t.name) as name
+            FROM volume_themes vt
+            JOIN themes t ON t.id = vt.theme_id
+            WHERE vt.volume_id = %s
+        """, [entity_id])
+        state["theme_ids"] = [t["id"] for t in themes]
+        state["themes"] = [{"id": t["id"], "name": t["name"]} for t in themes]
+
+        staff = db.get_all("SELECT person_id, role FROM volume_persons WHERE volume_id = %s", [entity_id])
+        state["staff"] = [{"person_id": s["person_id"], "role": s["role"]} for s in staff]
+
+        chars = db.get_all("SELECT character_id, role FROM volume_characters WHERE volume_id = %s", [entity_id])
+        state["characters"] = [{"character_id": c["character_id"], "role": c["role"]} for c in chars]
 
     return state
 
@@ -123,11 +145,29 @@ def filter_patch_data(before_state: dict | None, after_data: dict) -> tuple[dict
 
         is_equal = False
 
-        # Порівняння списків (наприклад, theme_ids, staff, characters, themes)
+        # Автоматична десеріалізація JSON рядків для спискових полів на кшталт personas або aliases
+        if key in ("personas", "aliases"):
+            if isinstance(before_val, str):
+                try:
+                    before_val = json.loads(before_val)
+                except Exception:
+                    pass
+            if isinstance(after_val, str):
+                try:
+                    after_val = json.loads(after_val)
+                except Exception:
+                    pass
+
+        # Порівняння списків (наприклад, theme_ids, staff, characters, themes, personas)
         if isinstance(after_val, list) or isinstance(before_val, list):
             def get_norm_list(val):
                 if not val:
                     return []
+                if isinstance(val, str):
+                    try:
+                        val = json.loads(val)
+                    except Exception:
+                        return [val.strip()]
                 if isinstance(val, list):
                     if val and isinstance(val[0], (int, float)):
                         return sorted([int(x) for x in val])
@@ -149,6 +189,37 @@ def filter_patch_data(before_state: dict | None, after_data: dict) -> tuple[dict
                     return {}
                 return {str(k): str(v) for k, v in val.items() if v not in (None, "")}
             is_equal = get_norm_dict(before_val) == get_norm_dict(after_val)
+
+        # Спеціальна нормалізація для origin (походження)
+        elif key == "origin":
+            ORIGIN_KEYS = {
+                "human": ["human", "людина"],
+                "mutant": ["mutant", "мутант"],
+                "alien": ["alien", "прибулець"],
+                "cyborg": ["cyborg", "кіборг"],
+                "robot": ["robot", "робот"],
+                "android": ["android", "андроїд"],
+                "deity": ["deity", "божество"],
+                "demon": ["demon", "демон"],
+                "magic": ["magic", "магічна істота", "magical being"],
+                "atlantian": ["atlantian", "атлант", "atlantean"],
+                "amazon": ["amazon", "амазонка"],
+                "inhuman": ["inhuman", "нелюд"],
+                "symbiote": ["symbiote", "симбіот"],
+                "vampire": ["vampire", "вампір"],
+                "zombie": ["zombie", "зомбі"],
+                "clone": ["clone", "клон"],
+                "meta": ["meta", "мета-людина", "metahuman"],
+            }
+            def get_norm_origin(v):
+                if not v:
+                    return ""
+                s = str(v).strip().lower()
+                for k, aliases in ORIGIN_KEYS.items():
+                    if s == k or s in aliases:
+                        return k
+                return s
+            is_equal = get_norm_origin(before_val) == get_norm_origin(after_val)
 
         # Порівняння простих полів (рядки, числа, None)
         else:
@@ -193,19 +264,22 @@ def _apply_score(
 
 @router.get("/{edit_id}")
 async def get_edit_request(edit_id: int, request: Request):
-    user = get_current_user(request)
-    if not user or user["role"] not in ("admin", "moderator"):
-        raise HTTPException(status_code=403, detail="Недостатньо прав")
-
     db = get_db()
     query = """
         SELECT er.*, u.username as proposer_username, m.username as moderator_username,
-               v.name as volume_name, v.name_uk as volume_name_uk,
-               v.image as volume_cv_img, NULL as volume_hikka_img
+               COALESCE(v.name, i.name, c.name, p.name, pub.name, col.name) as volume_name,
+               COALESCE(v.name_uk, i.name_uk, c.name_uk, p.name_uk) as volume_name_uk,
+               COALESCE(v.image, i.image, c.image, p.image, pub.image, col.image) as volume_cv_img,
+               NULL as volume_hikka_img
         FROM edit_requests er
         JOIN users u ON er.user_id = u.id
         LEFT JOIN users m ON er.moderator_id = m.id
         LEFT JOIN volumes v ON er.entity_type = 'volume' AND er.entity_id = v.id
+        LEFT JOIN issues i ON er.entity_type = 'issue' AND er.entity_id = i.id
+        LEFT JOIN characters c ON er.entity_type = 'character' AND er.entity_id = c.id
+        LEFT JOIN persons p ON er.entity_type = 'person' AND er.entity_id = p.id
+        LEFT JOIN publishers pub ON er.entity_type = 'publisher' AND er.entity_id = pub.id
+        LEFT JOIN collections col ON er.entity_type = 'collection' AND er.entity_id = col.id
         WHERE er.id = %s
     """
     row = db.get_one(query, [edit_id])
@@ -230,6 +304,71 @@ async def get_edit_request(edit_id: int, request: Request):
 
     return d
 
+def apply_entity_update_in_db(db, entity_type: str, entity_id: int, data: dict):
+    if entity_type == "volume":
+        apply_volume_update_in_db(db, entity_id, data)
+        return
+
+    ENTITY_TABLES = {
+        "issue": ("issues", ["name", "name_uk", "issue_number", "cover_img", "image", "publication_date", "description", "synopsis"]),
+        "character": ("characters", [
+            "name", "name_uk", "name_ro", "name_native",
+            "real_name", "real_name_uk",
+            "creators", "franchise", "earth", "essence", "origin",
+            "image", "portret_img", "costume_img", "portret_costume_img",
+            "pseudo", "description", "bio", "cv_id",
+        ]),
+        "person": ("persons", ["name", "name_uk", "name_native", "pseudo", "occupation", "birth", "birth_place", "website", "image", "cv_id"]),
+        "publisher": ("publishers", ["name", "name_uk", "country", "website", "image", "logo", "cv_id"]),
+        "collection": ("collections", ["name", "name_uk", "description", "image", "cover_img"])
+    }
+
+    if entity_type not in ENTITY_TABLES:
+        return
+
+    table, allowed_fields = ENTITY_TABLES[entity_type]
+    fields = []
+    params = []
+    for key, value in data.items():
+        if key in allowed_fields:
+            if value == "":
+                value = None
+            fields.append(f"{key} = %s")
+            params.append(value)
+
+    if entity_type == "character":
+        if "personas" in data:
+            personas_raw = data["personas"]
+            if isinstance(personas_raw, str):
+                try:
+                    personas = json.loads(personas_raw)
+                except Exception:
+                    personas = []
+            elif isinstance(personas_raw, list):
+                personas = personas_raw
+            else:
+                personas = []
+            fields.append("personas = %s::jsonb")
+            params.append(json.dumps(personas, ensure_ascii=False))
+
+        if "aliases" in data:
+            aliases_raw = data["aliases"]
+            if isinstance(aliases_raw, str):
+                try:
+                    aliases = json.loads(aliases_raw)
+                except Exception:
+                    aliases = []
+            elif isinstance(aliases_raw, list):
+                aliases = aliases_raw
+            else:
+                aliases = []
+            fields.append("aliases = %s::jsonb")
+            params.append(json.dumps(aliases, ensure_ascii=False))
+
+    if fields:
+        params.append(entity_id)
+        db.execute(f"UPDATE {table} SET {', '.join(fields)} WHERE id = %s", params)
+
 @router.post("")
 async def create_edit_request(req: EditRequestSchema, request: Request):
     user = get_current_user(request)
@@ -238,18 +377,25 @@ async def create_edit_request(req: EditRequestSchema, request: Request):
     
     db = get_db()
     
-    # Перевіримо, чи існує сутність
-    if req.entity_type == "volume":
-        volume = db.get_one("SELECT id FROM volumes WHERE id = %s", [req.entity_id])
-        if not volume:
-            raise HTTPException(status_code=404, detail="Том не знайдено")
-    else:
+    ENTITY_TABLES = {
+        "volume": "volumes",
+        "issue": "issues",
+        "character": "characters",
+        "person": "persons",
+        "publisher": "publishers",
+        "collection": "collections"
+    }
+
+    if req.entity_type not in ENTITY_TABLES:
         raise HTTPException(status_code=400, detail="Непідтримуваний тип сутності")
 
+    table = ENTITY_TABLES[req.entity_type]
+    entity = db.get_one(f"SELECT id FROM {table} WHERE id = %s", [req.entity_id])
+    if not entity:
+        raise HTTPException(status_code=404, detail="Сутність не знайдено")
+
     # Збережемо поточний стан "До"
-    before_state = None
-    if req.entity_type == "volume":
-        before_state = get_volume_current_state(db, req.entity_id)
+    before_state = get_entity_current_state(db, req.entity_type, req.entity_id)
 
     # Збагатимо after_state назвами тем
     if "theme_ids" in req.patch_data and isinstance(req.patch_data["theme_ids"], list):
@@ -306,22 +452,21 @@ async def create_edit_request(req: EditRequestSchema, request: Request):
     )
     new_id = cursor.fetchone()["id"]
     db.conn.commit()
-    
-    # Якщо авто-затверджено, відразу застосовуємо зміни
+
+    # Якщо авто-затверджено при створенні:
     if status == "approved":
         try:
-            if req.entity_type == "volume":
-                apply_volume_update_in_db(db, req.entity_id, filtered_after)
+            apply_entity_update_in_db(db, req.entity_type, req.entity_id, filtered_after)
         except Exception as e:
             db.execute("DELETE FROM edit_requests WHERE id = %s", [new_id])
             raise HTTPException(status_code=500, detail=f"Помилка при застосуванні змін: {str(e)}")
 
-        # Нараховуємо бали автору за авто-затверджену правку
         pts, parts = calculate_edit_score(
             filtered_before,
             filtered_after,
             themes_before,
             themes_after,
+            entity_type=req.entity_type
         )
         if pts > 0:
             reason = build_reason_string(req.entity_type, req.entity_id, parts, pts)
@@ -358,8 +503,7 @@ async def approve_edit_request(edit_id: int, req: Optional[ModerationActionSchem
     
     # Застосовуємо зміни в транзакції
     try:
-        if entity_type == "volume":
-            apply_volume_update_in_db(db, entity_id, patch_data)
+        apply_entity_update_in_db(db, entity_type, entity_id, patch_data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Помилка при застосуванні змін: {str(e)}")
         
@@ -464,3 +608,53 @@ async def close_edit_request(edit_id: int, request: Request):
         [edit_id]
     )
     return {"message": "Правку успішно закрито"}
+
+@router.delete("/{edit_id}")
+async def delete_edit_request(edit_id: int, request: Request):
+    user = get_current_user(request)
+    if not user or user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Видаляти правки може тільки адміністратор")
+
+    db = get_db()
+    edit_req = db.get_one("SELECT * FROM edit_requests WHERE id = %s", [edit_id])
+    if not edit_req:
+        raise HTTPException(status_code=404, detail="Запит на правку не знайдено")
+
+    proposer_id = edit_req["user_id"]
+    was_approved = edit_req["status"] == "approved"
+
+    # Якщо правка була схвалена, відкочуємо зміни поля "до" назад в базу даних
+    if was_approved:
+        try:
+            patch_obj = json.loads(edit_req["patch_data"])
+            before_data = patch_obj.get("before", {})
+            if before_data:
+                apply_entity_update_in_db(db, edit_req["entity_type"], edit_req["entity_id"], before_data)
+        except Exception as err:
+            raise HTTPException(status_code=500, detail=f"Помилка відкочування змін у БД: {str(err)}")
+
+    # Рахуємо бали, якщо за цієї правку давали бали пропозиціонеру
+    score_row = db.get_one(
+        """
+        SELECT COALESCE(SUM(delta), 0) as total_awarded
+        FROM score_history
+        WHERE edit_id = %s AND user_id = %s AND delta > 0
+        """,
+        [edit_id, proposer_id]
+    )
+    awarded_score = score_row["total_awarded"] if score_row else 0
+
+    if awarded_score > 0:
+        reason = f"Видалено правку #{edit_id} (відкочено зміни та анульовано {awarded_score} б.)"
+        _apply_score(db, proposer_id, -awarded_score, reason, edit_id)
+
+    db.execute("DELETE FROM edit_requests WHERE id = %s", [edit_id])
+    db.conn.commit()
+
+    msg = f"Правку #{edit_id} успішно видалено"
+    if was_approved:
+        msg += " та відкочено її зміни у базі даних"
+    if awarded_score > 0:
+        msg += f" (анульовано {awarded_score} б. у автора)"
+
+    return {"message": msg}

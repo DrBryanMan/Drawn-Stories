@@ -6,20 +6,9 @@ import { createComicCard } from '../components/cards/ComicCard.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { t } from '../helpers/i18n.js';
 import { parseAliases } from '../helpers/lang.js';
-
-// ── Lucide icons ──────────────────────────────────────
-const ICON = {
-  calendar:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>',
-  mapPin:       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
-  globe:        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
-  user:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
-  externalLink: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
-  book:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>',
-  chevronRight: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
-  image:        '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>',
-  edit:         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
-  layers:       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
-};
+import { openEditPersonModal } from '../components/modals/EditPersonModal.js';
+import { fetchEntityEdits, renderEditorsHistoryBlock, initEditorsHistoryBlock } from '../components/editorsHistoryBlock.js';
+import { icon } from '../helpers/icons.js';
 
 // ── Paginator instance (for works tab) ───────────────
 const worksPaginator = createPaginator({ pageSize: 24 });
@@ -63,7 +52,7 @@ function volumeReleaseCardHTML(vol) {
   const issueCount = vol.issue_count || 0;
   const coverHtml = imgUrl
     ? `<img src="${escapeHtmlAttribute(imgUrl)}" alt="${title}" loading="lazy">`
-    : `<div class="entity-release-cover-empty">${ICON.image}</div>`;
+    : `<div class="entity-release-cover-empty">${icon('imagePlaceholder', 36, { strokeWidth: 1.5 })}</div>`;
 
   return `
     <a href="#/volumes/${vol.id}" class="entity-release-card">
@@ -84,7 +73,7 @@ function issueReleaseCardHTML(issue) {
   const displayTitle = numText ? `${volName} ${numText}` : volName;
   const coverHtml = imgUrl
     ? `<img src="${escapeHtmlAttribute(imgUrl)}" alt="${title}" loading="lazy">`
-    : `<div class="entity-release-cover-empty">${ICON.image}</div>`;
+    : `<div class="entity-release-cover-empty">${icon('imagePlaceholder', 36, { strokeWidth: 1.5 })}</div>`;
 
   return `
     <a href="#/issues/${issue.id}" class="entity-release-card">
@@ -94,110 +83,6 @@ function issueReleaseCardHTML(issue) {
         <div class="entity-release-sub">${title}</div>
       </div>
     </a>
-  `;
-}
-
-function openModal(id) {
-  const el = document.getElementById(id);
-  if (el) {
-    el.style.display = 'flex';
-    document.body.classList.add('modal-open');
-  }
-}
-
-function closeModal(id) {
-  const el = document.getElementById(id);
-  if (el) {
-    el.style.display = 'none';
-    const openModals = document.querySelectorAll('.ds-modal-overlay[style*="display: flex"], .ds-modal-overlay[style*="display: block"]');
-    if (openModals.length === 0) {
-      document.body.classList.remove('modal-open');
-    }
-  }
-}
-
-function editModalHTML(person) {
-  const genderOptions = `
-    <option value="" ${!person.gender ? 'selected' : ''}>Не вказано</option>
-    <option value="1" ${person.gender === 1 ? 'selected' : ''}>Чоловік</option>
-    <option value="2" ${person.gender === 2 ? 'selected' : ''}>Жінка</option>
-  `;
-
-  return `
-    <div class="ds-modal-overlay" id="person-edit-modal" style="display: none;">
-      <div class="ds-modal ds-modal--large" id="person-edit-modal-box">
-        <div class="ds-modal-header">
-          <div class="ds-modal-title">${ICON.edit} Редагувати дані особи</div>
-          <button class="ds-modal-close" type="button" data-close-modal="person-edit-modal">&times;</button>
-        </div>
-        <form id="person-edit-form">
-          <div class="ds-modal-body">
-            <div class="admin-form-grid">
-              <div class="admin-form-group admin-form-group--full">
-                <label class="admin-label">Ім'я (англійською / оригінал)</label>
-                <input type="text" name="name" class="admin-input" value="${escapeHtmlAttribute(person.name || '')}" required>
-              </div>
-              <div class="admin-form-group">
-                <label class="admin-label">Ім'я українською</label>
-                <input type="text" name="name_uk" class="admin-input" value="${escapeHtmlAttribute(person.name_uk || '')}">
-              </div>
-              <div class="admin-form-group">
-                <label class="admin-label">Псевдонім</label>
-                <input type="text" name="pseudo" class="admin-input" value="${escapeHtmlAttribute(person.pseudo || '')}">
-              </div>
-              <div class="admin-form-group">
-                <label class="admin-label">Професія / Заняття</label>
-                <input type="text" name="occupation" class="admin-input" value="${escapeHtmlAttribute(person.occupation || '')}">
-              </div>
-              <div class="admin-form-group">
-                <label class="admin-label">Стать</label>
-                <select name="gender" class="admin-input">${genderOptions}</select>
-              </div>
-              <div class="admin-form-group">
-                <label class="admin-label">Дата народження</label>
-                <input type="text" name="birth" class="admin-input" value="${escapeHtmlAttribute(person.birth || '')}">
-              </div>
-              <div class="admin-form-group">
-                <label class="admin-label">Дата смерті</label>
-                <input type="text" name="death" class="admin-input" value="${escapeHtmlAttribute(person.death || '')}">
-              </div>
-              <div class="admin-form-group">
-                <label class="admin-label">Країна</label>
-                <input type="text" name="country" class="admin-input" value="${escapeHtmlAttribute(person.country || '')}">
-              </div>
-              <div class="admin-form-group">
-                <label class="admin-label">Рідне місто</label>
-                <input type="text" name="hometown" class="admin-input" value="${escapeHtmlAttribute(person.hometown || '')}">
-              </div>
-              <div class="admin-form-group admin-form-group--full">
-                <label class="admin-label">Веб-сайт</label>
-                <input type="url" name="website" class="admin-input" value="${escapeHtmlAttribute(person.website || '')}">
-              </div>
-              <div class="admin-form-group admin-form-group--full">
-                <label class="admin-label">URL фото профілю</label>
-                <input type="url" name="image" class="admin-input" value="${escapeHtmlAttribute(person.image || '')}">
-              </div>
-              <div class="admin-form-group admin-form-group--full">
-                <label class="admin-label">Псевдоніми / Аліаси (через кому)</label>
-                <input type="text" name="aliases" class="admin-input" value="${escapeHtmlAttribute(person.aliases || '')}">
-              </div>
-              <div class="admin-form-group">
-                <label class="admin-label">ComicVine ID</label>
-                <input type="number" name="cv_id" class="admin-input" value="${person.cv_id || ''}">
-              </div>
-              <div class="admin-form-group">
-                <label class="admin-label">ComicVine Slug</label>
-                <input type="text" name="cv_slug" class="admin-input" value="${escapeHtmlAttribute(person.cv_slug || '')}">
-              </div>
-            </div>
-          </div>
-          <div class="ds-modal-footer">
-            <button class="btn-admin btn-admin--secondary" type="button" data-close-modal="person-edit-modal">Скасувати</button>
-            <button class="btn-admin btn-admin--primary" type="submit">Зберегти зміни</button>
-          </div>
-        </form>
-      </div>
-    </div>
   `;
 }
 
@@ -247,53 +132,23 @@ export async function renderPersonnelDetail(container, params) {
     const displayName = person.name_uk || person.name;
     document.title = `${displayName} — Drawn Stories`;
 
-    container.innerHTML = buildDetailHTML(person);
+    const edits = await fetchEntityEdits('person', id);
+    container.innerHTML = buildDetailHTML(person, edits);
 
     initTabs(container, person, id);
     worksPaginator.reset();
 
-    // Bind modal controls
-    if (isModerator()) {
-      container.querySelector('#person-edit-btn')?.addEventListener('click', () => openModal('person-edit-modal'));
+    // Edit button click
+    container.querySelector('#person-edit-btn')?.addEventListener('click', () => {
+      openEditPersonModal(person, () => renderPersonnelDetail(container, params));
+    });
 
-      container.querySelectorAll('[data-close-modal]').forEach(btn => {
-        btn.addEventListener('click', () => closeModal(btn.dataset.closeModal));
-      });
-
-      container.querySelector('#person-edit-form')?.addEventListener('submit', async event => {
-        event.preventDefault();
-        const form = new FormData(event.currentTarget);
-        try {
-          await API.put(`/personnel/${id}`, {
-            name: form.get('name')?.trim(),
-            name_uk: form.get('name_uk')?.trim() || null,
-            pseudo: form.get('pseudo')?.trim() || null,
-            occupation: form.get('occupation')?.trim() || null,
-            gender: form.get('gender') ? Number(form.get('gender')) : null,
-            birth: form.get('birth')?.trim() || null,
-            death: form.get('death')?.trim() || null,
-            country: form.get('country')?.trim() || null,
-            hometown: form.get('hometown')?.trim() || null,
-            website: form.get('website')?.trim() || null,
-            image: form.get('image')?.trim() || null,
-            aliases: form.get('aliases')?.trim() || null,
-            cv_id: form.get('cv_id') ? Number(form.get('cv_id')) : null,
-            cv_slug: form.get('cv_slug')?.trim() || null,
-          });
-          closeModal('person-edit-modal');
-          // Re-render page
-          await renderPersonnelDetail(container, params);
-        } catch (e) {
-          alert('Помилка при збереженні: ' + e.message);
-        }
-      });
-    }
-
+    initEditorsHistoryBlock(container, edits);
   } catch (err) {
     container.innerHTML = `
       <div class="container" style="padding-top: 40px;">
         <div class="personnel-detail-empty">
-          ${ICON.image}
+          ${icon('imagePlaceholder', 36, { strokeWidth: 1.5 })}
           <h3>Особу не знайдено</h3>
           <p>${escapeHtmlAttribute(err.message)}</p>
           <a href="#/personnel" class="personnel-detail-action-btn" style="margin-top:8px;">← Назад до персоналу</a>
@@ -304,7 +159,7 @@ export async function renderPersonnelDetail(container, params) {
 }
 
 // ── Build HTML ────────────────────────────────────────
-function buildDetailHTML(person) {
+function buildDetailHTML(person, edits = []) {
   const latestVolumes = person.latest_volumes || [];
   const latestIssues = person.latest_issues || [];
 
@@ -338,13 +193,13 @@ function buildDetailHTML(person) {
             ${originalName ? `<div class="personnel-detail-subname">${escapeHtmlAttribute(originalName)}</div>` : ''}
 
             <div class="personnel-detail-badges-row">
-              ${person.occupation ? `<span class="personnel-detail-type-badge">${ICON.layers} ${escapeHtmlAttribute(person.occupation)}</span>` : ''}
-              ${person.pseudo ? `<span class="personnel-detail-type-badge">${ICON.user} Псевдонім: ${escapeHtmlAttribute(person.pseudo)}</span>` : ''}
+              ${person.occupation ? `<span class="personnel-detail-type-badge">${icon('layers', 14, { strokeWidth: 2.1 })} ${escapeHtmlAttribute(person.occupation)}</span>` : ''}
+              ${person.pseudo ? `<span class="personnel-detail-type-badge">${icon('user', 14, { strokeWidth: 2.1 })} Псевдонім: ${escapeHtmlAttribute(person.pseudo)}</span>` : ''}
             </div>
 
             <div class="personnel-detail-meta-row">
-              ${person.birth ? `<span class="personnel-detail-meta-item">${ICON.calendar} народження: <strong>${escapeHtmlAttribute(person.birth)}</strong></span>` : ''}
-              ${location ? `<span class="personnel-detail-meta-item">${ICON.mapPin} ${escapeHtmlAttribute(location)}</span>` : ''}
+              ${person.birth ? `<span class="personnel-detail-meta-item">${icon('calendar', 14, { strokeWidth: 2.1 })} народження: <strong>${escapeHtmlAttribute(person.birth)}</strong></span>` : ''}
+              ${location ? `<span class="personnel-detail-meta-item">${icon('chevronRight', 14, { strokeWidth: 2.2 })} ${escapeHtmlAttribute(location)}</span>` : ''}
             </div>
 
             <div class="personnel-detail-stats-row">
@@ -361,16 +216,13 @@ function buildDetailHTML(person) {
             <div class="personnel-detail-actions">
               ${person.website ? `
                 <a href="${escapeHtmlAttribute(person.website)}" class="personnel-detail-action-btn" target="_blank" rel="noopener noreferrer">
-                  ${ICON.globe} Сайт ${ICON.externalLink}
+                  ${icon('globe', 14, { strokeWidth: 2.1 })} Сайт ${icon('externalLink', 12, { strokeWidth: 2.2 })}
                 </a>
-              ` : ''}
-              ${isModerator() ? `
-                <button class="personnel-detail-action-btn hero-edit-action-btn" id="person-edit-btn" title="Редагувати">
-                  ${ICON.edit}
-                </button>
               ` : ''}
             </div>
           </div>
+
+          ${renderEditorsHistoryBlock(edits, currentUser, { editButtonId: 'person-edit-btn', editTitle: 'Редагувати' })}
         </div>
       </section>
 
@@ -382,7 +234,7 @@ function buildDetailHTML(person) {
               Огляд
             </button>
             <button class="personnel-detail-tab-btn" data-tab="works" role="tab" aria-selected="false">
-              ${ICON.book} Роботи <span class="tab-count">${totalWorks.toLocaleString('uk-UA')}</span>
+              ${icon('book', 14, { strokeWidth: 2.1 })} Роботи <span class="tab-count">${totalWorks.toLocaleString('uk-UA')}</span>
             </button>
           </div>
         </div>
@@ -405,9 +257,9 @@ function buildDetailHTML(person) {
                   ${factItemHTML('Смерть', person.death ? escapeHtmlAttribute(person.death) : null)}
                   ${factItemHTML('Місто', person.hometown ? escapeHtmlAttribute(person.hometown) : null)}
                   ${factItemHTML('Країна', person.country ? escapeHtmlAttribute(person.country) : null)}
-                  ${factItemHTML('Сайт', person.website ? `<a href="${escapeHtmlAttribute(person.website)}" target="_blank" rel="noopener">${escapeHtmlAttribute(person.website)} ${ICON.externalLink}</a>` : null)}
+                  ${factItemHTML('Сайт', person.website ? `<a href="${escapeHtmlAttribute(person.website)}" target="_blank" rel="noopener">${escapeHtmlAttribute(person.website)} ${icon('externalLink', 12, { strokeWidth: 2.2 })}</a>` : null)}
                   ${factItemHTML('Псевдоніми', aliases.length ? escapeHtmlAttribute(aliases.join(', ')) : null)}
-                  ${factItemHTML('CV ID', person.cv_id ? `<a href="https://comicvine.gamespot.com/person/${person.cv_slug || person.cv_id}/" target="_blank" rel="noopener">${escapeHtmlAttribute(String(person.cv_id))} ${ICON.externalLink}</a>` : null)}
+                  ${factItemHTML('CV ID', person.cv_id ? `<a href="https://comicvine.gamespot.com/person/${person.cv_slug || person.cv_id}/" target="_blank" rel="noopener">${escapeHtmlAttribute(String(person.cv_id))} ${icon('externalLink', 12, { strokeWidth: 2.2 })}</a>` : null)}
                 </ul>
               </div>
             </aside>
@@ -450,9 +302,6 @@ function buildDetailHTML(person) {
           </div>
         </div>
       </div>
-
-      <!-- Edit Modal Overlay -->
-      ${isModerator() ? editModalHTML(person) : ''}
     </div>
   `;
 }
@@ -566,7 +415,7 @@ async function fetchAndRenderWorks(container, personId, filterBar) {
     if (items.length === 0) {
       grid.innerHTML = `
         <div class="personnel-detail-empty" style="grid-column: 1 / -1;">
-          ${ICON.book}
+          ${icon('book', 14, { strokeWidth: 2.1 })}
           <h3>Робіт не знайдено</h3>
           <p>У цієї особи поки немає доданих ${currentWorkType === 'volumes' ? 'серій' : 'випусків'}</p>
         </div>
@@ -593,7 +442,7 @@ async function fetchAndRenderWorks(container, personId, filterBar) {
   } catch (err) {
     grid.innerHTML = `
       <div class="personnel-detail-empty" style="grid-column: 1 / -1;">
-        ${ICON.image}
+        ${icon('imagePlaceholder', 36, { strokeWidth: 1.5 })}
         <h3>Помилка завантаження</h3>
         <p>${escapeHtmlAttribute(err.message)}</p>
       </div>
