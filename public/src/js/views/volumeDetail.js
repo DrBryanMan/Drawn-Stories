@@ -812,13 +812,13 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                                 </div>
                                 ${volume.hikka_score ? `
                                     <div class="rating-item rating--hikka" title="Голосів на Hikka: ${volume.hikka_scored_by || 0}">
-                                        <span class="rating-value">${volume.hikka_score}</span>
+                                        <span class="rating-value">${Number(volume.hikka_score).toFixed(2)}</span>
                                         <span class="rating-label rating--hikka">Hikka</span>
                                     </div>
                                 ` : ''}
                                 ${volume.mal_score ? `
                                     <div class="rating-item rating--mal" title="Голосів на MAL: ${volume.mal_scored_by || 0}">
-                                        <span class="rating-value">${volume.mal_score}</span>
+                                         <span class="rating-value">${Number(volume.mal_score).toFixed(2)}</span>
                                         <span class="rating-label">MAL</span>
                                     </div>
                                 ` : ''}

@@ -188,11 +188,11 @@ export function mountFilterBar(container, {
         const val = extraSelect.value;
         const opt = extraSelectOptions.find(o => o.value === val) || { value: '', label: '' };
         const meta = LIST_COLORS[val] || { color: '#64748b', bg: 'var(--bg-card)', borderColor: 'var(--border-s)' };
-        const icon = LIST_ICONS[val] || '';
+        const iconHtml = icon(val, 14, { strokeWidth: 2.2 }) || '';
 
         const iconEl = extraSelect.querySelector('.readlist-select-chosen .readlist-icon');
         const labelEl = extraSelect.querySelector('.readlist-select-chosen .select-label');
-        if (iconEl) { iconEl.innerHTML = icon; iconEl.style.color = meta.color; }
+        if (iconEl) { iconEl.innerHTML = iconHtml; iconEl.style.color = meta.color; }
         if (labelEl) labelEl.textContent = opt.label;
 
         if (meta.bg) {

@@ -4,7 +4,11 @@ let _modal = null;
 let _eventSource = null;
 let _isFinished = false;
 
-export function openScrapeProgressModal(type, id) {
+function escapeHtml(str) {
+    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+export function openTerminalLogModal({ title, sseUrl, onFinish, autoReload = false }) {
     if (document.getElementById('scrape-progress-modal-overlay')) {
         return;
     }
@@ -16,14 +20,10 @@ export function openScrapeProgressModal(type, id) {
     overlay.className = 'ds-modal-overlay';
     overlay.style.display = 'flex';
 
-    const titleText = type === 'volume' 
-        ? 'Скрапінг томів' 
-        : (type === 'manga-characters' ? 'Парсинг персонажів манґи' : 'Скрапінг випуску');
-
     overlay.innerHTML = `
         <div class="ds-modal scrape-progress-modal" id="scrape-progress-modal">
             <div class="ds-modal-header">
-                <div class="ds-modal-title">${titleText}</div>
+                <div class="ds-modal-title">${escapeHtml(title)}</div>
                 <button class="ds-modal-close" id="spm-close-x-btn" style="display: none;">${icon('x', 20, { strokeWidth: 2.2 })}</button>
             </div>
             <div class="ds-modal-body">
@@ -54,9 +54,8 @@ export function openScrapeProgressModal(type, id) {
         const line = document.createElement('div');
         line.className = `terminal-line terminal-${category}`;
         
-        // Convert typical console color sequences to spans or plain text
         let cleanText = text
-            .replace(/\033\[[0-9;]*m/g, '') // remove bash color codes if any seep through
+            .replace(/\033\[[0-9;]*m/g, '') // remove bash color codes
             .replace(/\[DONE\]/g, '')
             .replace(/\[ERROR\]/g, '');
 
@@ -72,24 +71,27 @@ export function openScrapeProgressModal(type, id) {
             _eventSource = null;
         }
 
-        actionBtn.textContent = 'Закрити та оновити';
+        actionBtn.textContent = autoReload ? 'Закрити та оновити' : 'Закрити';
         actionBtn.className = 'btn-admin btn-admin--primary';
         closeXBtn.style.display = 'block';
 
         if (success) {
             statusIcon.innerHTML = icon('check', 20, { strokeWidth: 2.5 });
             statusIcon.className = 'spm-status-icon spm-status-success';
-            statusText.textContent = 'Парсинг успішно завершено!';
-            appendLog('Процес завершено успішно.', 'success');
+            statusText.textContent = 'Процес успішно завершено!';
+            appendLog('Завершено.', 'success');
         } else {
             statusIcon.innerHTML = icon('warning', 20, { strokeWidth: 2.2 });
             statusIcon.className = 'spm-status-icon spm-status-error';
-            statusText.textContent = 'Сталася помилка під час парсингу';
+            statusText.textContent = 'Сталася помилка під час виконання';
             appendLog('Процес перервано через помилку.', 'error');
+        }
+
+        if (typeof onFinish === 'function') {
+            onFinish(success);
         }
     };
 
-    // Close logic
     const close = () => {
         if (_eventSource) {
             _eventSource.close();
@@ -98,7 +100,7 @@ export function openScrapeProgressModal(type, id) {
             _modal.remove();
             _modal = null;
         }
-        if (_isFinished) {
+        if (_isFinished && autoReload) {
             window.location.reload();
         }
     };
@@ -114,8 +116,6 @@ export function openScrapeProgressModal(type, id) {
 
     closeXBtn.onclick = close;
 
-    // Connect to SSE
-    const sseUrl = `/api/scrape/${type}/${id}`;
     _eventSource = new EventSource(sseUrl);
 
     _eventSource.onmessage = (event) => {
@@ -129,15 +129,14 @@ export function openScrapeProgressModal(type, id) {
             finishProcess(false);
         } else {
             let cat = 'info';
-            if (data.toLowerCase().includes('помилка')) cat = 'error';
-            else if (data.toLowerCase().includes('попередження')) cat = 'warning';
-            else if (data.toLowerCase().includes('успішно')) cat = 'success';
-            else if (data.toLowerCase().includes('початок')) cat = 'system';
+            const lower = data.toLowerCase();
+            if (lower.includes('помилка') || data.includes('[x]')) cat = 'error';
+            else if (lower.includes('попередження')) cat = 'warning';
+            else if (lower.includes('успішно') || data.includes('[~]')) cat = 'success';
+            else if (lower.includes('початок') || data.includes('[system]') || lower.includes('запуск')) cat = 'system';
             
             appendLog(data, cat);
-            statusText.textContent = type === 'manga-characters' 
-                ? 'Виконується парсинг даних з MyAnimeList...' 
-                : 'Виконується парсинг даних з Comic Vine...';
+            statusText.textContent = 'Виконується обробка даних...';
         }
     };
 
@@ -148,4 +147,15 @@ export function openScrapeProgressModal(type, id) {
             finishProcess(false);
         }
     };
+}
+
+export function openScrapeProgressModal(type, id) {
+    const titleText = type === 'volume' 
+        ? 'Скрапінг томів' 
+        : (type === 'manga-characters' ? 'Парсинг персонажів манґи' : 'Скрапінг випуску');
+    openTerminalLogModal({
+        title: titleText,
+        sseUrl: `/api/scrape/${type}/${id}`,
+        autoReload: true
+    });
 }

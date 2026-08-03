@@ -16,6 +16,8 @@ export async function renderEdits(main) {
                 <p class="catalog-subtitle">Перегляд та опрацювання пропозицій редагування від користувачів</p>
             </div>
             
+            <div id="contributors-container" class="contributors-carousel" style="display: none; margin-bottom: 24px;"></div>
+            
             <div class="edits-filter-bar">
                 <div class="filter-section results-section">
                     <div class="results-label">Правок</div>
@@ -38,8 +40,6 @@ export async function renderEdits(main) {
                     <div id="filter-moderator-container"></div>
                 </div>
             </div>
-            
-            <div id="contributors-container" class="contributors-carousel" style="display: none; margin-bottom: 24px;"></div>
 
             <div class="loader-container" id="edits-loader"><div class="loader"></div></div>
             <div id="edits-content" style="display: none;">
@@ -136,8 +136,8 @@ export async function renderEdits(main) {
             return a.rejected - b.rejected;
         });
 
-        // Take top 5
-        const topContributors = sorted.slice(0, 5);
+        // Take top 3
+        const topContributors = sorted.slice(0, 3);
 
         if (topContributors.length === 0) {
             container.innerHTML = '';
@@ -151,8 +151,9 @@ export async function renderEdits(main) {
             </svg>
         `;
 
-        container.style.display = 'flex';
-        container.innerHTML = topContributors.map((c, index) => {
+        let totalCount = sorted.length;
+
+        const cardsHtml = topContributors.map((c, index) => {
             let starHtml = '';
             if (index === 0) starHtml = starSvg('rank-star--gold');
             else if (index === 1) starHtml = starSvg('rank-star--silver');
@@ -190,6 +191,28 @@ export async function renderEdits(main) {
                 </div>
             `;
         }).join('');
+
+        const renderContainerContent = (count) => {
+            const moreCardHtml = `
+                <a href="#/users" class="contributor-card contributor-card--more" title="Переглянути лідерборд усіх користувачів">
+                    <div class="contributor-more-content">
+                        <span class="contributor-more-icon">${icon('users', 20)}</span>
+                        <span class="contributor-more-text">показати всіх (${count})</span>
+                    </div>
+                    <span class="contributor-more-arrow">${icon('chevronRight', 18)}</span>
+                </a>
+            `;
+            container.style.display = 'flex';
+            container.innerHTML = cardsHtml + moreCardHtml;
+        };
+
+        renderContainerContent(totalCount);
+
+        API.get('/users').then(res => {
+            if (res && typeof res.total === 'number') {
+                renderContainerContent(res.total);
+            }
+        }).catch(() => {});
     }
 
     function populateFilters() {

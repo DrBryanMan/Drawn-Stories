@@ -26,7 +26,7 @@ def apply_initial_schema(conn):
         synopsis_ua     TEXT,
         description     TEXT,
         site_link       TEXT,
-        mal_score       INTEGER,
+        mal_score       REAL,
         mal_scored_by   INTEGER,
         hikka_score     REAL,
         hikka_scored_by INTEGER,

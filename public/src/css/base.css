@@ -79,7 +79,7 @@ img { display: block; max-width: 100%; }
 button { font-family: var(--font); cursor: pointer; border: none; background: none; }
 
 /* ── Layout ─────────────────────────────────────────── */
-.container   { max-width: var(--container); margin: 0 auto; padding: 0 24px; }
+.container   { max-width: var(--container); margin: 0 auto; padding: 1em 2em; }
 .hidden      { display: none !important; }
 
 /* ── App shell ──────────────────────────────────────── */

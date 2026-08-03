@@ -5,6 +5,7 @@ import { initGlobalModalListeners } from './helpers/modalManager.js';
 initGlobalModalListeners();
 import { renderHome }    from './views/home.js';
 import { renderEdits }   from './views/edits.js';
+import { renderUsers }   from './views/users.js';
 import { renderEditDetail } from './views/editDetail.js';
 import { renderCatalog } from './views/catalog.js';
 import { renderVolumeDetail } from './views/volumeDetail.js?v=3';
@@ -77,6 +78,7 @@ async function start() {
     .on('/user/:username/favorites', (_path, params) => renderFavorites(main, params))
     .on('/edits',         () => renderEdits(main))
     .on('/edits/:id',     (_path, params) => renderEditDetail(main, params))
+    .on('/users',         () => renderUsers(main))
     .notFound(            () => renderHome(main))
     .listen();
 }

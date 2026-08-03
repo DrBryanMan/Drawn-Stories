@@ -3,6 +3,7 @@ import sys
 import re
 import asyncio
 from fastapi import APIRouter, HTTPException, Request, Depends
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import Optional
 
@@ -206,4 +207,55 @@ async def add_publisher_volumes(req: ParserCVRequest):
     if not res["ok"]:
         raise HTTPException(status_code=400, detail=res["message"])
     return res
+
+# ── POST /api/parser/update-manga-meta ─────────────────────────────────────────
+@router.post("/update-manga-meta", dependencies=[Depends(require_moderator)])
+async def update_manga_meta():
+    res = await run_parser_script("update_manga_scores_and_names.py", [])
+    if not res["ok"]:
+        raise HTTPException(status_code=400, detail=res["message"])
+    return res
+
+# ── GET /api/parser/stream/update-manga-meta ──────────────────────────────────
+@router.get("/stream/update-manga-meta", dependencies=[Depends(require_moderator)])
+async def stream_update_manga_meta():
+    async def event_generator():
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        script_path = os.path.abspath(os.path.join(script_dir, "..", "scripts", "update_manga_scores_and_names.py"))
+        
+        if not os.path.exists(script_path):
+            yield "data: [ERROR] Скрипт update_manga_scores_and_names.py не знайдено.\n\n"
+            return
+
+        cmd = [sys.executable, "-u", script_path]
+
+        env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            env=env
+        )
+
+        yield "data: [SYSTEM] Запуск оновлення назв та оцінок манґи...\n\n"
+
+        while True:
+            line = await process.stdout.readline()
+            if not line:
+                break
+            decoded_line = line.decode('utf-8', errors='replace').rstrip('\r\n')
+            if decoded_line:
+                yield f"data: {decoded_line}\n\n"
+
+        await process.wait()
+
+        if process.returncode == 0:
+            yield "data: [DONE] Оновлення оцінок та назв манґи успішно завершено!\n\n"
+        else:
+            yield f"data: [ERROR] Скрипт завершився з помилкою (код {process.returncode})\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
 

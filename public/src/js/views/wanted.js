@@ -6,6 +6,7 @@ import { API } from '../helpers/api.js';
 import { createWantedCard } from './wantedCard.js';
 import { createPaginator } from '../components/Pagination.js';
 import { icon } from '../helpers/icons.js';
+import { openTerminalLogModal } from '../components/ScrapeProgressModal.js';
 
 // ── Sections config ───────────────────────────────────────
 const SECTIONS = [
@@ -691,6 +692,21 @@ function buildAddPanel(config) {
           <div class="wanted-add-card-status"></div>
         </div>
 
+        <!-- Оновити укр. назви та рейтинги манґи -->
+        <div class="wanted-add-card" id="card-update-manga-meta">
+          <div class="wanted-add-card-title">
+            ${icon('refreshCw', 18)}
+            Оновити рейтинги та укр. назви (Hikka / MAL)
+          </div>
+          <div class="wanted-add-card-desc">
+            Оновлює українські назви (<code>name_uk</code>), оцінки Hikka та MAL і кількість голосів для наявних томів манґи.
+          </div>
+          <div class="wanted-add-card-row">
+            <button class="wanted-add-btn" style="width: 100%;">Запустити оновлення</button>
+          </div>
+          <div class="wanted-add-card-status"></div>
+        </div>
+
       </div>
     </div>
   `;
@@ -709,6 +725,17 @@ function attachAddPanelEvents(content) {
     const id = match ? parseInt(match[1], 10) : parseInt(val, 10);
     return { cv_id: id };
   });
+
+  const updateMangaBtn = content.querySelector('#card-update-manga-meta .wanted-add-btn');
+  if (updateMangaBtn) {
+    updateMangaBtn.addEventListener('click', () => {
+      openTerminalLogModal({
+        title: 'Оновлення оцінок та назв манґи (Hikka / MAL)',
+        sseUrl: '/api/parser/stream/update-manga-meta',
+        autoReload: false
+      });
+    });
+  }
 }
 
 function setupCardOp(content, cardSelector, endpoint, payloadFn) {
@@ -725,8 +752,8 @@ function setupCardOp(content, cardSelector, endpoint, payloadFn) {
   };
   
   const execute = async () => {
-    const val = input.value.trim();
-    if (!val) {
+    const val = input ? input.value.trim() : '';
+    if (input && input.hasAttribute('required') && !val) {
       setStatus('⚠ Будь ласка, заповніть поле.', 'warn');
       return;
     }

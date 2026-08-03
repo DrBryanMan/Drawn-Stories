@@ -11,7 +11,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from server.db import init_db, close_db
-from server.routes import stats, catalog, volumes, publishers, themes, auth, user_readlist, favorites, collections, issues, events, reading_orders, images, characters, personnel, scrape, wanted, magazines, manga_chapters, parser, edits, ratings, earths, essences
+from server.routes import stats, catalog, volumes, publishers, themes, auth, user_readlist, favorites, collections, issues, events, reading_orders, images, characters, personnel, scrape, wanted, magazines, manga_chapters, parser, edits, ratings, earths, essences, users
 # Monkey patch Starlette Request to automatically decode URL-encoded username cookie
 import urllib.parse
 original_cookies_property = Request.cookies
@@ -44,6 +44,20 @@ async def lifespan(app: FastAPI):
     print("\033[93m[Сервер] Роботу сервера завершено\033[0m")
 
 app = FastAPI(title="Drawn Stories API", lifespan=lifespan)
+
+# ── Online User & Anonymous Guest Tracking ───────────
+from server.helpers.activity import track_request_activity, get_active_guests_count, get_active_usernames, ACTIVE_USERS, ACTIVE_GUESTS
+
+@app.middleware("http")
+async def track_activity(request: Request, call_next):
+    new_guest_cookie = track_request_activity(request)
+
+    response = await call_next(request)
+
+    if new_guest_cookie:
+        response.set_cookie(key="guest_id", value=new_guest_cookie, max_age=86400 * 30, httponly=True)
+
+    return response
 
 # ── Custom Request Logger Middleware ─────────────────
 def should_log_request(path: str, accept_header: str) -> bool:
@@ -144,6 +158,7 @@ app.include_router(edits.router)
 app.include_router(ratings.router)
 app.include_router(earths.router)
 app.include_router(essences.router)
+app.include_router(users.router)
 
 @app.get("/api/health")
 async def health_check():
