@@ -1370,26 +1370,35 @@ export class IssueEditor {
                         </div>
                     </form>
                 </div>
-                <div class="ds-modal-footer">
-                    <button class="btn-admin btn-admin--secondary" id="edit-cancel">Скасувати</button>
-                    ${(() => {
-                        const role = currentUser ? currentUser.role : null;
-                        if (role === 'admin') {
-                            return `
-                                <button class="btn-admin btn-admin--primary btn-admin--purple" id="edit-save-direct">Записати в БД</button>
-                                <button class="btn-admin btn-admin--primary btn-admin--green" id="edit-save-approve">Записати і прийняти</button>
-                            `;
-                        } else if (role === 'moderator' || role === 'editor') {
-                            return `
-                                <button class="btn-admin btn-admin--primary btn-admin--green" id="edit-save-approve">Записати і прийняти</button>
-                            `;
-                        } else {
-                            return `
-                                <input type="text" id="edit-propose-comment" class="admin-input" placeholder="Коментар до вашої правки..." style="margin-right: auto; max-width: 300px; font-size: 0.85rem; padding: 6px 10px; height: 32px;">
-                                <button class="btn-admin btn-admin--primary btn-admin--yellow" id="edit-save-propose" style="height: 32px; padding: 0 16px; font-size: 13px;">Запропонувати</button>
-                            `;
-                        }
-                    })()}
+                <div class="ds-modal-footer" style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-top:1px solid var(--border-s);">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        ${currentUser && currentUser.role === 'admin' && this.issue && this.issue.id ? `
+                            <button type="button" class="btn-admin btn-admin--danger" id="edit-delete-btn" title="Видалити з БД" style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">${icon('trash', 14)}</button>
+                        ` : ''}
+                        ${(!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'moderator' && currentUser.role !== 'editor')) ? `
+                            <input type="text" id="edit-propose-comment" class="admin-input" placeholder="Коментар до правки..." style="max-width: 260px; font-size: 12px; height: 32px; margin-bottom: 0;">
+                        ` : ''}
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <button class="btn-admin btn-admin--secondary" type="button" id="edit-cancel">Скасувати</button>
+                        ${(() => {
+                            const role = currentUser ? currentUser.role : null;
+                            if (role === 'admin') {
+                                return `
+                                    <button class="btn-admin btn-admin--primary btn-admin--purple" id="edit-save-direct">Записати в БД</button>
+                                    <button class="btn-admin btn-admin--primary btn-admin--green" id="edit-save-approve">Записати і прийняти</button>
+                                `;
+                            } else if (role === 'moderator' || role === 'editor') {
+                                return `
+                                    <button class="btn-admin btn-admin--primary btn-admin--green" id="edit-save-approve">Записати і прийняти</button>
+                                `;
+                            } else {
+                                return `
+                                    <button class="btn-admin btn-admin--primary btn-admin--yellow" id="edit-save-propose" style="height: 32px; padding: 0 16px; font-size: 13px;">Запропонувати</button>
+                                `;
+                            }
+                        })()}
+                    </div>
                 </div>
             </div>
         `;
@@ -1397,6 +1406,20 @@ export class IssueEditor {
         modal.querySelector('.ds-modal-close').addEventListener('click', () => this.close());
         modal.querySelector('#edit-cancel').addEventListener('click', () => this.close());
         
+        const deleteBtn = modal.querySelector('#edit-delete-btn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', async () => {
+                if (!confirm(`Ви дійсно бажаєте видалити випуск з бази даних?`)) return;
+                try {
+                    await API.delete(`/issues/${this.issue.id}`);
+                    this.close();
+                    if (this.onUpdate) this.onUpdate(null);
+                } catch (err) {
+                    alert('Помилка видалення: ' + (err.message || err));
+                }
+            });
+        }
+
         modal.querySelector('#edit-save-direct')?.addEventListener('click', () => this.save('direct'));
         modal.querySelector('#edit-save-approve')?.addEventListener('click', () => this.save('approve'));
         modal.querySelector('#edit-save-propose')?.addEventListener('click', () => this.save('propose'));

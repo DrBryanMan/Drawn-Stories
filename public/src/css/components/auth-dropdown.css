@@ -37,10 +37,32 @@
 }
 
 .dropdown-info {
-    padding: .5em;
+    padding: 8px 10px;
     display: flex;
     align-items: center;
     gap: 12px;
+    text-decoration: none;
+    border-radius: var(--r);
+    transition: background 0.15s ease;
+    cursor: pointer;
+}
+
+.dropdown-user-card:hover {
+    background: color-mix(in srgb, var(--accent) 10%, var(--bg-card));
+}
+
+.dropdown-user-chevron {
+    margin-left: auto;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.dropdown-user-card:hover .dropdown-user-chevron {
+    color: var(--accent);
+    transform: translateX(2px);
 }
 .user-details {
     display: flex;

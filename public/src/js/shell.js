@@ -312,9 +312,9 @@ function updateAuthUI() {
           ${getAvatarHtml(avatarUrl, 'header-avatar', 38)}
         </button>
         <div class="nav-dropdown-content dropdown-right">
-          <div class="dropdown-info">
+          <a class="dropdown-info dropdown-user-card" href="#/user/${currentUser.username}" data-route="/user/${currentUser.username}" data-tab="overview">
             ${getAvatarHtml(avatarUrl, 'header-avatar', 40)}
-            <div class="user-details">
+            <div class="user-details" style="flex: 1; min-width: 0;">
                 <div class="user-name">${currentUser.nickname || currentUser.username}</div>
                 <div class="user-level-info">Рівень ${prog.levelNum}: ${prog.title}</div>
                 <div class="user-score-info">Бали: ${score}${prog.nextThreshold ? ` / ${prog.nextThreshold}` : ''}</div>
@@ -324,25 +324,28 @@ function updateAuthUI() {
                     </div>
                 ` : '<div class="user-level-max">Максимальний рівень!</div>'}
             </div>
-          </div>
+            <div class="dropdown-user-chevron">
+              ${icon('<polyline points="9 18 15 12 9 6"/>', 16)}
+            </div>
+          </a>
           <div class="dropdown-divider"></div>
           
           <!-- Основні списки -->
-          <a class="nav-dropdown-link" href="#/user/${currentUser.username}/lists" data-route="/user/${currentUser.username}/lists">
+          <a class="nav-dropdown-link" href="#/user/${currentUser.username}?tab=readlists" data-route="/user/${currentUser.username}" data-tab="readlists">
             ${icon('<path d="M8 6h10"/><path d="M8 12h10"/><path d="M8 18h7"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>')}
             <span>${t('my_lists')}</span>
           </a>
-          <a class="nav-dropdown-link" href="#/bookmarks" id="bookmarks-dropdown-link">
-            ${icon(ICON_BOOKMARK)}
-            <span>${t('bookmarks')}</span>
-          </a>
-          <a class="nav-dropdown-link" href="#/user/${currentUser.username}/collection" data-route="/user/${currentUser.username}/collection">
+          <a class="nav-dropdown-link" href="#/user/${currentUser.username}?tab=collections" data-route="/user/${currentUser.username}" data-tab="collections">
             ${icon('<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>')}
             <span>${t('my_collection')}</span>
           </a>
-          <a class="nav-dropdown-link" href="#/user/${currentUser.username}/favorites" data-route="/user/${currentUser.username}/favorites">
+          <a class="nav-dropdown-link" href="#/user/${currentUser.username}?tab=favorites" data-route="/user/${currentUser.username}" data-tab="favorites">
             ${icon('<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>')}
             <span>${t('favorites')}</span>
+          </a>
+          <a class="nav-dropdown-link" href="#/bookmarks" id="bookmarks-dropdown-link" data-route="/bookmarks">
+            ${icon(ICON_BOOKMARK)}
+            <span>${t('bookmarks')}</span>
           </a>
           
           <div class="dropdown-divider"></div>
@@ -370,12 +373,19 @@ function updateAuthUI() {
       addBtn.addEventListener('click', () => openGlobalAddModal());
     }
 
-    container.querySelector('#logout-btn').addEventListener('click', async () => {
-      await API.post('/auth/logout');
-      currentUser = null;
-      updateAuthUI();
-      router.resolve();
-    });
+    const logoutBtn = container.querySelector('#logout-btn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', async () => {
+        try {
+          await API.post('/auth/logout');
+          currentUser = null;
+          updateAuthUI();
+          router.navigate('/');
+        } catch (err) {
+          console.error('Помилка виходу:', err);
+        }
+      });
+    }
 
     bindDropdown(container.querySelector('.nav-dropdown'));
     if (isAdmin) {
@@ -409,19 +419,24 @@ function bindDropdown(dropdown) {
 // ── Active nav ───────────────────────────────────────
 function syncActiveNav(path, query) {
   const currentContentType = query.content_type || '';
+  const currentTab = query.tab || (path.startsWith('/user/') ? 'overview' : '');
   
-  // Highlight both dropdown links AND top-level links (like Publishers)
-  document.querySelectorAll('.nav-link, .nav-dropdown-link, .manga-menu-btn').forEach(el => {
+  // Highlight both dropdown links AND top-level links
+  document.querySelectorAll('.nav-link, .nav-dropdown-link, .manga-menu-btn, .dropdown-user-card').forEach(el => {
     // Skip the user dropdown trigger
     if (el.classList.contains('auth-user-btn')) return;
 
-    const route = el.dataset.route || el.getAttribute('href')?.replace('#', '');
+    const rawHref = el.getAttribute('href') || '';
+    const route = el.dataset.route || rawHref.replace('#', '').split('?')[0];
     if (!route) return;
 
     const contentType = el.dataset.contentType;
+    const elTab = el.dataset.tab;
     let isActive = false;
     
-    if (contentType) {
+    if (elTab) {
+      isActive = path === route && currentTab === elTab;
+    } else if (contentType) {
       isActive = path === route && currentContentType === contentType;
     } else {
       isActive = path === route;

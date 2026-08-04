@@ -6,6 +6,7 @@ initGlobalModalListeners();
 import { renderHome }    from './views/home.js';
 import { renderEdits }   from './views/edits.js';
 import { renderUsers }   from './views/users.js';
+import { renderUserProfile } from './views/userProfile.js';
 import { renderEditDetail } from './views/editDetail.js';
 import { renderCatalog } from './views/catalog.js';
 import { renderVolumeDetail } from './views/volumeDetail.js?v=3';
@@ -73,9 +74,10 @@ async function start() {
         }
         renderSettings(main, currentUser);
     })
-    .on('/user/:username/lists', (_path, params, query) => renderUserLists(main, params, query))
-    .on('/user/:username/collection', (_path, params) => renderCollections(main, params))
-    .on('/user/:username/favorites', (_path, params) => renderFavorites(main, params))
+    .on('/user/:username', (_path, params, query) => renderUserProfile(main, params, query))
+    .on('/user/:username/lists', (_path, params) => renderUserProfile(main, params, { tab: 'readlists' }))
+    .on('/user/:username/collection', (_path, params) => renderUserProfile(main, params, { tab: 'collections' }))
+    .on('/user/:username/favorites', (_path, params) => renderUserProfile(main, params, { tab: 'favorites' }))
     .on('/edits',         () => renderEdits(main))
     .on('/edits/:id',     (_path, params) => renderEditDetail(main, params))
     .on('/users',         () => renderUsers(main))

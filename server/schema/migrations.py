@@ -1602,6 +1602,21 @@ def m062_score_history(conn):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_score_history_edit ON score_history(edit_id)")
 
 
+# ── M042: таблиця user_follows ───────────────────────────────────────────
+@migration("M042_user_follows")
+def m042_user_follows(conn):
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS user_follows (
+        id           SERIAL PRIMARY KEY,
+        follower_id  INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        following_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT unique_user_follow UNIQUE (follower_id, following_id)
+    )""")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_user_follows_follower ON user_follows(follower_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_user_follows_following ON user_follows(following_id)")
+
+
 def apply_migrations(conn):
     ensure_migrations_table(conn)
 

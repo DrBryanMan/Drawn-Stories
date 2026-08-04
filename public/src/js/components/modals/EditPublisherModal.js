@@ -1,6 +1,7 @@
 import { API } from '/static/js/helpers/api.js';
 import { escapeHtmlAttribute } from '/static/js/helpers/image.js';
 import { currentUser } from '/static/js/shell.js';
+import { icon } from '/static/js/helpers/icons.js';
 
 export function openEditPublisherModal(publisher, onUpdate) {
     const modalId = 'admin-edit-publisher-modal';
@@ -13,32 +14,35 @@ export function openEditPublisherModal(publisher, onUpdate) {
 
     const role = currentUser ? currentUser.role : null;
 
-    let footerButtonsHTML = '';
-    if (role === 'admin') {
-        footerButtonsHTML = `
-            <button type="button" class="btn-admin btn-admin--danger btn-delete-pub-from-db">Видалити з бази</button>
-            <div style="display: flex; gap: 8px; align-items: center; margin-left: auto;">
-                <button type="button" class="btn-admin btn-admin--secondary btn-close-pub-modal">Скасувати</button>
-                <button type="button" class="btn-admin btn-admin--primary btn-admin--purple btn-save-pub-direct">Записати в БД</button>
-                <button type="button" class="btn-admin btn-admin--primary btn-save-pub-approve" style="background: var(--green);">Записати і прийняти</button>
-            </div>
-        `;
-    } else if (role === 'moderator' || role === 'editor') {
-        footerButtonsHTML = `
-            <div style="display: flex; gap: 8px; align-items: center; margin-left: auto;">
-                <button type="button" class="btn-admin btn-admin--secondary btn-close-pub-modal">Скасувати</button>
-                <button type="button" class="btn-admin btn-admin--primary btn-save-pub-approve" style="background: var(--green);">Записати і прийняти</button>
-            </div>
-        `;
-    } else {
-        footerButtonsHTML = `
-            <input type="text" id="edit-pub-propose-comment" class="admin-input" placeholder="Коментар до вашої правки..." style="margin-right: auto; max-width: 260px; font-size: 12px; height: 32px; margin-bottom: 0;">
-            <div style="display: flex; gap: 8px; align-items: center;">
-                <button type="button" class="btn-admin btn-admin--secondary btn-close-pub-modal">Скасувати</button>
-                <button type="button" class="btn-admin btn-admin--primary btn-save-pub-propose" style="background: var(--yellow);">Запропонувати</button>
-            </div>
-        `;
-    }
+    let footerButtonsHTML = `
+        <div style="display: flex; gap: 8px; align-items: center;">
+            ${role === 'admin' && publisher && publisher.id ? `
+                <button type="button" class="btn-admin btn-admin--danger btn-delete-pub-from-db" title="Видалити з БД" style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">${icon('trash', 14)}</button>
+            ` : ''}
+            ${(!currentUser || (role !== 'admin' && role !== 'moderator' && role !== 'editor')) ? `
+                <input type="text" id="edit-pub-propose-comment" class="admin-input" placeholder="Коментар до правки..." style="max-width: 260px; font-size: 12px; height: 32px; margin-bottom: 0;">
+            ` : ''}
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <button type="button" class="btn-admin btn-admin--secondary btn-close-pub-modal">Скасувати</button>
+            ${(() => {
+                if (role === 'admin') {
+                    return `
+                        <button type="button" class="btn-admin btn-admin--primary btn-admin--purple btn-save-pub-direct">Записати в БД</button>
+                        <button type="button" class="btn-admin btn-admin--primary btn-save-pub-approve" style="background: var(--green);">Записати і прийняти</button>
+                    `;
+                } else if (role === 'moderator' || role === 'editor') {
+                    return `
+                        <button type="button" class="btn-admin btn-admin--primary btn-save-pub-approve" style="background: var(--green);">Записати і прийняти</button>
+                    `;
+                } else {
+                    return `
+                        <button type="button" class="btn-admin btn-admin--primary btn-save-pub-propose" style="background: var(--yellow);">Запропонувати</button>
+                    `;
+                }
+            })()}
+        </div>
+    `;
     
     modal.innerHTML = `
         <div class="ds-modal ds-modal--large" id="edit-publisher-modal-content">

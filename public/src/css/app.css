@@ -46,6 +46,7 @@
 @import url('views/edits.css');
 @import url('views/editDetail.css');
 @import url('views/users.css');
+@import url('views/user-profile.css');
 
 /* Адаптивність — усі @media блоки проєкту */
 @import url('responsive.css');

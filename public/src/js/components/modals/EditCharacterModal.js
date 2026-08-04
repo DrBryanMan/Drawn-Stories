@@ -195,9 +195,14 @@ export function openEditCharacterModal(char, onUpdate) {
           </div>
         </div>
         <div class="ds-modal-footer" style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-top:1px solid var(--border-s);">
-          ${currentUser && currentUser.role === 'admin' ? `
-            <button type="button" class="btn-admin btn-admin--danger" id="universal-char-delete-btn">${t('delete_from_db')}</button>
-          ` : '<div></div>'}
+          <div style="display:flex; gap:8px; align-items:center;">
+            ${currentUser && currentUser.role === 'admin' && char.id ? `
+              <button type="button" class="btn-admin btn-admin--danger" id="universal-char-delete-btn" title="${escapeHtmlAttribute(t('delete_from_db'))}" style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">${icon('trash', 14)}</button>
+            ` : ''}
+            ${(!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'moderator' && currentUser.role !== 'editor')) ? `
+              <input type="text" id="universal-char-propose-comment" class="admin-input" placeholder="Коментар до правки..." style="max-width: 260px; font-size: 12px; height: 32px; margin-bottom: 0;">
+            ` : ''}
+          </div>
           <div style="display:flex; gap:8px; align-items:center;">
             <button class="btn-admin btn-admin--secondary" type="button" id="universal-char-cancel-btn">${t('cancel')}</button>
             ${(() => {
@@ -213,7 +218,6 @@ export function openEditCharacterModal(char, onUpdate) {
                 `;
               } else {
                 return `
-                  <input type="text" id="universal-char-propose-comment" class="admin-input" placeholder="Коментар до правки..." style="max-width: 220px; font-size: 12px; height: 32px; margin-bottom: 0;">
                   <button type="button" class="btn-admin btn-admin--primary" id="universal-char-save-propose" style="background: var(--yellow);">Запропонувати</button>
                 `;
               }
@@ -501,66 +505,67 @@ export function openEditCharacterModal(char, onUpdate) {
         }
         personas.splice(idx, 1);
         updatePersonasState();
-      });
     });
   };
 
-  personaAdd.addEventListener('click', async () => {
-    const nameInp = modal.querySelector('#universal-persona-name');
-    const nameUkInp = modal.querySelector('#universal-persona-name-uk');
-    const imgInp = modal.querySelector('#universal-persona-image');
-    const appInp = modal.querySelector('#universal-persona-app');
+  if (personaAdd) {
+    personaAdd.addEventListener('click', async () => {
+      const nameInp = modal.querySelector('#universal-persona-name');
+      const nameUkInp = modal.querySelector('#universal-persona-name-uk');
+      const imgInp = modal.querySelector('#universal-persona-image');
+      const appInp = modal.querySelector('#universal-persona-app');
 
-    const pName = nameInp.value.trim();
-    if (!pName) {
-      alert(t('enter_persona_name_alert'));
-      return;
-    }
-
-    const manualApp = appInp.value.trim() || null;
-    let issueId = selectedPersonaIssue ? selectedPersonaIssue.id : null;
-    let firstAppTitle = selectedPersonaIssue ? selectedPersonaIssue.title : null;
-
-    if (!selectedPersonaIssue && manualApp) {
-      if (/^\d+$/.test(manualApp)) {
-        issueId = parseInt(manualApp, 10);
-        try {
-          const issue = await API.get(`/issues/${issueId}`);
-          const volName = issue.volume_name_uk || issue.volume_name || '';
-          const numText = issue.issue_number ? `#${issue.issue_number}` : '';
-          firstAppTitle = `${volName} ${numText}`.trim() || issue.name || `Випуск #${issueId}`;
-        } catch (err) {
-          firstAppTitle = `Випуск #${issueId}`;
-        }
-      } else {
-        firstAppTitle = manualApp;
+      const pName = nameInp ? nameInp.value.trim() : '';
+      if (!pName) {
+        alert(t('enter_persona_name_alert'));
+        return;
       }
-    }
 
-    const obj = {
-      name: pName,
-      name_uk: nameUkInp.value.trim() || null,
-      image: imgInp.value.trim() || null,
-      first_appearance: firstAppTitle,
-      issue_id: issueId
-    };
+      const manualApp = appInp ? appInp.value.trim() || null : null;
+      let issueId = selectedPersonaIssue ? selectedPersonaIssue.id : null;
+      let firstAppTitle = selectedPersonaIssue ? selectedPersonaIssue.title : null;
 
-    if (editingPersonaIdx !== null) {
-      personas[editingPersonaIdx] = obj;
-      editingPersonaIdx = null;
-    } else {
-      personas.push(obj);
-    }
+      if (!selectedPersonaIssue && manualApp) {
+        if (/^\d+$/.test(manualApp)) {
+          issueId = parseInt(manualApp, 10);
+          try {
+            const issue = await API.get(`/issues/${issueId}`);
+            const volName = issue.volume_name_uk || issue.volume_name || '';
+            const numText = issue.issue_number ? `#${issue.issue_number}` : '';
+            firstAppTitle = `${volName} ${numText}`.trim() || issue.name || `Випуск #${issueId}`;
+          } catch (err) {
+            firstAppTitle = `Випуск #${issueId}`;
+          }
+        } else {
+          firstAppTitle = manualApp;
+        }
+      }
 
-    selectedPersonaIssue = null;
-    renderSelectedPersonaIssue();
-    nameInp.value = '';
-    nameUkInp.value = '';
-    imgInp.value = '';
-    appInp.value = '';
+      const obj = {
+        name: pName,
+        name_uk: nameUkInp ? nameUkInp.value.trim() || null : null,
+        image: imgInp ? imgInp.value.trim() || null : null,
+        first_appearance: firstAppTitle,
+        issue_id: issueId
+      };
 
-    updatePersonasState();
-  });
+      if (editingPersonaIdx !== null) {
+        personas[editingPersonaIdx] = obj;
+        editingPersonaIdx = null;
+      } else {
+        personas.push(obj);
+      }
+
+      if (nameInp) nameInp.value = '';
+      if (nameUkInp) nameUkInp.value = '';
+      if (imgInp) imgInp.value = '';
+      if (appInp) appInp.value = '';
+
+      selectedPersonaIssue = null;
+      renderSelectedPersonaIssue();
+      updatePersonasState();
+    });
+  }
 
   if (isPrivileged && personasList) {
     updatePersonasState();

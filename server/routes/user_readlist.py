@@ -80,6 +80,10 @@ async def update_readlist(data: ReadlistUpdate, request: Request):
             "DELETE FROM user_volumes_readlist WHERE user_id = %s AND volume_id = %s",
             [user_id, data.volume_id]
         )
+        db.execute("""
+            DELETE FROM user_issues_readlist
+            WHERE user_id = %s AND issue_id IN (SELECT id FROM issues WHERE volume_id = %s)
+        """, [user_id, data.volume_id])
     else:
         if existing:
             db.execute(
@@ -91,6 +95,21 @@ async def update_readlist(data: ReadlistUpdate, request: Request):
                 "INSERT INTO user_volumes_readlist (user_id, list_name, volume_id, issues_count) VALUES (%s, %s, %s, %s)",
                 [user_id, data.list_name, data.volume_id, data.issues_count]
             )
+            
+        if data.list_name == 'Completed':
+            # Mark all issues of this volume as Completed for the user
+            db.execute("""
+                DELETE FROM user_issues_readlist
+                WHERE user_id = %s AND issue_id IN (SELECT id FROM issues WHERE volume_id = %s)
+            """, [user_id, data.volume_id])
+            
+            db.execute("""
+                INSERT INTO user_issues_readlist (user_id, list_name, issue_id)
+                SELECT %s, 'Completed', id
+                FROM issues
+                WHERE volume_id = %s
+                ON CONFLICT DO NOTHING
+            """, [user_id, data.volume_id])
             
     return {"status": "ok"}
 

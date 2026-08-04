@@ -9,6 +9,23 @@ def require_moderator(request: Request):
     if role not in {"moderator", "admin"}:
         raise HTTPException(status_code=403, detail="Потрібні права модератора")
 
+def require_admin(request: Request):
+    role = request.cookies.get("role")
+    if role != "admin":
+        raise HTTPException(status_code=403, detail="Потрібні права адміністратора")
+
+@router.delete("/{person_id}")
+async def delete_person(person_id: int, request: Request):
+    require_admin(request)
+    db = get_db()
+    person = db.get_one("SELECT id FROM persons WHERE id = %s", [person_id])
+    if not person:
+        raise HTTPException(status_code=404, detail="Персону не знайдено")
+    db.execute("DELETE FROM issue_persons WHERE person_id = %s", [person_id])
+    db.execute("DELETE FROM volume_persons WHERE person_id = %s", [person_id])
+    db.execute("DELETE FROM persons WHERE id = %s", [person_id])
+    return {"message": "Персону успішно видалено з БД"}
+
 @router.get("/{person_id}")
 async def get_person_detail(person_id: int):
     db = get_db()

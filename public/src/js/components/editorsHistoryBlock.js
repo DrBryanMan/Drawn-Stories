@@ -34,14 +34,14 @@ export function renderEditorsHistoryBlock(edits, currentUser, options = {}) {
     let editorsListHTML = '';
     if (editors.length > 0) {
         editorsListHTML = `
-            <div class="volume-editors-list" title="Редактори">
-                <span class="volume-editors-icon" title="Редактори">
+            <div class="editors-list" title="Редактори">
+                <span class="editors-icon" title="Редактори">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 </span>
-                <div class="volume-editors-avatars">
+                <div class="editors-avatars">
                     ${editors.slice(0, 5).map(ed => `
-                        <a href="#/user/${ed.username}" class="volume-editor-avatar-link" title="${escapeHtmlAttribute(ed.username)}">
-                            ${getAvatarHtml(ed.avatarUrl, 'volume-editor-avatar-img', 28)}
+                        <a href="#/user/${ed.username}" class="editor-avatar-link" title="${escapeHtmlAttribute(ed.username)}">
+                            ${getAvatarHtml(ed.avatarUrl, 'editor-avatar-img', 28)}
                         </a>
                     `).join('')}
                     ${editors.length > 5 ? `<span style="font-size: 11px; margin-left: 4px; color: var(--text-muted); font-weight: 600;">+${editors.length - 5}</span>` : ''}
@@ -66,11 +66,17 @@ export function renderEditorsHistoryBlock(edits, currentUser, options = {}) {
         </button>
     ` : '';
 
-    return `
-        <div class="volume-editors-history-block" data-edits='${escapeHtmlAttribute(JSON.stringify(edits || []))}'>
-            ${editorsListHTML}
-            ${historyButtonHTML}
+    const actionsHTML = (historyButtonHTML || editButtonHTML) ? `
+        <div class="entity-history-actions">
             ${editButtonHTML}
+            ${historyButtonHTML}
+        </div>
+    ` : '';
+
+    return `
+        <div class="entity-editors-history-block">
+            ${actionsHTML}
+            ${editorsListHTML}
         </div>
     `;
 }

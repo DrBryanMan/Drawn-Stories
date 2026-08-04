@@ -50,11 +50,92 @@ export async function renderUserLists(main, params, query = {}) {
     try {
         const data = await API.get(`/user/readlist/user/${username}?content_type=${currentTab}`);
         allListItems = data.lists || {};
+        renderProgressScale(main, allListItems);
         applyFilters();
         renderResults();
     } catch (err) {
         main.querySelector('#user-lists-results').innerHTML = `<div class="error-state">${t('error_label')}: ${escapeHtmlAttribute(err.message)}</div>`;
     }
+}
+
+function renderProgressScale(container, lists) {
+    const scaleEl = container.querySelector('#user-lists-progress-container');
+    if (!scaleEl) return;
+
+    const statuses = [
+        { key: 'Completed', label: t('list_completed') || 'Прочитано', color: '#10b981' },
+        { key: 'Reading', label: t('list_reading') || 'Читаю', color: '#3b82f6' },
+        { key: 'Planned', label: t('list_planned') || 'У планах', color: '#f59e0b' },
+        { key: 'On Hold', label: t('list_on_hold') || 'Відкладено', color: '#94a3b8' },
+        { key: 'Dropped', label: t('list_dropped') || 'Кинуто', color: '#ef4444' }
+    ];
+
+    let total = 0;
+    const counts = {};
+    statuses.forEach(s => {
+        const cnt = (lists[s.key] || []).length;
+        counts[s.key] = cnt;
+        total += cnt;
+    });
+
+    if (total === 0) {
+        scaleEl.innerHTML = '';
+        return;
+    }
+
+    const segmentsHtml = statuses.map(s => {
+        const cnt = counts[s.key];
+        if (cnt === 0) return '';
+        const pct = ((cnt / total) * 100).toFixed(1);
+        return `
+            <div class="readlist-segment readlist-segment--${s.key.toLowerCase().replace(' ', '-')}"
+                 style="width: ${pct}%; background-color: ${s.color};"
+                 title="${s.label}: ${cnt} (${pct}%)"
+                 data-status="${s.key}">
+            </div>
+        `;
+    }).join('');
+
+    const legendHtml = statuses.map(s => {
+        const cnt = counts[s.key];
+        if (cnt === 0) return '';
+        const pct = Math.round((cnt / total) * 100);
+        return `
+            <div class="readlist-legend-item ${currentListType === s.key ? 'is-selected' : ''}" data-status="${s.key}" title="Фільтрувати за статусом ${s.label}">
+                <span class="readlist-legend-dot" style="background-color: ${s.color};"></span>
+                <span class="readlist-legend-label">${s.label}</span>
+                <span class="readlist-legend-val">${cnt} <span class="readlist-legend-pct">(${pct}%)</span></span>
+            </div>
+        `;
+    }).join('');
+
+    scaleEl.innerHTML = `
+        <div class="readlist-progress-card">
+            <div class="readlist-progress-bar">
+                ${segmentsHtml}
+            </div>
+            <div class="readlist-progress-legend">
+                ${legendHtml}
+            </div>
+        </div>
+    `;
+
+    // Клікабельність сегментів та елементів легенди
+    scaleEl.querySelectorAll('[data-status]').forEach(el => {
+        el.addEventListener('click', () => {
+            const st = el.dataset.status;
+            currentListType = (currentListType === st) ? 'all' : st;
+            const selectEl = container.querySelector('#user-list-type-select');
+            if (selectEl) {
+                selectEl.value = currentListType;
+                selectEl.dispatchEvent(new Event('change'));
+            } else {
+                applyFilters();
+                renderResults();
+                renderProgressScale(container, lists);
+            }
+        });
+    });
 }
 
 function renderLayout(main, username) {
@@ -85,7 +166,9 @@ function renderLayout(main, username) {
                 </div>
             </div>
 
-            <div id="user-lists-results" class="catalog-results">
+            <div id="user-lists-progress-container" style="margin-top: 16px;"></div>
+
+            <div id="user-lists-results" class="catalog-results" style="margin-top: 20px;">
                 <div class="loader-container"><div class="loader"></div></div>
             </div>
         </div>
@@ -135,10 +218,28 @@ function renderLayout(main, username) {
 
     const tabButtons = main.querySelectorAll('[data-tab-type]');
     tabButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             const tab = btn.dataset.tabType;
             if (tab === currentTab) return;
-            location.hash = `#/user/${username}/lists?tab=${tab}`;
+
+            currentTab = tab;
+            if (currentTab === 'issue' && !['all', 'Planned', 'Completed'].includes(currentListType)) {
+                currentListType = 'all';
+            }
+
+            renderLayout(main, username);
+
+            try {
+                const data = await API.get(`/user/readlist/user/${username}?content_type=${currentTab}`);
+                allListItems = data.lists || {};
+                applyFilters();
+                renderResults();
+            } catch (err) {
+                const resultsEl = main.querySelector('#user-lists-results');
+                if (resultsEl) {
+                    resultsEl.innerHTML = `<div class="error-state">${t('error_label')}: ${escapeHtmlAttribute(err.message)}</div>`;
+                }
+            }
         });
     });
 }

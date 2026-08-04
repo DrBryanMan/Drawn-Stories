@@ -668,35 +668,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                </div>`
             : '';
 
-        const editors = [];
-        const seenEditors = new Set();
-        edits.forEach(e => {
-            const username = e.proposer_username;
-            if (username && !seenEditors.has(username)) {
-                seenEditors.add(username);
-                editors.push({
-                    username: username,
-                    avatarUrl: `/api/auth/avatar/${username}`
-                });
-            }
-        });
 
-        let editorsListHTML = '';
-        if (editors.length > 0) {
-            editorsListHTML = `
-                <div class="volume-editors-list">
-                    <span class="volume-editors-label">Редактори:</span>
-                    <div class="volume-editors-avatars">
-                        ${editors.slice(0, 5).map(ed => `
-                            <a href="#/user/${ed.username}" class="volume-editor-avatar-link" title="${escapeHtmlAttribute(ed.username)}">
-                                ${getAvatarHtml(ed.avatarUrl, 'volume-editor-avatar-img', 28)}
-                            </a>
-                        `).join('')}
-                        ${editors.length > 5 ? `<span style="font-size: 12px; margin-left: 6px; color: var(--text-muted);">+${editors.length - 5}</span>` : ''}
-                    </div>
-                </div>
-            `;
-        }
 
         const editorsHistoryBlockHTML = renderEditorsHistoryBlock(edits, currentUser, {
             editButtonId: 'volume-edit-btn',
@@ -749,12 +721,23 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
 
                                     ${currentUser ? `
                                         <div class="read-progress-section">
-                                            <div class="progress-title">${t('issues_read')}</div>
+                                            <div class="progress-title">
+                                                <span>${t('issues_read')}</span>
+                                                <span class="progress-type-badge" id="read-progress-hint" title="${t('progress_hint_tooltip')}">
+                                                    ${readlistStatus.issues_count !== null ? `${icon('edit', 11)} ${t('progress_manual_short')}` : `${icon('sparkles', 11)} ${t('progress_auto_short')}`}
+                                                </span>
+                                            </div>
                                             <div class="progress-controls">
-                                                <input type="number" min="0" max="${stats.issues || 0}" class="progress-input" id="read-issues-input" value="${readlistStatus.issues_count !== null ? readlistStatus.issues_count : ''}" placeholder="${readlistStatus.read_issues_count}">
-                                                <span class="progress-slash">/</span>
-                                                <span class="progress-total">${stats.issues || 0}</span>
-                                                <button class="progress-save-btn" id="save-progress-btn">${t('save')}</button>
+                                                <div class="progress-stepper">
+                                                    <button type="button" class="stepper-btn" id="btn-progress-minus" title="Зменшити на 1">${icon('minus', 13)}</button>
+                                                    <button type="button" class="stepper-btn" id="btn-progress-plus" title="Збільшити на 1">${icon('plus', 13)}</button>
+                                                </div>
+                                                <div class="progress-value-wrap">
+                                                    <input type="number" min="0" max="${stats.issues || 0}" class="progress-input" id="read-issues-input" value="${readlistStatus.issues_count !== null ? readlistStatus.issues_count : ''}" placeholder="${readlistStatus.read_issues_count}">
+                                                    <span class="progress-slash">/</span>
+                                                    <span class="progress-total">${stats.issues || 0}</span>
+                                                </div>
+                                                <button type="button" class="progress-save-btn" id="save-progress-btn" title="${t('save')}">${icon('save', 14)}</button>
                                             </div>
                                         </div>
                                     ` : ''}
@@ -1217,6 +1200,50 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
 
         // Save progress logic
         const saveProgressBtn = main.querySelector('#save-progress-btn');
+        const readIssuesInput = main.querySelector('#read-issues-input');
+        const btnMinus = main.querySelector('#btn-progress-minus');
+        const btnPlus = main.querySelector('#btn-progress-plus');
+
+        if (readIssuesInput) {
+            readIssuesInput.addEventListener('input', () => {
+                const hintEl = main.querySelector('#read-progress-hint');
+                if (hintEl) {
+                    const hasVal = readIssuesInput.value.trim() !== '';
+                    hintEl.innerHTML = hasVal 
+                        ? `${icon('edit', 11)} ${t('progress_manual_short')}` 
+                        : `${icon('sparkles', 11)} ${t('progress_auto_short')}`;
+                }
+            });
+        }
+
+        const getInputValue = () => {
+            if (!readIssuesInput) return 0;
+            const valStr = readIssuesInput.value.trim();
+            if (valStr !== '') {
+                return parseInt(valStr, 10) || 0;
+            }
+            return parseInt(readIssuesInput.placeholder, 10) || 0;
+        };
+
+        if (btnMinus && readIssuesInput) {
+            btnMinus.addEventListener('click', () => {
+                const current = getInputValue();
+                const nextVal = Math.max(0, current - 1);
+                readIssuesInput.value = nextVal;
+                readIssuesInput.dispatchEvent(new Event('input'));
+            });
+        }
+
+        if (btnPlus && readIssuesInput) {
+            btnPlus.addEventListener('click', () => {
+                const current = getInputValue();
+                const maxVal = parseInt(readIssuesInput.getAttribute('max'), 10) || 9999;
+                const nextVal = Math.min(maxVal, current + 1);
+                readIssuesInput.value = nextVal;
+                readIssuesInput.dispatchEvent(new Event('input'));
+            });
+        }
+
         if (saveProgressBtn) {
             saveProgressBtn.addEventListener('click', async () => {
                 const input = main.querySelector('#read-issues-input');

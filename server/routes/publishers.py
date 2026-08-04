@@ -9,6 +9,22 @@ def require_moderator(request: Request):
     if role not in {"moderator", "admin"}:
         raise HTTPException(status_code=403, detail="Потрібні права модератора")
 
+def require_admin(request: Request):
+    role = request.cookies.get("role")
+    if role != "admin":
+        raise HTTPException(status_code=403, detail="Потрібні права адміністратора")
+
+@router.delete("/{publisher_id}")
+async def delete_publisher(publisher_id: int, request: Request):
+    require_admin(request)
+    db = get_db()
+    pub = db.get_one("SELECT id FROM publishers WHERE id = %s", [publisher_id])
+    if not pub:
+        raise HTTPException(status_code=404, detail="Видавництво не знайдено")
+    db.execute("UPDATE volumes SET publisher = NULL WHERE publisher = %s", [publisher_id])
+    db.execute("DELETE FROM publishers WHERE id = %s", [publisher_id])
+    return {"message": "Видавництво успішно видалено з БД"}
+
 @router.get("/{publisher_id}")
 async def get_publisher(publisher_id: int):
     db = get_db()

@@ -478,7 +478,7 @@ export class VolumeEditor {
             container.appendChild(wrap);
             
             const input = wrap.querySelector('.character-search-input');
-            const DefenseResults = wrap.querySelector('.character-search-results');
+            const results = wrap.querySelector('.character-search-results');
             input.focus();
             
             let timeout = null;
@@ -486,24 +486,24 @@ export class VolumeEditor {
                 const q = input.value.trim();
                 clearTimeout(timeout);
                 if (!q) {
-                     DefenseResults.style.display = 'none';
-                     DefenseResults.innerHTML = '';
+                     results.style.display = 'none';
+                     results.innerHTML = '';
                      return;
                 }
                  
-                DefenseResults.style.display = 'block';
-                DefenseResults.innerHTML = '<div style="padding: 8px; font-size: 12px; color: var(--text-muted);">Пошук...</div>';
+                results.style.display = 'block';
+                results.innerHTML = '<div style="padding: 8px; font-size: 12px; color: var(--text-muted);">Пошук...</div>';
                  
                 timeout = setTimeout(async () => {
                      try {
                          const res = await API.get('/issues/appearances/search/characters', { search: q });
                          const items = res || [];
                          if (items.length === 0) {
-                             DefenseResults.innerHTML = '<div style="padding: 8px; font-size: 12px; color: var(--text-muted);">Нічого не знайдено</div>';
+                             results.innerHTML = '<div style="padding: 8px; font-size: 12px; color: var(--text-muted);">Нічого не знайдено</div>';
                              return;
                          }
                          
-                         DefenseResults.innerHTML = items.map(c => {
+                         results.innerHTML = items.map(c => {
                              const img = c.image ? comicVineImageUrl(c.image) : '';
                              const imgHTML = img
                                  ? `<img src="${escapeHtmlAttribute(img)}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">`
@@ -521,7 +521,7 @@ export class VolumeEditor {
                              `;
                          }).join('');
                          
-                         DefenseResults.querySelectorAll('.character-search-result-item').forEach(item => {
+                         results.querySelectorAll('.character-search-result-item').forEach(item => {
                              item.addEventListener('click', () => {
                                  const charId = parseInt(item.dataset.id);
                                  const name = item.dataset.name;
@@ -575,7 +575,6 @@ export class VolumeEditor {
             `;
         } else {
             footerButtonsHTML = `
-                <input type="text" id="edit-propose-comment" class="admin-input" placeholder="Коментар до вашої правки (необов'язково)..." style="margin-right: auto; max-width: 400px; font-size: 0.85rem; padding: 6px 10px; height: 32px;">
                 <button class="btn-admin btn-admin--primary btn-admin--yellow" id="edit-save-propose" style="height: 32px; padding: 0 16px; font-size: 13px;">Запропонувати</button>
             `;
         }
@@ -724,6 +723,10 @@ export class VolumeEditor {
                                     <div id="vol-theme-chips" style="display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.5rem; min-height:0; align-items:center;">
                                         ${Utils.buildThemeChipsHTML(this.allThemes.filter(t => this.currentThemeIds.has(t.id)), 'window._emRemoveThemeVol')}
                                     </div>
+                                    <div id="vol-theme-complete-warning" class="theme-warning-notice" style="display: none;">
+                                        ${icon('warning', 16)}
+                                        <span>Тему "Завершена" слід додавати лише якщо рік завершення серії невідомий.</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -753,9 +756,19 @@ export class VolumeEditor {
                         </div>
                     </form>
                 </div>
-                <div class="ds-modal-footer">
-                    <button class="btn-admin btn-admin--secondary" id="edit-cancel">Скасувати</button>
-                    ${footerButtonsHTML}
+                <div class="ds-modal-footer" style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-top:1px solid var(--border-s);">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        ${role === 'admin' && v.id ? `
+                            <button type="button" class="btn-admin btn-admin--danger" id="edit-delete-btn" title="Видалити з БД" style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">${icon('trash', 14)}</button>
+                        ` : ''}
+                        ${(!currentUser || (role !== 'admin' && role !== 'moderator' && role !== 'editor')) ? `
+                            <input type="text" id="edit-propose-comment" class="admin-input" placeholder="Коментар до правки..." style="max-width: 260px; font-size: 12px; height: 32px; margin-bottom: 0;">
+                        ` : ''}
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <button class="btn-admin btn-admin--secondary" type="button" id="edit-cancel">Скасувати</button>
+                        ${footerButtonsHTML}
+                    </div>
                 </div>
             </div>
         `;
@@ -763,6 +776,20 @@ export class VolumeEditor {
         modal.querySelector('.ds-modal-close').addEventListener('click', () => this.close());
         modal.querySelector('#edit-cancel').addEventListener('click', () => this.close());
         
+        const deleteBtn = modal.querySelector('#edit-delete-btn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', async () => {
+                if (!confirm(`Ви дійсно бажаєте видалити серію "${v.name}" з бази даних?`)) return;
+                try {
+                    await API.delete(`/volumes/${v.id}`);
+                    this.close();
+                    if (this.onUpdate) this.onUpdate(null);
+                } catch (err) {
+                    alert('Помилка видалення: ' + (err.message || err));
+                }
+            });
+        }
+
         const saveDirectBtn = modal.querySelector('#edit-save-direct');
         if (saveDirectBtn) {
             saveDirectBtn.addEventListener('click', () => this.save('direct'));
@@ -816,6 +843,9 @@ export class VolumeEditor {
         // Initialize search events
         this.initStaffSearch();
         this.initCharacterSearch();
+
+        // Initial theme warning/chips state
+        this._rebuildThemeChips(modal);
     }
 
     _rebuildThemeChips(modal) {
@@ -828,6 +858,12 @@ export class VolumeEditor {
             type: cb.dataset.type || 'theme',
         }));
         container.innerHTML = Utils.buildThemeChipsHTML(selectedThemes, 'window._emRemoveThemeVol');
+
+        const warningEl = modal.querySelector('#vol-theme-complete-warning');
+        if (warningEl) {
+            const hasCompleteTheme = selectedThemes.some(t => t.id === 13);
+            warningEl.style.display = hasCompleteTheme ? 'flex' : 'none';
+        }
     }
 
     close() {

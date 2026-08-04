@@ -349,4 +349,21 @@ body:has(.ds-modal-overlay:not([hidden]):not([style*="display: none"]):not([styl
   background: rgba(239, 68, 68, 0.1);
 }
 
+/* ── Warning Notice inside Modals ────────────────────── */
+.theme-warning-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--r-m, 8px);
+  color: var(--warning-text, #d97706);
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+
 

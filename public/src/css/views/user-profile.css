@@ -1,0 +1,557 @@
+/* ── User Profile View Styles (Hero Band Layout) ── */
+
+.user-profile-view {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Hero Band ── */
+.user-profile-hero-band {
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-s);
+    padding-top: 32px;
+    position: relative;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.user-profile-hero {
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+    padding-bottom: 28px;
+}
+
+/* Avatar Column (200px Avatar) */
+.user-profile-avatar-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.user-profile-avatar-frame {
+    width: 200px;
+    height: 200px;
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    background: var(--bg-body);
+    border: 2px solid var(--border-s);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.user-profile-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Online Dot on Avatar */
+.profile-avatar-online-dot {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--border-s);
+    border: 2.5px solid var(--bg-card);
+    z-index: 2;
+    transition: background 0.3s ease;
+}
+
+.profile-avatar-online-dot.is-online {
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+/* Actions under avatar (icons only) */
+.user-profile-avatar-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+    width: 100%;
+}
+
+.btn-icon-only {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--r);
+}
+
+/* Info Column */
+.user-profile-info {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex: 1;
+    min-width: 0;
+}
+
+.user-profile-name-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.user-profile-name-row h1 {
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+    line-height: 1.1;
+}
+
+/* Level Box */
+.user-profile-level-box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--bg-2);
+    padding: 12px 16px;
+    border-radius: var(--r);
+    border: 1px solid var(--border-s);
+    max-width: 440px;
+}
+
+.level-box-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.level-score-text {
+    font-family: var(--font-oswald);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--purple, #a855f7);
+}
+
+.level-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--border-s);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.level-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 70%, #a855f7) 100%);
+    border-radius: 4px;
+    transition: width 0.4s ease;
+}
+
+/* Meta Row */
+.user-profile-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.user-profile-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Right Subscriptions & Follow Button Column */
+.user-profile-right-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 16px;
+    flex-shrink: 0;
+}
+
+.user-profile-follows-card {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: var(--bg-2);
+    border: 1px solid var(--border-s);
+    padding: 12px 22px;
+    border-radius: var(--r-lg);
+}
+
+.follows-stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+    user-select: none;
+}
+
+.follows-stat-item:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+}
+
+.follows-stat-num {
+    font-family: var(--font-oswald);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+}
+
+.follows-stat-lbl {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-top: 3px;
+}
+
+.follows-stat-divider {
+    width: 1px;
+    height: 28px;
+    background: var(--border-s);
+}
+
+/* Follow Buttons */
+.btn-follow-primary {
+    background: linear-gradient(135deg, var(--accent) 0%, #a855f7 100%);
+    color: #ffffff;
+    border: none;
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: var(--r);
+    padding: 10px 22px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+    transition: all 0.2s ease;
+    width: 100%;
+    justify-content: center;
+}
+
+.btn-follow-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(168, 85, 247, 0.45);
+}
+
+.btn-following {
+    background: var(--bg-2);
+    color: var(--text-muted);
+    border: 1px solid var(--border-s);
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: var(--r);
+    padding: 10px 22px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+    justify-content: center;
+}
+
+.btn-following:hover {
+    background: color-mix(in srgb, #ef4444 12%, var(--bg-2));
+    color: #ef4444;
+    border-color: color-mix(in srgb, #ef4444 35%, transparent);
+}
+
+/* ── Modal User Item List ── */
+.modal-user-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: var(--r);
+    background: var(--bg-2);
+    border: 1px solid var(--border-s);
+}
+
+.modal-user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--text);
+}
+
+.modal-user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.modal-user-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.modal-user-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+}
+
+/* ── Modal Follow Button Styles ── */
+.modal-follow-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: var(--r);
+    border: none;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--accent) 0%, #a855f7 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(168, 85, 247, 0.25);
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.modal-follow-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.35);
+}
+
+.modal-follow-btn.is-following {
+    background: var(--bg-card);
+    color: var(--text-muted);
+    border: 1px solid var(--border-s);
+    box-shadow: none;
+}
+
+.modal-follow-btn.is-following:hover {
+    background: color-mix(in srgb, #ef4444 12%, var(--bg-card));
+    color: #ef4444;
+    border-color: color-mix(in srgb, #ef4444 35%, transparent);
+}
+
+/* ── Hero Tabs Band (Windows 11 Fluent Style) ── */
+.user-profile-tabs-band {
+    background: color-mix(in srgb, var(--bg-body) 45%, var(--bg-card));
+    border-top: 1px solid var(--border-s);
+    padding: .5em 0;
+}
+
+.user-profile-tabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+}
+
+.user-profile-tab {
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-decoration: none;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+    position: relative;
+    border: 1px solid transparent;
+}
+
+.user-profile-tab:hover {
+    color: var(--text);
+    background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+
+.user-profile-tab.is-active {
+    color: var(--text);
+    background: var(--bg-card);
+    border-color: var(--border-s);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    background: color-mix(in srgb, var(--accent) 10%, var(--bg-card));
+}
+
+.user-profile-tab.is-active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 22px;
+    height: 3px;
+    background: var(--accent);
+    border-radius: 3px;
+}
+
+.tab-count {
+    background: var(--bg-2);
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    color: var(--text-muted);
+}
+
+.user-profile-tab.is-active .tab-count {
+    background: color-mix(in srgb, var(--accent) 18%, var(--bg-card));
+    color: var(--accent);
+}
+
+/* ── Content Wrap ── */
+.user-profile-content-wrap {
+    padding-top: 32px;
+    padding-bottom: 48px;
+}
+
+/* Overview Tab Grid */
+.overview-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.stat-card-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border-s);
+    border-radius: var(--r-lg);
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.stat-card-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.stat-card-val {
+    font-family: var(--font-oswald);
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+@media (max-width: 768px) {
+    .user-profile-hero {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .user-profile-avatar-frame {
+        width: 140px;
+        height: 140px;
+    }
+
+    .user-profile-right-col {
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid var(--border-s);
+        padding-top: 16px;
+    }
+
+    .user-profile-level-box {
+        max-width: 100%;
+    }
+}
+
+/* ── Readlist Progress Bar & Legend ── */
+.readlist-progress-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-s);
+    border-radius: var(--r-lg);
+    padding: 16px 20px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.readlist-progress-bar {
+    display: flex;
+    gap: 3px;
+    height: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+    width: 100%;
+    background: var(--bg-2);
+}
+
+.readlist-segment {
+    height: 100%;
+    border-radius: 4px;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    cursor: pointer;
+}
+
+.readlist-segment:hover {
+    opacity: 0.85;
+    transform: scaleY(1.15);
+}
+
+.readlist-progress-legend {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+    font-size: 13px;
+}
+
+.readlist-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: var(--r);
+    transition: all 0.15s ease;
+}
+
+.readlist-legend-item:hover,
+.readlist-legend-item.is-selected {
+    color: var(--text);
+    background: var(--bg-2);
+}
+
+.readlist-legend-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.readlist-legend-val {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.readlist-legend-pct {
+    font-weight: 400;
+    color: var(--text-muted);
+    font-size: 12px;
+}
