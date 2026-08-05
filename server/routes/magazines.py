@@ -61,6 +61,167 @@ async def get_weekly_chapters(date_min: str, date_max: str):
     """, [date_min, date_max])
     return {"items": [dict(c) for c in chapters]}
 
+@router.get("/calendar")
+async def get_manga_calendar(
+    request: Request,
+    start_date: str,
+    end_date: str,
+    magazine_id: Optional[int] = None
+):
+    db = get_db()
+
+    # Get user_id if logged in
+    username = request.cookies.get("username")
+    user_id = None
+    if username:
+        user_rec = db.get_one("SELECT id FROM users WHERE username = %s", [username])
+        if user_rec:
+            user_id = user_rec["id"]
+
+    # Filter params for date range
+    params = [start_date, end_date]
+    mag_condition = ""
+    if magazine_id:
+        mag_condition = " AND mi.magazine_id = %s "
+        params.append(magazine_id)
+
+    # 1. Fetch all chapters in the date range with issue, magazine, and manga details
+    sql_chapters = f"""
+        SELECT 
+            mic.id as mic_id,
+            mic.order_num,
+            mc.id as chapter_id,
+            mc.chapter_number,
+            mc.name as chapter_name,
+            v.id as manga_id,
+            v.name as manga_name,
+            v.name_uk as manga_name_uk,
+            v.image as manga_cover,
+            mi.id as issue_id,
+            mi.issue_number,
+            mi.name as issue_name,
+            mi.release_date as issue_release_date,
+            mi.image as issue_image,
+            mm.id as magazine_id,
+            mm.name as magazine_name,
+            mm.label as magazine_label,
+            CASE 
+                WHEN %s::integer IS NOT NULL AND (
+                    EXISTS (SELECT 1 FROM user_volumes_readlist uvr WHERE uvr.user_id = %s::integer AND uvr.volume_id = v.id)
+                    OR EXISTS (SELECT 1 FROM user_favorites uf WHERE uf.user_id = %s::integer AND uf.content_id = v.id AND uf.content_type = 'volume')
+                ) THEN TRUE 
+                ELSE FALSE 
+            END as is_in_user_list
+        FROM magazine_issues mi
+        JOIN manga_magazines mm ON mi.magazine_id = mm.id
+        LEFT JOIN magazine_issue_chapters mic ON mic.magazine_issue_id = mi.id
+        LEFT JOIN manga_chapters mc ON mic.manga_chapter_id = mc.id
+        LEFT JOIN volumes v ON mic.manga_id = v.id
+        WHERE mi.release_date >= %s AND mi.release_date <= %s
+        {mag_condition}
+        ORDER BY mi.release_date ASC, mm.id ASC, mi.id ASC, mic.order_num ASC
+    """
+    
+    chapters_raw = db.get_all(sql_chapters, [user_id, user_id, user_id] + params)
+
+    # Also fetch issues that might not have chapters added yet in the given range
+    sql_issues_only = f"""
+        SELECT 
+            mi.id as issue_id,
+            mi.issue_number,
+            mi.name as issue_name,
+            mi.release_date as issue_release_date,
+            mi.image as issue_image,
+            mm.id as magazine_id,
+            mm.name as magazine_name,
+            mm.label as magazine_label
+        FROM magazine_issues mi
+        JOIN manga_magazines mm ON mi.magazine_id = mm.id
+        WHERE mi.release_date >= %s AND mi.release_date <= %s
+        {mag_condition}
+        ORDER BY mi.release_date ASC, mm.id ASC
+    """
+    issues_raw = db.get_all(sql_issues_only, params)
+
+    # Process structure: group by issue
+    issues_map = {}
+    total_chapters_count = 0
+    user_chapters_count = 0
+    active_magazines_set = set()
+    active_series_set = set()
+
+    for iss in issues_raw:
+        iss_id = iss["issue_id"]
+        issues_map[iss_id] = {
+            "issue_id": iss_id,
+            "issue_number": iss["issue_number"],
+            "issue_name": iss["issue_name"],
+            "release_date": str(iss["issue_release_date"]) if iss["issue_release_date"] else None,
+            "issue_image": iss["issue_image"],
+            "magazine_id": iss["magazine_id"],
+            "magazine_name": iss["magazine_name"],
+            "magazine_label": iss["magazine_label"],
+            "chapters": []
+        }
+        if iss["magazine_id"]:
+            active_magazines_set.add(iss["magazine_id"])
+
+    for row in chapters_raw:
+        iss_id = row["issue_id"]
+        if iss_id not in issues_map:
+            issues_map[iss_id] = {
+                "issue_id": iss_id,
+                "issue_number": row["issue_number"],
+                "issue_name": row["issue_name"],
+                "release_date": str(row["issue_release_date"]) if row["issue_release_date"] else None,
+                "issue_image": row["issue_image"],
+                "magazine_id": row["magazine_id"],
+                "magazine_name": row["magazine_name"],
+                "magazine_label": row["magazine_label"],
+                "chapters": []
+            }
+
+        if row["magazine_id"]:
+            active_magazines_set.add(row["magazine_id"])
+
+        if row["chapter_id"] or row["manga_id"]:
+            total_chapters_count += 1
+            if row["manga_id"]:
+                active_series_set.add(row["manga_id"])
+            if row.get("is_in_user_list"):
+                user_chapters_count += 1
+
+            issues_map[iss_id]["chapters"].append({
+                "chapter_id": row["chapter_id"],
+                "chapter_number": row["chapter_number"],
+                "chapter_name": row["chapter_name"],
+                "manga_id": row["manga_id"],
+                "manga_name": row["manga_name"],
+                "manga_name_uk": row["manga_name_uk"],
+                "manga_cover": row["manga_cover"],
+                "order_num": row["order_num"],
+                "is_in_user_list": bool(row.get("is_in_user_list"))
+            })
+
+    # Fetch list of all magazines for dropdown filter ordered by series count (top magazines first)
+    all_magazines = db.get_all("""
+        SELECT mm.id, mm.name, mm.label,
+               (SELECT COUNT(*) FROM magazine_volumes mv WHERE mv.magazine_id = mm.id) as series_count
+        FROM manga_magazines mm 
+        ORDER BY series_count DESC, mm.name ASC
+    """)
+
+    return {
+        "stats": {
+            "total_chapters": total_chapters_count,
+            "user_chapters": user_chapters_count,
+            "active_magazines": len(active_magazines_set),
+            "active_series": len(active_series_set)
+        },
+        "issues": list(issues_map.values()),
+        "magazines": [dict(m) for m in all_magazines]
+    }
+
 @router.get("/issues-catalog")
 async def list_magazine_issues_catalog(
     search: Optional[str] = None,
@@ -643,3 +804,5 @@ async def get_all_magazine_series(id: int, page: int = 1, limit: int = 24, ongoi
         "page": page,
         "limit": limit
     }
+
+

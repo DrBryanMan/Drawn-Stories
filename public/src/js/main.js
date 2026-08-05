@@ -36,6 +36,7 @@ import { renderMangaChapterDetail } from './views/mangaChapterDetail.js';
 import { renderMangaMagazinesCatalog } from './views/mangaMagazinesCatalog.js';
 import { renderMangaChaptersCatalog } from './views/mangaChaptersCatalog.js';
 import { renderNotifications } from './views/NotificationsView.js';
+import { renderMangaCalendar } from './views/mangaCalendar.js';
 
 async function start() {
   const main = await initShell();
@@ -43,6 +44,8 @@ async function start() {
   router
     .on('/',              () => renderHome(main))
     .on('/catalog',       (_path, _params, query) => renderCatalog(main, query))
+    .on('/calendar/manga', (_path, _params, query) => renderMangaCalendar(main, query))
+    .on('/calendar',      () => router.navigate('/calendar/manga'))
     .on('/manga-magazines', (_path, _params, query) => renderMangaMagazinesCatalog(main, query))
     .on('/manga-chapters', (_path, _params, query) => renderMangaChaptersCatalog(main, query))
     .on('/notifications', () => renderNotifications(main))
