@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request, Query
 from ..db import get_db
 from typing import Optional
+from server.helpers.notifications import notify_new_issue_subscribers
 
 router = APIRouter(prefix="/api/issues", tags=["issues"])
 
@@ -699,6 +700,22 @@ async def create_issue(data: dict):
 
     sql = f"INSERT INTO issues ({', '.join(columns)}) VALUES ({', '.join(placeholders)}) RETURNING id"
     new_id = db.get_one(sql, params)["id"]
+
+    volume_id = data.get("volume_id")
+    if volume_id:
+        vol = db.get_one("SELECT name FROM volumes WHERE id = %s", [volume_id])
+        vol_name = vol["name"] if vol else None
+        issue_num = str(data.get("issue_number") or data.get("name") or new_id)
+        try:
+            notify_new_issue_subscribers(
+                volume_id=int(volume_id),
+                issue_id=new_id,
+                issue_number=issue_num,
+                volume_name=vol_name
+            )
+        except Exception as err:
+            print(f"Помилка відправки сповіщень для нового випуску #{new_id}: {err}")
+
     return {"message": "Випуск успішно створено", "id": new_id}
 
 

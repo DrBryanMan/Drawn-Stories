@@ -51,16 +51,47 @@
     color: var(--text);
 }
 
+.label-with-hint {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.hint-info-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    background: rgba(79, 70, 229, 0.08);
+    border: 1px solid rgba(79, 70, 229, 0.15);
+    color: var(--accent);
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 20px;
+    transition: var(--t);
+}
+
+.hint-info-btn:hover {
+    color: var(--accent-h);
+    background: rgba(79, 70, 229, 0.15);
+}
+
 .input-wrapper {
     position: relative;
     display: flex;
     align-items: center;
 }
 
-.input-wrapper svg {
+/* Position leading icon inside input */
+.input-wrapper > svg {
     position: absolute;
     left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
     color: var(--text-muted);
+    pointer-events: none;
+    z-index: 1;
 }
 
 .input-wrapper input {
@@ -71,12 +102,81 @@
     background: var(--bg-input);
     font-size: 1rem;
     transition: var(--t);
+    color: var(--text);
+}
+
+.input-wrapper input.has-toggle {
+    padding-right: 2.75rem;
 }
 
 .input-wrapper input:focus {
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* Password eye button styling */
+.password-toggle-btn {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--r-s);
+    transition: var(--t);
+    z-index: 2;
+}
+
+.password-toggle-btn svg {
+    position: static !important;
+    left: auto !important;
+    color: currentColor !important;
+    display: block;
+}
+
+.password-toggle-btn:hover {
+    color: var(--text);
+    background: var(--bg-card-h, rgba(0, 0, 0, 0.05));
+}
+
+.input-wrapper input.nickname-highlight:placeholder-shown {
+    background: #fefce8;
+    border-color: #fde047;
+}
+
+.input-wrapper input.nickname-highlight:not(:placeholder-shown) {
+    background: var(--bg-input);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .input-wrapper input.nickname-highlight:placeholder-shown {
+    background: rgba(234, 179, 8, 0.12);
+    border-color: rgba(234, 179, 8, 0.5);
+    color: #fef08a;
+}
+
+[data-theme="dark"] .input-wrapper input.nickname-highlight:not(:placeholder-shown) {
+    background: var(--bg-input);
+    border-color: var(--border);
+    color: var(--text);
+}
+
+.nickname-hint-text {
+    font-size: 0.78rem;
+    color: #b45309;
+    margin-top: 4px;
+    line-height: 1.35;
+}
+
+[data-theme="dark"] .nickname-hint-text {
+    color: #facc15;
 }
 
 .auth-btn {
@@ -119,7 +219,7 @@
 }
 
 .auth-footer {
-    margin-top: 2rem;
+    margin-top: 1.75rem;
     text-align: center;
     font-size: 0.875rem;
     color: var(--text-2);
@@ -133,4 +233,53 @@
 
 .auth-footer a:hover {
     text-decoration: underline;
+}
+
+/* Modal styles for AuthCriteriaModal */
+.modal-title-with-icon {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent);
+}
+
+.auth-criteria-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.criteria-card {
+    background: var(--bg-body);
+    border: 1px solid var(--border-s);
+    border-radius: var(--r);
+    padding: 14px 16px;
+}
+
+.criteria-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    color: var(--accent);
+}
+
+.criteria-card-header h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--text);
+}
+
+.criteria-list {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 0.85rem;
+    color: var(--text-2);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.criteria-list li em {
+    color: var(--text-muted);
 }

@@ -2,6 +2,7 @@ import { API } from '/static/js/helpers/api.js';
 import { comicVineImageUrl, escapeHtmlAttribute } from '/static/js/helpers/image.js';
 import { currentUser } from '/static/js/shell.js';
 import { icon } from '/static/js/helpers/icons.js';
+import { t } from '../../helpers/i18n.js';
 
 export function openEditPersonModal(person, onUpdate) {
     const modalId = 'admin-edit-person-modal';
@@ -17,27 +18,27 @@ export function openEditPersonModal(person, onUpdate) {
     let footerButtonsHTML = `
         <div style="display: flex; gap: 8px; align-items: center;">
             ${role === 'admin' && person && person.id ? `
-                <button type="button" class="btn-admin btn-admin--danger btn-delete-person-from-db" title="Видалити з БД" style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">${icon('trash', 14)}</button>
+                <button type="button" class="btn-admin btn-admin--danger btn-delete-person-from-db" title="${t('delete_from_db')}" style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">${icon('trash', 14)}</button>
             ` : ''}
             ${(!currentUser || (role !== 'admin' && role !== 'moderator' && role !== 'editor')) ? `
-                <input type="text" id="edit-person-propose-comment" class="admin-input" placeholder="Коментар до правки..." style="max-width: 260px; font-size: 12px; height: 32px; margin-bottom: 0;">
+                <input type="text" id="edit-person-propose-comment" class="admin-input" placeholder="${t('edit_comment_placeholder')}" style="max-width: 260px; font-size: 12px; height: 32px; margin-bottom: 0;">
             ` : ''}
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
-            <button type="button" class="btn-admin btn-admin--secondary btn-close-person-modal">Скасувати</button>
+            <button type="button" class="btn-admin btn-admin--secondary btn-close-person-modal">${t('cancel')}</button>
             ${(() => {
                 if (role === 'admin') {
                     return `
-                        <button type="button" class="btn-admin btn-admin--primary btn-admin--purple btn-save-person-direct">Записати в БД</button>
-                        <button type="button" class="btn-admin btn-admin--primary btn-save-person-approve" style="background: var(--green);">Записати і прийняти</button>
+                        <button type="button" class="btn-admin btn-admin--primary btn-admin--purple btn-save-person-direct">${t('save_to_db')}</button>
+                        <button type="button" class="btn-admin btn-admin--primary btn-save-person-approve" style="background: var(--green);">${t('save_and_approve')}</button>
                     `;
                 } else if (role === 'moderator' || role === 'editor') {
                     return `
-                        <button type="button" class="btn-admin btn-admin--primary btn-save-person-approve" style="background: var(--green);">Записати і прийняти</button>
+                        <button type="button" class="btn-admin btn-admin--primary btn-save-person-approve" style="background: var(--green);">${t('save_and_approve')}</button>
                     `;
                 } else {
                     return `
-                        <button type="button" class="btn-admin btn-admin--primary btn-save-person-propose" style="background: var(--yellow);">Запропонувати</button>
+                        <button type="button" class="btn-admin btn-admin--primary btn-save-person-propose" style="background: var(--yellow);">${t('propose_edit')}</button>
                     `;
                 }
             })()}

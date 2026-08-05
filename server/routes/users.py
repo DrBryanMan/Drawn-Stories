@@ -3,6 +3,7 @@ from typing import Optional
 from datetime import datetime
 from server.db import get_db
 from server.helpers.scores import get_level_title, get_level_for_score, LEVELS
+from server.helpers.notifications import notify_user_follow
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -220,16 +221,16 @@ def calculate_level_progress(score: int):
         "progress_percent": percent
     }
 
-@router.get("/profile/{username}")
-async def get_user_profile(username: str, request: Request):
+@router.get("/profile/{identifier}")
+async def get_user_profile(identifier: str, request: Request):
     db = get_db()
     
     user = db.get_one("""
         SELECT id, username, COALESCE(nickname, username) AS nickname, role, score, level, created_at,
                COALESCE(last_activity, last_login, created_at) AS last_activity
         FROM users
-        WHERE LOWER(username) = LOWER(%s)
-    """, [username])
+        WHERE LOWER(nickname) = LOWER(%s)
+    """, [identifier])
     
     if not user:
         raise HTTPException(status_code=404, detail="Користувача не знайдено")
@@ -318,7 +319,7 @@ async def get_user_profile(username: str, request: Request):
         "next_min_score": level_info["next_min_score"],
         "current_min_score": level_info["current_min_score"],
         "progress_percent": level_info["progress_percent"],
-        "created_at_text": f"На сайті з {created_str}",
+        "created_at_text": created_str,
         "last_activity_text": act_text,
         "is_online": is_online,
         "followers_count": followers_cnt.get("count", 0),
@@ -354,6 +355,10 @@ async def toggle_follow_user(target_id: int, request: Request):
     else:
         db.execute("INSERT INTO user_follows (follower_id, following_id) VALUES (%s, %s)", [curr_user_id, target_id])
         following = True
+        try:
+            notify_user_follow(follower_id=curr_user_id, target_id=target_id)
+        except Exception as err:
+            print(f"Помилка відправки сповіщення про підписку: {err}")
         
     followers_cnt = db.get_one("SELECT COUNT(*) AS count FROM user_follows WHERE following_id = %s", [target_id]) or {}
     return {

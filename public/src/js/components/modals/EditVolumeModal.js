@@ -6,6 +6,7 @@ import * as Utils from './editorUtils.js';
 import { openEditCharacterModal } from '/static/js/components/modals/EditCharacterModal.js';
 import { currentUser } from '/static/js/shell.js';
 import { icon } from '../../helpers/icons.js';
+import { t } from '../../helpers/i18n.js';
 
 export class VolumeEditor {
     constructor(volume, onSave) {
@@ -566,16 +567,16 @@ export class VolumeEditor {
         let footerButtonsHTML = '';
         if (role === 'admin') {
             footerButtonsHTML = `
-                <button class="btn-admin btn-admin--primary btn-admin--purple" id="edit-save-direct">Записати в БД</button>
-                <button class="btn-admin btn-admin--primary btn-admin--green" id="edit-save-approve">Записати і прийняти</button>
+                <button class="btn-admin btn-admin--primary btn-admin--purple" id="edit-save-direct">${t('save_to_db')}</button>
+                <button class="btn-admin btn-admin--primary btn-admin--green" id="edit-save-approve">${t('save_and_approve')}</button>
             `;
         } else if (role === 'moderator' || role === 'editor') {
             footerButtonsHTML = `
-                <button class="btn-admin btn-admin--primary btn-admin--green" id="edit-save-approve">Записати і прийняти</button>
+                <button class="btn-admin btn-admin--primary btn-admin--green" id="edit-save-approve">${t('save_and_approve')}</button>
             `;
         } else {
             footerButtonsHTML = `
-                <button class="btn-admin btn-admin--primary btn-admin--yellow" id="edit-save-propose" style="height: 32px; padding: 0 16px; font-size: 13px;">Запропонувати</button>
+                <button class="btn-admin btn-admin--primary btn-admin--yellow" id="edit-save-propose" style="height: 32px; padding: 0 16px; font-size: 13px;">${t('propose_edit')}</button>
             `;
         }
         
@@ -759,14 +760,14 @@ export class VolumeEditor {
                 <div class="ds-modal-footer" style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-top:1px solid var(--border-s);">
                     <div style="display:flex; gap:8px; align-items:center;">
                         ${role === 'admin' && v.id ? `
-                            <button type="button" class="btn-admin btn-admin--danger" id="edit-delete-btn" title="Видалити з БД" style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">${icon('trash', 14)}</button>
+                            <button type="button" class="btn-admin btn-admin--danger" id="edit-delete-btn" title="${t('delete_from_db')}" style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">${icon('trash', 14)}</button>
                         ` : ''}
                         ${(!currentUser || (role !== 'admin' && role !== 'moderator' && role !== 'editor')) ? `
-                            <input type="text" id="edit-propose-comment" class="admin-input" placeholder="Коментар до правки..." style="max-width: 260px; font-size: 12px; height: 32px; margin-bottom: 0;">
+                            <input type="text" id="edit-propose-comment" class="admin-input" placeholder="${t('edit_comment_placeholder')}" style="max-width: 260px; font-size: 12px; height: 32px; margin-bottom: 0;">
                         ` : ''}
                     </div>
                     <div style="display:flex; gap:8px; align-items:center;">
-                        <button class="btn-admin btn-admin--secondary" type="button" id="edit-cancel">Скасувати</button>
+                        <button class="btn-admin btn-admin--secondary" type="button" id="edit-cancel">${t('cancel')}</button>
                         ${footerButtonsHTML}
                     </div>
                 </div>

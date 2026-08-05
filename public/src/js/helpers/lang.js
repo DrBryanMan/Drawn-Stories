@@ -1,3 +1,5 @@
+import { getCurrentLanguage } from './i18n.js';
+
 export const LANG_MAP = {
     ja:      { label: 'Японська',               flag: '🇯🇵' },
     en:      { label: 'Американська',           flag: '🇺🇸' },
@@ -46,38 +48,42 @@ export function langName(code) {
     return langDisplay(code).name;
 }
 
-export function formatDate(dateStr, fallback = null) {
+export function formatDate(dateStr, fallback = '—') {
     if (!dateStr) return fallback;
-    const currentLang = localStorage.getItem('site_lang') || 'uk';
+    const currentLang = getCurrentLanguage();
     const locale = currentLang === 'en' ? 'en-US' : 'uk-UA';
-    let formatted = dateStr;
-    if (dateStr.includes('-')) {
-        const parts = dateStr.split('-');
-        if (parts.length === 3 && parts[2] === '00') {
-            const monthsUk = [
-                'січень', 'лютий', 'березень', 'квітень', 'травень', 'червень',
-                'липень', 'серпень', 'вересень', 'жовтень', 'листопад', 'грудень',
-            ];
-            const monthsEn = [
-                'January', 'February', 'March', 'April', 'May', 'June',
-                'July', 'August', 'September', 'October', 'November', 'December',
-            ];
-            const months = currentLang === 'en' ? monthsEn : monthsUk;
-            const mIdx = parseInt(parts[1], 10) - 1;
-            formatted = `${months[mIdx] || parts[1]} ${parts[0]}`;
-        } else {
-            try {
-                const d = new Date(dateStr);
-                formatted = d.toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' });
-            } catch {
-                formatted = dateStr;
+
+    try {
+        const cleanStr = String(dateStr).trim().replace(' ', 'T');
+        if (cleanStr.includes('-') && !cleanStr.includes('T')) {
+            const parts = cleanStr.split('-');
+            if (parts.length === 3 && parts[2] === '00') {
+                const year = parseInt(parts[0], 10);
+                const monthIdx = parseInt(parts[1], 10) - 1;
+                const d = new Date(year, monthIdx, 1);
+                const formatted = d.toLocaleDateString(locale, { year: 'numeric', month: 'long' });
+                return formatted.charAt(0).toUpperCase() + formatted.slice(1);
             }
         }
-    }
-    if (formatted && typeof formatted === 'string') {
+        const d = new Date(cleanStr);
+        if (isNaN(d.getTime())) return dateStr;
+
+        const hasTime = cleanStr.includes('T') && cleanStr.length > 10;
+        const options = {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        };
+        if (hasTime) {
+            options.hour = '2-digit';
+            options.minute = '2-digit';
+        }
+
+        const formatted = d.toLocaleString(locale, options);
         return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+    } catch {
+        return dateStr;
     }
-    return formatted;
 }
 
 export function parseAliases(aliases) {
@@ -101,4 +107,51 @@ export function parseAliases(aliases) {
     return str.split(/[,;]/).map(item => item.replace(/^[\["'\s]+|[\]"'\s]+$/g, '').trim()).filter(Boolean);
 }
 
+export const ENTITY_TYPE_LABELS = {
+    uk: {
+        volume: 'Том',
+        issue: 'Випуск',
+        character: 'Персонаж',
+        person: 'Персона',
+        publisher: 'Видавництво',
+        collection: 'Збірник',
+        reprint: 'Передрук',
+        series: 'Серія',
+        magazine: 'Журнал',
+        event: 'Подія'
+    },
+    en: {
+        volume: 'Volume',
+        issue: 'Issue',
+        character: 'Character',
+        person: 'Person',
+        publisher: 'Publisher',
+        collection: 'Collection',
+        reprint: 'Reprint',
+        series: 'Series',
+        magazine: 'Magazine',
+        event: 'Event'
+    }
+};
 
+export function getEntityTypeLabel(type) {
+    if (!type) return '';
+    const key = String(type).toLowerCase();
+    const lang = getCurrentLanguage();
+    const dict = ENTITY_TYPE_LABELS[lang] || ENTITY_TYPE_LABELS.uk;
+    return dict[key] || (ENTITY_TYPE_LABELS.uk[key] || type);
+}
+
+export function getEntityUrl(entityType, entityId) {
+    if (!entityType || !entityId) return '#/';
+    const type = String(entityType).toLowerCase();
+    if (type === 'volume' || type === 'series') return `#/volumes/${entityId}`;
+    if (type === 'issue' || type === 'reprint') return `#/issues/${entityId}`;
+    if (type === 'character') return `#/characters/${entityId}`;
+    if (type === 'person' || type === 'personnel') return `#/personnel/${entityId}`;
+    if (type === 'publisher') return `#/publishers/${entityId}`;
+    if (type === 'collection') return `#/collections/${entityId}`;
+    if (type === 'magazine') return `#/magazines/${entityId}`;
+    if (type === 'event') return `#/events/${entityId}`;
+    return '#/';
+}

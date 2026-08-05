@@ -200,7 +200,7 @@ export function openEditCharacterModal(char, onUpdate) {
               <button type="button" class="btn-admin btn-admin--danger" id="universal-char-delete-btn" title="${escapeHtmlAttribute(t('delete_from_db'))}" style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">${icon('trash', 14)}</button>
             ` : ''}
             ${(!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'moderator' && currentUser.role !== 'editor')) ? `
-              <input type="text" id="universal-char-propose-comment" class="admin-input" placeholder="Коментар до правки..." style="max-width: 260px; font-size: 12px; height: 32px; margin-bottom: 0;">
+              <input type="text" id="universal-char-propose-comment" class="admin-input" placeholder="${t('edit_comment_placeholder')}" style="max-width: 260px; font-size: 12px; height: 32px; margin-bottom: 0;">
             ` : ''}
           </div>
           <div style="display:flex; gap:8px; align-items:center;">
@@ -209,16 +209,16 @@ export function openEditCharacterModal(char, onUpdate) {
               const role = currentUser ? currentUser.role : null;
               if (role === 'admin') {
                 return `
-                  <button type="button" class="btn-admin btn-admin--primary btn-admin--purple" id="universal-char-save-direct">Записати в БД</button>
-                  <button type="button" class="btn-admin btn-admin--primary" id="universal-char-save-approve" style="background: var(--green);">Записати і прийняти</button>
+                  <button type="button" class="btn-admin btn-admin--primary btn-admin--purple" id="universal-char-save-direct">${t('save_to_db')}</button>
+                  <button type="button" class="btn-admin btn-admin--primary" id="universal-char-save-approve" style="background: var(--green);">${t('save_and_approve')}</button>
                 `;
               } else if (role === 'moderator' || role === 'editor') {
                 return `
-                  <button type="button" class="btn-admin btn-admin--primary" id="universal-char-save-approve" style="background: var(--green);">Записати і прийняти</button>
+                  <button type="button" class="btn-admin btn-admin--primary" id="universal-char-save-approve" style="background: var(--green);">${t('save_and_approve')}</button>
                 `;
               } else {
                 return `
-                  <button type="button" class="btn-admin btn-admin--primary" id="universal-char-save-propose" style="background: var(--yellow);">Запропонувати</button>
+                  <button type="button" class="btn-admin btn-admin--primary" id="universal-char-save-propose" style="background: var(--yellow);">${t('propose_edit')}</button>
                 `;
               }
             })()}
@@ -505,8 +505,9 @@ export function openEditCharacterModal(char, onUpdate) {
         }
         personas.splice(idx, 1);
         updatePersonasState();
-    });
-  };
+      })
+    })
+  }
 
   if (personaAdd) {
     personaAdd.addEventListener('click', async () => {
@@ -630,7 +631,7 @@ export function openEditCharacterModal(char, onUpdate) {
   modal.querySelector('#universal-char-save-propose')?.addEventListener('click', () => handleSave('propose'));
 
   // Delete Character Button
-  modal.querySelector('#universal-char-delete-btn').addEventListener('click', async () => {
+  modal.querySelector('#universal-char-delete-btn')?.addEventListener('click', async () => {
     if (!confirm(t('confirm_delete_character', { name: char.name }))) return;
     try {
       await API.delete(`/characters/${char.id}`);

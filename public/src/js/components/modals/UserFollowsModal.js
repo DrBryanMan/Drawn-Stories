@@ -72,14 +72,15 @@ export async function openUserFollowsModal(username, initialType = 'followers') 
         }
 
         listContainer.innerHTML = res.items.map(u => {
-            const avatarUrl = `/api/auth/avatar/${u.username}`;
+            const userDisp = u.nickname || u.username;
+            const avatarUrl = `/api/auth/avatar/${encodeURIComponent(userDisp)}`;
             const avatarHtml = getAvatarHtml(avatarUrl, 'modal-user-avatar', 40);
             const roleIcon = getRoleIconName(u.role);
             const isSelf = currentUser && currentUser.username.toLowerCase() === u.username.toLowerCase();
 
             return `
                 <div class="modal-user-item">
-                    <a href="#/user/${escapeHtml(u.username)}" class="modal-user-info" onclick="document.body.classList.remove('modal-open'); document.getElementById('user-follows-modal')?.remove()">
+                    <a href="#/user/${escapeHtml(userDisp)}" class="modal-user-info" onclick="document.body.classList.remove('modal-open'); document.getElementById('user-follows-modal')?.remove()">
                         ${avatarHtml}
                         <div class="modal-user-text">
                             <div class="modal-user-name">

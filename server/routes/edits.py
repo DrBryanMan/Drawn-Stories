@@ -10,6 +10,7 @@ from server.helpers.scores import (
     build_reason_string,
     get_level_for_score,
 )
+from server.helpers.notifications import notify_edit_status_change
 
 router = APIRouter(prefix="/api/edits", tags=["edits"])
 
@@ -38,7 +39,7 @@ async def get_edit_requests(
     db = get_db()
     
     query = """
-        SELECT er.*, u.username as proposer_username, u.score as proposer_score, m.username as moderator_username,
+        SELECT er.*, u.username as proposer_username, COALESCE(u.nickname, u.username) as proposer_nickname, u.score as proposer_score, m.username as moderator_username, COALESCE(m.nickname, m.username) as moderator_nickname,
                COALESCE(v.name, i.name, c.name, p.name, pub.name, col.name) as volume_name,
                COALESCE(v.name_uk, i.name_uk, c.name_uk, p.name_uk) as volume_name_uk,
                COALESCE(v.image, i.image, c.image, p.image, pub.image, col.image) as volume_cv_img,
@@ -123,6 +124,13 @@ def get_entity_current_state(db, entity_type: str, entity_id: int):
         state["staff"] = [{"person_id": s["person_id"], "role": s["role"]} for s in staff]
 
         chars = db.get_all("SELECT character_id, role FROM volume_characters WHERE volume_id = %s", [entity_id])
+        state["characters"] = [{"character_id": c["character_id"], "role": c["role"]} for c in chars]
+
+    elif entity_type == "issue":
+        staff = db.get_all("SELECT person_id, role FROM issue_persons WHERE issue_id = %s AND story_id IS NULL", [entity_id])
+        state["staff"] = [{"person_id": s["person_id"], "role": s["role"]} for s in staff]
+
+        chars = db.get_all("SELECT character_id, role FROM issue_characters WHERE issue_id = %s", [entity_id])
         state["characters"] = [{"character_id": c["character_id"], "role": c["role"]} for c in chars]
 
     return state
@@ -266,7 +274,7 @@ def _apply_score(
 async def get_edit_request(edit_id: int, request: Request):
     db = get_db()
     query = """
-        SELECT er.*, u.username as proposer_username, m.username as moderator_username,
+        SELECT er.*, u.username as proposer_username, COALESCE(u.nickname, u.username) as proposer_nickname, m.username as moderator_username, COALESCE(m.nickname, m.username) as moderator_nickname,
                COALESCE(v.name, i.name, c.name, p.name, pub.name, col.name) as volume_name,
                COALESCE(v.name_uk, i.name_uk, c.name_uk, p.name_uk) as volume_name_uk,
                COALESCE(v.image, i.image, c.image, p.image, pub.image, col.image) as volume_cv_img,
@@ -294,7 +302,7 @@ async def get_edit_request(edit_id: int, request: Request):
 
     # Підвантажуємо записи балів пов'язані з цією правкою
     score_rows = db.get_all("""
-        SELECT sh.delta, sh.reason, sh.created_at, u.username
+        SELECT sh.delta, sh.reason, sh.created_at, u.username, COALESCE(u.nickname, u.username) AS nickname
         FROM score_history sh
         JOIN users u ON u.id = sh.user_id
         WHERE sh.edit_id = %s
@@ -528,14 +536,26 @@ async def approve_edit_request(edit_id: int, req: Optional[ModerationActionSchem
         reason = build_reason_string(entity_type, entity_id, parts, pts)
         _apply_score(db, edit_req["user_id"], pts, reason, edit_id)
 
-    # Бонус модератору за розгляд
-    _apply_score(
-        db,
-        user["id"],
-        2,
-        f"Розглянуто та схвалено правку #{edit_id} (+2 б.)",
-        edit_id,
+    # Бонус модератору за розгляд (якщо модератор не є автором правки)
+    if user["id"] != edit_req["user_id"]:
+        _apply_score(
+            db,
+            user["id"],
+            2,
+            f"Розглянуто та схвалено правку #{edit_id} (+2 б.)",
+            edit_id,
+        )
+
+    # Сповіщення автору правки
+    notify_edit_status_change(
+        user_id=edit_req["user_id"],
+        edit_id=edit_id,
+        entity_type=edit_req["entity_type"],
+        new_status="approved",
+        moderator_comment=req.moderator_comment if req else None,
+        moderator_id=user["id"]
     )
+
     db.conn.commit()
 
     return {"message": "Правку успішно схвалено та застосовано"}
@@ -547,7 +567,7 @@ async def reject_edit_request(edit_id: int, req: Optional[ModerationActionSchema
         raise HTTPException(status_code=403, detail="Недостатньо прав для модерації")
         
     db = get_db()
-    edit_req = db.get_one("SELECT id, status, user_id FROM edit_requests WHERE id = %s", [edit_id])
+    edit_req = db.get_one("SELECT id, status, user_id, entity_type FROM edit_requests WHERE id = %s", [edit_id])
     if not edit_req:
         raise HTTPException(status_code=404, detail="Запит на правку не знайдено")
 
@@ -573,14 +593,26 @@ async def reject_edit_request(edit_id: int, req: Optional[ModerationActionSchema
         edit_id,
     )
 
-    # Бонус модератору за розгляд
-    _apply_score(
-        db,
-        user["id"],
-        2,
-        f"Розглянуто та відхилено правку #{edit_id} (+2 б.)",
-        edit_id,
+    # Бонус модератору за розгляд (якщо модератор не є автором правки)
+    if user["id"] != edit_req["user_id"]:
+        _apply_score(
+            db,
+            user["id"],
+            2,
+            f"Розглянуто та відхилено правку #{edit_id} (+2 б.)",
+            edit_id,
+        )
+
+    # Сповіщення автору правки
+    notify_edit_status_change(
+        user_id=edit_req["user_id"],
+        edit_id=edit_id,
+        entity_type=edit_req["entity_type"],
+        new_status="rejected",
+        moderator_comment=req.moderator_comment if req else None,
+        moderator_id=user["id"]
     )
+
     db.conn.commit()
 
     return {"message": "Правку відхилено"}

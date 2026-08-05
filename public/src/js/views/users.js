@@ -3,15 +3,16 @@ import { getAvatarHtml } from '../shell.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { icon } from '../helpers/icons.js';
 import { escapeHtml } from '../helpers/editDiff.js';
+import { t, getCurrentLanguage } from '../helpers/i18n.js';
 
 export async function renderUsers(main) {
-    document.title = 'Лідерборд користувачів — Drawn Stories';
+    document.title = `${t('users_leaderboard_title')} — Drawn Stories`;
 
     main.innerHTML = `
         <div class="container container--main">
             <div class="catalog-heading" style="margin-bottom: 1.5rem;">
-                <h1 class="catalog-title">Лідерборд користувачів</h1>
-                <p class="catalog-subtitle">Перегляд списку всіх учасників, їхніх досягнень, балів та активності</p>
+                <h1 class="catalog-title">${t('users_leaderboard_title')}</h1>
+                <p class="catalog-subtitle">${t('users_leaderboard_subtitle')}</p>
             </div>
 
             <div id="users-filter-bar-container"></div>
@@ -45,11 +46,15 @@ export async function renderUsers(main) {
             const res = await API.get('/users/online');
             renderOnlineBar(res.online_users || [], res.guests_count || 0);
         } catch (err) {
-            console.error('Помилка завантаження онлайн користувачів:', err);
+            console.error('Error loading online users:', err);
         }
     }
 
     function formatGuestCount(count) {
+        const isEn = getCurrentLanguage() === 'en';
+        if (isEn) {
+            return count === 1 ? '1 anonymous visitor' : `${count} anonymous visitors`;
+        }
         if (count === 0) return '0 анонімних відвідувачів';
         if (count === 1) return '1 анонімний відвідувач';
         const lastTwo = count % 100;
@@ -77,11 +82,12 @@ export async function renderUsers(main) {
         if (!onlineContainer) return;
 
         const onlineUserChips = onlineUsers.map(u => {
-            const avatarUrl = `/api/auth/avatar/${u.username}`;
+            const userDisp = u.nickname || u.username;
+            const avatarUrl = `/api/auth/avatar/${encodeURIComponent(userDisp)}`;
             const avatarHtml = getAvatarHtml(avatarUrl, 'online-user-avatar', 24);
             const iconName = getRoleIconName(u.role);
             return `
-                <a href="#/user/${escapeHtml(u.username)}" class="online-user-chip" title="${escapeHtml(u.nickname)} (${escapeHtml(u.role_title)})">
+                <a href="#/user/${escapeHtml(userDisp)}" class="online-user-chip" title="${escapeHtml(u.nickname)} (${escapeHtml(u.role_title)})">
                     ${avatarHtml}
                     <span class="online-user-name">${escapeHtml(u.nickname)}</span>
                     <span class="online-role-tag online-role-tag--${u.role}" title="${escapeHtml(u.role_title)}">${icon(iconName, 12)}</span>
@@ -90,7 +96,7 @@ export async function renderUsers(main) {
         }).join('');
 
         const guestChip = `
-            <div class="online-guest-chip" title="Анонімні відвідувачі, які зараз переглядають сайт">
+            <div class="online-guest-chip" title="${t('online_now')}">
                 <span class="online-guest-icon">${icon('userCheck', 14)}</span>
                 <span>${formatGuestCount(guestsCount)}</span>
             </div>
@@ -98,7 +104,7 @@ export async function renderUsers(main) {
 
         onlineContainer.innerHTML = `
             <div class="online-bar-header">
-                <span class="online-bar-title">${icon('users', 15)} Зараз на сайті:</span>
+                <span class="online-bar-title">${icon('users', 15)} ${t('online_now')}:</span>
             </div>
             <div class="online-bar-list">
                 ${onlineUserChips}
@@ -127,7 +133,7 @@ export async function renderUsers(main) {
             content.style.display = 'block';
         } catch (err) {
             loader.style.display = 'none';
-            tableWrap.innerHTML = `<div class="error-msg">Помилка завантаження користувачів: ${escapeHtml(err.message)}</div>`;
+            tableWrap.innerHTML = `<div class="error-msg">${t('error_loading_users')}: ${escapeHtml(err.message)}</div>`;
             content.style.display = 'block';
         }
     }
@@ -135,17 +141,17 @@ export async function renderUsers(main) {
     function renderFilterBar() {
         filterBar = mountFilterBar(filterBarContainer, {
             resultsCount: usersData.total || 0,
-            resultsLabel: 'Учасників',
+            resultsLabel: t('participants'),
             showResults: true,
             showSearch: true,
-            searchPlaceholder: 'Пошук користувача...',
+            searchPlaceholder: t('search_user_placeholder'),
             searchValue: state.search,
             showSort: true,
             sortValue: state.sort,
             sortOptions: [
-                { value: 'score', label: 'За балами' },
-                { value: 'last_activity', label: 'За останнім онлайном' },
-                { value: 'username', label: 'За ім\'ям' }
+                { value: 'score', label: t('sort_by_score') },
+                { value: 'last_activity', label: t('sort_by_online') },
+                { value: 'username', label: t('sort_by_name') }
             ],
             showSortOrder: false,
             onSearch: (val) => {
@@ -169,8 +175,8 @@ export async function renderUsers(main) {
         if (!usersData.items || usersData.items.length === 0) {
             tableWrap.innerHTML = `
                 <div class="ds-empty-state">
-                    <h3>Користувачів не знайдено</h3>
-                    <p>Спробуйте змінити пошуковий запит або параметри сортування.</p>
+                    <h3>${t('no_users_found')}</h3>
+                    <p>${t('no_users_found_desc')}</p>
                 </div>
             `;
             return;
@@ -184,17 +190,18 @@ export async function renderUsers(main) {
             if (state.sort === 'score') {
                 if (rank === 1) {
                     rankClass = 'user-row--rank-1';
-                    rankBadgeHtml = `<span class="rank-badge rank-badge--gold" title="1 місце">${starSvg('rank-star--gold')}</span>`;
+                    rankBadgeHtml = `<span class="rank-badge rank-badge--gold">${starSvg('rank-star--gold')}</span>`;
                 } else if (rank === 2) {
                     rankClass = 'user-row--rank-2';
-                    rankBadgeHtml = `<span class="rank-badge rank-badge--silver" title="2 місце">${starSvg('rank-star--silver')}</span>`;
+                    rankBadgeHtml = `<span class="rank-badge rank-badge--silver">${starSvg('rank-star--silver')}</span>`;
                 } else if (rank === 3) {
                     rankClass = 'user-row--rank-3';
-                    rankBadgeHtml = `<span class="rank-badge rank-badge--bronze" title="3 місце">${starSvg('rank-star--bronze')}</span>`;
+                    rankBadgeHtml = `<span class="rank-badge rank-badge--bronze">${starSvg('rank-star--bronze')}</span>`;
                 }
             }
 
-            const avatarUrl = `/api/auth/avatar/${u.username}`;
+            const userDisp = u.nickname || u.username;
+            const avatarUrl = `/api/auth/avatar/${encodeURIComponent(userDisp)}`;
             const avatarHtml = getAvatarHtml(avatarUrl, 'user-avatar-small', 36);
             const edits = u.edits || { approved: 0, rejected: 0, closed: 0 };
 
@@ -211,32 +218,32 @@ export async function renderUsers(main) {
                             ${avatarHtml}
                             <div class="edit-row-author-text">
                                 <div class="user-name-line">
-                                    <a href="#/user/${escapeHtml(u.username)}" class="user-username">${escapeHtml(u.nickname || u.username)}</a>
+                                    <a href="#/user/${escapeHtml(userDisp)}" class="user-username">${escapeHtml(userDisp)}</a>
                                     ${getRoleBadgeHtml(u.role, u.role_title)}
-                                    <span class="user-level-badge" title="${escapeHtml(u.level_title)}">Рівень ${u.level}</span>
+                                    <span class="user-level-badge" title="${escapeHtml(t('level_title_' + u.level))}">${t('level')} ${u.level}</span>
                                 </div>
                             </div>
                         </div>
                     </td>
 
                     <td class="col-activity">
-                        <span class="user-activity-status" title="Останній візит">
+                        <span class="user-activity-status" title="${t('last_visit')}">
                             <span class="activity-icon">${icon('clock', 14)}</span>
                             <span>${escapeHtml(u.last_activity_text)}</span>
                         </span>
                     </td>
 
                     <td class="col-edits">
-                        <div class="user-edits-breakdown" title="Правки: Схвалено / Відхилено / Закрито">
-                            <div class="stat-item" title="Схвалено">
+                        <div class="user-edits-breakdown">
+                            <div class="stat-item" title="${t('approved_plural')}">
                                 <span class="stat-dot stat-dot--green"></span>
                                 <span>${edits.approved}</span>
                             </div>
-                            <div class="stat-item" title="Відхилено">
+                            <div class="stat-item" title="${t('rejected_plural')}">
                                 <span class="stat-dot stat-dot--red"></span>
                                 <span>${edits.rejected}</span>
                             </div>
-                            <div class="stat-item" title="Закрито">
+                            <div class="stat-item" title="${t('closed_plural')}">
                                 <span class="stat-dot stat-dot--grey"></span>
                                 <span>${edits.closed}</span>
                             </div>
@@ -244,7 +251,7 @@ export async function renderUsers(main) {
                     </td>
 
                     <td class="col-score">
-                        <div class="user-score-box" title="Бали користувача">
+                        <div class="user-score-box">
                             <span class="user-score-val">${u.score} б.</span>
                         </div>
                     </td>
@@ -257,11 +264,11 @@ export async function renderUsers(main) {
                 <table class="edits-table users-table">
                     <thead>
                         <tr>
-                            <th class="col-rank">Місце</th>
-                            <th class="col-author">Учасник</th>
-                            <th class="col-activity">Останній візит</th>
-                            <th class="col-edits">Правки</th>
-                            <th class="col-score" style="text-align: right;">Бали</th>
+                            <th class="col-rank">${t('rank')}</th>
+                            <th class="col-author">${t('participant')}</th>
+                            <th class="col-activity">${t('last_visit')}</th>
+                            <th class="col-edits">${t('edit_list')}</th>
+                            <th class="col-score" style="text-align: right;">${t('points')}</th>
                         </tr>
                     </thead>
                     <tbody>

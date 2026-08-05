@@ -2,6 +2,8 @@ import { API } from '../helpers/api.js';
 import { router } from '../helpers/router.js';
 import { currentUser } from '../shell.js';
 import { t } from '../helpers/i18n.js';
+import { icon } from '../helpers/icons.js';
+import { openAuthCriteriaModal } from '../components/modals/AuthCriteriaModal.js';
 
 export async function renderAuth(container) {
     const params = new URLSearchParams(window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '');
@@ -20,29 +22,40 @@ export async function renderAuth(container) {
                     <div class="auth-header">
                         <h2>${mode === 'login' ? t('auth_login') : t('auth_register')}</h2>
                         <p>${mode === 'login' ? t('auth_login_sub') : t('auth_register_sub')}</p>
+                        ${mode === 'register' ? `
+                        <div style="margin-top: 10px;">
+                            <button type="button" class="hint-info-btn open-criteria-btn" title="Критерії заповнення полів">
+                                ${icon('info', 15)} Критерії заповнення полів
+                            </button>
+                        </div>
+                        ` : ''}
                     </div>
                     <form id="auth-form" class="auth-form">
                         <div class="form-group">
-                            <label for="username">${t('username')}</label>
+                            <label for="username">${t('username')} *</label>
                             <div class="input-wrapper">
-                                ${icon('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>')}
-                                <input type="text" id="username" name="username" required maxlength="10" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ\\.]+$" title="Дозволено лише літери, цифри та крапку (макс. 10 симв.)" placeholder="${t('auth_username_placeholder')}">
+                                ${icon('user', 16)}
+                                <input type="text" id="username" name="username" required maxlength="20" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ]+$" title="Дозволено лише літери та цифри (від 1 до 20 симв.)" placeholder="${t('auth_username_placeholder')}">
                             </div>
                         </div>
                         ${mode === 'register' ? `
                         <div class="form-group">
                             <label for="nickname">${t('nickname')}</label>
                             <div class="input-wrapper">
-                                ${icon('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>')}
-                                <input type="text" id="nickname" name="nickname" required maxlength="10" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ\\.]+$" title="Дозволено лише літери, цифри та крапку (макс. 10 симв.)" placeholder="${t('auth_nickname_placeholder')}">
+                                ${icon('smile', 16)}
+                                <input type="text" id="nickname" name="nickname" maxlength="20" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ]+$" title="Дозволено лише літери та цифри (від 1 до 20 симв.)" class="nickname-highlight" placeholder="${t('auth_nickname_placeholder')}">
                             </div>
+                            <div class="nickname-hint-text">Якщо ви не вкажете нікнейм, в якості нього буде використано логін.</div>
                         </div>
                         ` : ''}
                         <div class="form-group">
-                            <label for="password">${t('auth_password')}</label>
+                            <label for="password">${t('auth_password')} *</label>
                             <div class="input-wrapper">
-                                ${icon('<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>')}
-                                <input type="password" id="password" name="password" required placeholder="••••••••">
+                                ${icon('lock', 16)}
+                                <input type="password" id="password" name="password" required ${mode === 'register' ? 'minlength="6"' : ''} class="has-toggle" placeholder="••••••••">
+                                <button type="button" id="toggle-password-btn" class="password-toggle-btn" title="Показати/приховати пароль">
+                                    ${icon('eye', 18)}
+                                </button>
                             </div>
                         </div>
                         <div id="auth-error" class="auth-error hidden"></div>
@@ -62,6 +75,30 @@ export async function renderAuth(container) {
         const form = container.querySelector('#auth-form');
         const errorEl = container.querySelector('#auth-error');
         const toggleBtn = container.querySelector('#toggle-mode');
+        const togglePasswordBtn = container.querySelector('#toggle-password-btn');
+        const passwordInput = container.querySelector('#password');
+        const nicknameInput = container.querySelector('#nickname');
+        const openCriteriaBtns = container.querySelectorAll('.open-criteria-btn');
+
+        let isPasswordVisible = false;
+
+        togglePasswordBtn?.addEventListener('click', () => {
+            isPasswordVisible = !isPasswordVisible;
+            passwordInput.type = isPasswordVisible ? 'text' : 'password';
+            togglePasswordBtn.innerHTML = icon(isPasswordVisible ? 'eyeOff' : 'eye', 18);
+        });
+
+        nicknameInput?.addEventListener('input', () => {
+            if (nicknameInput.value.trim().length > 0) {
+                nicknameInput.classList.remove('nickname-highlight');
+            } else {
+                nicknameInput.classList.add('nickname-highlight');
+            }
+        });
+
+        openCriteriaBtns.forEach(btn => {
+            btn.addEventListener('click', () => openAuthCriteriaModal());
+        });
 
         toggleBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -107,8 +144,4 @@ export async function renderAuth(container) {
     }
 
     render();
-}
-
-function icon(d, size = 18) {
-    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 }

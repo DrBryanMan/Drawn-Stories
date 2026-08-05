@@ -2,25 +2,29 @@ import { API } from '../helpers/api.js';
 import { router } from '../helpers/router.js';
 import { createPaginator } from '../components/Pagination.js';
 import { updateEditsPendingCount, getAvatarHtml, currentUser } from '../shell.js';
-import { langName } from '../helpers/lang.js';
+import { langName, getEntityTypeLabel, formatDate } from '../helpers/lang.js';
 import { normalizeImageUrl } from '../helpers/image.js';
 import { createSearchableUserSelect } from '../components/SearchableUserSelect.js';
 import { icon } from '../helpers/icons.js';
 import { getChangedFieldBadges, generateDiffHTML } from '../helpers/editDiff.js';
+import { renderEditStatusBadge } from '../components/EditStatusBadge.js';
+import { t } from '../helpers/i18n.js';
 
 export async function renderEdits(main) {
+    document.title = `${t('edits_moderation')} — Drawn Stories`;
+
     main.innerHTML = `
         <div class="container container--main">
             <div class="catalog-heading" style="margin-bottom: 1.5rem;">
-                <h1 class="catalog-title">Модерація правок</h1>
-                <p class="catalog-subtitle">Перегляд та опрацювання пропозицій редагування від користувачів</p>
+                <h1 class="catalog-title">${t('edits_moderation')}</h1>
+                <p class="catalog-subtitle">${t('edits_moderation_desc')}</p>
             </div>
             
             <div id="contributors-container" class="contributors-carousel" style="display: none; margin-bottom: 24px;"></div>
             
             <div class="edits-filter-bar">
                 <div class="filter-section results-section">
-                    <div class="results-label">Правок</div>
+                    <div class="results-label">${t('edits_count_label')}</div>
                     <div class="results-value" id="edits-count-value">—</div>
                 </div>
                 
@@ -29,7 +33,7 @@ export async function renderEdits(main) {
                         <span class="search-icon">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                         </span>
-                        <input type="text" id="edits-search-input" class="search-input-pill" placeholder="Пошук за назвою..." autocomplete="off">
+                        <input type="text" id="edits-search-input" class="search-input-pill" placeholder="${t('search_by_title')}" autocomplete="off">
                     </div>
                 </div>
 
@@ -159,16 +163,17 @@ export async function renderEdits(main) {
             else if (index === 1) starHtml = starSvg('rank-star--silver');
             else if (index === 2) starHtml = starSvg('rank-star--bronze');
 
-            const avatarUrl = `/api/auth/avatar/${c.username}`;
+            const contributorDisp = c.nickname || c.username;
+            const avatarUrl = `/api/auth/avatar/${encodeURIComponent(contributorDisp)}`;
             const avatarHtml = getAvatarHtml(avatarUrl, 'contributor-avatar', 44);
 
             return `
-                <div class="contributor-card">
+                <a href="#/user/${escapeHtml(contributorDisp)}" class="contributor-card" title="Переглянути профіль ${escapeHtml(contributorDisp)}">
                     <div class="contributor-avatar-wrap">
                         ${avatarHtml}
                     </div>
                     <div class="contributor-info">
-                        <span class="contributor-name">${escapeHtml(c.username)}</span>
+                        <span class="contributor-name">${escapeHtml(contributorDisp)}</span>
                         <div class="contributor-stats">
                             <div class="stat-item" title="Схвалено">
                                 <span class="stat-dot stat-dot--green"></span>
@@ -188,7 +193,7 @@ export async function renderEdits(main) {
                         ${starHtml}
                     </div>
                     <div class="contributor-score-badge" title="Загальна кількість балів з правок">${c.totalScore} б.</div>
-                </div>
+                </a>
             `;
         }).join('');
 
@@ -197,7 +202,7 @@ export async function renderEdits(main) {
                 <a href="#/users" class="contributor-card contributor-card--more" title="Переглянути лідерборд усіх користувачів">
                     <div class="contributor-more-content">
                         <span class="contributor-more-icon">${icon('users', 20)}</span>
-                        <span class="contributor-more-text">показати всіх (${count})</span>
+                        <span class="contributor-more-text">${t('show_all')} (${count})</span>
                     </div>
                     <span class="contributor-more-arrow">${icon('chevronRight', 18)}</span>
                 </a>
@@ -231,11 +236,11 @@ export async function renderEdits(main) {
             if (entityTypeSelectComp) entityTypeSelectComp.destroy();
             const entityOpts = Array.from(entityTypes).sort().map(t => ({
                 value: t,
-                label: t === 'volume' ? 'Том' : t
+                label: getEntityTypeLabel(t)
             }));
             entityTypeSelectComp = createSearchableUserSelect({
                 container: entityTypeContainer,
-                placeholder: 'Всі типи',
+                placeholder: t('all_types'),
                 searchable: false,
                 options: entityOpts,
                 value: state.entityType,
@@ -252,13 +257,13 @@ export async function renderEdits(main) {
             if (statusSelectComp) statusSelectComp.destroy();
             statusSelectComp = createSearchableUserSelect({
                 container: statusContainer,
-                placeholder: 'Всі статуси',
+                placeholder: t('all_statuses'),
                 searchable: false,
                 options: [
-                    { value: 'pending',  label: 'Очікують' },
-                    { value: 'approved', label: 'Схвалені' },
-                    { value: 'rejected', label: 'Відхилені' },
-                    { value: 'closed',   label: 'Закриті' }
+                    { value: 'pending',  label: t('pending_plural') },
+                    { value: 'approved', label: t('approved_plural') },
+                    { value: 'rejected', label: t('rejected_plural') },
+                    { value: 'closed',   label: t('closed_plural') }
                 ],
                 value: state.status === 'all' ? '' : state.status,
                 onChange: (val) => {
@@ -274,8 +279,8 @@ export async function renderEdits(main) {
             if (proposerSelectComp) proposerSelectComp.destroy();
             proposerSelectComp = createSearchableUserSelect({
                 container: proposerContainer,
-                placeholder: 'Всі автори',
-                searchPlaceholder: "Ім'я користувача...",
+                placeholder: t('all_authors'),
+                searchPlaceholder: t('search_user_placeholder'),
                 options: Array.from(proposers).sort(),
                 value: state.proposer,
                 onChange: (val) => {
@@ -291,8 +296,8 @@ export async function renderEdits(main) {
             if (moderatorSelectComp) moderatorSelectComp.destroy();
             moderatorSelectComp = createSearchableUserSelect({
                 container: moderatorContainer,
-                placeholder: 'Всі модератори',
-                searchPlaceholder: "Ім'я користувача...",
+                placeholder: t('all_moderators'),
+                searchPlaceholder: t('search_user_placeholder'),
                 options: Array.from(moderators).sort(),
                 value: state.moderator,
                 onChange: (val) => {
@@ -330,7 +335,7 @@ export async function renderEdits(main) {
         const pageItems = filtered.slice((page - 1) * pageSize, page * pageSize);
 
         if (pageItems.length === 0) {
-            listContainer.innerHTML = `<div class="empty-msg">Немає запитів на правку, що відповідають фільтрам.</div>`;
+            listContainer.innerHTML = `<div class="empty-msg">${t('no_edits_found_desc')}</div>`;
             const paginationWrap = main.querySelector('#edits-pagination');
             if (paginationWrap) paginationWrap.innerHTML = '';
             return;
@@ -341,12 +346,12 @@ export async function renderEdits(main) {
                 <table class="edits-table">
                     <thead>
                         <tr>
-                            <th>Правка</th>
-                            <th>Автор</th>
-                            <th>Контент</th>
-                            <th>Зміни</th>
-                            <th>Бали</th>
-                            <th style="text-align: right;">Статус</th>
+                            <th>ID</th>
+                            <th>${t('author_date')}</th>
+                            <th>${t('content_type')}</th>
+                            <th>${t('changes')}</th>
+                            <th>${t('points')}</th>
+                            <th style="text-align: right;">${t('status')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -401,30 +406,14 @@ export async function renderEdits(main) {
     }
 
     function renderEditRow(e) {
-        const statusLabels = {
-            'pending': `<span class="edit-status-badge edit-status--pending" title="Очікує прийняття">${icon('planned', 16, { strokeWidth: 2.5, class: 'status-badge-icon', style: 'vertical-align: middle;' })}</span>`,
-            'approved': `<span class="edit-status-badge edit-status--approved" title="Прийнята">${icon('check', 16, { strokeWidth: 2.5, class: 'status-badge-icon', style: 'vertical-align: middle;' })}</span>`,
-            'rejected': `<span class="edit-status-badge edit-status--rejected" title="Відхилена">${icon('x', 16, { strokeWidth: 2.5, class: 'status-badge-icon', style: 'vertical-align: middle;' })}</span>`,
-            'closed': `<span class="edit-status-badge edit-status--closed" title="Закрита">${icon('dropped', 16, { strokeWidth: 2.5, class: 'status-badge-icon', style: 'vertical-align: middle;' })}</span>`
-        };
+        const statusBadgeHtml = renderEditStatusBadge(e.status, { iconOnly: true });
 
-        const ENTITY_TYPE_LABELS = {
-            'volume': 'Том',
-            'issue': 'Випуск',
-            'character': 'Персонаж',
-            'person': 'Персона',
-            'publisher': 'Видавництво',
-            'collection': 'Збірник'
-        };
-        const entityLabel = ENTITY_TYPE_LABELS[e.entity_type] || e.entity_type;
+        const entityLabel = getEntityTypeLabel(e.entity_type);
         const entityName = e.volume_name_uk || e.volume_name || `ID ${e.entity_id}`;
         
         const patchObj = e.patch_data || {};
         const beforeData = patchObj.before || {};
         const afterData = patchObj.after || patchObj;
-        
-        const avatarUrl = `/api/auth/avatar/${e.proposer_username}`;
-        const proposerAvatarHtml = getAvatarHtml(avatarUrl, 'edit-row-avatar', 40);
 
         const isAdmin = currentUser && currentUser.role === 'admin';
         const deleteBtnHtml = isAdmin ? `
@@ -433,19 +422,23 @@ export async function renderEdits(main) {
             </button>
         ` : '';
 
+        const proposerDisp = e.proposer_nickname || e.proposer_username;
+        const proposerAvatarUrl = `/api/auth/avatar/${encodeURIComponent(proposerDisp)}`;
+        const proposerAvatarHtml = getAvatarHtml(proposerAvatarUrl, 'edit-row-avatar', 36);
+
         return `
             <tr class="edit-row" data-id="${e.id}">
                 <td class="col-id">
                     <a href="#/edits/${e.id}" class="edit-row-link">#${e.id}</a>
                 </td>
                 <td class="col-author">
-                    <div class="edit-row-author-info">
+                    <a href="#/user/${escapeHtml(proposerDisp)}" class="edit-row-author-info" title="Переглянути профіль ${escapeHtml(proposerDisp)}">
                         ${proposerAvatarHtml}
                         <div class="edit-row-author-text">
-                            <span class="edit-row-author-name">${escapeHtml(e.proposer_username)}</span>
+                            <span class="edit-row-author-name">${escapeHtml(proposerDisp)}</span>
                             <span class="edit-row-date">${formatDate(e.created_at)}</span>
                         </div>
-                    </div>
+                    </a>
                 </td>
                 <td class="col-content">
                     <div class="edit-row-content-info">
@@ -460,7 +453,7 @@ export async function renderEdits(main) {
                     ${renderScoreChip(e)}
                 </td>
                 <td class="col-status" style="white-space: nowrap;">
-                    ${statusLabels[e.status]}
+                    ${statusBadgeHtml}
                     ${deleteBtnHtml}
                 </td>
             </tr>
@@ -491,21 +484,7 @@ export async function renderEdits(main) {
             .replace(/'/g, "&#039;");
     }
 
-    function formatDate(dateStr) {
-        if (!dateStr) return '—';
-        try {
-            const date = new Date(dateStr.replace(' ', 'T'));
-            return date.toLocaleString('uk-UA', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        } catch {
-            return dateStr;
-        }
-    }
+
 
     // Текстовий пошук
     const searchInput = main.querySelector('#edits-search-input');

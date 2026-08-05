@@ -8,6 +8,8 @@ from server.db import get_db
 from fastapi.responses import FileResponse
 from server.helpers.scores import get_level_for_score, get_level_title
 
+from server.helpers.avatar import generate_default_avatar_svg
+
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 # Resolve target directory relative to this file
@@ -20,11 +22,18 @@ async def upload_avatar(request: Request, avatar: UploadFile = File(...)):
     if not username:
         raise HTTPException(status_code=401, detail="Not logged in")
     
+    db = get_db()
+    user = db.get_one("SELECT username, nickname FROM users WHERE username = %s", [username])
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    display_name = user.get("nickname") or user["username"]
+
     if avatar.content_type not in ["image/jpeg", "image/webp"]:
         raise HTTPException(status_code=400, detail="Invalid file type")
     
     ext = ".jpg" if avatar.content_type == "image/jpeg" else ".webp"
-    filename = f"{username}_avatar{ext}"
+    filename = f"{display_name}_avatar{ext}"
     
     # Ensure directory exists
     os.makedirs(USERS_IMAGES_DIR, exist_ok=True)
@@ -32,25 +41,45 @@ async def upload_avatar(request: Request, avatar: UploadFile = File(...)):
     with open(os.path.join(USERS_IMAGES_DIR, filename), "wb") as buffer:
         shutil.copyfileobj(avatar.file, buffer)
     
-    return {"url": f"/api/auth/avatar/{username}?t={os.urandom(4).hex()}"}
+    return {"url": f"/api/auth/avatar/{display_name}?t={os.urandom(4).hex()}"}
 
-@router.get("/avatar/{username}")
-async def get_avatar(username: str):
-    # Check for jpg or webp
+@router.get("/avatar/{identifier}")
+async def get_avatar(identifier: str):
+    db = get_db()
+    # 1. Direct file check by identifier (which can be nickname or username)
     for ext in [".jpg", ".webp"]:
-        path = os.path.join(USERS_IMAGES_DIR, f"{username}_avatar{ext}")
+        path = os.path.join(USERS_IMAGES_DIR, f"{identifier}_avatar{ext}")
         if os.path.exists(path):
-            return FileResponse(path)
+            return FileResponse(path, headers={"Cache-Control": "public, max-age=3600"})
     
-    # Return 404 if no avatar found, frontend will handle it
-    raise HTTPException(status_code=404, detail="Avatar not found")
+    # 2. Lookup user by nickname to find target filename
+    user = db.get_one(
+        "SELECT username, COALESCE(nickname, username) as nickname FROM users WHERE LOWER(nickname) = LOWER(%s)",
+        [identifier]
+    )
+    if user:
+        for name_to_try in [user.get("nickname"), user["username"]]:
+            if not name_to_try:
+                continue
+            for ext in [".jpg", ".webp"]:
+                path = os.path.join(USERS_IMAGES_DIR, f"{name_to_try}_avatar{ext}")
+                if os.path.exists(path):
+                    return FileResponse(path, headers={"Cache-Control": "public, max-age=3600"})
+
+    # 3. Return dynamic default avatar SVG (HTTP 200) with 24h browser caching
+    svg_content = generate_default_avatar_svg(identifier)
+    return Response(
+        content=svg_content,
+        media_type="image/svg+xml",
+        headers={"Cache-Control": "public, max-age=86400"}
+    )
 
 import re
 
 def validate_field(val: str) -> bool:
-    if not val or len(val) > 10:
+    if not val or len(val) > 20:
         return False
-    return bool(re.match(r"^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ\.]+$", val))
+    return bool(re.match(r"^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ]+$", val))
 
 class ProfileUpdateRequest(BaseModel):
     new_username: Optional[str] = None
@@ -67,7 +96,7 @@ async def update_profile(req: ProfileUpdateRequest, request: Request, response: 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
-    updated_username = old_username
+    old_nickname = user.get("nickname") or old_username
     
     # 1. Зміна логіну (username)
     if req.new_username is not None:
@@ -75,27 +104,15 @@ async def update_profile(req: ProfileUpdateRequest, request: Request, response: 
         if not new_username:
             raise HTTPException(status_code=400, detail="Логін не може бути порожнім")
         if not validate_field(new_username):
-            raise HTTPException(status_code=400, detail="Логін має бути до 10 символів і містити лише літери, цифри та крапку")
+            raise HTTPException(status_code=400, detail="Логін має бути до 20 символів і містити лише літери та цифри (без крапок та пробілів)")
             
-        if new_username != old_username:
-            existing = db.get_one("SELECT id FROM users WHERE username = %s", [new_username])
+        if new_username.lower() != old_username.lower():
+            existing = db.get_one("SELECT id FROM users WHERE LOWER(username) = LOWER(%s)", [new_username])
             if existing:
                 raise HTTPException(status_code=400, detail="Користувач з таким логіном вже існує")
             
             db.execute("UPDATE users SET username = %s WHERE id = %s", [new_username, user["id"]])
-            updated_username = new_username
             
-            # Перейменовуємо аватари
-            os.makedirs(USERS_IMAGES_DIR, exist_ok=True)
-            for ext in [".jpg", ".webp"]:
-                old_path = os.path.join(USERS_IMAGES_DIR, f"{old_username}_avatar{ext}")
-                new_path = os.path.join(USERS_IMAGES_DIR, f"{new_username}_avatar{ext}")
-                if os.path.exists(old_path):
-                    try:
-                        os.rename(old_path, new_path)
-                    except Exception as e:
-                        print(f"Error renaming avatar: {e}")
-                        
             import urllib.parse
             response.set_cookie(key="username", value=urllib.parse.quote(new_username), httponly=True)
             
@@ -105,9 +122,25 @@ async def update_profile(req: ProfileUpdateRequest, request: Request, response: 
         if not new_nickname:
             raise HTTPException(status_code=400, detail="Нікнейм не може бути порожнім")
         if not validate_field(new_nickname):
-            raise HTTPException(status_code=400, detail="Нікнейм має бути до 10 символів і містити лише літери, цифри та крапку")
+            raise HTTPException(status_code=400, detail="Нікнейм має бути до 20 символів і містити лише літери та цифри (без крапок та пробілів)")
             
-        db.execute("UPDATE users SET nickname = %s WHERE id = %s", [new_nickname, user["id"]])
+        if new_nickname.lower() != old_nickname.lower():
+            existing = db.get_one("SELECT id FROM users WHERE LOWER(nickname) = LOWER(%s) AND id != %s", [new_nickname, user["id"]])
+            if existing:
+                raise HTTPException(status_code=400, detail="Користувач з таким нікнеймом вже існує")
+            
+            db.execute("UPDATE users SET nickname = %s WHERE id = %s", [new_nickname, user["id"]])
+            
+            # Перейменовуємо аватари з old_nickname на new_nickname
+            os.makedirs(USERS_IMAGES_DIR, exist_ok=True)
+            for ext in [".jpg", ".webp"]:
+                old_path = os.path.join(USERS_IMAGES_DIR, f"{old_nickname}_avatar{ext}")
+                new_path = os.path.join(USERS_IMAGES_DIR, f"{new_nickname}_avatar{ext}")
+                if os.path.exists(old_path):
+                    try:
+                        os.rename(old_path, new_path)
+                    except Exception as e:
+                        print(f"Error renaming avatar: {e}")
 
     # Отримуємо свіжі дані
     updated_user = db.get_one("SELECT username, nickname, role FROM users WHERE id = %s", [user["id"]])
@@ -146,14 +179,21 @@ async def register(req: RegisterRequest):
     nickname = req.nickname.strip() if req.nickname else username
     
     if not validate_field(username):
-        raise HTTPException(status_code=400, detail="Логін має бути до 10 символів і містити лише літери, цифри та крапку")
+        raise HTTPException(status_code=400, detail="Логін має бути від 1 до 20 символів і містити лише літери та цифри (без крапок)")
     if not validate_field(nickname):
-        raise HTTPException(status_code=400, detail="Нікнейм має бути до 10 символів і містити лише літери, цифри та крапку")
+        raise HTTPException(status_code=400, detail="Нікнейм має бути від 1 до 20 символів і містити лише літери та цифри (без крапок)")
+    if not req.password or len(req.password) < 6:
+        raise HTTPException(status_code=400, detail="Пароль має містити не менше 6 символів")
         
-    # Check if user exists
-    existing = db.get_one("SELECT id FROM users WHERE username = %s", [username])
-    if existing:
-        raise HTTPException(status_code=400, detail="Користувач з таким ім'ям вже існує")
+    # Check if username exists
+    existing_user = db.get_one("SELECT id FROM users WHERE LOWER(username) = LOWER(%s)", [username])
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Користувач з таким логіном вже існує")
+        
+    # Check if nickname exists
+    existing_nick = db.get_one("SELECT id FROM users WHERE LOWER(nickname) = LOWER(%s)", [nickname])
+    if existing_nick:
+        raise HTTPException(status_code=400, detail="Користувач з таким нікнеймом вже існує")
     
     pwd_hash = hash_password(req.password)
     db.execute("INSERT INTO users (username, nickname, password_hash, role) VALUES (%s, %s, %s, 'viewer')", [username, nickname, pwd_hash])
@@ -238,6 +278,9 @@ async def change_password(req: PasswordChangeRequest, request: Request):
         
     if not verify_password(req.old_password, user["password_hash"]):
         raise HTTPException(status_code=400, detail="Невірний старий пароль")
+
+    if not req.new_password or len(req.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Новий пароль має містити не менше 6 символів")
         
     new_hash = hash_password(req.new_password)
     db.execute("UPDATE users SET password_hash = %s WHERE id = %s", [new_hash, user["id"]])

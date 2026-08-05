@@ -6,11 +6,14 @@ import { renderUserLists } from './userLists.js';
 import { renderCollections } from './collections.js';
 import { renderFavorites } from './favorites.js';
 import { openUserFollowsModal } from '../components/modals/UserFollowsModal.js';
+import { renderEditStatusBadge } from '../components/EditStatusBadge.js';
+import { getEntityTypeLabel, formatDate } from '../helpers/lang.js';
+import { t } from '../helpers/i18n.js';
 
 export async function renderUserProfile(main, params, query = {}) {
     const username = params.username;
     const currentTab = query.tab || 'overview';
-    document.title = `Профіль користувача ${username} — Drawn Stories`;
+    document.title = `${t('user_profile')} ${username} — Drawn Stories`;
 
     main.innerHTML = `
         <div class="user-profile-view">
@@ -32,8 +35,8 @@ export async function renderUserProfile(main, params, query = {}) {
         content.innerHTML = `
             <div class="container" style="padding: 60px 0;">
                 <div class="error-state">
-                    <h3>Користувача не знайдено</h3>
-                    <p>Користувача "${escapeHtml(username)}" не знайдено або виникла помилка: ${escapeHtml(err.message)}</p>
+                    <h3>${t('user_not_found')}</h3>
+                    <p>${t('user_not_found_desc')}: ${escapeHtml(err.message)}</p>
                 </div>
             </div>
         `;
@@ -55,7 +58,7 @@ function renderProfileLayout(container, p, activeTab) {
     const isSelf = currentUser && currentUser.username.toLowerCase() === p.username.toLowerCase();
     const roleIcon = getRoleIconName(p.role);
 
-    const edits = p.edits_stats || { approved: 0, rejected: 0, closed: 0, total: 0 };
+    const edits = p.edits_stats || { approved: 0, rejected: 0, closed: 0, pending: 0, total: 0 };
 
     container.innerHTML = `
         <!-- Hero Band -->
@@ -65,17 +68,17 @@ function renderProfileLayout(container, p, activeTab) {
                 <div class="user-profile-avatar-col">
                     <div class="user-profile-avatar-frame">
                         ${avatarHtml}
-                        <span class="profile-avatar-online-dot ${p.is_online ? 'is-online' : ''}" title="${p.is_online ? 'Зараз онлайн' : p.last_activity_text}"></span>
+                        <span class="profile-avatar-online-dot ${p.is_online ? 'is-online' : ''}" title="${p.is_online ? t('online_status_online') : p.last_activity_text}"></span>
                     </div>
 
                     <!-- Кнопки дій під аватаром (лише іконки) -->
                     <div class="user-profile-avatar-actions">
                         ${isSelf ? `
-                            <a href="#/settings" class="btn btn-secondary btn-icon-only" title="Налаштування">
+                            <a href="#/settings" class="btn btn-secondary btn-icon-only" title="${t('settings')}">
                                 ${icon('edit', 16)}
                             </a>
                         ` : ''}
-                        <button class="btn btn-secondary btn-icon-only" id="btn-share-profile" title="Поділитися">
+                        <button class="btn btn-secondary btn-icon-only" id="btn-share-profile" title="${t('share')}">
                             ${icon('share', 16)}
                         </button>
                     </div>
@@ -93,21 +96,21 @@ function renderProfileLayout(container, p, activeTab) {
                     <!-- Level Progress Bar з бейджем рівня та балами -->
                     <div class="user-profile-level-box">
                         <div class="level-box-header">
-                            <span class="user-level-badge" title="${escapeHtml(p.level_title)}">
-                                Рівень ${p.level} — ${escapeHtml(p.level_title)}
+                            <span class="user-level-badge" title="${escapeHtml(t('level_title_' + p.level))}">
+                                ${t('level')} ${p.level} — ${escapeHtml(t('level_title_' + p.level))}
                             </span>
-                            <span class="level-score-text">${p.score} / ${p.next_min_score} б.</span>
+                            <span class="level-score-text">${p.score} / ${p.next_min_score} ${t('points_short')}</span>
                         </div>
-                        <div class="level-progress-bar" title="Прогрес до наступного рівня: ${p.progress_percent}% (${p.score} / ${p.next_min_score} б.)">
+                        <div class="level-progress-bar" title="${t('progress_to_next_level')}: ${p.progress_percent}% (${p.score} / ${p.next_min_score} ${t('points_short')})">
                             <div class="level-progress-fill" style="width: ${p.progress_percent}%;"></div>
                         </div>
                     </div>
 
                     <!-- Meta Row (тільки дата реєстрації) -->
                     <div class="user-profile-meta-row">
-                        <div class="user-profile-meta-item" title="Дата реєстрації">
+                        <div class="user-profile-meta-item" title="${t('registration_date')}">
                             ${icon('calendar', 14)}
-                            <span>${escapeHtml(p.created_at_text)}</span>
+                            <span>${t('member_since', { date: escapeHtml((p.created_at_text || '').replace(/^На сайті з\s*/i, '')) })}</span>
                         </div>
                     </div>
                 </div>
@@ -115,20 +118,20 @@ function renderProfileLayout(container, p, activeTab) {
                 <!-- Right Subscriptions & Follow Button Column -->
                 <div class="user-profile-right-col">
                     <div class="user-profile-follows-card">
-                        <div class="follows-stat-item" id="btn-open-followers" title="Натисніть, щоб переглянути підписників">
+                        <div class="follows-stat-item" id="btn-open-followers" title="${t('click_to_view_followers')}">
                             <span class="follows-stat-num" id="followers-count-val">${p.followers_count}</span>
-                            <span class="follows-stat-lbl">підписників</span>
+                            <span class="follows-stat-lbl">${t('followers_count_label')}</span>
                         </div>
                         <div class="follows-stat-divider"></div>
-                        <div class="follows-stat-item" id="btn-open-following" title="Натисніть, щоб переглянути підписки">
+                        <div class="follows-stat-item" id="btn-open-following" title="${t('click_to_view_following')}">
                             <span class="follows-stat-num">${p.following_count}</span>
-                            <span class="follows-stat-lbl">підписок</span>
+                            <span class="follows-stat-lbl">${t('following_count_label')}</span>
                         </div>
                     </div>
 
                     ${!isSelf ? `
                         <button class="btn ${p.is_following ? 'btn-following' : 'btn-follow-primary'}" id="btn-follow-user">
-                            ${p.is_following ? `${icon('userCheck', 15)} Ви підписані` : `${icon('userPlus', 15)} Підписатися`}
+                            ${p.is_following ? `${icon('userCheck', 15)} ${t('you_are_following')}` : `${icon('userPlus', 15)} ${t('follow_button')}`}
                         </button>
                     ` : ''}
                 </div>
@@ -138,17 +141,17 @@ function renderProfileLayout(container, p, activeTab) {
             <div class="user-profile-tabs-band">
                 <div class="container" style="padding: 0 2em;">
                     <div class="user-profile-tabs" role="tablist">
-                        <a href="#/user/${escapeHtml(p.username)}?tab=overview" class="user-profile-tab ${activeTab === 'overview' ? 'is-active' : ''}">
-                            ${icon('sparkles', 14)} Огляд та правки
+                        <a href="#/user/${escapeHtml(p.nickname || p.username)}?tab=overview" class="user-profile-tab ${activeTab === 'overview' ? 'is-active' : ''}">
+                            ${icon('sparkles', 14)} ${t('tab_overview_and_edits')}
                         </a>
-                        <a href="#/user/${escapeHtml(p.username)}?tab=readlists" class="user-profile-tab ${activeTab === 'readlists' ? 'is-active' : ''}">
-                            ${icon('bookOpen', 14)} Списки читання <span class="tab-count">${p.readlists_count}</span>
+                        <a href="#/user/${escapeHtml(p.nickname || p.username)}?tab=readlists" class="user-profile-tab ${activeTab === 'readlists' ? 'is-active' : ''}">
+                            ${icon('bookOpen', 14)} ${t('tab_readlists')} <span class="tab-count">${p.readlists_count}</span>
                         </a>
-                        <a href="#/user/${escapeHtml(p.username)}?tab=collections" class="user-profile-tab ${activeTab === 'collections' ? 'is-active' : ''}">
-                            ${icon('collections', 14)} Колекції <span class="tab-count">${p.collections_count}</span>
+                        <a href="#/user/${escapeHtml(p.nickname || p.username)}?tab=collections" class="user-profile-tab ${activeTab === 'collections' ? 'is-active' : ''}">
+                            ${icon('collections', 14)} ${t('tab_collections')} <span class="tab-count">${p.collections_count}</span>
                         </a>
-                        <a href="#/user/${escapeHtml(p.username)}?tab=favorites" class="user-profile-tab ${activeTab === 'favorites' ? 'is-active' : ''}">
-                            ${icon('heart', 14)} Улюблене <span class="tab-count">${p.favorites_count}</span>
+                        <a href="#/user/${escapeHtml(p.nickname || p.username)}?tab=favorites" class="user-profile-tab ${activeTab === 'favorites' ? 'is-active' : ''}">
+                            ${icon('heart', 14)} ${t('tab_favorites')} <span class="tab-count">${p.favorites_count}</span>
                         </a>
                     </div>
                 </div>
@@ -185,7 +188,7 @@ function renderProfileLayout(container, p, activeTab) {
                 if (cntEl) cntEl.textContent = res.followers_count;
                 
                 followBtn.className = `btn ${res.following ? 'btn-following' : 'btn-follow-primary'}`;
-                followBtn.innerHTML = res.following ? `${icon('userCheck', 15)} Ви підписані` : `${icon('userPlus', 15)} Підписатися`;
+                followBtn.innerHTML = res.following ? `${icon('userCheck', 15)} ${t('you_are_following')}` : `${icon('userPlus', 15)} ${t('follow_button')}`;
             } catch (e) {
                 alert(e.message || 'Помилка виконання дії');
             }
@@ -222,46 +225,71 @@ function renderOverviewTab(container, p, edits) {
     const recentEdits = p.recent_edits || [];
 
     const editsRowsHtml = recentEdits.length > 0 ? recentEdits.map(e => {
-        let statusBadge = `<span class="status-badge status-badge--pending">На розгляді</span>`;
-        if (e.status === 'approved') statusBadge = `<span class="status-badge status-badge--approved">Схвалено</span>`;
-        else if (e.status === 'rejected') statusBadge = `<span class="status-badge status-badge--rejected">Відхилено</span>`;
-        else if (e.status === 'closed') statusBadge = `<span class="status-badge status-badge--closed">Закрито</span>`;
+        const statusBadge = renderEditStatusBadge(e.status);
 
         return `
             <tr class="edit-row" onclick="window.location.hash='#/edits/${e.id}'">
                 <td style="font-family: var(--font-monos);">#${e.id}</td>
                 <td><strong>${escapeHtml(e.volume_title)}</strong></td>
-                <td><span class="user-level-badge">${escapeHtml(e.entity_type)}</span></td>
+                <td><span class="user-level-badge">${escapeHtml(getEntityTypeLabel(e.entity_type))}</span></td>
                 <td>${statusBadge}</td>
-                <td style="color: var(--purple, #a855f7); font-weight:700;">+${e.score_awarded} б.</td>
-                <td style="color: var(--text-muted); font-size: 13px;">${e.created_at}</td>
+                <td style="color: var(--purple, #a855f7); font-weight:700;">+${e.score_awarded} ${t('points_short')}</td>
+                <td style="color: var(--text-muted); font-size: 13px;">${formatDate(e.created_at)}</td>
             </tr>
         `;
-    }).join('') : `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">Користувач ще не подавав правок.</td></tr>`;
+    }).join('') : `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">${t('user_no_edits')}</td></tr>`;
 
     container.innerHTML = `
         <div class="container">
-            <div class="overview-stats-grid">
-                <div class="stat-card-box">
-                    <div class="stat-card-title">${icon('sparkles', 14)} Нараховано балів</div>
-                    <div class="stat-card-val" style="color: var(--purple, #a855f7);">${p.score}</div>
+            <!-- Спільний уніфікований блок статистики правок -->
+            <div class="user-edits-summary-card">
+                <div class="summary-card-header">
+                    <span class="summary-card-title">${icon('history', 16)} ${t('edits_and_score_stats')}</span>
                 </div>
-                <div class="stat-card-box">
-                    <div class="stat-card-title">${icon('check', 14)} Схвалено правок</div>
-                    <div class="stat-card-val" style="color: #10b981;">${edits.approved}</div>
-                </div>
-                <div class="stat-card-box">
-                    <div class="stat-card-title">${icon('x', 14)} Відхилено / Закрито</div>
-                    <div class="stat-card-val" style="color: #ef4444;">${edits.rejected + edits.closed}</div>
-                </div>
-                <div class="stat-card-box">
-                    <div class="stat-card-title">${icon('history', 14)} Всього внесено</div>
-                    <div class="stat-card-val">${edits.total}</div>
+                <div class="summary-card-body">
+                    <!-- 1. Індикатори статусу -->
+                    <div class="summary-section summary-section--indicators">
+                        <span class="summary-section-label">${icon('layers', 12)} ${t('by_status')}</span>
+                        <div class="edit-indicators-group">
+                            <div class="edit-indicator-pill edit-indicator-pill--pending" title="${t('status_pending')}: ${edits.pending || 0}">
+                                <span class="pill-icon-count">${icon('planned', 14)} <strong class="pill-val">${edits.pending || 0}</strong></span>
+                                <span class="pill-lbl">${t('status_pending')}</span>
+                            </div>
+                            <div class="edit-indicator-pill edit-indicator-pill--approved" title="${t('status_approved')}: ${edits.approved}">
+                                <span class="pill-icon-count">${icon('check', 14)} <strong class="pill-val">${edits.approved}</strong></span>
+                                <span class="pill-lbl">${t('status_approved')}</span>
+                            </div>
+                            <div class="edit-indicator-pill edit-indicator-pill--rejected" title="${t('status_rejected')}: ${edits.rejected}">
+                                <span class="pill-icon-count">${icon('x', 14)} <strong class="pill-val">${edits.rejected}</strong></span>
+                                <span class="pill-lbl">${t('status_rejected')}</span>
+                            </div>
+                            <div class="edit-indicator-pill edit-indicator-pill--closed" title="${t('status_closed')}: ${edits.closed}">
+                                <span class="pill-icon-count">${icon('lock', 14)} <strong class="pill-val">${edits.closed}</strong></span>
+                                <span class="pill-lbl">${t('status_closed')}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="summary-divider"></div>
+
+                    <!-- 2. Всього внесено -->
+                    <div class="summary-section summary-section--total">
+                        <span class="summary-section-label">${icon('list', 12)} ${t('total_submitted')}</span>
+                        <div class="summary-metric-val">${edits.total}</div>
+                    </div>
+
+                    <div class="summary-divider"></div>
+
+                    <!-- 3. Нараховано балів -->
+                    <div class="summary-section summary-section--score">
+                        <span class="summary-section-label">${icon('sparkles', 12)} ${t('awarded_points')}</span>
+                        <div class="summary-metric-val summary-metric-val--purple">${p.score}</div>
+                    </div>
                 </div>
             </div>
 
             <div class="catalog-heading" style="margin-bottom: 1rem;">
-                <h3>${icon('history', 16)} Останні правки користувача</h3>
+                <h3>${icon('history', 16)} ${t('user_recent_edits')}</h3>
             </div>
 
             <div class="edits-table-container">
@@ -269,11 +297,11 @@ function renderOverviewTab(container, p, edits) {
                     <thead>
                         <tr>
                             <th style="width: 70px;">ID</th>
-                            <th>Об'єкт / Том</th>
-                            <th>Тип</th>
-                            <th>Статус</th>
-                            <th>Бали</th>
-                            <th>Дата</th>
+                            <th>${t('content')}</th>
+                            <th>${t('type')}</th>
+                            <th>${t('status')}</th>
+                            <th>${t('points')}</th>
+                            <th>${t('date')}</th>
                         </tr>
                     </thead>
                     <tbody>

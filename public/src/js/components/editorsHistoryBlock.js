@@ -1,7 +1,10 @@
 import { API } from '../helpers/api.js';
 import { escapeHtmlAttribute } from '../helpers/image.js';
 import { getAvatarHtml } from '../shell.js';
-import { FIELD_DEFINITIONS, getChangedFieldBadges } from '../helpers/editDiff.js';
+import { FIELD_DEFINITIONS, getChangedFieldBadges, getFieldLabel } from '../helpers/editDiff.js';
+import { renderEditStatusBadge } from './EditStatusBadge.js';
+import { t } from '../helpers/i18n.js';
+import { formatDate } from '../helpers/lang.js';
 
 export async function fetchEntityEdits(entityType, entityId) {
     try {
@@ -15,18 +18,19 @@ export async function fetchEntityEdits(entityType, entityId) {
 
 export function renderEditorsHistoryBlock(edits, currentUser, options = {}) {
     const editButtonId = options.editButtonId || 'entity-edit-btn';
-    const editTitle = options.editTitle || 'Редагувати';
+    const editTitle = options.editTitle || t('edit');
 
     const seenEditors = new Set();
     const editors = [];
     
     (edits || []).forEach(e => {
         const username = e.proposer_username;
-        if (username && !seenEditors.has(username)) {
-            seenEditors.add(username);
+        const nameToUse = e.proposer_nickname || e.proposer_username;
+        if (nameToUse && !seenEditors.has(nameToUse)) {
+            seenEditors.add(nameToUse);
             editors.push({
-                username: username,
-                avatarUrl: `/api/auth/avatar/${username}`
+                name: nameToUse,
+                avatarUrl: `/api/auth/avatar/${encodeURIComponent(nameToUse)}`
             });
         }
     });
@@ -34,13 +38,13 @@ export function renderEditorsHistoryBlock(edits, currentUser, options = {}) {
     let editorsListHTML = '';
     if (editors.length > 0) {
         editorsListHTML = `
-            <div class="editors-list" title="Редактори">
-                <span class="editors-icon" title="Редактори">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <div class="editors-list" title="${t('editors')}">
+                <span class="editors-icon" title="${t('editors')}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 1 0 7.75"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 </span>
                 <div class="editors-avatars">
                     ${editors.slice(0, 5).map(ed => `
-                        <a href="#/user/${ed.username}" class="editor-avatar-link" title="${escapeHtmlAttribute(ed.username)}">
+                        <a href="#/user/${encodeURIComponent(ed.name)}" class="editor-avatar-link" title="${escapeHtmlAttribute(ed.name)}">
                             ${getAvatarHtml(ed.avatarUrl, 'editor-avatar-img', 28)}
                         </a>
                     `).join('')}
@@ -54,7 +58,7 @@ export function renderEditorsHistoryBlock(edits, currentUser, options = {}) {
     const orangeIndicatorHTML = hasPendingEdits ? `<span class="badge-pending-dot"></span>` : '';
 
     const historyButtonHTML = `
-        <button class="btn-history-trigger" id="entity-history-btn" title="Історія змін">
+        <button class="btn-history-trigger" id="entity-history-btn" title="${t('edit_history')}">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
             ${orangeIndicatorHTML}
         </button>
@@ -106,93 +110,31 @@ export function openEditHistoryModal(edits) {
     };
 
     const formatEditDate = (dateStr) => {
-        if (!dateStr) return '—';
-        const date = new Date(dateStr);
-        const months = ['січ.', 'лют.', 'берез.', 'квіт.', 'трав.', 'черв.', 'лип.', 'серп.', 'верес.', 'жовт.', 'лист.', 'груд.'];
-        const day = date.getDate();
-        const month = months[date.getMonth()];
-        const year = date.getFullYear();
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        return `${day} ${month} ${year} ${hours}:${minutes}`;
+        return formatDate(dateStr);
     };
 
     const getStatusBadge = (status) => {
-        if (status === 'approved') {
-            return `
-                <span class="edit-history-status-badge edit-history-status-badge--approved">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    Прийнято
-                </span>
-            `;
-        }
-        if (status === 'pending') {
-            return `
-                <span class="edit-history-status-badge edit-history-status-badge--pending">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                    Очікує
-                </span>
-            `;
-        }
-        if (status === 'rejected') {
-            return `
-                <span class="edit-history-status-badge edit-history-status-badge--rejected">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    Відхилено
-                </span>
-            `;
-        }
-        if (status === 'closed') {
-            return `
-                <span class="edit-history-status-badge edit-history-status-badge--closed">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
-                    Закрито
-                </span>
-            `;
-        }
-        return status;
+        return renderEditStatusBadge(status, { shortText: true });
     };
 
     const getFieldBadge = (fieldKey) => {
-        if (FIELD_DEFINITIONS[fieldKey] && FIELD_DEFINITIONS[fieldKey].label) {
-            return FIELD_DEFINITIONS[fieldKey].label;
-        }
-        const fieldMapping = {
-            'name_uk': 'Назва UA',
-            'name_en': 'Назва EN',
-            'name': 'Назва / Ім\'я',
-            'name_native': 'Рідне ім\'я',
-            'pseudo': 'Псевдонім',
-            'start_year': 'Рік початку',
-            'synopsis_ua': 'Синопсис UA',
-            'synopsis': 'Синопсис EN',
-            'description': 'Опис',
-            'bio': 'Біографія',
-            'lang': 'Мова',
-            'site_link': 'Джерело',
-            'website': 'Вебсайт',
-            'image': 'Обкладинка',
-            'cover_img': 'Банер',
-            'theme_ids': 'Теми',
-            'staff': 'Персонал',
-            'characters': 'Персонажі'
-        };
-        return fieldMapping[fieldKey] || fieldKey;
+        return getFieldLabel(fieldKey);
     };
 
     const renderEditsList = () => {
         if (!edits || edits.length === 0) {
             return `
                 <div class="ds-empty-state">
-                    <h3>Нічого не знайдено</h3>
-                    <p>До цієї сторінки ще не було запропоновано жодної правки.</p>
+                    <h3>${t('no_edits_found')}</h3>
+                    <p>${t('no_edits_for_page')}</p>
                 </div>
             `;
         }
         return `
             <div class="edit-history-list">
                 ${edits.map(e => {
-                    const avatarUrl = `/api/auth/avatar/${e.proposer_username}`;
+                    const proposerDisp = e.proposer_nickname || e.proposer_username;
+                    const avatarUrl = `/api/auth/avatar/${encodeURIComponent(proposerDisp)}`;
                     const avatarHtml = getAvatarHtml(avatarUrl, 'contributor-avatar', 44);
                     const patchObj = e.patch_data || {};
                     const beforeData = patchObj.before || {};
@@ -207,7 +149,7 @@ export function openEditHistoryModal(edits) {
                                         ${avatarHtml}
                                     </div>
                                     <div class="edit-history-meta">
-                                        <span class="edit-history-username">${escapeHtml(e.proposer_username)}</span>
+                                        <span class="edit-history-username">${escapeHtml(proposerDisp)}</span>
                                         <span class="edit-history-date">${formatEditDate(e.created_at)}</span>
                                     </div>
                                 </div>
@@ -231,7 +173,7 @@ export function openEditHistoryModal(edits) {
     modal.innerHTML = `
         <div class="ds-modal ds-modal--medium" id="edit-history-modal" style="max-height: 85vh; display: flex; flex-direction: column;">
             <div class="ds-modal-header" style="border-bottom: 1px solid var(--border-s); padding-bottom: 12px; margin-bottom: 16px;">
-                <h3 style="margin: 0; font-family: var(--font-oswald); font-size: 1.25rem;">Історія змін та правок</h3>
+                <h3 style="margin: 0; font-family: var(--font-oswald); font-size: 1.25rem;">${t('edit_history_and_proposals')}</h3>
                 <button type="button" class="btn-modal-close" id="btn-close-edit-history-modal">✕</button>
             </div>
             <div class="ds-modal-body" style="overflow-y: auto; flex: 1; padding-right: 4px;">

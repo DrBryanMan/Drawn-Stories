@@ -5,6 +5,7 @@ import { openAddReprintModal } from '/static/js/components/addReprintModal.js';
 import { openEditCharacterModal } from '/static/js/components/modals/EditCharacterModal.js';
 import { currentUser } from '/static/js/shell.js';
 import { icon } from '../../helpers/icons.js';
+import { t } from '../../helpers/i18n.js';
 
 function parsePersonas(raw) {
     if (!raw) return [];
@@ -1373,28 +1374,28 @@ export class IssueEditor {
                 <div class="ds-modal-footer" style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-top:1px solid var(--border-s);">
                     <div style="display:flex; gap:8px; align-items:center;">
                         ${currentUser && currentUser.role === 'admin' && this.issue && this.issue.id ? `
-                            <button type="button" class="btn-admin btn-admin--danger" id="edit-delete-btn" title="Видалити з БД" style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">${icon('trash', 14)}</button>
+                            <button type="button" class="btn-admin btn-admin--danger" id="edit-delete-btn" title="${t('delete_from_db')}" style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">${icon('trash', 14)}</button>
                         ` : ''}
                         ${(!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'moderator' && currentUser.role !== 'editor')) ? `
-                            <input type="text" id="edit-propose-comment" class="admin-input" placeholder="Коментар до правки..." style="max-width: 260px; font-size: 12px; height: 32px; margin-bottom: 0;">
+                            <input type="text" id="edit-propose-comment" class="admin-input" placeholder="${t('edit_comment_placeholder')}" style="max-width: 260px; font-size: 12px; height: 32px; margin-bottom: 0;">
                         ` : ''}
                     </div>
                     <div style="display:flex; gap:8px; align-items:center;">
-                        <button class="btn-admin btn-admin--secondary" type="button" id="edit-cancel">Скасувати</button>
+                        <button class="btn-admin btn-admin--secondary" type="button" id="edit-cancel">${t('cancel')}</button>
                         ${(() => {
                             const role = currentUser ? currentUser.role : null;
                             if (role === 'admin') {
                                 return `
-                                    <button class="btn-admin btn-admin--primary btn-admin--purple" id="edit-save-direct">Записати в БД</button>
-                                    <button class="btn-admin btn-admin--primary btn-admin--green" id="edit-save-approve">Записати і прийняти</button>
+                                    <button class="btn-admin btn-admin--primary btn-admin--purple" id="edit-save-direct">${t('save_to_db')}</button>
+                                    <button class="btn-admin btn-admin--primary btn-admin--green" id="edit-save-approve">${t('save_and_approve')}</button>
                                 `;
                             } else if (role === 'moderator' || role === 'editor') {
                                 return `
-                                    <button class="btn-admin btn-admin--primary btn-admin--green" id="edit-save-approve">Записати і прийняти</button>
+                                    <button class="btn-admin btn-admin--primary btn-admin--green" id="edit-save-approve">${t('save_and_approve')}</button>
                                 `;
                             } else {
                                 return `
-                                    <button class="btn-admin btn-admin--primary btn-admin--yellow" id="edit-save-propose" style="height: 32px; padding: 0 16px; font-size: 13px;">Запропонувати</button>
+                                    <button class="btn-admin btn-admin--primary btn-admin--yellow" id="edit-save-propose" style="height: 32px; padding: 0 16px; font-size: 13px;">${t('propose_edit')}</button>
                                 `;
                             }
                         })()}

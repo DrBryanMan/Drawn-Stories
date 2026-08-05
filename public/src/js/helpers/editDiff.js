@@ -1,5 +1,6 @@
 import { icon } from './icons.js';
 import { langName } from './lang.js';
+import { t, getCurrentLanguage } from './i18n.js';
 
 export function escapeHtml(str) {
   if (str === null || str === undefined) return '';
@@ -17,60 +18,67 @@ export function escapeHtml(str) {
  */
 export const FIELD_DEFINITIONS = {
   // Назви та імена
-  'name': { label: 'Назва оригінальна', iconName: 'edit' },
-  'name_uk': { label: 'Назва UA', iconName: 'edit' },
-  'name_ro': { label: 'Назва (Трансліт)', iconName: 'edit' },
-  'name_native': { label: 'Рідна назва', iconName: 'edit' },
-  'real_name': { label: 'Справжнє ім\'я (Оригінал)', iconName: 'user' },
-  'real_name_uk': { label: 'Справжнє ім\'я (UA)', iconName: 'user' },
-  'pseudo': { label: 'Псевдонім', iconName: 'user' },
-  'aliases': { label: 'Псевдоніми', iconName: 'users' },
+  'name': { uk: 'Назва оригінальна', en: 'Original title', iconName: 'edit' },
+  'name_uk': { uk: 'Назва UA', en: 'Title (UA)', iconName: 'edit' },
+  'name_ro': { uk: 'Назва (Трансліт)', en: 'Title (Translit)', iconName: 'edit' },
+  'name_native': { uk: 'Рідна назва', en: 'Native title', iconName: 'edit' },
+  'real_name': { uk: 'Справжнє ім\'я (Оригінал)', en: 'Real name (Original)', iconName: 'user' },
+  'real_name_uk': { uk: 'Справжнє ім\'я (UA)', en: 'Real name (UA)', iconName: 'user' },
+  'pseudo': { uk: 'Псевдонім', en: 'Pseudonym', iconName: 'user' },
+  'aliases': { uk: 'Псевдоніми', en: 'Aliases', iconName: 'users' },
 
   // Деталі персонажа / персони
-  'creators': { label: 'Творці / Автори', iconName: 'users' },
-  'franchise': { label: 'Франшиза', iconName: 'layers' },
-  'earth': { label: 'Всесвіт / Земля', iconName: 'earth' },
-  'essence': { label: 'Сутність / Раса', iconName: 'sparkles' },
-  'origin': { label: 'Походження', iconName: 'globe' },
-  'gender': { label: 'Стать', iconName: 'user' },
-  'occupation': { label: 'Професія / Роль', iconName: 'building' },
-  'birth': { label: 'Дата народження', iconName: 'calendar' },
-  'birth_place': { label: 'Місце народження', iconName: 'globe' },
+  'creators': { uk: 'Творці / Автори', en: 'Creators / Authors', iconName: 'users' },
+  'franchise': { uk: 'Франшиза', en: 'Franchise', iconName: 'layers' },
+  'earth': { uk: 'Всесвіт / Земля', en: 'Universe / Earth', iconName: 'earth' },
+  'essence': { uk: 'Сутність / Раса', en: 'Essence / Race', iconName: 'sparkles' },
+  'origin': { uk: 'Походження', en: 'Origin', iconName: 'globe' },
+  'gender': { uk: 'Стать', en: 'Gender', iconName: 'user' },
+  'occupation': { uk: 'Професія / Роль', en: 'Occupation / Role', iconName: 'building' },
+  'birth': { uk: 'Дата народження', en: 'Birth date', iconName: 'calendar' },
+  'birth_place': { uk: 'Місце народження', en: 'Birth place', iconName: 'globe' },
 
   // Дати та класифікація
-  'start_year': { label: 'Рік початку', iconName: 'calendar' },
-  'issue_number': { label: 'Номер випуску', iconName: 'hash' },
-  'publication_date': { label: 'Дата публікації', iconName: 'calendar' },
-  'country': { label: 'Країна', iconName: 'globe' },
-  'publisher': { label: 'Видавництво', iconName: 'building' },
-  'lang': { label: 'Мова', iconName: 'globe' },
+  'start_year': { uk: 'Рік початку', en: 'Start year', iconName: 'calendar' },
+  'issue_number': { uk: 'Номер випуску', en: 'Issue number', iconName: 'hash' },
+  'publication_date': { uk: 'Дата публікації', en: 'Publication date', iconName: 'calendar' },
+  'country': { uk: 'Країна', en: 'Country', iconName: 'globe' },
+  'publisher': { uk: 'Видавництво', en: 'Publisher', iconName: 'building' },
+  'lang': { uk: 'Мова', en: 'Language', iconName: 'globe' },
 
   // Посилання
-  'site_link': { label: 'Посилання на джерело', iconName: 'externalLink' },
-  'website': { label: 'Вебсайт', iconName: 'externalLink' },
+  'site_link': { uk: 'Посилання на джерело', en: 'Source link', iconName: 'externalLink' },
+  'website': { uk: 'Вебсайт', en: 'Website', iconName: 'externalLink' },
 
   // Зображення
-  'image': { label: 'Головне зображення', iconName: 'imagePlaceholder' },
-  'cover_img': { label: 'Банер / Обкладинка', iconName: 'imagePlaceholder' },
-  'portret_img': { label: 'Портрет', iconName: 'imagePlaceholder' },
-  'costume_img': { label: 'Костюм', iconName: 'imagePlaceholder' },
-  'portret_costume_img': { label: 'Портрет у костюмі', iconName: 'imagePlaceholder' },
-  'logo': { label: 'Логотип', iconName: 'imagePlaceholder' },
-  'photo': { label: 'Фото', iconName: 'imagePlaceholder' },
+  'image': { uk: 'Головне зображення', en: 'Main image', iconName: 'imagePlaceholder' },
+  'cover_img': { uk: 'Банер / Обкладинка', en: 'Banner / Cover', iconName: 'imagePlaceholder' },
+  'portret_img': { uk: 'Портрет', en: 'Portrait', iconName: 'imagePlaceholder' },
+  'costume_img': { uk: 'Костюм', en: 'Costume', iconName: 'imagePlaceholder' },
+  'portret_costume_img': { uk: 'Портрет у костюмі', en: 'Portrait in costume', iconName: 'imagePlaceholder' },
+  'logo': { uk: 'Логотип', en: 'Logo', iconName: 'imagePlaceholder' },
+  'photo': { uk: 'Фото', en: 'Photo', iconName: 'imagePlaceholder' },
 
   // Тексти та описи
-  'synopsis_ua': { label: 'Синопсис UA', iconName: 'messageSquare' },
-  'synopsis': { label: 'Синопсис EN', iconName: 'messageSquare' },
-  'description': { label: 'Опис', iconName: 'messageSquare' },
-  'bio': { label: 'Біографія', iconName: 'messageSquare' },
+  'synopsis_ua': { uk: 'Синопсис UA', en: 'Synopsis (UA)', iconName: 'messageSquare' },
+  'synopsis': { uk: 'Синопсис EN', en: 'Synopsis (EN)', iconName: 'messageSquare' },
+  'description': { uk: 'Опис', en: 'Description', iconName: 'messageSquare' },
+  'bio': { uk: 'Біографія', en: 'Biography', iconName: 'messageSquare' },
 
   // Складні зв'язки
-  'theme_ids': { label: 'Теми', iconName: 'tag' },
-  'themes': { label: 'Теми', iconName: 'tag' },
-  'staff': { label: 'Персонал', iconName: 'users' },
-  'characters': { label: 'Персонажі', iconName: 'users' },
-  'personas': { label: 'Альтер-его / Версії', iconName: 'users' },
+  'theme_ids': { uk: 'Теми', en: 'Themes', iconName: 'tag' },
+  'themes': { uk: 'Теми', en: 'Themes', iconName: 'tag' },
+  'staff': { uk: 'Персонал', en: 'Staff', iconName: 'users' },
+  'characters': { uk: 'Персонажі', en: 'Characters', iconName: 'users' },
+  'personas': { uk: 'Альтер-его / Версії', en: 'Alter-ego / Versions', iconName: 'users' },
 };
+
+export function getFieldLabel(key) {
+  const def = FIELD_DEFINITIONS[key];
+  if (!def) return key;
+  const lang = getCurrentLanguage();
+  return def[lang] || def.uk || def.label || key;
+}
 
 /**
  * Нормалізує значення personas (якщо воно рядок JSON або масив)
@@ -131,8 +139,7 @@ export function getChangedFieldBadges(before = {}, after = {}) {
       const afterStr = normalizeVal(after[key]);
       if (beforeStr !== afterStr && !processedKeys.has(key)) {
         processedKeys.add(key);
-        const def = FIELD_DEFINITIONS[key];
-        const label = def ? def.label : key;
+        const label = getFieldLabel(key);
         badges.push(`<span class="changed-field-badge">${escapeHtml(label)}</span>`);
       }
     }
@@ -143,7 +150,7 @@ export function getChangedFieldBadges(before = {}, after = {}) {
     const beforeIds = (before.theme_ids || []).map(id => Number(id)).sort();
     const afterIds = (after.theme_ids || []).map(id => Number(id)).sort();
     if (JSON.stringify(beforeIds) !== JSON.stringify(afterIds)) {
-      badges.push(`<span class="changed-field-badge changed-field-badge--themes">Теми</span>`);
+      badges.push(`<span class="changed-field-badge changed-field-badge--themes">${escapeHtml(t('themes'))}</span>`);
     }
   }
 
@@ -152,7 +159,7 @@ export function getChangedFieldBadges(before = {}, after = {}) {
     const beforeStaffText = (before.staff || []).map(s => `ID: ${s.person_id} (${s.role})`).sort().join('\n');
     const afterStaffText = (after.staff || []).map(s => `ID: ${s.person_id} (${s.role})`).sort().join('\n');
     if (beforeStaffText !== afterStaffText) {
-      badges.push(`<span class="changed-field-badge changed-field-badge--staff">Персонал</span>`);
+      badges.push(`<span class="changed-field-badge changed-field-badge--staff">${escapeHtml(t('personnel'))}</span>`);
     }
   }
 
@@ -161,7 +168,7 @@ export function getChangedFieldBadges(before = {}, after = {}) {
     const beforeCharsText = (before.characters || []).map(c => `ID: ${c.character_id || c.id} (${c.role})`).sort().join('\n');
     const afterCharsText = (after.characters || []).map(c => `ID: ${c.character_id || c.id} (${c.role})`).sort().join('\n');
     if (beforeCharsText !== afterCharsText) {
-      badges.push(`<span class="changed-field-badge changed-field-badge--characters">Персонажі</span>`);
+      badges.push(`<span class="changed-field-badge changed-field-badge--characters">${escapeHtml(t('characters'))}</span>`);
     }
   }
 
@@ -170,12 +177,12 @@ export function getChangedFieldBadges(before = {}, after = {}) {
     const beforePText = formatPersonas(before.personas);
     const afterPText = formatPersonas(after.personas);
     if (beforePText !== afterPText) {
-      badges.push(`<span class="changed-field-badge changed-field-badge--characters">Альтер-его / Версії</span>`);
+      badges.push(`<span class="changed-field-badge changed-field-badge--characters">${escapeHtml(t('personas_label'))}</span>`);
     }
   }
 
   if (badges.length === 0) {
-    return `<div class="changed-fields-wrap"><span class="changed-field-badge changed-field-badge--none">Немає фактичних змін</span></div>`;
+    return `<div class="changed-fields-wrap"><span class="changed-field-badge changed-field-badge--none">${escapeHtml(t('no_actual_changes'))}</span></div>`;
   }
 
   return `<div class="changed-fields-wrap">${badges.join('')}</div>`;
@@ -202,8 +209,8 @@ export function generateDiffHTML(before = {}, after = {}, themesCache = []) {
 
       if (beforeVal !== afterVal) {
         hasChanges = true;
-        const def = FIELD_DEFINITIONS[key] || { label: key, iconName: 'edit' };
-        const iconSvg = icon(def.iconName, 14) || '';
+        const fieldLabel = getFieldLabel(key);
+        const iconSvg = icon(FIELD_DEFINITIONS[key]?.iconName || 'edit', 14) || '';
 
         let displayBefore = beforeVal;
         let displayAfter = afterVal;
@@ -212,12 +219,12 @@ export function generateDiffHTML(before = {}, after = {}, themesCache = []) {
           displayBefore = beforeVal ? (langName(beforeVal) || beforeVal) : '—';
           displayAfter = afterVal ? (langName(afterVal) || afterVal) : '—';
         } else if (key === 'gender') {
-          const genders = { 1: 'Чоловіча', 2: 'Жіноча', 3: 'Інша' };
+          const genders = { 1: t('male'), 2: t('female'), 3: t('other_gender') };
           displayBefore = genders[beforeVal] || beforeVal || '—';
           displayAfter = genders[afterVal] || afterVal || '—';
         }
 
-        html += renderDiffField(def.label, iconSvg, displayBefore, displayAfter, key, imageKeys.has(key));
+        html += renderDiffField(fieldLabel, iconSvg, displayBefore, displayAfter, key, imageKeys.has(key));
       }
     }
   }
@@ -243,29 +250,29 @@ export function generateDiffHTML(before = {}, after = {}, themesCache = []) {
 
       const beforeText = beforeIds.map(id => getThemeChipHTML(id, before.themes)).join('') || '—';
       const afterText = afterIds.map(id => getThemeChipHTML(id, after.themes)).join('') || '—';
-      html += renderDiffField('Теми', icon('tag', 14) || '', beforeText, afterText, 'themes');
+      html += renderDiffField(t('themes'), icon('tag', 14) || '', beforeText, afterText, 'themes');
     }
   }
 
   // 3. Порівнюємо персонал
   if (after.staff !== undefined && after.staff !== null) {
-    const beforeStaffText = (before.staff || []).map(s => `ID автора: ${s.person_id} (${s.role})`).sort().join('\n') || '—';
-    const afterStaffText = (after.staff || []).map(s => `ID автора: ${s.person_id} (${s.role})`).sort().join('\n') || '—';
+    const beforeStaffText = (before.staff || []).map(s => `ID: ${s.person_id} (${s.role})`).sort().join('\n') || '—';
+    const afterStaffText = (after.staff || []).map(s => `ID: ${s.person_id} (${s.role})`).sort().join('\n') || '—';
 
     if (beforeStaffText !== afterStaffText) {
       hasChanges = true;
-      html += renderDiffField('Персонал', icon('users', 14) || '', beforeStaffText, afterStaffText);
+      html += renderDiffField(t('personnel'), icon('users', 14) || '', beforeStaffText, afterStaffText);
     }
   }
 
   // 4. Порівнюємо персонажів
   if (after.characters !== undefined && after.characters !== null) {
-    const beforeCharsText = (before.characters || []).map(c => `ID персонажа: ${c.character_id || c.id} (${c.role || 'cameo'})`).sort().join('\n') || '—';
-    const afterCharsText = (after.characters || []).map(c => `ID персонажа: ${c.character_id || c.id} (${c.role || 'cameo'})`).sort().join('\n') || '—';
+    const beforeCharsText = (before.characters || []).map(c => `ID: ${c.character_id || c.id} (${c.role || 'cameo'})`).sort().join('\n') || '—';
+    const afterCharsText = (after.characters || []).map(c => `ID: ${c.character_id || c.id} (${c.role || 'cameo'})`).sort().join('\n') || '—';
 
     if (beforeCharsText !== afterCharsText) {
       hasChanges = true;
-      html += renderDiffField('Персонажі', icon('users', 14) || '', beforeCharsText, afterCharsText);
+      html += renderDiffField(t('characters'), icon('users', 14) || '', beforeCharsText, afterCharsText);
     }
   }
 
@@ -276,12 +283,12 @@ export function generateDiffHTML(before = {}, after = {}, themesCache = []) {
 
     if (beforePText !== afterPText) {
       hasChanges = true;
-      html += renderDiffField('Альтер-его / Версії', icon('users', 14) || '', beforePText, afterPText);
+      html += renderDiffField(t('personas_label'), icon('users', 14) || '', beforePText, afterPText);
     }
   }
 
   if (!hasChanges) {
-    html += '<div class="empty-msg" style="padding: 10px 0;">Немає фактичних змін (дані збігаються з поточними в базі даних).</div>';
+    html += `<div class="empty-msg" style="padding: 10px 0;">${escapeHtml(t('no_actual_changes'))}</div>`;
   }
 
   html += '</div>';
@@ -289,23 +296,23 @@ export function generateDiffHTML(before = {}, after = {}, themesCache = []) {
 }
 
 function renderDiffField(label, iconHtml, beforeVal, afterVal, key = '', isImage = false) {
-  let beforeRendered = beforeVal ? escapeHtml(beforeVal) : '<em>порожньо</em>';
-  let afterRendered = afterVal ? escapeHtml(afterVal) : '<em>видалено</em>';
+  let beforeRendered = beforeVal ? escapeHtml(beforeVal) : `<em>${escapeHtml(t('diff_empty'))}</em>`;
+  let afterRendered = afterVal ? escapeHtml(afterVal) : `<em>${escapeHtml(t('diff_removed'))}</em>`;
 
   if (isImage) {
     const isBanner = key === 'cover_img';
     const imgClass = isBanner ? 'diff-image-preview diff-image-preview--banner' : 'diff-image-preview';
 
     beforeRendered = beforeVal
-      ? `<div class="${imgClass}"><img src="${escapeHtml(beforeVal)}" alt="До" onerror="this.onerror=null;this.src='/public/img/no-cover.jpg';"></div>`
-      : '<em>немає зображення</em>';
+      ? `<div class="${imgClass}"><img src="${escapeHtml(beforeVal)}" alt="${escapeHtml(t('diff_before'))}" onerror="this.onerror=null;this.src='/public/img/no-cover.jpg';"></div>`
+      : `<em>${escapeHtml(t('diff_no_image'))}</em>`;
 
     afterRendered = afterVal
-      ? `<div class="${imgClass}"><img src="${escapeHtml(afterVal)}" alt="Після" onerror="this.onerror=null;this.src='/public/img/no-cover.jpg';"></div>`
-      : '<em>видалено</em>';
+      ? `<div class="${imgClass}"><img src="${escapeHtml(afterVal)}" alt="${escapeHtml(t('diff_after'))}" onerror="this.onerror=null;this.src='/public/img/no-cover.jpg';"></div>`
+      : `<em>${escapeHtml(t('diff_removed'))}</em>`;
   } else if (key === 'themes') {
-    beforeRendered = beforeVal || '<em>немає тем</em>';
-    afterRendered = afterVal || '<em>видалено всі теми</em>';
+    beforeRendered = beforeVal || `<em>${escapeHtml(t('diff_no_themes'))}</em>`;
+    afterRendered = afterVal || `<em>${escapeHtml(t('diff_removed_all_themes'))}</em>`;
   }
 
   return `
@@ -316,11 +323,11 @@ function renderDiffField(label, iconHtml, beforeVal, afterVal, key = '', isImage
       </div>
       <div class="diff-values-grid">
         <div class="diff-val diff-val--before">
-          <span class="diff-val-tag">До</span>
+          <span class="diff-val-tag">${escapeHtml(t('diff_before'))}</span>
           <div class="diff-val-content">${beforeRendered}</div>
         </div>
         <div class="diff-val diff-val--after">
-          <span class="diff-val-tag">Після</span>
+          <span class="diff-val-tag">${escapeHtml(t('diff_after'))}</span>
           <div class="diff-val-content">${afterRendered}</div>
         </div>
       </div>

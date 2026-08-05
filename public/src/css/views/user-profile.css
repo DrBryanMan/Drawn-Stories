@@ -418,41 +418,195 @@
     padding-bottom: 48px;
 }
 
-/* Overview Tab Grid */
-.overview-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 28px;
-}
-
-.stat-card-box {
+/* Unified Edits Summary Card */
+.user-edits-summary-card {
     background: var(--bg-card);
     border: 1px solid var(--border-s);
     border-radius: var(--r-lg);
-    padding: 18px 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+    padding: 20px 24px;
+    margin-bottom: 28px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
-.stat-card-title {
-    font-size: 12px;
+.summary-card-header {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-s);
+}
+
+.summary-card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.summary-card-body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.summary-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.summary-section--indicators {
+    flex: 0 0 50%;
+    max-width: 50%;
+    min-width: 260px;
+}
+
+.summary-section--total,
+.summary-section--score {
+    flex: 1;
+    min-width: 120px;
+    align-items: flex-start;
+}
+
+.summary-section-label {
+    font-size: 11px;
     font-weight: 600;
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
 }
 
-.stat-card-val {
+.summary-metric-val {
     font-family: var(--font-oswald);
-    font-size: 26px;
+    font-size: 28px;
     font-weight: 700;
     color: var(--text);
+    line-height: 1.1;
+}
+
+.summary-metric-val--purple {
+    color: var(--purple, #a855f7);
+}
+
+.summary-divider {
+    width: 1px;
+    height: 48px;
+    background: var(--border-s);
+    flex-shrink: 0;
+}
+
+/* Combined Indicators Group */
+.edit-indicators-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.edit-indicator-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: var(--r-md, 6px);
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: default;
+}
+
+.edit-indicator-pill:hover {
+    transform: translateY(-1px);
+}
+
+.pill-icon-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.pill-val {
+    font-family: var(--font-oswald);
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.pill-lbl {
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0.9;
+}
+
+.edit-indicator-pill--pending {
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.22);
+    color: var(--amber, #d97706);
+}
+
+.edit-indicator-pill--pending:hover {
+    background: rgba(245, 158, 11, 0.14);
+    border-color: rgba(245, 158, 11, 0.35);
+}
+
+.edit-indicator-pill--approved {
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.22);
+    color: #10b981;
+}
+
+.edit-indicator-pill--approved:hover {
+    background: rgba(16, 185, 129, 0.14);
+    border-color: rgba(16, 185, 129, 0.35);
+}
+
+.edit-indicator-pill--rejected {
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.22);
+    color: #ef4444;
+}
+
+.edit-indicator-pill--rejected:hover {
+    background: rgba(239, 68, 68, 0.14);
+    border-color: rgba(239, 68, 68, 0.35);
+}
+
+.edit-indicator-pill--closed {
+    background: rgba(107, 114, 128, 0.08);
+    border: 1px solid rgba(107, 114, 128, 0.22);
+    color: var(--text-muted, #6b7280);
+}
+
+.edit-indicator-pill--closed:hover {
+    background: rgba(107, 114, 128, 0.14);
+    border-color: rgba(107, 114, 128, 0.35);
+}
+
+@media (max-width: 768px) {
+    .summary-card-body {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+    }
+
+    .summary-section--indicators,
+    .summary-section--total,
+    .summary-section--score {
+        width: 100%;
+    }
+
+    .summary-divider {
+        width: 100%;
+        height: 1px;
+        margin: 0;
+    }
 }
 
 @media (max-width: 768px) {

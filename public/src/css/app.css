@@ -21,6 +21,7 @@
 @import url('components/entity-releases.css');
 @import url('components/essence-versions.css');
 @import url('components/edit-diff.css');
+@import url('components/notifications.css');
 
 /* Сторінки */
 @import url('views/volumeCharacters.css');

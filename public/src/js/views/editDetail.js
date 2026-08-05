@@ -1,10 +1,12 @@
 import { API } from '../helpers/api.js';
 import { router } from '../helpers/router.js';
 import { updateEditsPendingCount, getAvatarHtml, currentUser } from '../shell.js';
-import { langName } from '../helpers/lang.js';
+import { langName, getEntityTypeLabel, getEntityUrl, formatDate } from '../helpers/lang.js';
 import { normalizeImageUrl } from '../helpers/image.js';
 import { icon } from '../helpers/icons.js';
 import { getChangedFieldBadges, generateDiffHTML } from '../helpers/editDiff.js';
+import { renderEditStatusBadge } from '../components/EditStatusBadge.js';
+import { t } from '../helpers/i18n.js';
 
 export async function renderEditDetail(main, params) {
     main.innerHTML = `
@@ -12,7 +14,7 @@ export async function renderEditDetail(main, params) {
             <div class="back-link-wrap">
                 <a href="#/edits" class="back-to-edits-btn">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-                    Назад до списку правок
+                    ${t('back_to_edits')}
                 </a>
             </div>
 
@@ -57,24 +59,11 @@ export async function renderEditDetail(main, params) {
 
     function renderDetails() {
         const e = editData;
-        const statusLabels = {
-            'pending': `<span class="edit-status-badge edit-status--pending">${icon('planned', 16, { strokeWidth: 2.5, class: 'status-badge-icon', style: 'vertical-align: middle;' })}</span>`,
-            'approved': `<span class="edit-status-badge edit-status--approved">${icon('check', 16, { strokeWidth: 2.5, class: 'status-badge-icon', style: 'vertical-align: middle;' })}</span>`,
-            'rejected': `<span class="edit-status-badge edit-status--rejected">${icon('x', 16, { strokeWidth: 2.5, class: 'status-badge-icon', style: 'vertical-align: middle;' })}</span>`,
-            'closed': `<span class="edit-status-badge edit-status--closed">${icon('dropped', 16, { strokeWidth: 2.5, class: 'status-badge-icon', style: 'vertical-align: middle;' })}</span>`
-        };
+        const statusBadgeHtml = renderEditStatusBadge(e.status);
 
-        const ENTITY_TYPE_LABELS = {
-            'volume': 'Том',
-            'issue': 'Випуск',
-            'character': 'Персонаж',
-            'person': 'Персона',
-            'publisher': 'Видавництво',
-            'collection': 'Збірник'
-        };
-        const entityLabel = ENTITY_TYPE_LABELS[e.entity_type] || e.entity_type;
+        const entityLabel = getEntityTypeLabel(e.entity_type);
         const entityName = e.volume_name_uk || e.volume_name || `ID ${e.entity_id}`;
-        const entityLink = e.entity_type === 'volume' ? `#/volumes/${e.entity_id}` : '#/';
+        const entityLink = getEntityUrl(e.entity_type, e.entity_id);
 
         const patchObj = e.patch_data || {};
         const beforeData = patchObj.before || {};
@@ -96,9 +85,9 @@ export async function renderEditDetail(main, params) {
         const subtitleHTML = e.comment 
             ? `<div class="edit-comment-block" style="margin-top: 8px;">
                    <span class="comment-icon">${icon('messageSquare', 14)}</span>
-                   <span class="comment-text"><strong>Коментар автора:</strong> ${escapeHtml(e.comment)}</span>
+                   <span class="comment-text"><strong>${t('comment')}:</strong> ${escapeHtml(e.comment)}</span>
                </div>`
-            : `<p class="edit-detail-subtitle">Перегляд змін, запропонованих користувачем, та прийняття рішення про їх затвердження.</p>`;
+            : `<p class="edit-detail-subtitle">${t('edit_detail_subtitle')}</p>`;
 
         // Аватар автора пропозиції
         const proposerAvatarUrl = `/api/auth/avatar/${e.proposer_username}`;
@@ -106,26 +95,27 @@ export async function renderEditDetail(main, params) {
 
         // Картка модератора
         let moderatorCardHTML = '';
-        if (e.status !== 'pending' && e.status !== 'closed') {
+        if (e.status !== 'pending' && e.moderator_username) {
             const moderatorAvatarUrl = `/api/auth/avatar/${e.moderator_username}`;
             const moderatorAvatarHtml = getAvatarHtml(moderatorAvatarUrl, 'person-avatar-img', 44);
-            const modAction = e.status === 'approved' ? 'Схвалив правку' : 'Відхилив правку';
+            const modAction = e.status === 'approved' ? t('approved_by') : t('rejected_by');
             const modClass = e.status === 'approved' ? 'moderator-card--approved' : 'moderator-card--rejected';
-            const commentMod = e.moderator_comment ? `<div class="person-card-comment"><strong>Коментар:</strong> ${escapeHtml(e.moderator_comment)}</div>` : '';
+            const commentMod = e.moderator_comment ? `<div class="person-card-comment"><strong>${t('comment')}:</strong> ${escapeHtml(e.moderator_comment)}</div>` : '';
 
+            const modName = e.moderator_nickname || e.moderator_username;
             moderatorCardHTML = `
                 <div class="people-section">
                     <span class="people-section-title">${modAction}</span>
-                    <div class="person-card moderator-card ${modClass}">
+                    <a href="#/user/${escapeHtml(modName)}" class="person-card moderator-card ${modClass}" title="Переглянути профіль ${escapeHtml(modName)}">
                         <div class="person-card-avatar">
                             ${moderatorAvatarHtml}
                         </div>
                         <div class="person-card-info">
-                            <span class="person-card-name">${escapeHtml(e.moderator_username || 'Модератор')}</span>
+                            <span class="person-card-name">${escapeHtml(modName || 'Модератор')}</span>
                             <span class="person-card-date">${formatDate(e.moderated_at)}</span>
                             ${commentMod}
                         </div>
-                    </div>
+                    </a>
                 </div>
             `;
         }
@@ -141,20 +131,20 @@ export async function renderEditDetail(main, params) {
 
             if (isPrivileged) {
                 actionsHTML += `
-                    <button class="btn-admin btn-admin--primary btn-approve-edit-detail" data-id="${e.id}">Схвалити правку</button>
-                    <button class="btn-admin btn-admin--danger btn-reject-edit-detail" data-id="${e.id}">Відхилити правку</button>
+                    <button class="btn-admin btn-admin--primary btn-approve-edit-detail" data-id="${e.id}">${t('approve_edit')}</button>
+                    <button class="btn-admin btn-admin--danger btn-reject-edit-detail" data-id="${e.id}">${t('reject_edit')}</button>
                 `;
             }
 
             if (isOwner || isPrivileged) {
                 actionsHTML += `
-                    <button class="btn-admin btn-admin--secondary btn-close-edit-detail" data-id="${e.id}">Закрити правку</button>
+                    <button class="btn-admin btn-admin--secondary btn-close-edit-detail" data-id="${e.id}">${t('close_edit')}</button>
                 `;
             }
 
             if (isAdmin) {
                 actionsHTML += `
-                    <button class="btn-admin btn-admin--danger btn-delete-edit-detail" data-id="${e.id}" style="margin-left: auto;">Видалити правку</button>
+                    <button class="btn-admin btn-admin--danger btn-delete-edit-detail" data-id="${e.id}" style="margin-left: auto;">${t('delete_edit')}</button>
                 `;
             }
 
@@ -162,16 +152,18 @@ export async function renderEditDetail(main, params) {
         } else if (isAdmin) {
             actionsHTML = `
                 <div class="edit-details-actions-bar">
-                    <button class="btn-admin btn-admin--danger btn-delete-edit-detail" data-id="${e.id}" style="margin-left: auto;">Видалити правку</button>
+                    <button class="btn-admin btn-admin--danger btn-delete-edit-detail" data-id="${e.id}" style="margin-left: auto;">${t('delete_edit')}</button>
                 </div>
             `;
         }
 
+        const proposerName = e.proposer_nickname || e.proposer_username;
+
         content.innerHTML = `
             <div class="edit-detail-header-block">
                 <div class="edit-detail-title-line">
-                    <h1 class="edit-detail-main-title">Правка #${e.id}</h1>
-                    ${statusLabels[e.status]}
+                    <h1 class="edit-detail-main-title">${t('edit_single')} #${e.id}</h1>
+                    ${statusBadgeHtml}
                 </div>
                 ${subtitleHTML}
             </div>
@@ -180,7 +172,7 @@ export async function renderEditDetail(main, params) {
                 <!-- Блок Контент -->
                 <div class="edit-detail-block edit-detail-block--content">
                     <h2 class="edit-detail-block-title">
-                        <span>Контент</span>
+                        <span>${t('content')}</span>
                         <div class="edit-detail-entity-line">
                             <span class="edit-entity-badge">${entityLabel}</span>
                         </div>
@@ -195,19 +187,19 @@ export async function renderEditDetail(main, params) {
 
                 <!-- Блок Автор/Модератор -->
                 <div class="edit-detail-block edit-detail-block--people">
-                    <h2 class="edit-detail-block-title">Автор / Модератор</h2>
+                    <h2 class="edit-detail-block-title">${t('author_moderator')}</h2>
                     <div class="people-cards-column">
                         <div class="people-section">
-                            <span class="people-section-title">Запропонував правку</span>
-                            <div class="person-card author-card">
+                            <span class="people-section-title">${t('proposed_by')}</span>
+                            <a href="#/user/${escapeHtml(proposerName)}" class="person-card author-card" title="Переглянути профіль ${escapeHtml(proposerName)}">
                                 <div class="person-card-avatar">
                                     ${proposerAvatarHtml}
                                 </div>
                                 <div class="person-card-info">
-                                    <span class="person-card-name">${escapeHtml(e.proposer_username)}</span>
+                                    <span class="person-card-name">${escapeHtml(proposerName)}</span>
                                     <span class="person-card-date">${formatDate(e.created_at)}</span>
                                 </div>
-                            </div>
+                            </a>
                         </div>
 
                         ${moderatorCardHTML}
@@ -217,7 +209,7 @@ export async function renderEditDetail(main, params) {
 
             <!-- Блок Деталі зміни -->
             <div class="edit-detail-block edit-detail-block--diff">
-                <h2 class="edit-detail-block-title">Деталі правки (зміни)</h2>
+                <h2 class="edit-detail-block-title">${t('edit_details_diff')}</h2>
                 <div class="edit-diff-container-detail">
                     ${generateDiffHTML(beforeData, afterData)}
                 </div>
@@ -231,6 +223,75 @@ export async function renderEditDetail(main, params) {
         attachEvents();
     }
 
+    function formatScoreReasonHTML(reasonStr) {
+        if (!reasonStr) return '';
+
+        const fieldMap = {
+            'start_year': 'рік початку',
+            'name_native': 'рідна назва',
+            'name_uk': 'українська назва',
+            'name_en': 'англійська назва',
+            'name': 'назва',
+            'cv_img': 'обкладинка',
+            'cover_img': 'банер',
+            'image': 'зображення',
+            'synopsis_ua': 'український синопсис',
+            'synopsis': 'синопсис',
+            'description': 'опис',
+            'bio': 'біографія',
+            'lang': 'мова',
+            'site_link': 'джерело',
+            'website': 'вебсайт',
+            'publisher': 'видавництво',
+            'staff': 'персонал',
+            'characters': 'персонажі',
+            'theme_ids': 'теми'
+        };
+
+        let text = escapeHtml(reasonStr);
+        for (const [key, val] of Object.entries(fieldMap)) {
+            const regex = new RegExp(`\\b${key}\\b`, 'g');
+            text = text.replace(regex, val);
+        }
+
+        if (text.includes(': ')) {
+            const parts = text.split(': ');
+            const title = parts[0];
+            let details = parts.slice(1).join(': ');
+
+            details = details.replace(/\s*\(всього\s*[\+\-]?\d+\s*б\.\)/gi, '');
+
+            const items = details.split(', ').map(item => item.trim()).filter(Boolean);
+
+            const tagsHtml = items.map(item => {
+                const ptsMatch = item.match(/\(([^)]*\+?\d+\s*б\.[^)]*)\)/);
+                let ptsText = '';
+                let cleanItem = item;
+
+                if (ptsMatch) {
+                    ptsText = ptsMatch[1];
+                    cleanItem = item.replace(ptsMatch[0], '').trim();
+                }
+
+                return `
+                    <span class="score-reason-tag">
+                        <span class="score-reason-tag-label">${cleanItem}</span>
+                        ${ptsText ? `<span class="score-reason-tag-pts">${ptsText}</span>` : ''}
+                    </span>
+                `;
+            }).join('');
+
+            return `
+                <div class="score-reason-container">
+                    <div class="score-reason-title">${title}</div>
+                    <div class="score-reason-tags">${tagsHtml}</div>
+                </div>
+            `;
+        }
+
+        return `<div class="score-reason-title score-reason-title--simple">${text}</div>`;
+    }
+
     function renderScoreHistoryBlock(e) {
         const history = e.score_history || [];
         if (history.length === 0) return '';
@@ -238,13 +299,25 @@ export async function renderEditDetail(main, params) {
         const rows = history.map(row => {
             const delta = row.delta;
             const isPositive = delta > 0;
-            const chipClass = isPositive ? 'score-chip--positive' : 'score-chip--negative';
+            const badgeClass = isPositive ? 'score-history-badge--positive' : 'score-history-badge--negative';
             const sign = isPositive ? '+' : '';
+            const userDisp = row.nickname || row.username;
+            const avatarUrl = `/api/auth/avatar/${encodeURIComponent(userDisp)}`;
+            const avatarHtml = getAvatarHtml(avatarUrl, 'score-history-user-avatar', 32);
+
             return `
-                <div class="score-history-row">
-                    <span class="score-chip ${chipClass}">${sign}${delta} б.</span>
-                    <span class="score-history-user">${escapeHtml(row.username)}</span>
-                    <span class="score-history-reason">${escapeHtml(row.reason)}</span>
+                <div class="score-history-card">
+                    <a href="#/user/${escapeHtml(userDisp)}" class="score-history-user-info" title="Переглянути профіль ${escapeHtml(userDisp)}">
+                        ${avatarHtml}
+                        <span class="score-history-username">${escapeHtml(userDisp)}</span>
+                    </a>
+                    <div class="score-history-reason-box">
+                        ${formatScoreReasonHTML(row.reason)}
+                    </div>
+                    <div class="score-history-badge ${badgeClass}">
+                        ${isPositive ? icon('sparkles', 13) : icon('alertCircle', 13)}
+                        <span>${sign}${delta} ${t('points_short')}</span>
+                    </div>
                 </div>
             `;
         }).join('');
@@ -252,7 +325,7 @@ export async function renderEditDetail(main, params) {
         return `
             <div class="edit-detail-block edit-detail-block--score">
                 <h2 class="edit-detail-block-title">
-                    <span>Нараховані бали</span>
+                    <span>${icon('sparkles', 16)} ${t('awarded_points')}</span>
                 </h2>
                 <div class="score-history-list">
                     ${rows}
@@ -355,21 +428,7 @@ export async function renderEditDetail(main, params) {
             .replace(/'/g, "&#039;");
     }
 
-    function formatDate(dateStr) {
-        if (!dateStr) return '—';
-        try {
-            const date = new Date(dateStr.replace(' ', 'T'));
-            return date.toLocaleString('uk-UA', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        } catch {
-            return dateStr;
-        }
-    }
+
 
     await loadEditData();
 }

@@ -44,24 +44,24 @@ export async function renderSettings(main, user) {
 
         <div class="block">
           <h3>${icon('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>')} ${t('profile_info')}</h3>
-          <div style="display: flex; flex-direction: column; gap: 20px;">
+          <div class="info-grid-2col">
             <!-- Username/Login change -->
-            <form id="username-form" class="info-grid">
+            <form id="username-form">
               <div class="info-item">
                 <span class="info-label">${t('username')}</span>
                 <div class="input-with-button">
-                  <input type="text" id="username-input" class="settings-input" value="${user.username}" required maxlength="10" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ\\.]+$" title="Дозволено лише літери, цифри та крапку (макс. 10 симв.)">
+                  <input type="text" id="username-input" class="settings-input" value="${user.username}" required maxlength="20" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ]+$" title="Дозволено лише літери та цифри (макс. 20 симв.)">
                   <button type="submit" class="save-btn" id="save-username-btn">${t('save')}</button>
                 </div>
               </div>
             </form>
 
             <!-- Nickname change -->
-            <form id="nickname-form" class="info-grid">
+            <form id="nickname-form">
               <div class="info-item">
                 <span class="info-label">${t('nickname')}</span>
                 <div class="input-with-button">
-                  <input type="text" id="nickname-input" class="settings-input" value="${user.nickname || user.username}" required maxlength="10" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ\\.]+$" title="Дозволено лише літери, цифри та крапку (макс. 10 симв.)">
+                  <input type="text" id="nickname-input" class="settings-input" value="${user.nickname || user.username}" required maxlength="20" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ]+$" title="Дозволено лише літери та цифри (макс. 20 симв.)">
                   <button type="submit" class="save-btn" id="save-nickname-btn">${t('save')}</button>
                 </div>
               </div>
@@ -71,16 +71,18 @@ export async function renderSettings(main, user) {
 
         <div class="block">
           <h3>${icon('<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>')} ${t('change_password')}</h3>
-          <form id="password-form" class="info-grid">
-            <div class="info-item" style="margin-bottom: 12px;">
-              <span class="info-label">${t('old_password')}</span>
-              <input type="password" id="old-password-input" class="settings-input" style="width: 100%; max-width: 300px;" required>
-            </div>
-            <div class="info-item">
-              <span class="info-label">${t('new_password')}</span>
-              <div class="input-with-button">
-                <input type="password" id="new-password-input" class="settings-input" style="width: 100%; max-width: 300px;" required>
-                <button type="submit" class="save-btn" id="save-password-btn">${t('save')}</button>
+          <form id="password-form">
+            <div class="info-grid-2col">
+              <div class="info-item">
+                <span class="info-label">${t('old_password')}</span>
+                <input type="password" id="old-password-input" class="settings-input" style="width: 100%;" required>
+              </div>
+              <div class="info-item">
+                <span class="info-label">${t('new_password')}</span>
+                <div class="input-with-button">
+                  <input type="password" id="new-password-input" class="settings-input" style="width: 100%;" required minlength="6">
+                  <button type="submit" class="save-btn" id="save-password-btn">${t('save')}</button>
+                </div>
               </div>
             </div>
           </form>

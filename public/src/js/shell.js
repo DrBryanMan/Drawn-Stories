@@ -3,6 +3,7 @@ import { API } from './helpers/api.js';
 import { Bookmarks } from './helpers/bookmarks.js';
 import { openGlobalAddModal } from './components/GlobalAddModal.js';
 import { t, setLanguage, getCurrentLanguage } from './helpers/i18n.js';
+import { NotificationBell } from './components/NotificationBell.js';
 
 // ── Nav config ───────────────────────────────────────
 // ── Nav config ───────────────────────────────────────
@@ -65,6 +66,31 @@ const getNav = () => [
             icon: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
             href: '#/personnel',
             route: '/personnel'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    label: t('other'),
+    icon: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+    sections: [
+      {
+        title: t('community_and_activity'),
+        links: [
+          {
+            label: t('edit_list'),
+            desc: t('edits_desc'),
+            icon: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+            href: '#/edits',
+            route: '/edits'
+          },
+          {
+            label: t('users_leaderboard'),
+            desc: t('users_leaderboard_desc'),
+            icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+            href: '#/users',
+            route: '/users'
           }
         ]
       }
@@ -266,6 +292,8 @@ export async function updateEditsPendingCount() {
   }
 }
 
+let notificationBellInstance = null;
+
 function updateAuthUI() {
   const container = document.getElementById('header-actions');
   if (!container) return;
@@ -283,6 +311,10 @@ function updateAuthUI() {
     <button class="bookmarks-trigger" id="global-add-btn" title="${t('add_content')}">
       ${icon('<path d="M12 5v14M5 12h14"/>', 20)}
     </button>
+    <a href="#/edits" class="bookmarks-trigger" id="edits-list-btn" title="${t('edit_list')}" style="display: inline-flex; align-items: center; justify-content: center; margin-right: 2px; position: relative;">
+      ${icon('<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>', 20)}
+      <span class="bookmarks-count edits-pending-badge" id="edits-pending-count"></span>
+    </a>
   ` : '';
 
   const bookmarksGuestHTML = `
@@ -294,28 +326,26 @@ function updateAuthUI() {
 
   const headerControlsHTML = `
     ${addBtnHTML}
-    <a href="#/edits" class="bookmarks-trigger" id="edits-list-btn" title="${t('edit_list')}" style="display: inline-flex; align-items: center; justify-content: center; margin-right: 2px; position: relative;">
-      ${icon('<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>', 20)}
-      <span class="bookmarks-count edits-pending-badge" id="edits-pending-count"></span>
-    </a>
   `;
 
   if (currentUser) {
-    const avatarUrl = `/api/auth/avatar/${currentUser.username}?t=${new Date().getTime()}`;
+    const userIdentifier = currentUser.nickname || currentUser.username;
+    const avatarUrl = `/api/auth/avatar/${encodeURIComponent(userIdentifier)}?t=${new Date().getTime()}`;
     const score = currentUser.score || 0;
     const prog = getLevelProgress(score);
 
     container.innerHTML = `
       ${headerControlsHTML}
+      <div id="bell-mount-point" style="display: inline-flex; align-items: center; margin-right: 4px;"></div>
       <div class="nav-dropdown">
         <button class="nav-link nav-dropdown-trigger auth-user-btn">
           ${getAvatarHtml(avatarUrl, 'header-avatar', 38)}
         </button>
         <div class="nav-dropdown-content dropdown-right">
-          <a class="dropdown-info dropdown-user-card" href="#/user/${currentUser.username}" data-route="/user/${currentUser.username}" data-tab="overview">
+          <a class="dropdown-info dropdown-user-card" href="#/user/${encodeURIComponent(userIdentifier)}" data-route="/user/${encodeURIComponent(userIdentifier)}" data-tab="overview">
             ${getAvatarHtml(avatarUrl, 'header-avatar', 40)}
             <div class="user-details" style="flex: 1; min-width: 0;">
-                <div class="user-name">${currentUser.nickname || currentUser.username}</div>
+                <div class="user-name">${userIdentifier}</div>
                 <div class="user-level-info">Рівень ${prog.levelNum}: ${prog.title}</div>
                 <div class="user-score-info">Бали: ${score}${prog.nextThreshold ? ` / ${prog.nextThreshold}` : ''}</div>
                 ${prog.nextThreshold ? `
@@ -331,15 +361,15 @@ function updateAuthUI() {
           <div class="dropdown-divider"></div>
           
           <!-- Основні списки -->
-          <a class="nav-dropdown-link" href="#/user/${currentUser.username}?tab=readlists" data-route="/user/${currentUser.username}" data-tab="readlists">
+          <a class="nav-dropdown-link" href="#/user/${encodeURIComponent(userIdentifier)}?tab=readlists" data-route="/user/${encodeURIComponent(userIdentifier)}" data-tab="readlists">
             ${icon('<path d="M8 6h10"/><path d="M8 12h10"/><path d="M8 18h7"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>')}
             <span>${t('my_lists')}</span>
           </a>
-          <a class="nav-dropdown-link" href="#/user/${currentUser.username}?tab=collections" data-route="/user/${currentUser.username}" data-tab="collections">
+          <a class="nav-dropdown-link" href="#/user/${encodeURIComponent(userIdentifier)}?tab=collections" data-route="/user/${encodeURIComponent(userIdentifier)}" data-tab="collections">
             ${icon('<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>')}
             <span>${t('my_collection')}</span>
           </a>
-          <a class="nav-dropdown-link" href="#/user/${currentUser.username}?tab=favorites" data-route="/user/${currentUser.username}" data-tab="favorites">
+          <a class="nav-dropdown-link" href="#/user/${encodeURIComponent(userIdentifier)}?tab=favorites" data-route="/user/${encodeURIComponent(userIdentifier)}" data-tab="favorites">
             ${icon('<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>')}
             <span>${t('favorites')}</span>
           </a>
@@ -391,7 +421,20 @@ function updateAuthUI() {
     if (isAdmin) {
       updateEditsPendingCount();
     }
+
+    if (!notificationBellInstance) {
+      notificationBellInstance = new NotificationBell();
+    }
+    const bellMount = container.querySelector('#bell-mount-point');
+    if (bellMount) {
+      bellMount.appendChild(notificationBellInstance.render());
+    }
   } else {
+    if (notificationBellInstance) {
+      notificationBellInstance.destroy();
+      notificationBellInstance = null;
+    }
+
     container.innerHTML = `
       ${bookmarksGuestHTML}
       <a href="${authHref}" class="auth-trigger" id="auth-btn">
