@@ -52,10 +52,10 @@ async def get_avatar(identifier: str):
         if os.path.exists(path):
             return FileResponse(path, headers={"Cache-Control": "public, max-age=3600"})
     
-    # 2. Lookup user by nickname to find target filename
+    # 2. Lookup user by nickname or username to find target filename
     user = db.get_one(
-        "SELECT username, COALESCE(nickname, username) as nickname FROM users WHERE LOWER(nickname) = LOWER(%s)",
-        [identifier]
+        "SELECT username, COALESCE(nickname, username) as nickname FROM users WHERE LOWER(nickname) = LOWER(%s) OR LOWER(username) = LOWER(%s)",
+        [identifier, identifier]
     )
     if user:
         for name_to_try in [user.get("nickname"), user["username"]]:
@@ -79,7 +79,7 @@ import re
 def validate_field(val: str) -> bool:
     if not val or len(val) > 20:
         return False
-    return bool(re.match(r"^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ]+$", val))
+    return bool(re.match(r"^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ_]+$", val))
 
 class ProfileUpdateRequest(BaseModel):
     new_username: Optional[str] = None
@@ -202,7 +202,8 @@ async def register(req: RegisterRequest):
 @router.post("/login")
 async def login(req: LoginRequest, response: Response):
     db = get_db()
-    user = db.get_one("SELECT * FROM users WHERE username = %s", [req.username])
+    username = req.username.strip() if req.username else ""
+    user = db.get_one("SELECT * FROM users WHERE username = %s", [username])
     if not user or not verify_password(req.password, user['password_hash']):
         raise HTTPException(status_code=401, detail="Невірне ім'я користувача або пароль")
     

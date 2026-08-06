@@ -246,6 +246,18 @@ export class NotificationsView {
       return t('edit_rejected_msg', { name: `<strong>${actorName}</strong>` });
     }
 
+    if (item.type === 'new_issue') {
+      const number = payload.issue_number || (item.message ? item.message.match(/#([\w\.\-]+)/)?.[1] : '');
+      let title = payload.volume_name;
+      if (!title && item.message) {
+        const match = item.message.match(/'([^']+)'/);
+        if (match) title = match[1];
+      }
+      if (number) {
+        return t('new_issue_msg', { number, title: this.escapeHtml(title || '') });
+      }
+    }
+
     let msg = this.escapeHtml(item.message);
     if (actorName && msg.includes(actorName)) {
       msg = msg.replace(actorName, `<strong>${actorName}</strong>`);

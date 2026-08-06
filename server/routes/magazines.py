@@ -708,7 +708,7 @@ async def get_magazine_detail(id: int):
     issues = db.get_all("""
         SELECT * FROM magazine_issues
         WHERE magazine_id = %s
-        ORDER BY CASE WHEN issue_number ~ '^[0-9]' THEN CAST(substring(issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END DESC NULLS LAST, issue_number DESC, release_date DESC, cover_date DESC
+        ORDER BY COALESCE(cover_date, release_date) DESC NULLS LAST, CASE WHEN issue_number ~ '^[0-9]' THEN CAST(substring(issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END DESC NULLS LAST, issue_number DESC
         LIMIT 6
     """, [id])
     
@@ -759,7 +759,7 @@ async def get_all_magazine_issues(id: int, page: int = 1, limit: int = 24):
     issues = db.get_all("""
         SELECT * FROM magazine_issues
         WHERE magazine_id = %s
-        ORDER BY CASE WHEN issue_number ~ '^[0-9]' THEN CAST(substring(issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END DESC NULLS LAST, issue_number DESC, release_date DESC, cover_date DESC
+        ORDER BY COALESCE(cover_date, release_date) DESC NULLS LAST, CASE WHEN issue_number ~ '^[0-9]' THEN CAST(substring(issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END DESC NULLS LAST, issue_number DESC
         LIMIT %s OFFSET %s
     """, [id, limit, offset])
     

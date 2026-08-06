@@ -1,6 +1,8 @@
 import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { createPaginator } from '../components/Pagination.js';
+import { formatDate } from '../helpers/lang.js';
+import { icon } from '../helpers/icons.js';
 
 export async function renderMagazineAllItems(main, params = {}) {
     const magazineId = Number(params.id);
@@ -47,15 +49,25 @@ export async function renderMagazineAllItems(main, params = {}) {
                             ${data.items.map(item => {
                                 if (activeTab === 'issues') {
                                     const issCover = normalizeImageUrl(item.image);
+                                    const formattedDate = formatDate(item.cover_date || item.release_date, '');
                                     return `
                                         <a class="issue-grid-card" href="#/magazines/issues/${item.id}">
-                                            <div class="issue-grid-poster">
-                                                ${issCover ? `<img src="${escapeHtmlAttribute(issCover)}" alt="Випуск #${item.issue_number}" loading="lazy">` : ''}
-                                                <div class="issue-grid-badge"># ${escapeHtmlAttribute(item.issue_number || '')}</div>
+                                            <div class="issue-grid-cover-wrap">
+                                                ${issCover
+                                                    ? `<img class="issue-grid-cover" src="${escapeHtmlAttribute(issCover)}" alt="Випуск #${item.issue_number}" loading="lazy">`
+                                                    : `<div class="issue-grid-cover-empty">${icon('imagePlaceholder', 32)}</div>`}
+                                                ${item.issue_number ? `<div class="issue-grid-number"># ${escapeHtmlAttribute(item.issue_number)}</div>` : ''}
                                             </div>
                                             <div class="issue-grid-body">
-                                                <h3 class="issue-grid-title">${escapeHtmlAttribute(item.name || `Випуск #${item.issue_number}`)}</h3>
-                                                <span class="issue-grid-date">${item.release_date || item.cover_date || ''}</span>
+                                                <h3 class="issue-grid-title" title="${escapeHtmlAttribute(item.name || `Випуск #${item.issue_number}`)}">
+                                                    ${escapeHtmlAttribute(item.name || `Випуск #${item.issue_number}`)}
+                                                </h3>
+                                                ${formattedDate ? `
+                                                    <div class="issue-grid-date" style="display: flex; align-items: center; gap: 4px; margin-top: 4px;">
+                                                        ${icon('calendar', 12, { strokeWidth: 2 })}
+                                                        <span>${escapeHtmlAttribute(formattedDate)}</span>
+                                                    </div>
+                                                ` : ''}
                                             </div>
                                         </a>
                                     `;
@@ -63,8 +75,10 @@ export async function renderMagazineAllItems(main, params = {}) {
                                     const serCover = normalizeImageUrl(item.image);
                                     return `
                                         <a class="issue-grid-card" href="#/volumes/${item.id}">
-                                            <div class="issue-grid-poster">
-                                                ${serCover ? `<img src="${escapeHtmlAttribute(serCover)}" alt="${escapeHtmlAttribute(item.name)}" loading="lazy">` : ''}
+                                            <div class="issue-grid-cover-wrap">
+                                                ${serCover
+                                                    ? `<img class="issue-grid-cover" src="${escapeHtmlAttribute(serCover)}" alt="${escapeHtmlAttribute(item.name)}" loading="lazy">`
+                                                    : `<div class="issue-grid-cover-empty">${icon('imagePlaceholder', 32)}</div>`}
                                             </div>
                                             <div class="issue-grid-body">
                                                 <h3 class="issue-grid-title">${escapeHtmlAttribute(item.name_uk || item.name)}</h3>
@@ -100,7 +114,7 @@ export async function renderMagazineAllItems(main, params = {}) {
                     <div class="container volume-body" style="padding-top: 20px;">
                         <div class="wanted-section-header wanted-section-header--row">
                             <div class="wanted-section-title">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-1.5Z"/><path d="M8 7h6"/><path d="M8 11h8"/></svg>
+                                ${icon('magazine', 24, { strokeWidth: 2.2 })}
                                 <span>${magazineTitle}</span>
                             </div>
                             

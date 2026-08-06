@@ -23,6 +23,10 @@ def create_notification(
         RETURNING id
     """
     res = db.get_one(sql, [user_id, type_str, title, message, link, payload_json])
+    try:
+        db.conn.commit()
+    except Exception:
+        pass
     return res["id"] if res else None
 
 
@@ -175,10 +179,10 @@ def notify_new_issue_subscribers(
     vol = db.get_one("SELECT image, cover_img FROM volumes WHERE id = %s", [volume_id])
     cover_image = (vol.get("image") or vol.get("cover_img")) if vol else None
 
-    # Знаходимо користувачів у favorites та user_volumes_readlist для списків 'planned' та 'reading'
+    # Знаходимо користувачів у user_favorites та user_volumes_readlist для списків 'planned' та 'reading'
     sql = """
         SELECT DISTINCT user_id FROM (
-            SELECT user_id FROM favorites WHERE entity_type = 'volume' AND entity_id = %s
+            SELECT user_id FROM user_favorites WHERE content_type = 'volume' AND content_id = %s
             UNION
             SELECT user_id FROM user_volumes_readlist WHERE volume_id = %s AND LOWER(list_name) IN ('planned', 'reading')
         ) sub
@@ -195,6 +199,7 @@ def notify_new_issue_subscribers(
         "volume_id": volume_id,
         "issue_id": issue_id,
         "issue_number": issue_number,
+        "volume_name": volume_name,
         "cover_image": cover_image
     }
     

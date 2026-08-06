@@ -114,7 +114,7 @@ export async function renderMagazineDetail(main, params = {}) {
                     <section class="related-collections-section block">
                         <div class="block-header">
                             <h2>
-                                ${icon('layers', 16, { strokeWidth: 2.2 })}
+                                ${icon('sparkles', 16, { strokeWidth: 2.2 })}
                                 Нові випуски
                                 <span id="issues-pag-label"></span>
                             </h2>
@@ -131,7 +131,7 @@ export async function renderMagazineDetail(main, params = {}) {
                         ${allIssues.length === 0 ? '<p>Немає завантажених випусків.</p>' : `
                             <div style="position: relative;">
                                 <button class="outer-nav-btn outer-nav-btn--prev" id="btn-issues-prev" title="Попередня"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
-                                <div class="related-list" id="magazine-issues-list-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 1em;">
+                                <div class="related-list" id="magazine-issues-list-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 1em;">
                                 </div>
                                 <button class="outer-nav-btn outer-nav-btn--next" id="btn-issues-next" title="Наступна"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
                             </div>
@@ -142,7 +142,7 @@ export async function renderMagazineDetail(main, params = {}) {
                     ${series.length > 0 ? `
                         <section class="block">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                                <h2>Поточні серії</h2>
+                                <h2>${icon('volumes', 16, { strokeWidth: 2.2 })} Поточні серії</h2>
                                 ${(data.series_count || series.length) > 6 ? `
                                     <a href="#/magazines/${magazineId}/all?tab=series" class="section-link">
                                         Всі серії (${data.series_count || series.length})
@@ -155,8 +155,8 @@ export async function renderMagazineDetail(main, params = {}) {
                                     const serCover = normalizeImageUrl(ser.image);
                                     return `
                                         <a class="issue-grid-card" href="#/volumes/${ser.id}">
-                                            <div class="issue-grid-poster">
-                                                ${serCover ? `<img src="${escapeHtmlAttribute(serCover)}" alt="${escapeHtmlAttribute(ser.name)}" loading="lazy">` : ''}
+                                            <div class="issue-grid-cover-wrap">
+                                                ${serCover ? `<img class="issue-grid-cover" src="${escapeHtmlAttribute(serCover)}" alt="${escapeHtmlAttribute(ser.name)}" loading="lazy">` : ''}
                                             </div>
                                             <div class="issue-grid-body">
                                                 <h3 class="issue-grid-title">${escapeHtmlAttribute(ser.name_uk || ser.name)}</h3>
@@ -193,8 +193,8 @@ export async function renderMagazineDetail(main, params = {}) {
                             const serCover = normalizeImageUrl(ser.image);
                             return `
                                 <a class="issue-grid-card" href="#/volumes/${ser.id}">
-                                    <div class="issue-grid-poster">
-                                        ${serCover ? `<img src="${escapeHtmlAttribute(serCover)}" alt="${escapeHtmlAttribute(ser.name)}" loading="lazy">` : ''}
+                                    <div class="issue-grid-cover-wrap">
+                                        ${serCover ? `<img class="issue-grid-cover" src="${escapeHtmlAttribute(serCover)}" alt="${escapeHtmlAttribute(ser.name)}" loading="lazy">` : ''}
                                     </div>
                                     <div class="issue-grid-body">
                                         <h3 class="issue-grid-title">${escapeHtmlAttribute(ser.name_uk || ser.name)}</h3>
@@ -238,13 +238,17 @@ export async function renderMagazineDetail(main, params = {}) {
 
             let currentIssuesPage = 1;
             const issuesPerPage = 8;
-            let selectedYear = '';
-            if (allIssues.length > 0) {
-                const latestIssueDate = allIssues[0].cover_date || allIssues[0].release_date || '';
-                if (latestIssueDate && latestIssueDate.includes('-')) {
-                    selectedYear = latestIssueDate.split('-')[0];
-                }
-            }
+
+            // Отримуємо унікальні роки та сортуємо їх від найновішого до найстарішого
+            const years = allIssues.map(iss => {
+                const d = iss.cover_date || iss.release_date || '';
+                return d.split('-')[0];
+            }).filter(y => y && !isNaN(y)).map(Number);
+
+            const uniqueYears = Array.from(new Set(years)).sort((a, b) => b - a);
+
+            // За замовчуванням вибираємо найновіший рік
+            let selectedYear = uniqueYears.length > 0 ? String(uniqueYears[0]) : '';
             
             let filteredIssues = selectedYear ? allIssues.filter(iss => (iss.cover_date || iss.release_date || '').startsWith(selectedYear)) : [...allIssues];
 
@@ -292,15 +296,6 @@ export async function renderMagazineDetail(main, params = {}) {
 
             const datepickerContainer = document.getElementById('issues-datepicker-container');
             if (allIssues.length > 0 && datepickerContainer) {
-                // Find all unique years across allIssues
-                const years = allIssues.map(iss => {
-                    const d = iss.cover_date || iss.release_date || '';
-                    return d.split('-')[0];
-                }).filter(y => y && !isNaN(y)).map(Number);
-
-                // Get unique years, sorted descending
-                const uniqueYears = Array.from(new Set(years)).sort((a, b) => b - a);
-
                 let yearOptions = '';
                 for (const yr of uniqueYears) {
                     yearOptions += `<option value="${yr}" ${String(yr) === selectedYear ? 'selected' : ''}>${yr}</option>`;
@@ -309,7 +304,7 @@ export async function renderMagazineDetail(main, params = {}) {
                 datepickerContainer.innerHTML = `
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            ${icon('calendar', 14, { strokeWidth: 2.2 })}
                             Рік:
                         </span>
                         <select id="issues-yearpicker" style="background: var(--bg-card); border: 1px solid var(--border-s); border-radius: 6px; color: var(--text); padding: 4px 8px; font-size: 13px; outline: none; height: 32px;">

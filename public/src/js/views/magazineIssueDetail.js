@@ -347,7 +347,7 @@ export async function renderMagazineIssueDetail(main, params = {}) {
                         </div>
                         <div style="position: relative;">
                             <button class="outer-nav-btn outer-nav-btn--prev" id="btn-issues-prev" title="Попередня">${icon('chevronLeft', 24, { strokeWidth: 2.5 })}</button>
-                            <div class="related-list" id="magazine-issues-list-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 1em;">
+                            <div class="related-list" id="magazine-issues-list-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 1em;">
                             </div>
                             <button class="outer-nav-btn outer-nav-btn--next" id="btn-issues-next" title="Наступна">${icon('chevronRight', 24, { strokeWidth: 2.5 })}</button>
                         </div>

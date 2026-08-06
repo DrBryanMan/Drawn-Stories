@@ -53,7 +53,7 @@ function getRoleIconName(role) {
 }
 
 function renderProfileLayout(container, p, activeTab) {
-    const avatarUrl = `/api/auth/avatar/${p.username}`;
+    const avatarUrl = `/api/auth/avatar/${encodeURIComponent(p.nickname || p.username)}`;
     const avatarHtml = getAvatarHtml(avatarUrl, 'user-profile-avatar-img', 200);
     const isSelf = currentUser && currentUser.username.toLowerCase() === p.username.toLowerCase();
     const roleIcon = getRoleIconName(p.role);

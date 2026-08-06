@@ -90,19 +90,20 @@ export async function renderEditDetail(main, params) {
             : `<p class="edit-detail-subtitle">${t('edit_detail_subtitle')}</p>`;
 
         // Аватар автора пропозиції
-        const proposerAvatarUrl = `/api/auth/avatar/${e.proposer_username}`;
+        const proposerName = e.proposer_nickname || e.proposer_username;
+        const proposerAvatarUrl = `/api/auth/avatar/${encodeURIComponent(proposerName)}`;
         const proposerAvatarHtml = getAvatarHtml(proposerAvatarUrl, 'person-avatar-img', 44);
 
         // Картка модератора
         let moderatorCardHTML = '';
-        if (e.status !== 'pending' && e.moderator_username) {
-            const moderatorAvatarUrl = `/api/auth/avatar/${e.moderator_username}`;
+        const modName = e.moderator_nickname || e.moderator_username;
+        if (e.status !== 'pending' && modName) {
+            const moderatorAvatarUrl = `/api/auth/avatar/${encodeURIComponent(modName)}`;
             const moderatorAvatarHtml = getAvatarHtml(moderatorAvatarUrl, 'person-avatar-img', 44);
             const modAction = e.status === 'approved' ? t('approved_by') : t('rejected_by');
             const modClass = e.status === 'approved' ? 'moderator-card--approved' : 'moderator-card--rejected';
             const commentMod = e.moderator_comment ? `<div class="person-card-comment"><strong>${t('comment')}:</strong> ${escapeHtml(e.moderator_comment)}</div>` : '';
 
-            const modName = e.moderator_nickname || e.moderator_username;
             moderatorCardHTML = `
                 <div class="people-section">
                     <span class="people-section-title">${modAction}</span>
@@ -156,8 +157,6 @@ export async function renderEditDetail(main, params) {
                 </div>
             `;
         }
-
-        const proposerName = e.proposer_nickname || e.proposer_username;
 
         content.innerHTML = `
             <div class="edit-detail-header-block">

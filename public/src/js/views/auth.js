@@ -35,7 +35,7 @@ export async function renderAuth(container) {
                             <label for="username">${t('username')} *</label>
                             <div class="input-wrapper">
                                 ${icon('user', 16)}
-                                <input type="text" id="username" name="username" required maxlength="20" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ]+$" title="Дозволено лише літери та цифри (від 1 до 20 симв.)" placeholder="${t('auth_username_placeholder')}">
+                                <input type="text" id="username" name="username" required maxlength="20" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ_]+$" title="Дозволено лише літери, цифри та нижнє підкреслення (від 1 до 20 симв.)" placeholder="${t('auth_username_placeholder')}">
                             </div>
                         </div>
                         ${mode === 'register' ? `
@@ -43,7 +43,7 @@ export async function renderAuth(container) {
                             <label for="nickname">${t('nickname')}</label>
                             <div class="input-wrapper">
                                 ${icon('smile', 16)}
-                                <input type="text" id="nickname" name="nickname" maxlength="20" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ]+$" title="Дозволено лише літери та цифри (від 1 до 20 симв.)" class="nickname-highlight" placeholder="${t('auth_nickname_placeholder')}">
+                                <input type="text" id="nickname" name="nickname" maxlength="20" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ_]+$" title="Дозволено лише літери, цифри та нижнє підкреслення (від 1 до 20 симв.)" class="nickname-highlight" placeholder="${t('auth_nickname_placeholder')}">
                             </div>
                             <div class="nickname-hint-text">Якщо ви не вкажете нікнейм, в якості нього буде використано логін.</div>
                         </div>

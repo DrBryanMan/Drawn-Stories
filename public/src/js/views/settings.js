@@ -2,7 +2,7 @@ import { API } from '../helpers/api.js';
 import { t, getCurrentLanguage, setLanguage } from '../helpers/i18n.js';
 
 export async function renderSettings(main, user) {
-  const avatarUrl = `/api/auth/avatar/${user.username}?t=${new Date().getTime()}`;
+  const avatarUrl = `/api/auth/avatar/${encodeURIComponent(user.nickname || user.username)}?t=${new Date().getTime()}`;
 
   const icon = (d, size = 18) =>
     `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
@@ -50,7 +50,7 @@ export async function renderSettings(main, user) {
               <div class="info-item">
                 <span class="info-label">${t('username')}</span>
                 <div class="input-with-button">
-                  <input type="text" id="username-input" class="settings-input" value="${user.username}" required maxlength="20" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ]+$" title="Дозволено лише літери та цифри (макс. 20 симв.)">
+                  <input type="text" id="username-input" class="settings-input" value="${user.username}" required maxlength="20" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ_]+$" title="Дозволено лише літери, цифри та нижнє підкреслення (макс. 20 симв.)">
                   <button type="submit" class="save-btn" id="save-username-btn">${t('save')}</button>
                 </div>
               </div>
@@ -61,7 +61,7 @@ export async function renderSettings(main, user) {
               <div class="info-item">
                 <span class="info-label">${t('nickname')}</span>
                 <div class="input-with-button">
-                  <input type="text" id="nickname-input" class="settings-input" value="${user.nickname || user.username}" required maxlength="20" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ]+$" title="Дозволено лише літери та цифри (макс. 20 симв.)">
+                  <input type="text" id="nickname-input" class="settings-input" value="${user.nickname || user.username}" required maxlength="20" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ_]+$" title="Дозволено лише літери, цифри та нижнє підкреслення (макс. 20 симв.)">
                   <button type="submit" class="save-btn" id="save-nickname-btn">${t('save')}</button>
                 </div>
               </div>

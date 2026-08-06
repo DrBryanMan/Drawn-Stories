@@ -335,7 +335,7 @@ function imgField(name = 'image', label = 'Обкладинка') {
       <label class="admin-label">${label}</label>
       <div class="gam-image-field-container" style="display: grid; grid-template-columns: 1fr 140px; gap: 16px; align-items: start;">
         <div class="gam-image-inputs" style="display: flex; flex-direction: column; gap: 8px;">
-            <input type="url" name="${name}" placeholder="URL зображення (ComicVine, Fandom...)" class="admin-input gam-img-url-input">
+            <input type="text" name="${name}" placeholder="URL зображення (ComicVine, Fandom...)" class="admin-input gam-img-url-input" autocomplete="off">
             <div style="display: flex; align-items: center; gap: 8px;">
                 <label class="btn-admin btn-admin--secondary" style="margin: 0; cursor: pointer; flex: 1; text-align: center;">
                     ${icon('plus', 18)} Завантажити локально

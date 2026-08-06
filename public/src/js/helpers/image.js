@@ -14,6 +14,10 @@ export function normalizeImageUrl(value, width = 250) {
     const path = String(value).trim();
     if (!path) return '';
 
+    if (path.startsWith('data:') || path.startsWith('blob:')) {
+        return path;
+    }
+
     // Fandom (Wikia) Support
     // Original: https://static.wikia.nocookie.net/marvel/images/6/6b/Filename.jpeg/revision/latest?path-prefix=ru
     // Target: https://images.wikia.nocookie.net/marvel/ru/images/thumb/6/6b/Filename.jpeg/250px-.
@@ -42,10 +46,25 @@ export function normalizeImageUrl(value, width = 250) {
         }
     }
 
-    if (/^https?:\/\//i.test(path)) return path;
+    if (/^https?:\/\//i.test(path)) {
+        try {
+            const url = new URL(path);
+            if (typeof window !== 'undefined' && (url.origin === window.location.origin || url.hostname === 'localhost' || url.hostname === '127.0.0.1')) {
+                return url.pathname + url.search + url.hash;
+            }
+        } catch (e) {}
+        return path;
+    }
     if (path.startsWith('//')) return `https:${path}`;
 
     const cleanPath = path.replace(/^\/+/, '');
+
+    // Local application static/media/api paths
+    const isComicVineUpload = /^uploads\/(scale_|original\/)/.test(cleanPath) || /^a\/uploads\//.test(cleanPath) || /^scale_/.test(cleanPath);
+    if (cleanPath.startsWith('images/') || cleanPath.startsWith('static/') || cleanPath.startsWith('api/') || (cleanPath.startsWith('uploads/') && !isComicVineUpload)) {
+        return `/${cleanPath}`;
+    }
+
     if (cleanPath.startsWith('a/uploads/')) {
         return `https://comicvine.gamespot.com/${cleanPath}`;
     }

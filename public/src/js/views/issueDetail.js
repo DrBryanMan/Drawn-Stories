@@ -1030,6 +1030,7 @@ export async function renderIssueDetail(container, params = {}) {
                             ${pagesBadge}
                         </div>
                     </div>
+                    ${renderEditorsHistoryBlock(edits, currentUser, { editButtonId: 'issue-edit-btn', editTitle: isModerator ? t('edit') : t('suggest_edit') })}
                 </div>
 
                 <div class="issue-hero-tabs-band">
@@ -1074,8 +1075,6 @@ export async function renderIssueDetail(container, params = {}) {
                     ${reprintsHTML}
                 </div>
             </div>
-
-            ${renderEditorsHistoryBlock(edits, currentUser, { editButtonId: 'issue-edit-btn', editTitle: t('edit') })}
         </div>
     `;
 
@@ -1402,21 +1401,21 @@ export async function renderIssueDetail(container, params = {}) {
 
     initEditorsHistoryBlock(container, edits);
 
+    const editBtn = container.querySelector('#issue-edit-btn');
+    if (editBtn) {
+        editBtn.addEventListener('click', () => {
+            const editor = new IssueEditor(issue, stories, persons, reprints, appearances, () => {
+                renderIssueDetail(container, params);
+            });
+            editor.render();
+        });
+    }
+
     if (isModerator) {
         const scrapeBtn = container.querySelector('#issue-scrape-appearances-btn');
         if (scrapeBtn) {
             scrapeBtn.addEventListener('click', () => {
                 openScrapeProgressModal('issue', issueId);
-            });
-        }
-
-        const editBtn = container.querySelector('#issue-edit-btn');
-        if (editBtn) {
-            editBtn.addEventListener('click', () => {
-                const editor = new IssueEditor(issue, stories, persons, reprints, appearances, () => {
-                    renderIssueDetail(container, params);
-                });
-                editor.render();
             });
         }
 

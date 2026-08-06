@@ -164,14 +164,15 @@
 }
 
 .notification-item.unread::before {
-  content: '';
-  position: absolute;
-  left: 4px;
-  top: 20px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 50%;
+    width: 3px;
+    height: 80%;
+    border-radius: 4px;
+    background: var(--accent);
+    transform: translateY(-50%)
 }
 
 /* Avatar container with type badge in bottom-right corner */

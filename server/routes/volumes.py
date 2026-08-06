@@ -902,7 +902,8 @@ async def get_volume_edit_history(volume_id: int):
         raise HTTPException(status_code=404, detail="Том не знайдено")
         
     query = """
-        SELECT er.*, u.username as proposer_username, m.username as moderator_username
+        SELECT er.*, u.username as proposer_username, COALESCE(u.nickname, u.username) as proposer_nickname,
+               m.username as moderator_username, COALESCE(m.nickname, m.username) as moderator_nickname
         FROM edit_requests er
         JOIN users u ON er.user_id = u.id
         LEFT JOIN users m ON er.moderator_id = m.id

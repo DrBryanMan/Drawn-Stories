@@ -767,7 +767,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                                         ${escapeHtmlAttribute(magazine.name)}
                                     </a>
                                 ` : `
-                                    <a href="#/catalog?publisher_ids=${volume.publisher}" class="volume-badge volume-publisher-badge" title="Видавництво">
+                                    <a href="${volume.publisher ? `#/publishers/${volume.publisher}` : '#/publishers'}" class="volume-badge volume-publisher-badge" title="Видавництво">
                                         ${icon('building', 13, { strokeWidth: 2.2 })}
                                         ${publisherName}
                                     </a>
