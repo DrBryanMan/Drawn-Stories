@@ -82,12 +82,12 @@
 .calendar-controls-bar {
   background: var(--cal-bg-primary);
   border: 1px solid var(--cal-border);
-  border-radius: var(--cal-radius);
-  padding: 14px 20px;
+  border-radius: var(--r-lg);
+  padding: .5em;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 5px;
   margin-bottom: 24px;
   box-shadow: var(--cal-shadow);
   flex-wrap: wrap;
@@ -96,23 +96,23 @@
 .calendar-controls-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: .5em;
 }
 
 .calendar-controls-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: .5em;
 }
 
 .calendar-nav-group {
   display: flex;
   align-items: center;
-  gap: 5px;
-  background: var(--cal-bg-secondary);
-  border-radius: 8px;
-  padding: 2px;
-  border: 1px solid var(--cal-border);
+  gap: 1em;
+  /* background: var(--cal-bg-secondary); */
+  /* border-radius: 8px; */
+  /* padding: 2px; */
+  /* border: 1px solid var(--cal-border); */
 }
 
 .calendar-date-display {

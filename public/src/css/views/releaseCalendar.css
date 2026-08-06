@@ -1,0 +1,241 @@
+/* public/src/css/views/releaseCalendar.css */
+
+.release-calendar {
+  padding-bottom: 60px;
+}
+
+.release-cal-controls-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin-bottom: 28px;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
+}
+
+/* Sections inside control bar */
+.release-cal-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Section Dividers */
+.release-cal-divider {
+  width: 1px;
+  height: 36px;
+  background-color: var(--border-color, #e5e7eb);
+  align-self: center;
+}
+
+/* Section 1: Counter & Period badge */
+.release-cal-counter-section {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.release-cal-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-hover, rgba(99, 102, 241, 0.08));
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  padding: 5px 10px;
+  border-radius: 10px;
+}
+
+.release-cal-counter-num {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--primary, #6366f1);
+}
+
+.release-cal-counter-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted, #6b7280);
+}
+
+/* Period Status Badges */
+.release-period-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.release-period-badge.period-current {
+  background: var(--accent-gradient, linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15)));
+  color: var(--primary, #6366f1);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.release-period-badge.period-past {
+  background: var(--bg-body, #f3f4f6);
+  color: var(--text-muted, #6b7280);
+  border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.release-period-badge.period-future {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* Section 3: Filters right */
+.release-cal-filters-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.release-type-toggle,
+.category-toggle {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-body, #f3f4f6);
+  border-radius: 10px;
+  padding: 3px;
+  border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.release-type-toggle .calendar-toggle-btn,
+.category-toggle .calendar-toggle-btn {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #6b7280);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.release-type-toggle .calendar-toggle-btn.active,
+.category-toggle .calendar-toggle-btn.active {
+  background: var(--bg-card, #ffffff);
+  color: var(--primary, #6366f1);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Day Section & Sticky Header */
+.release-day-section {
+  margin-bottom: 36px;
+  position: relative;
+}
+
+.release-day-header-wrapper {
+  position: sticky;
+  top: var(--header-height, 64px);
+  z-index: 15;
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+  pointer-events: none;
+}
+
+.release-day-header {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 1em;
+  border-radius: var(--r-lg);
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-color, #1f2937);
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.release-day-header.is-today {
+  background: var(--bg-card, #ffffff);
+  border-color: var(--primary, #6366f1);
+  color: var(--primary, #6366f1);
+  box-shadow: 0 4px 18px rgba(99, 102, 241, 0.25);
+  font-weight: 700;
+}
+
+.release-day-header.is-empty {
+  opacity: 0.65;
+  background: var(--bg-card, #ffffff);
+  border-style: dashed;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.release-day-title {
+  display: inline-block;
+}
+
+.release-day-empty-text {
+  font-weight: 400;
+  color: var(--text-muted, #9ca3af);
+  font-size: 13px;
+}
+
+.release-day-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-body, #f3f4f6);
+  color: var(--text-color, #374151);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 12px;
+  min-width: 24px;
+}
+
+.release-day-header.is-today .release-day-count-badge {
+  background: var(--primary, #6366f1);
+  color: #ffffff;
+}
+
+/* Day Grid */
+.release-day-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 20px;
+  margin-top: 12px;
+}
+
+@media (max-width: 992px) {
+  .release-cal-divider {
+    display: none;
+  }
+
+  .release-cal-controls-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .release-cal-section {
+    justify-content: space-between;
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .release-day-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 12px;
+  }
+}
