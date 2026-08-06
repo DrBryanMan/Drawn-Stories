@@ -1,10 +1,9 @@
-import { getMagazineColor } from './colorHelper.js';
+import { getPublisherColor } from '../../helpers/publisher.js';
 
 /**
  * Component for rendering right sidebar details for a selected calendar day.
- * Matches 1:1 with user mockup:
  * - Top header with full date and blue release count pill
- * - Magazine banner with accent border, title, subtitle, and pink series count pill
+ * - Magazine banner with publisher-based accent border, title, subtitle, and link to magazine issue
  * - Borderless clean series rows with cover, main title, ukrainian title, and blue issue tag
  */
 
@@ -39,7 +38,7 @@ export function renderCalendarSidebar(container, selectedDayDate, dayIssues = []
   });
 
   const issuesBlocksHtml = dayIssues.map(iss => {
-    const color = getMagazineColor(iss.magazine_label, iss.magazine_id);
+    const colorHex = getPublisherColor(iss);
     const seriesCount = iss.chapters?.length || 0;
 
     const chaptersRowsHtml = (iss.chapters || []).map(ch => {
@@ -64,20 +63,14 @@ export function renderCalendarSidebar(container, selectedDayDate, dayIssues = []
 
     return `
       <div class="sidebar-issue-section">
-        <div class="sidebar-issue-banner" style="
-          --mag-color: ${color.dot};
-          --mag-bg: ${color.bg};
-          --mag-text: ${color.text};
-          --mag-pill-bg: ${color.bg};
-          --mag-border: ${color.border};
-        ">
+        <div class="sidebar-issue-banner" style="--mag-color: ${colorHex};">
           <div class="sidebar-issue-banner-left">
             <div class="sidebar-issue-banner-title">
               ${iss.magazine_label || iss.magazine_name} #${iss.issue_number}
             </div>
             <div class="sidebar-issue-banner-subtitle">${iss.magazine_name}</div>
           </div>
-          <div class="sidebar-issue-banner-pill">${seriesCount} серій</div>
+          <a href="#/magazines/issues/${iss.issue_id}" class="sidebar-issue-banner-pill">${seriesCount} серій</a>
         </div>
 
         ${chaptersRowsHtml ? `<div class="sidebar-chapters-container">${chaptersRowsHtml}</div>` : ''}

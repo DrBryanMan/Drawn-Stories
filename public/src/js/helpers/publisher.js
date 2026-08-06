@@ -95,22 +95,31 @@ export const PUBLISHER_COLORS = {
 };
 
 /**
- * Returns color associated with a publisher name
- * @param {string} name - The publisher's name
+ * Returns color associated with a publisher name or an object containing publisher_name
+ * @param {string|Object} target - The publisher's name string or object with publisher_name
  * @returns {string} Hex color code
  */
-export function getPublisherColor(name) {
-    if (!name) return '#64748b'; // Default color: slate
+export function getPublisherColor(target) {
+    if (!target) return '#64748b'; // Default color: slate
+
+    let name = '';
+    if (typeof target === 'object') {
+        name = target.publisher_name || '';
+    } else if (typeof target === 'string') {
+        name = target;
+    }
+
+    if (!name) return '#64748b';
     const normalized = name.trim().toLowerCase();
     return PUBLISHER_COLORS[normalized] || '#64748b';
 }
 
 /**
  * Returns CSS style string for publisher badge
- * @param {string} name - The publisher's name
+ * @param {string|Object} target - The publisher's name or object with publisher_name
  * @returns {string} Style attribute content
  */
-export function getPublisherBadgeStyle(name) {
-    const color = getPublisherColor(name);
+export function getPublisherBadgeStyle(target) {
+    const color = getPublisherColor(target);
     return `border-color: color-mix(in srgb, ${color} 20%, var(--border-s)); background: color-mix(in srgb, ${color} 6%, #ffffff); color: ${color};`;
 }

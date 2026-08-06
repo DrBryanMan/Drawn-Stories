@@ -22,23 +22,6 @@
   padding-bottom: 40px;
 }
 
-.calendar-page-header {
-  margin-bottom: 16px;
-}
-
-.calendar-page-title {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--cal-text);
-  margin: 0 0 4px 0;
-}
-
-.calendar-page-subtitle {
-  font-size: 0.88rem;
-  color: var(--cal-text-muted);
-  margin: 0;
-}
-
 /* ── Stats Header Bar ── */
 .calendar-stats-grid {
   display: grid;
@@ -253,12 +236,20 @@
   font-weight: 500;
   line-height: 1.6;
   cursor: pointer;
-  transition: transform 0.12s ease, filter 0.12s ease;
+  transition: transform 0.12s ease, filter 0.12s ease, background-color 0.15s ease;
   user-select: none;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  background: color-mix(in srgb, var(--mag-color, #3b82f6) 12%, transparent);
+  color: var(--mag-color, #3b82f6);
+  border: 1px solid color-mix(in srgb, var(--mag-color, #3b82f6) 28%, transparent);
+}
+
+.mag-badge:hover {
+  transform: scale(1.02);
+  background: color-mix(in srgb, var(--mag-color, #3b82f6) 22%, transparent);
 }
 
 .mag-badge-label {
@@ -547,39 +538,7 @@
   padding-top: 1px;
 }
 
-/* Legend Footer */
-.month-calendar-legend {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid var(--cal-border);
-}
 
-.legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--cal-text-muted);
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
-  transition: background-color 0.15s;
-}
-
-.legend-item:hover {
-  background: var(--cal-bg-secondary);
-}
-
-.legend-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-}
 
 /* ── Sidebar Component ── */
 .calendar-sidebar {
@@ -647,8 +606,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 14px;
-  background: color-mix(in srgb, var(--mag-color) 6%, transparent);
-  border-left: 3px solid var(--mag-color, #dc2626);
+  background: color-mix(in srgb, var(--mag-color, #3b82f6) 6%, transparent);
+  border-left: 3px solid var(--mag-color, #3b82f6);
 }
 
 .sidebar-issue-banner-left {
@@ -661,7 +620,7 @@
   font-family: var(--font-mono);
   font-size: 14px;
   font-weight: 700;
-  color: var(--mag-text, #dc2626);
+  color: var(--mag-color, #3b82f6);
   letter-spacing: -0.01em;
 }
 
@@ -672,14 +631,21 @@
 }
 
 .sidebar-issue-banner-pill {
-  background: var(--mag-pill-bg, #fff1f2);
-  border: 1px solid var(--mag-border, #fecdd3);
-  color: var(--mag-text, #e11d48);
+  background: color-mix(in srgb, var(--mag-color, #3b82f6) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--mag-color, #3b82f6) 25%, transparent);
+  color: var(--mag-color, #3b82f6);
   padding: 2px 8px;
   border-radius: 20px;
   font-size: 11px;
   font-weight: 600;
   line-height: 1.6;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.sidebar-issue-banner-pill:hover {
+  background: color-mix(in srgb, var(--mag-color, #3b82f6) 22%, transparent);
+  border-color: var(--mag-color, #3b82f6);
 }
 
 .sidebar-chapters-container {

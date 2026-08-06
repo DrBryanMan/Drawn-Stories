@@ -105,6 +105,7 @@ async def get_manga_calendar(
             mm.id as magazine_id,
             mm.name as magazine_name,
             mm.label as magazine_label,
+            p.name as publisher_name,
             CASE 
                 WHEN %s::integer IS NOT NULL AND (
                     EXISTS (SELECT 1 FROM user_volumes_readlist uvr WHERE uvr.user_id = %s::integer AND uvr.volume_id = v.id)
@@ -114,6 +115,7 @@ async def get_manga_calendar(
             END as is_in_user_list
         FROM magazine_issues mi
         JOIN manga_magazines mm ON mi.magazine_id = mm.id
+        LEFT JOIN publishers p ON mm.publisher = p.id
         LEFT JOIN magazine_issue_chapters mic ON mic.magazine_issue_id = mi.id
         LEFT JOIN manga_chapters mc ON mic.manga_chapter_id = mc.id
         LEFT JOIN volumes v ON mic.manga_id = v.id
@@ -134,9 +136,11 @@ async def get_manga_calendar(
             mi.image as issue_image,
             mm.id as magazine_id,
             mm.name as magazine_name,
-            mm.label as magazine_label
+            mm.label as magazine_label,
+            p.name as publisher_name
         FROM magazine_issues mi
         JOIN manga_magazines mm ON mi.magazine_id = mm.id
+        LEFT JOIN publishers p ON mm.publisher = p.id
         WHERE mi.release_date >= %s AND mi.release_date <= %s
         {mag_condition}
         ORDER BY mi.release_date ASC, mm.id ASC
@@ -161,6 +165,7 @@ async def get_manga_calendar(
             "magazine_id": iss["magazine_id"],
             "magazine_name": iss["magazine_name"],
             "magazine_label": iss["magazine_label"],
+            "publisher_name": iss.get("publisher_name"),
             "chapters": []
         }
         if iss["magazine_id"]:
@@ -178,6 +183,7 @@ async def get_manga_calendar(
                 "magazine_id": row["magazine_id"],
                 "magazine_name": row["magazine_name"],
                 "magazine_label": row["magazine_label"],
+                "publisher_name": row.get("publisher_name"),
                 "chapters": []
             }
 
@@ -205,9 +211,10 @@ async def get_manga_calendar(
 
     # Fetch list of all magazines for dropdown filter ordered by series count (top magazines first)
     all_magazines = db.get_all("""
-        SELECT mm.id, mm.name, mm.label,
+        SELECT mm.id, mm.name, mm.label, p.name as publisher_name,
                (SELECT COUNT(*) FROM magazine_volumes mv WHERE mv.magazine_id = mm.id) as series_count
         FROM manga_magazines mm 
+        LEFT JOIN publishers p ON mm.publisher = p.id
         ORDER BY series_count DESC, mm.name ASC
     """)
 

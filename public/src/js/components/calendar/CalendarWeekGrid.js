@@ -1,4 +1,4 @@
-import { getMagazineColor } from './colorHelper.js';
+import { getPublisherColor } from '../../helpers/publisher.js';
 
 /**
  * Component for rendering week grid layout (7 day sections Mon..Sun)
@@ -55,7 +55,7 @@ export function renderCalendarWeekGrid(container, options = {}) {
     const dayIssues = issuesByDate[dateStr] || [];
 
     const issuesHtml = dayIssues.map(iss => {
-      const color = getMagazineColor(iss.magazine_label, iss.magazine_id);
+      const colorHex = getPublisherColor(iss);
 
       const chaptersHtml = (iss.chapters || []).map(ch => {
         const coverUrl = ch.manga_cover || '/public/logo.png';
@@ -76,12 +76,7 @@ export function renderCalendarWeekGrid(container, options = {}) {
       }).join('');
 
       return `
-        <div class="week-issue-block" style="
-          --mag-color: ${color.dot};
-          --mag-bg: ${color.bg};
-          --mag-text: ${color.text};
-          --mag-border: ${color.border};
-        ">
+        <div class="week-issue-block" style="--mag-color: ${colorHex};">
           <div class="week-issue-header">
             <div class="week-issue-title">
               ${iss.magazine_label || iss.magazine_name} #${iss.issue_number}

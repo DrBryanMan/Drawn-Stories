@@ -1,4 +1,5 @@
 import { renderMagazineSelectDropdown } from './MagazineSelectDropdown.js';
+import { icon } from '../../helpers/icons.js';
 
 export function renderCalendarControls(container, options = {}) {
   const {
@@ -11,7 +12,8 @@ export function renderCalendarControls(container, options = {}) {
     onToday,
     onDateSelect,
     onViewChange,
-    onMagazineChange
+    onMagazineChange,
+    onOpenLegend
   } = options;
 
   // Format date range text for display
@@ -74,6 +76,11 @@ export function renderCalendarControls(container, options = {}) {
       </div>
 
       <div class="calendar-controls-right">
+        <button type="button" class="calendar-btn calendar-btn-today" id="cal-btn-legend" title="Розшифровка скорочень журналів">
+          ${icon('bookOpen', 16)}
+          <span>Легенда</span>
+        </button>
+
         <div id="cal-mag-dropdown-slot"></div>
 
         <div class="calendar-view-toggle">
@@ -100,6 +107,7 @@ export function renderCalendarControls(container, options = {}) {
   container.querySelector('#cal-btn-prev')?.addEventListener('click', () => onPrev?.());
   container.querySelector('#cal-btn-next')?.addEventListener('click', () => onNext?.());
   container.querySelector('#cal-btn-today')?.addEventListener('click', () => onToday?.());
+  container.querySelector('#cal-btn-legend')?.addEventListener('click', () => onOpenLegend?.());
 
   const dateInput = container.querySelector('#cal-native-date');
   const datepickerBtn = container.querySelector('#cal-btn-datepicker');
@@ -131,4 +139,3 @@ export function renderCalendarControls(container, options = {}) {
     });
   });
 }
-

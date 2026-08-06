@@ -1,6 +1,10 @@
 /* ══════════════════════════════════════════════════════
    PAGE HEADER
 ══════════════════════════════════════════════════════ */
+.page-header {
+  margin-bottom: 16px;
+}
+
 .page-title {
   font-family: var(--font-oswald); font-size: 28px; font-weight: 800;
   color: var(--text); letter-spacing: -1px; margin-bottom: 6px;
@@ -72,8 +76,6 @@
       gap: 10px;
     }
 }
-
-
 
 .section-header {
   display: flex; align-items: center;

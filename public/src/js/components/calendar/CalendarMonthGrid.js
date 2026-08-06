@@ -1,8 +1,8 @@
-import { getMagazineColor } from './colorHelper.js';
+import { getPublisherColor } from '../../helpers/publisher.js';
 
 /**
  * Component for rendering month grid (7 columns: Mon..Sun).
- * Displays day numbers, magazine issue badges, overflow counts, and legend footer.
+ * Displays day numbers, magazine issue badges, and overflow counts.
  */
 
 const DAYS_SHORT_UK = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'НД'];
@@ -12,7 +12,6 @@ export function renderCalendarMonthGrid(container, options = {}) {
     currentDate = new Date(),
     issuesList = [],
     selectedDayStr = '',
-    magazinesList = [],
     onSelectDay
   } = options;
 
@@ -41,25 +40,12 @@ export function renderCalendarMonthGrid(container, options = {}) {
     }
   });
 
-  // Unique magazines in current month for legend
-  const legendMagazinesMap = {};
-  issuesList.forEach(iss => {
-    if (iss.magazine_id && !legendMagazinesMap[iss.magazine_id]) {
-      legendMagazinesMap[iss.magazine_id] = {
-        id: iss.magazine_id,
-        name: iss.magazine_name,
-        label: iss.magazine_label
-      };
-    }
-  });
-
   const todayStr = new Date().toISOString().split('T')[0];
 
-  // Render 35 or 42 day cells
+  // Render 35 day cells
   const cells = [];
   const currIter = new Date(startDate);
 
-  // Render 5 or 6 rows
   for (let i = 0; i < 35; i++) {
     const iterYear = currIter.getFullYear();
     const iterMonth = currIter.getMonth();
@@ -81,12 +67,12 @@ export function renderCalendarMonthGrid(container, options = {}) {
     const extraCount = dayIssues.length - maxBadges;
 
     const badgesHtml = visibleIssues.map(iss => {
-      const color = getMagazineColor(iss.magazine_label, iss.magazine_id);
+      const colorHex = getPublisherColor(iss);
       const chCount = iss.chapters?.length ?? 0;
       const labelText = iss.magazine_label || iss.magazine_name || 'Журнал';
 
       return `
-        <div class="mag-badge" style="background:${color.bg}; color:${color.text}; border:1px solid ${color.border};" title="${iss.magazine_name} #${iss.issue_number}">
+        <div class="mag-badge" style="--mag-color: ${colorHex};" title="${iss.magazine_name} #${iss.issue_number}">
           <span class="mag-badge-label">${labelText} #${iss.issue_number}</span>
           <span class="mag-badge-count">${chCount}</span>
         </div>
@@ -106,17 +92,6 @@ export function renderCalendarMonthGrid(container, options = {}) {
     currIter.setDate(currIter.getDate() + 1);
   }
 
-  // Legend HTML
-  const legendItemsHtml = Object.values(legendMagazinesMap).map(mag => {
-    const color = getMagazineColor(mag.label, mag.id);
-    return `
-      <div class="legend-item" data-mag-id="${mag.id}">
-        <span class="legend-dot" style="background-color:${color.dot};"></span>
-        <span>${mag.label || mag.name}</span>
-      </div>
-    `;
-  }).join('');
-
   const html = `
     <div class="month-grid-header">
       ${DAYS_SHORT_UK.map(d => `<div>${d}</div>`).join('')}
@@ -124,11 +99,6 @@ export function renderCalendarMonthGrid(container, options = {}) {
     <div class="month-grid-body">
       ${cells.join('')}
     </div>
-    ${legendItemsHtml.length ? `
-      <div class="month-calendar-legend">
-        ${legendItemsHtml}
-      </div>
-    ` : ''}
   `;
 
   container.innerHTML = html;

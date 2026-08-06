@@ -4,6 +4,7 @@ import { renderCalendarControls } from '../components/calendar/CalendarControls.
 import { renderCalendarMonthGrid } from '../components/calendar/CalendarMonthGrid.js';
 import { renderCalendarSidebar } from '../components/calendar/CalendarSidebar.js';
 import { renderCalendarWeekGrid } from '../components/calendar/CalendarWeekGrid.js';
+import { openCalendarLegendModal } from '../components/calendar/CalendarLegendModal.js';
 
 /**
  * Main View for Manga Magazine Release Calendar.
@@ -32,10 +33,10 @@ export async function renderMangaCalendar(mainContainer, queryParams = {}) {
 
   // Render Shell structure
   mainContainer.innerHTML = `
-    <div class="manga-calendar-container container">
-      <div class="calendar-page-header">
-        <h1 class="calendar-page-title">Календар випусків манґи</h1>
-        <p class="calendar-page-subtitle">Розклад релізів манґа-журналів та нових розділів</p>
+    <div class="manga-calendar container">
+      <div class="page-header">
+        <h1 class="page-title">Календар випусків манґи</h1>
+        <p class="page-subtitle">Розклад релізів манґа-журналів та нових розділів</p>
       </div>
 
       <div id="cal-stats-slot"></div>
@@ -164,6 +165,9 @@ export async function renderMangaCalendar(mainContainer, queryParams = {}) {
       onMagazineChange: (magId) => {
         selectedMagazineId = magId;
         loadData();
+      },
+      onOpenLegend: () => {
+        openCalendarLegendModal(calendarData.magazines || []);
       }
     });
 
