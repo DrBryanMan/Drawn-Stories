@@ -56,7 +56,7 @@ export async function renderHome(main) {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                 ${t('home_weekly_releases')} <span class="section-subtitle" style="font-size: 0.75em; color: var(--text-muted); margin-left: 8px;">(${dateRangeStr})</span>
               </div>
-              <a class="section-link" id="weekly-releases-more" href="#/catalog?view_type=issues&sort=date">${t('home_view_all')}</a>
+              <a class="section-link" id="weekly-releases-more" href="#/calendar">${t('home_view_all')}</a>
             </div>
             <div class="comic-grid" id="weekly-releases-grid">
               <div class="loader-container"><div class="loader"></div></div>
@@ -471,7 +471,7 @@ export async function renderHome(main) {
 
       if (weeklyMore) {
         weeklyMore.style.display = 'inline-block';
-        weeklyMore.href = `#/catalog?view_type=issues&sort=date&content_type=${tab}`;
+        weeklyMore.href = `#/calendar?category=${tab === 'manga' ? 'manga' : 'comics'}`;
       }
       if (volumesMore) {
         volumesMore.style.display = 'inline-block';

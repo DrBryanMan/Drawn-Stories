@@ -1,6 +1,8 @@
 import { API } from '../helpers/api.js';
 import { renderReleaseCalendarFilterBar } from '../components/releaseCalendar/ReleaseCalendarFilterBar.js';
 import { renderReleaseCalendarGrid } from '../components/releaseCalendar/ReleaseCalendarGrid.js';
+import { icon } from '../helpers/icons.js';
+import { t } from '../helpers/i18n.js';
 
 /**
  * Main View for Comic & Manga Release Calendar.
@@ -38,16 +40,18 @@ export async function renderReleaseCalendar(mainContainer, queryParams = {}) {
   mainContainer.innerHTML = `
     <div class="release-calendar container">
       <div class="page-header" style="margin-bottom: 24px;">
-        <h1 class="page-title">Календар релізів</h1>
-        <p class="page-subtitle">Розклад нових випусків та збірників коміксів і манґи</p>
+        <h1 class="page-title">${t('release_calendar_title')}</h1>
+        <p class="page-subtitle">${t('release_calendar_subtitle')}</p>
       </div>
 
       <div id="release-cal-filters-slot"></div>
+      <div id="release-cal-info-slot"></div>
       <div id="release-cal-grid-slot"></div>
     </div>
   `;
 
   const filtersSlot = mainContainer.querySelector('#release-cal-filters-slot');
+  const infoSlot = mainContainer.querySelector('#release-cal-info-slot');
   const gridSlot = mainContainer.querySelector('#release-cal-grid-slot');
 
   // Calculate Monday and Sunday for currentDate
@@ -77,7 +81,7 @@ export async function renderReleaseCalendar(mainContainer, queryParams = {}) {
   async function loadData() {
     gridSlot.innerHTML = `
       <div style="text-align: center; padding: 60px 0; color: var(--text-muted);">
-        Завантаження релізів...
+        ${t('loading_releases')}
       </div>
     `;
 
@@ -144,7 +148,25 @@ export async function renderReleaseCalendar(mainContainer, queryParams = {}) {
       }
     });
 
-    // 2. Render Main Grid by Days
+    // 2. Info banner for Manga Issues
+    if (infoSlot) {
+      if (category === 'manga' && releaseType === 'issues') {
+        infoSlot.innerHTML = `
+          <div class="release-cal-info-banner">
+            <div class="release-cal-info-banner-icon">
+              ${icon('info', 18)}
+            </div>
+            <div class="release-cal-info-banner-text">
+              ${t('manga_issues_banner')}
+            </div>
+          </div>
+        `;
+      } else {
+        infoSlot.innerHTML = '';
+      }
+    }
+
+    // 3. Render Main Grid by Days
     renderReleaseCalendarGrid(gridSlot, {
       currentDate,
       items: calendarData.items || []

@@ -309,6 +309,12 @@ function renderOverviewTab(container, p, edits) {
                     </tbody>
                 </table>
             </div>
+
+            <div class="user-all-edits-btn-wrap" style="margin-top: 16px; text-align: center;">
+                <a href="#/edits?proposer=${encodeURIComponent(p.username)}" class="btn btn-secondary">
+                    ${icon('list', 16)} ${t('view_all_edits')}
+                </a>
+            </div>
         </div>
     `;
 }

@@ -1,11 +1,15 @@
 import { getPublisherColor } from '../../helpers/publisher.js';
+import { getCurrentLanguage, t } from '../../helpers/i18n.js';
 
 /**
  * Component for rendering month grid (7 columns: Mon..Sun).
  * Displays day numbers, magazine issue badges, and overflow counts.
  */
 
-const DAYS_SHORT_UK = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'НД'];
+const DAYS_SHORT = {
+  uk: ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'НД'],
+  en: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
+};
 
 export function renderCalendarMonthGrid(container, options = {}) {
   const {
@@ -15,12 +19,14 @@ export function renderCalendarMonthGrid(container, options = {}) {
     onSelectDay
   } = options;
 
+  const currentLang = getCurrentLanguage();
+  const daysHeader = DAYS_SHORT[currentLang] || DAYS_SHORT.uk;
+
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
   // Determine grid start (Monday of first week) and end
   const firstDayOfMonth = new Date(year, month, 1);
-  const lastDayOfMonth = new Date(year, month + 1, 0);
 
   let startDayOfWeek = firstDayOfMonth.getDay() - 1;
   if (startDayOfWeek === -1) startDayOfWeek = 6; // Sunday -> 6
@@ -69,7 +75,7 @@ export function renderCalendarMonthGrid(container, options = {}) {
     const badgesHtml = visibleIssues.map(iss => {
       const colorHex = getPublisherColor(iss);
       const chCount = iss.chapters?.length ?? 0;
-      const labelText = iss.magazine_label || iss.magazine_name || 'Журнал';
+      const labelText = iss.magazine_label || iss.magazine_name || 'Mag';
 
       return `
         <div class="mag-badge" style="--mag-color: ${colorHex};" title="${iss.magazine_name} #${iss.issue_number}">
@@ -79,7 +85,8 @@ export function renderCalendarMonthGrid(container, options = {}) {
       `;
     }).join('');
 
-    const moreHtml = extraCount > 0 ? `<div class="month-day-more">+${extraCount} журн.</div>` : '';
+    const magLabelShort = currentLang === 'en' ? 'mags' : 'журн.';
+    const moreHtml = extraCount > 0 ? `<div class="month-day-more">+${extraCount} ${magLabelShort}</div>` : '';
 
     cells.push(`
       <div class="month-day-cell ${isOtherMonth ? 'other-month' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected-day' : ''}" data-date="${dateStr}">
@@ -94,7 +101,7 @@ export function renderCalendarMonthGrid(container, options = {}) {
 
   const html = `
     <div class="month-grid-header">
-      ${DAYS_SHORT_UK.map(d => `<div>${d}</div>`).join('')}
+      ${daysHeader.map(d => `<div>${d}</div>`).join('')}
     </div>
     <div class="month-grid-body">
       ${cells.join('')}
@@ -103,12 +110,11 @@ export function renderCalendarMonthGrid(container, options = {}) {
 
   container.innerHTML = html;
 
-  // Bind Day Cell Clicks
   container.querySelectorAll('.month-day-cell').forEach(cell => {
     cell.addEventListener('click', () => {
-      const dateStr = cell.dataset.date;
-      if (dateStr) {
-        onSelectDay?.(dateStr);
+      const dStr = cell.dataset.date;
+      if (dStr) {
+        onSelectDay?.(dStr);
       }
     });
   });

@@ -10,7 +10,7 @@ import { getChangedFieldBadges, generateDiffHTML } from '../helpers/editDiff.js'
 import { renderEditStatusBadge } from '../components/EditStatusBadge.js';
 import { t } from '../helpers/i18n.js';
 
-export async function renderEdits(main) {
+export async function renderEdits(main, query = {}) {
     document.title = `${t('edits_moderation')} — Drawn Stories`;
 
     main.innerHTML = `
@@ -61,12 +61,34 @@ export async function renderEdits(main) {
     let allEdits = [];
     let themesCache = [];
     let state = {
-        status: 'all',
-        search: '',
-        entityType: '',
-        proposer: '',
-        moderator: ''
+        status: query.status || 'all',
+        search: query.search || query.q || '',
+        entityType: query.entity_type || query.entityType || '',
+        proposer: query.proposer || query.author || query.user || '',
+        moderator: query.moderator || ''
     };
+
+    const initialPage = Number(query.page) || 1;
+    paginator.setPage(initialPage);
+
+    function syncUrl() {
+        const params = new URLSearchParams();
+        if (state.status && state.status !== 'all') params.set('status', state.status);
+        if (state.entityType) params.set('entity_type', state.entityType);
+        if (state.proposer) params.set('proposer', state.proposer);
+        if (state.moderator) params.set('moderator', state.moderator);
+        if (state.search) params.set('search', state.search);
+
+        const page = paginator.getPage();
+        if (page > 1) params.set('page', page);
+
+        const queryString = params.toString();
+        const currentRoutePath = router.currentPath || '/edits';
+        const newHash = `#${currentRoutePath}${queryString ? '?' + queryString : ''}`;
+        if (window.location.hash !== newHash) {
+            window.history.replaceState(null, '', newHash);
+        }
+    }
 
     async function loadThemes() {
         try {
@@ -248,6 +270,7 @@ export async function renderEdits(main) {
                     state.entityType = val;
                     paginator.reset();
                     renderFilteredList();
+                    syncUrl();
                 }
             });
         }
@@ -270,6 +293,7 @@ export async function renderEdits(main) {
                     state.status = val || 'all';
                     paginator.reset();
                     renderFilteredList();
+                    syncUrl();
                 }
             });
         }
@@ -287,6 +311,7 @@ export async function renderEdits(main) {
                     state.proposer = val;
                     paginator.reset();
                     renderFilteredList();
+                    syncUrl();
                 }
             });
         }
@@ -304,6 +329,7 @@ export async function renderEdits(main) {
                     state.moderator = val;
                     paginator.reset();
                     renderFilteredList();
+                    syncUrl();
                 }
             });
         }
@@ -367,6 +393,7 @@ export async function renderEdits(main) {
             paginationWrap.replaceChildren(
                 paginator.render(total, () => {
                     renderFilteredList();
+                    syncUrl();
                     listContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 })
             );
@@ -489,10 +516,14 @@ export async function renderEdits(main) {
     // Текстовий пошук
     const searchInput = main.querySelector('#edits-search-input');
     if (searchInput) {
+        if (state.search) {
+            searchInput.value = state.search;
+        }
         searchInput.addEventListener('input', (e) => {
             state.search = e.target.value.trim();
             paginator.reset();
             renderFilteredList();
+            syncUrl();
         });
     }
 

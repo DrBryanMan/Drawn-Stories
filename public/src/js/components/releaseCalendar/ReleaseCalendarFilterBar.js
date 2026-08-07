@@ -1,5 +1,6 @@
 import { renderPublisherSelectDropdown } from './PublisherSelectDropdown.js';
 import { icon } from '../../helpers/icons.js';
+import { t, getCurrentLanguage } from '../../helpers/i18n.js';
 
 export function renderReleaseCalendarFilterBar(container, options = {}) {
   const {
@@ -18,15 +19,8 @@ export function renderReleaseCalendarFilterBar(container, options = {}) {
     onCategoryChange
   } = options;
 
-  const monthsUkShort = [
-    'Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер',
-    'Лип', 'Сер', 'Вер', 'Жов', 'Лист', 'Груд'
-  ];
-
-  const monthsUkFull = [
-    'Січня', 'Лютого', 'Березня', 'Квітня', 'Травня', 'Червня',
-    'Липня', 'Серпня', 'Вересня', 'Жовтня', 'Листопада', 'Грудня'
-  ];
+  const currentLang = getCurrentLanguage();
+  const locale = currentLang === 'en' ? 'en-US' : 'uk-UA';
 
   // Calculate Monday and Sunday of current week
   const startOfWeek = new Date(currentDate);
@@ -39,20 +33,20 @@ export function renderReleaseCalendarFilterBar(container, options = {}) {
   endOfWeek.setDate(startOfWeek.getDate() + 6);
   endOfWeek.setHours(23, 59, 59, 999);
 
-  // Period status logic (Архів / Цей тиждень / Майбутнє)
+  // Period status logic
   const todayObj = new Date();
   todayObj.setHours(0, 0, 0, 0);
 
-  let periodLabel = 'Цей тиждень';
+  let periodLabel = t('period_current');
   let periodIcon = 'clock';
   let periodClass = 'period-current';
 
   if (todayObj < startOfWeek) {
-    periodLabel = 'Майбутнє';
+    periodLabel = t('period_future');
     periodIcon = 'sparkles';
     periodClass = 'period-future';
   } else if (todayObj > endOfWeek) {
-    periodLabel = 'Архів';
+    periodLabel = t('period_archive');
     periodIcon = 'archive';
     periodClass = 'period-past';
   }
@@ -60,11 +54,11 @@ export function renderReleaseCalendarFilterBar(container, options = {}) {
   // Date Range Title
   let dateRangeTitle = '';
   if (startOfWeek.getMonth() === endOfWeek.getMonth()) {
-    const monthName = monthsUkFull[startOfWeek.getMonth()];
+    const monthName = startOfWeek.toLocaleDateString(locale, { month: 'short' });
     dateRangeTitle = `${startOfWeek.getDate()} - ${endOfWeek.getDate()} ${monthName} ${startOfWeek.getFullYear()}`;
   } else {
-    const startMonth = monthsUkShort[startOfWeek.getMonth()];
-    const endMonth = monthsUkShort[endOfWeek.getMonth()];
+    const startMonth = startOfWeek.toLocaleDateString(locale, { month: 'short' });
+    const endMonth = endOfWeek.toLocaleDateString(locale, { month: 'short' });
     dateRangeTitle = `${startOfWeek.getDate()} ${startMonth} - ${endOfWeek.getDate()} ${endMonth} ${endOfWeek.getFullYear()}`;
   }
 
@@ -77,12 +71,12 @@ export function renderReleaseCalendarFilterBar(container, options = {}) {
     <div class="calendar-controls-bar release-cal-controls-bar">
       <!-- Секція 1 (Ліворуч): Лічильник та плашка періоду часу -->
       <div class="release-cal-section release-cal-counter-section">
-        <div class="release-cal-counter" title="Загальна кількість результатів">
+        <div class="release-cal-counter" title="${t('releases_count_label')}">
           <span class="release-cal-counter-num">${totalResults}</span>
-          <span class="release-cal-counter-label">релізів</span>
+          <span class="release-cal-counter-label">${t('releases_count_label')}</span>
         </div>
         
-        <div class="release-period-badge ${periodClass}" title="Статус періоду">
+        <div class="release-period-badge ${periodClass}">
           ${icon(periodIcon, 14)}
           <span>${periodLabel}</span>
         </div>
@@ -93,21 +87,21 @@ export function renderReleaseCalendarFilterBar(container, options = {}) {
       <!-- Секція 2 (По центру / Навігація): Перемикання тижнів, вибрана дата, кнопка Сьогодні -->
       <div class="release-cal-section calendar-controls-left">
         <div class="calendar-nav-group">
-          <button type="button" class="calendar-btn calendar-btn-icon" id="rel-btn-prev" title="Попередній тиждень">
+          <button type="button" class="calendar-btn calendar-btn-icon" id="rel-btn-prev" title="${t('prev_week')}">
             ${icon('chevronLeft', 18)}
           </button>
           <div class="calendar-date-display">${dateRangeTitle}</div>
-          <button type="button" class="calendar-btn calendar-btn-icon" id="rel-btn-next" title="Наступний тиждень">
+          <button type="button" class="calendar-btn calendar-btn-icon" id="rel-btn-next" title="${t('next_week')}">
             ${icon('chevronRight', 18)}
           </button>
         </div>
 
-        <button type="button" class="calendar-btn calendar-btn-icon calendar-btn-today" id="rel-btn-today" title="Поточний день">
+        <button type="button" class="calendar-btn calendar-btn-icon calendar-btn-today" id="rel-btn-today" title="${t('today_button')}">
           ${icon('clock', 18)}
         </button>
 
         <div class="calendar-datepicker-wrapper">
-          <button type="button" class="calendar-btn calendar-btn-icon calendar-btn-today" id="rel-btn-datepicker" title="Обрати дату">
+          <button type="button" class="calendar-btn calendar-btn-icon calendar-btn-today" id="rel-btn-datepicker" title="${t('select_date')}">
             ${icon('calendar', 18)}
           </button>
           <input type="date" class="calendar-datepicker-input" id="rel-native-date" value="${isoDate}">
@@ -124,20 +118,20 @@ export function renderReleaseCalendarFilterBar(container, options = {}) {
         <!-- Перемикач типом релізу: Випуски / Збірники -->
         <div class="calendar-view-toggle release-type-toggle">
           <button type="button" class="calendar-toggle-btn ${releaseType === 'issues' ? 'active' : ''}" data-type="issues">
-            Випуски
+            ${t('issues_tab')}
           </button>
           <button type="button" class="calendar-toggle-btn ${releaseType === 'collections' ? 'active' : ''}" data-type="collections">
-            Збірники
+            ${t('collections_tab')}
           </button>
         </div>
 
         <!-- Перемикач категорії: Комікси / Манґа -->
         <div class="calendar-view-toggle category-toggle">
           <button type="button" class="calendar-toggle-btn ${category === 'comics' ? 'active' : ''}" data-category="comics">
-            Комікси
+            ${t('comics_cat')}
           </button>
           <button type="button" class="calendar-toggle-btn ${category === 'manga' ? 'active' : ''}" data-category="manga">
-            Манґа
+            ${t('manga_cat')}
           </button>
         </div>
       </div>

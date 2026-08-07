@@ -1,10 +1,12 @@
+import { t } from '../../helpers/i18n.js';
+
 /**
  * Component for displaying upper statistics cards.
  * Uses Lucide SVG icons and formatted counters.
  */
 
 export function renderCalendarStats(container, stats = {}, viewMode = 'month') {
-  const periodLabel = viewMode === 'week' ? 'тиждень' : 'місяць';
+  const periodLabel = viewMode === 'week' ? t('period_week') : t('period_month');
 
   const totalChapters = stats.total_chapters ?? 0;
   const userChapters = stats.user_chapters ?? 0;
@@ -19,7 +21,7 @@ export function renderCalendarStats(container, stats = {}, viewMode = 'month') {
         </div>
         <div class="calendar-stat-info">
           <div class="calendar-stat-value">${totalChapters}</div>
-          <div class="calendar-stat-label">Розділів за ${periodLabel}</div>
+          <div class="calendar-stat-label">${t('chapters_per_period', { period: periodLabel })}</div>
         </div>
       </div>
 
@@ -29,7 +31,7 @@ export function renderCalendarStats(container, stats = {}, viewMode = 'month') {
         </div>
         <div class="calendar-stat-info">
           <div class="calendar-stat-value">${userChapters}</div>
-          <div class="calendar-stat-label">Зі списку користувача</div>
+          <div class="calendar-stat-label">${t('from_user_list')}</div>
         </div>
       </div>
 
@@ -39,7 +41,7 @@ export function renderCalendarStats(container, stats = {}, viewMode = 'month') {
         </div>
         <div class="calendar-stat-info">
           <div class="calendar-stat-value">${activeMagazines}</div>
-          <div class="calendar-stat-label">Активних журналів</div>
+          <div class="calendar-stat-label">${t('active_magazines')}</div>
         </div>
       </div>
 
@@ -49,7 +51,7 @@ export function renderCalendarStats(container, stats = {}, viewMode = 'month') {
         </div>
         <div class="calendar-stat-info">
           <div class="calendar-stat-value">${activeSeries}</div>
-          <div class="calendar-stat-label">Активних серій</div>
+          <div class="calendar-stat-label">${t('active_series')}</div>
         </div>
       </div>
     </div>

@@ -30,25 +30,6 @@ const getNav = () => [
         ]
       },
       {
-        title: 'Календарі випусків',
-        links: [
-          {
-            label: 'Календар манґи',
-            desc: 'Випуски манґа-журналів та розділів',
-            icon: '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/>',
-            href: '#/calendar/manga',
-            route: '/calendar/manga'
-          },
-          {
-            label: 'Календар коміксів',
-            desc: 'Релізи томів та синглів коміксів',
-            icon: '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/>',
-            href: '#/calendar/comics',
-            route: '/calendar/comics'
-          }
-        ]
-      },
-      {
         title: t('other_content'),
         links: [
           {
@@ -85,6 +66,31 @@ const getNav = () => [
             icon: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
             href: '#/personnel',
             route: '/personnel'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    label: t('calendars'),
+    icon: '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/>',
+    sections: [
+      {
+        title: t('release_calendars'),
+        links: [
+          {
+            label: t('calendar_comics'),
+            desc: t('calendar_comics_desc'),
+            icon: '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/>',
+            href: '#/calendar',
+            route: '/calendar'
+          },
+          {
+            label: t('calendar_manga'),
+            desc: t('calendar_manga_desc'),
+            icon: '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/>',
+            href: '#/calendar/manga',
+            route: '/calendar/manga'
           }
         ]
       }

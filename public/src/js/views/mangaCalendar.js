@@ -5,6 +5,7 @@ import { renderCalendarMonthGrid } from '../components/calendar/CalendarMonthGri
 import { renderCalendarSidebar } from '../components/calendar/CalendarSidebar.js';
 import { renderCalendarWeekGrid } from '../components/calendar/CalendarWeekGrid.js';
 import { openCalendarLegendModal } from '../components/calendar/CalendarLegendModal.js';
+import { t } from '../helpers/i18n.js';
 
 /**
  * Main View for Manga Magazine Release Calendar.
@@ -35,8 +36,8 @@ export async function renderMangaCalendar(mainContainer, queryParams = {}) {
   mainContainer.innerHTML = `
     <div class="manga-calendar container">
       <div class="page-header">
-        <h1 class="page-title">Календар випусків манґи</h1>
-        <p class="page-subtitle">Розклад релізів манґа-журналів та нових розділів</p>
+        <h1 class="page-title">${t('manga_calendar_title')}</h1>
+        <p class="page-subtitle">${t('manga_calendar_subtitle')}</p>
       </div>
 
       <div id="cal-stats-slot"></div>
@@ -98,7 +99,7 @@ export async function renderMangaCalendar(mainContainer, queryParams = {}) {
 
   // Load Data from API
   async function loadData() {
-    gridSlot.innerHTML = `<div style="text-align:center; padding: 40px 0; color: var(--cal-text-muted);">Завантаження даних календаря...</div>`;
+    gridSlot.innerHTML = `<div style="text-align:center; padding: 40px 0; color: var(--cal-text-muted);">${t('loading_calendar_data')}</div>`;
 
     const { startDateStr, endDateStr } = getDateRange();
     const params = {

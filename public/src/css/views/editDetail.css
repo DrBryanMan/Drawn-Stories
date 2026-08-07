@@ -1,29 +1,4 @@
 /* Edit Details View Styling */
-
-.back-link-wrap {
-    margin-bottom: 1.5rem;
-}
-
-.back-to-edits-btn {
-    display: inline-flex;
-    align-items: center;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-muted);
-    text-decoration: none;
-    padding: 6px 12px;
-    border: 1px solid var(--border-s);
-    border-radius: var(--r);
-    background: var(--bg-card);
-    transition: all 0.2s ease;
-}
-
-.back-to-edits-btn:hover {
-    background: var(--bg-hover);
-    color: var(--accent);
-    border-color: var(--accent);
-}
-
 .edit-detail-header-block {
     margin-bottom: 2rem;
 }

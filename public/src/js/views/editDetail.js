@@ -11,13 +11,6 @@ import { t } from '../helpers/i18n.js';
 export async function renderEditDetail(main, params) {
     main.innerHTML = `
         <div class="container container--main">
-            <div class="back-link-wrap">
-                <a href="#/edits" class="back-to-edits-btn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-                    ${t('back_to_edits')}
-                </a>
-            </div>
-
             <div class="loader-container" id="edit-detail-loader"><div class="loader"></div></div>
             <div id="edit-detail-content" style="display: none;"></div>
         </div>

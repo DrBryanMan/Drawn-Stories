@@ -1,3 +1,5 @@
+import { t } from '../../helpers/i18n.js';
+
 function escapeHtml(str) {
   if (!str) return '';
   return String(str)
@@ -19,8 +21,8 @@ export function renderPublisherSelectDropdown(container, options = {}) {
   let searchQuery = '';
   let isOpen = false;
 
-  const placeholder = 'Всі видавництва';
-  const searchPlaceholder = 'Пошук видавництва...';
+  const placeholder = t('all_publishers');
+  const searchPlaceholder = t('search_publisher');
 
   function closeDropdown() {
     if (!isOpen) return;
@@ -48,12 +50,12 @@ export function renderPublisherSelectDropdown(container, options = {}) {
     }
 
     if (displayList.length === 0) {
-      html += `<div class="user-search-select__empty">Видавництв не знайдено</div>`;
+      html += `<div class="user-search-select__empty">${escapeHtml(t('no_publishers_found'))}</div>`;
     } else {
       displayList.forEach(p => {
         const itemVal = String(p.id);
         const isSelected = itemVal === selectedValue;
-        const countText = p.series_count !== undefined && p.series_count !== null ? `${p.series_count} серій` : '';
+        const countText = p.series_count !== undefined && p.series_count !== null ? `${p.series_count} ${t('series')}` : '';
 
         html += `
           <div class="user-search-select__item ${isSelected ? 'is-selected' : ''}" data-value="${escapeHtml(itemVal)}">

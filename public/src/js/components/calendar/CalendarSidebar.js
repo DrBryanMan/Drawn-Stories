@@ -1,35 +1,28 @@
 import { getPublisherColor } from '../../helpers/publisher.js';
+import { getCurrentLanguage, t } from '../../helpers/i18n.js';
 
 /**
  * Component for rendering right sidebar details for a selected calendar day.
- * - Top header with full date and blue release count pill
- * - Magazine banner with publisher-based accent border, title, subtitle, and link to magazine issue
- * - Borderless clean series rows with cover, main title, ukrainian title, and blue issue tag
  */
 
-const DAYS_FULL_UK = [
-  'Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П’ятниця', 'Субота'
-];
-
-const MONTHS_GENITIVE_UK = [
-  'Січня', 'Лютого', 'Березня', 'Квітня', 'Травня', 'Червня',
-  'Липня', 'Серпня', 'Вересня', 'Жовтня', 'Листопада', 'Грудня'
-];
-
 export function renderCalendarSidebar(container, selectedDayDate, dayIssues = []) {
+  const currentLang = getCurrentLanguage();
+  const locale = currentLang === 'en' ? 'en-US' : 'uk-UA';
+
   if (!selectedDayDate) {
     container.innerHTML = `
       <div class="calendar-sidebar">
-        <div class="sidebar-date-title" style="color: var(--cal-text-muted);">Оберіть день у календарі</div>
+        <div class="sidebar-date-title" style="color: var(--cal-text-muted);">${t('select_day_in_calendar')}</div>
       </div>
     `;
     return;
   }
 
-  const dayOfWeek = DAYS_FULL_UK[selectedDayDate.getDay()];
-  const dayNum = selectedDayDate.getDate();
-  const monthGenitive = MONTHS_GENITIVE_UK[selectedDayDate.getMonth()];
-  const dateTitleStr = `${dayOfWeek}, ${dayNum} ${monthGenitive}`;
+  let dayOfWeek = selectedDayDate.toLocaleDateString(locale, { weekday: 'long' });
+  dayOfWeek = dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1);
+
+  const dateFormatted = selectedDayDate.toLocaleDateString(locale, { day: 'numeric', month: 'long' });
+  const dateTitleStr = `${dayOfWeek}, ${dateFormatted}`;
 
   // Calculate total releases count
   let totalReleases = 0;
@@ -43,9 +36,11 @@ export function renderCalendarSidebar(container, selectedDayDate, dayIssues = []
 
     const chaptersRowsHtml = (iss.chapters || []).map(ch => {
       const coverUrl = ch.manga_cover || '/public/logo.png';
-      const mainTitle = ch.manga_name || ch.manga_name_uk || 'Манґа';
+      const mainTitle = ch.manga_name || ch.manga_name_uk || 'Manga';
       const subTitle = ch.manga_name_uk && ch.manga_name_uk !== mainTitle ? ch.manga_name_uk : '';
-      const chapLabel = ch.chapter_number ? `Розділ <strong>${ch.chapter_number}</strong>` : `Вип. <strong>${iss.issue_number}</strong>`;
+      const chapLabel = ch.chapter_number 
+        ? `${t('chapter_num_prefix')} <strong>${ch.chapter_number}</strong>` 
+        : `${t('issue_num_prefix')} <strong>${iss.issue_number}</strong>`;
 
       return `
         <a href="#/volumes/${ch.manga_id}" class="sidebar-chapter-row">
@@ -70,7 +65,7 @@ export function renderCalendarSidebar(container, selectedDayDate, dayIssues = []
             </div>
             <div class="sidebar-issue-banner-subtitle">${iss.magazine_name}</div>
           </div>
-          <a href="#/magazines/issues/${iss.issue_id}" class="sidebar-issue-banner-pill">${seriesCount} серій</a>
+          <a href="#/magazines/issues/${iss.issue_id}" class="sidebar-issue-banner-pill">${t('series_count_label', { n: seriesCount })}</a>
         </div>
 
         ${chaptersRowsHtml ? `<div class="sidebar-chapters-container">${chaptersRowsHtml}</div>` : ''}
@@ -82,11 +77,11 @@ export function renderCalendarSidebar(container, selectedDayDate, dayIssues = []
     <div class="calendar-sidebar">
       <div class="sidebar-top-header">
         <div class="sidebar-date-title">${dateTitleStr}</div>
-        <div class="sidebar-release-pill">${totalReleases} виходи</div>
+        <div class="sidebar-release-pill">${t('releases_out_count', { n: totalReleases })}</div>
       </div>
 
       <div class="sidebar-body">
-        ${issuesBlocksHtml.length ? issuesBlocksHtml : '<div style="padding: 24px; color: var(--cal-text-muted); text-align: center; font-size: 0.9rem;">На цей день немає випусків</div>'}
+        ${issuesBlocksHtml.length ? issuesBlocksHtml : `<div style="padding: 24px; color: var(--cal-text-muted); text-align: center; font-size: 0.9rem;">${t('no_issues_on_this_day')}</div>`}
       </div>
     </div>
   `;

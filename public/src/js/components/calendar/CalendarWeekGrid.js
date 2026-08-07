@@ -1,18 +1,10 @@
 import { getPublisherColor } from '../../helpers/publisher.js';
+import { getCurrentLanguage, t } from '../../helpers/i18n.js';
 
 /**
  * Component for rendering week grid layout (7 day sections Mon..Sun)
  * with magazine cards and chapter items directly visible for each day.
  */
-
-const DAYS_FULL_UK = [
-  'Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П’ятниця', 'Субота'
-];
-
-const MONTHS_GENITIVE_UK = [
-  'Січня', 'Лютого', 'Березня', 'Квітня', 'Травня', 'Червня',
-  'Липня', 'Серпня', 'Вересня', 'Жовтня', 'Листопада', 'Грудня'
-];
 
 export function renderCalendarWeekGrid(container, options = {}) {
   const {
@@ -20,6 +12,9 @@ export function renderCalendarWeekGrid(container, options = {}) {
     issuesList = [],
     onSelectDay
   } = options;
+
+  const currentLang = getCurrentLanguage();
+  const locale = currentLang === 'en' ? 'en-US' : 'uk-UA';
 
   // Compute Monday of current week
   const monday = new Date(currentDate);
@@ -49,8 +44,10 @@ export function renderCalendarWeekGrid(container, options = {}) {
     const dd = String(iterDate.getDate()).padStart(2, '0');
     const dateStr = `${yyyy}-${mm}-${dd}`;
 
-    const dayName = DAYS_FULL_UK[iterDate.getDay()];
-    const dateFormatted = `${iterDate.getDate()} ${MONTHS_GENITIVE_UK[iterDate.getMonth()]}`;
+    let dayName = iterDate.toLocaleDateString(locale, { weekday: 'long' });
+    dayName = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+    
+    const dateFormatted = iterDate.toLocaleDateString(locale, { day: 'numeric', month: 'long' });
 
     const dayIssues = issuesByDate[dateStr] || [];
 
@@ -59,9 +56,11 @@ export function renderCalendarWeekGrid(container, options = {}) {
 
       const chaptersHtml = (iss.chapters || []).map(ch => {
         const coverUrl = ch.manga_cover || '/public/logo.png';
-        const title = ch.manga_name || ch.manga_name_uk || 'Манґа';
+        const title = ch.manga_name || ch.manga_name_uk || 'Manga';
         const titleUk = ch.manga_name_uk && ch.manga_name_uk !== title ? ch.manga_name_uk : '';
-        const chapLabel = ch.chapter_number ? `Розділ ${ch.chapter_number}` : `Вип. ${iss.issue_number}`;
+        const chapLabel = ch.chapter_number 
+          ? `${t('chapter_num_prefix')} ${ch.chapter_number}` 
+          : `${t('issue_num_prefix')} ${iss.issue_number}`;
 
         return `
           <a href="#/volumes/${ch.manga_id}" class="week-chapter-row">
@@ -84,7 +83,7 @@ export function renderCalendarWeekGrid(container, options = {}) {
             <div class="week-issue-subtitle">${iss.magazine_name}</div>
           </div>
           <div class="week-chapters-flex">
-            ${chaptersHtml.length ? chaptersHtml : '<div style="font-size:0.85rem; color:var(--cal-text-muted); grid-column: 1/-1; padding: 6px 0;">Випуск без доданих розділів</div>'}
+            ${chaptersHtml.length ? chaptersHtml : `<div style="font-size:0.85rem; color:var(--cal-text-muted); grid-column: 1/-1; padding: 6px 0;">${t('issue_without_chapters')}</div>`}
           </div>
         </div>
       `;
@@ -94,10 +93,10 @@ export function renderCalendarWeekGrid(container, options = {}) {
       <div class="week-day-column">
         <div class="week-day-header">
           <div>${dayName}, ${dateFormatted}</div>
-          <span style="font-size: 0.8rem; font-weight: 500; color: var(--cal-text-muted);">${dayIssues.length} випусків</span>
+          <span style="font-size: 0.8rem; font-weight: 500; color: var(--cal-text-muted);">${t('releases_out_count', { n: dayIssues.length })}</span>
         </div>
         <div class="week-day-issues">
-          ${issuesHtml.length ? issuesHtml : '<div style="color: var(--cal-text-muted); font-size: 0.85rem; padding: 10px 0;">Випусків не заплановано</div>'}
+          ${issuesHtml.length ? issuesHtml : `<div style="color: var(--cal-text-muted); font-size: 0.85rem; padding: 10px 0;">${t('no_issues_scheduled')}</div>`}
         </div>
       </div>
     `);

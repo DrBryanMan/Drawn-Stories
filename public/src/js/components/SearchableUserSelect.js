@@ -36,7 +36,7 @@ export function createSearchableUserSelect({
     function render() {
         const normOptions = getNormalizedOptions();
         const selectedObj = normOptions.find(o => o.value === selectedValue);
-        const displayLabel = selectedObj ? selectedObj.label : placeholder;
+        const displayLabel = selectedObj ? selectedObj.label : (selectedValue || placeholder);
 
         const searchHtml = searchable ? `
             <div class="user-search-select__search-wrap">

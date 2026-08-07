@@ -131,6 +131,34 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+/* Info Banner */
+.release-cal-info-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-hover, rgba(99, 102, 241, 0.08));
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 12px;
+  padding: 12px 18px;
+  margin-bottom: 24px;
+  color: var(--text-color, #1f2937);
+  font-size: 14px;
+  line-height: 1.5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.release-cal-info-banner-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary, #6366f1);
+  flex-shrink: 0;
+}
+
+.release-cal-info-banner-text {
+  flex: 1;
+}
+
 /* Day Section & Sticky Header */
 .release-day-section {
   margin-bottom: 36px;

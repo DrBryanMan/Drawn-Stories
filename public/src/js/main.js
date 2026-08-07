@@ -86,7 +86,7 @@ async function start() {
     .on('/user/:username/lists', (_path, params) => renderUserProfile(main, params, { tab: 'readlists' }))
     .on('/user/:username/collection', (_path, params) => renderUserProfile(main, params, { tab: 'collections' }))
     .on('/user/:username/favorites', (_path, params) => renderUserProfile(main, params, { tab: 'favorites' }))
-    .on('/edits',         () => renderEdits(main))
+    .on('/edits',         (_path, _params, query) => renderEdits(main, query))
     .on('/edits/:id',     (_path, params) => renderEditDetail(main, params))
     .on('/users',         () => renderUsers(main))
     .notFound(            () => renderHome(main))
