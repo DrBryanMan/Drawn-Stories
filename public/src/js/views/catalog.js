@@ -135,11 +135,12 @@ export async function renderCatalog(main, query = {}) {
   const themeParam = query.theme_ids || query.theme;
   if (themeParam) {
     try {
-      const ids = themeParam.split(',');
-      currentThemes = await Promise.all(ids.map(async (id) => {
-        const res = await API.get(`/themes/${id}`);
-        const tObj = res.theme || res;
-        return { id: Number(id), name: tObj.ua_name || tObj.name || tObj.title || '', type: tObj.type };
+      const res = await API.get('/themes', { ids: themeParam });
+      const items = res.items || [];
+      currentThemes = items.map((tObj) => ({
+        id: Number(tObj.id),
+        name: tObj.ua_name || tObj.name || tObj.title || '',
+        type: tObj.type
       }));
     } catch (e) { console.error('Failed to load initial themes', e); }
   }
@@ -147,11 +148,12 @@ export async function renderCatalog(main, query = {}) {
   currentExcludedThemes = [];
   if (query.exclude_theme_ids) {
     try {
-      const ids = query.exclude_theme_ids.split(',');
-      currentExcludedThemes = await Promise.all(ids.map(async (id) => {
-        const res = await API.get(`/themes/${id}`);
-        const tObj = res.theme || res;
-        return { id: Number(id), name: tObj.ua_name || tObj.name || tObj.title || '', type: tObj.type };
+      const res = await API.get('/themes', { ids: query.exclude_theme_ids });
+      const items = res.items || [];
+      currentExcludedThemes = items.map((tObj) => ({
+        id: Number(tObj.id),
+        name: tObj.ua_name || tObj.name || tObj.title || '',
+        type: tObj.type
       }));
     } catch (e) { console.error('Failed to load initial excluded themes', e); }
   }

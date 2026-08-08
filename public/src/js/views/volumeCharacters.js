@@ -98,7 +98,7 @@ export async function renderVolumeCharacters(container, params = {}) {
                 const name = escapeHtmlAttribute(char.name_uk || char.name || 'Без назви');
                 const charLink = char.cv_slug ? `#/characters/${char.id}-${char.cv_slug}` : `#/characters/${char.id}`;
                 return `
-                    <div class="character-card">
+                    <a href="${charLink}" class="character-card" style="text-decoration: none; color: inherit;">
                         <div class="char-cover-wrap">
                             ${cover
                                 ? `<img class="char-cover" src="${escapeHtmlAttribute(cover)}" alt="${name}" loading="lazy">`
@@ -106,9 +106,9 @@ export async function renderVolumeCharacters(container, params = {}) {
                             }
                         </div>
                         <div class="char-info">
-                            <a href="${charLink}" class="char-name" title="${name}" style="text-decoration: none;">${name}</a>
+                            <span class="char-name" title="${name}">${name}</span>
                         </div>
-                    </div>
+                    </a>
                 `;
             };
 

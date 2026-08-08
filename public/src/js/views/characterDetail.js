@@ -482,7 +482,7 @@ function renderAppearancesHTML(volumes, issues, mangaChapters) {
 }
 
 function renderVolumeCardHTML(vol) {
-  const cover = normalizeImageUrl(vol.cover_img || vol.image);
+  const cover = normalizeImageUrl(vol.image);
   const title = escapeHtmlAttribute(vol.name_uk || vol.name || t('no_title'));
   const countText = vol.char_issue_count ? t('issues_abbr', { count: vol.char_issue_count }) : t('issues_abbr', { count: vol.issue_count || 0 });
 

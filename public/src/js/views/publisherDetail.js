@@ -78,7 +78,7 @@ function factItemHTML(label, valueHTML) {
 }
 
 function volumeReleaseCardHTML(vol) {
-  const imgUrl = normalizeImageUrl(vol.cover_img || vol.image);
+  const imgUrl = normalizeImageUrl(vol.image);
   const title = escapeHtmlAttribute(vol.name_uk || vol.name || 'Без назви');
   const issueCount = vol.issue_count || 0;
   const coverHtml = imgUrl

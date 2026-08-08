@@ -592,3 +592,172 @@ def scrape_manga_characters_logic(db, volume_id, log_callback):
         db.conn.rollback()
         log_callback(f"Помилка під час транзакції в БД: {e}")
         return False
+
+
+def scrape_hikka_characters_logic(db, volume_id: int, log_callback) -> bool:
+    """
+    Парсить персонажів з Hikka API (https://api.hikka.io/manga/{hikka_slug}/characters) для тому volume_id,
+    створює чи оновлює записи у таблиці characters та пов'язує їх у volume_characters.
+    """
+    import urllib.request
+    import urllib.error
+    import json
+
+    # 1. Отримуємо дані тому з БД
+    vol = db.get_one("SELECT id, name, name_uk, hikka_slug FROM volumes WHERE id = %s", [volume_id])
+    if not vol:
+        log_callback(f"Помилка: Том з ID {volume_id} не знайдено.")
+        return False
+
+    hikka_slug = vol.get("hikka_slug")
+    vol_name = vol.get('name_uk') or vol.get('name') or f"Volume #{volume_id}"
+    
+    if not hikka_slug:
+        log_callback(f"Помилка: У тому '{vol_name}' відсутній Hikka slug.")
+        return False
+
+    log_callback(f"Початок парсингу персонажів з Hikka для тому '{vol_name}' (ID: {volume_id}, Hikka slug: {hikka_slug})")
+    
+    url = f"https://api.hikka.io/manga/{hikka_slug}/characters"
+    log_callback(f"Запит до Hikka API: {url}")
+    
+    req = urllib.request.Request(
+        url,
+        headers={
+            'User-Agent': 'DrawnStoriesAdmin/1.0 (Windows NT 10.0)',
+            'Accept': 'application/json'
+        }
+    )
+    
+    try:
+        with urllib.request.urlopen(req, timeout=25) as response:
+            if response.status == 200:
+                raw_content = response.read().decode('utf-8')
+                characters_data = json.loads(raw_content)
+            else:
+                log_callback(f"Помилка: Hikka API повернув статус {response.status}")
+                return False
+    except urllib.error.HTTPError as he:
+        log_callback(f"Помилка HTTP під час запиту до Hikka: {he.code} {he.reason}")
+        return False
+    except Exception as e:
+        log_callback(f"Помилка мережі при запиті до Hikka: {e}")
+        return False
+
+    if isinstance(characters_data, dict):
+        characters_list = characters_data.get("list") or characters_data.get("data") or characters_data.get("characters") or []
+    elif isinstance(characters_data, list):
+        characters_list = characters_data
+    else:
+        characters_list = []
+
+    if not characters_list:
+        log_callback("Попередження: Для цієї манґи не знайдено персонажів в Hikka API.")
+        return True
+
+    log_callback(f"Отримано персонажів з Hikka API: {len(characters_list)}")
+
+    try:
+        added_or_updated_count = 0
+
+        for item in characters_list:
+            char_obj = item.get("character") if isinstance(item, dict) and "character" in item else item
+            if not isinstance(char_obj, dict):
+                continue
+
+            c_slug = char_obj.get("slug") or char_obj.get("hikka_slug")
+            c_name_ua = char_obj.get("name_ua") or char_obj.get("name_uk")
+            c_name_en = char_obj.get("name_en") or char_obj.get("name")
+            c_name_ja = char_obj.get("name_ja") or char_obj.get("name_native") or char_obj.get("native_name")
+            c_image = char_obj.get("image") or char_obj.get("avatar") or char_obj.get("picture")
+            
+            is_main = item.get("main") if isinstance(item, dict) and "main" in item else None
+            raw_role = item.get("role") or char_obj.get("role") or "supporting"
+            if is_main is True:
+                role = "main"
+            elif is_main is False:
+                role = "supporting"
+            else:
+                role = "main" if str(raw_role).lower() in ("main", "головний", "главный") else "supporting"
+
+            if not c_slug and not c_name_en and not c_name_ua:
+                continue
+
+            # 1. Пошук персонажа в БД
+            char_db = None
+            if c_slug:
+                char_db = db.get_one("SELECT id, name, name_uk, name_native, image, hikka_slug FROM characters WHERE hikka_slug = %s LIMIT 1", [c_slug])
+
+            if not char_db and c_name_en:
+                char_db = db.get_one("SELECT id, name, name_uk, name_native, image, hikka_slug FROM characters WHERE LOWER(name) = %s LIMIT 1", [c_name_en.lower()])
+            if not char_db and c_name_ua:
+                char_db = db.get_one("SELECT id, name, name_uk, name_native, image, hikka_slug FROM characters WHERE LOWER(name_uk) = %s LIMIT 1", [c_name_ua.lower()])
+
+            if char_db:
+                char_id = char_db["id"]
+                updates = []
+                params = []
+
+                if c_name_ua and char_db.get("name_uk") != c_name_ua:
+                    updates.append("name_uk = %s")
+                    params.append(c_name_ua)
+                if c_name_en and char_db.get("name") != c_name_en:
+                    updates.append("name = %s")
+                    params.append(c_name_en)
+                if c_name_ja and char_db.get("name_native") != c_name_ja:
+                    updates.append("name_native = %s")
+                    params.append(c_name_ja)
+                if c_image and char_db.get("image") != c_image:
+                    updates.append("image = %s")
+                    params.append(c_image)
+                if c_slug and char_db.get("hikka_slug") != c_slug:
+                    updates.append("hikka_slug = %s")
+                    params.append(c_slug)
+
+                if updates:
+                    params.append(char_id)
+                    sql = f"UPDATE characters SET {', '.join(updates)} WHERE id = %s"
+                    db.conn.execute(sql, params)
+                    log_callback(f"Оновлено персонажа '{c_name_ua or c_name_en}' (ID: {char_id}) в БД.")
+                else:
+                    log_callback(f"Персонаж '{c_name_ua or c_name_en}' вже є в БД (ID: {char_id}).")
+            else:
+                primary_name = c_name_en or c_name_ua or "Unknown Character"
+                res = db.conn.execute(
+                    """
+                    INSERT INTO characters (name, name_uk, name_native, image, hikka_slug)
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING id
+                    """,
+                    [primary_name, c_name_ua, c_name_ja, c_image, c_slug]
+                )
+                row = res.fetchone()
+                char_id = row["id"] if isinstance(row, dict) else row[0]
+                log_callback(f"Створено нового персонажа '{primary_name}' в БД (ID: {char_id}).")
+
+            # 3. Зв'язок з томом
+            ex_rel = db.get_one(
+                "SELECT id, role FROM volume_characters WHERE volume_id = %s AND character_id = %s LIMIT 1",
+                [volume_id, char_id]
+            )
+            if ex_rel:
+                if ex_rel.get("role") != role:
+                    db.conn.execute(
+                        "UPDATE volume_characters SET role = %s WHERE id = %s",
+                        [role, ex_rel["id"]]
+                    )
+            else:
+                db.conn.execute(
+                    "INSERT INTO volume_characters (volume_id, character_id, role) VALUES (%s, %s, %s)",
+                    [volume_id, char_id, role]
+                )
+            added_or_updated_count += 1
+
+        db.conn.commit()
+        log_callback(f"Успішно оброблено персонажів Hikka для тому: {added_or_updated_count}.")
+        return True
+
+    except Exception as e:
+        db.conn.rollback()
+        log_callback(f"Помилка під час збереження персонажів Hikka у БД: {e}")
+        return False

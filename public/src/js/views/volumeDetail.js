@@ -2,7 +2,7 @@ import { API } from '../helpers/api.js';
 import { currentUser, getAvatarHtml } from '../shell.js';
 import { Bookmarks } from '../helpers/bookmarks.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
-import { langDisplay, langName, formatDate } from '../helpers/lang.js';
+import { langDisplay, langName, formatDate, formatIssueRanges } from '../helpers/lang.js';
 import { createPaginator } from '../components/Pagination.js';
 import { renderIssueGridCard } from '../components/cards/IssueGridCard.js';
 import { VolumeEditor } from '../components/modals/EditVolumeModal.js';
@@ -511,7 +511,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
         currentItems = shouldSeparate ? (data.issues || []) : (data.items || data.issues || []);
 
         let currentCollections = isMagazine ? magazineChildren : [];
-        if (!isMagazine && translations.length > 0) {
+        if (!isMagazine) {
             try {
                 const collRes = await API.get(`/volumes/${volumeId}/collections-from-issues`);
                 currentCollections = collRes.data || [];
@@ -520,9 +520,8 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
             }
         }
 
-        const showCounts = !isMagazine && translations.length > 0;
-        const issuesTabSuffix = showCounts ? ` (${currentItems.length})` : '';
-        const collectionsTabSuffix = showCounts ? ` (${currentCollections.length})` : '';
+        const issuesTabSuffix = currentItems.length > 0 ? ` (${currentItems.length})` : '';
+        const collectionsTabSuffix = currentCollections.length > 0 ? ` (${currentCollections.length})` : '';
 
         const groupedStaff = new Map();
         staff.forEach(person => {
@@ -588,7 +587,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                         const roleClass = char.role === 'main' ? 'role-main' : 'role-supporting';
                         const charLink = char.cv_slug ? `#/characters/${char.id}-${char.cv_slug}` : `#/characters/${char.id}`;
                         return `
-                            <div class="character-card">
+                            <a href="${charLink}" class="character-card" style="text-decoration: none; color: inherit;">
                                 <div class="char-cover-wrap">
                                     ${cover
                                         ? `<img class="char-cover" src="${escapeHtmlAttribute(cover)}" alt="${name}" loading="lazy">`
@@ -597,9 +596,9 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                                     <span class="char-role-badge ${roleClass}">${roleLabel}</span>
                                 </div>
                                 <div class="char-info">
-                                    <a href="${charLink}" class="char-name" title="${name}" style="text-decoration: none;">${name}</a>
+                                    <span class="char-name" title="${name}">${name}</span>
                                 </div>
-                            </div>
+                            </a>
                         `;
                     }).join('')}
                 </div>
@@ -1039,10 +1038,10 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                             <span>Скрапити стаф та появи</span>
                         </button>
                     ` : ''}
-                    ${volume.mal_id ? `
-                        <button class="btn-admin btn-admin--warning" id="volume-scrape-manga-characters-btn" title="Парсити персонажів манґи з MyAnimeList (Jikan)">
+                    ${(volume.hikka_slug || volume.mal_id) ? `
+                        <button class="btn-admin btn-admin--warning" id="volume-scrape-manga-characters-btn" title="Парсити персонажів манґи з Hikka API">
                             ${icon('refreshCw', 14, { strokeWidth: 2.2 })}
-                            <span>Парсити персонажів</span>
+                            <span>Парсити персонажів Hikka</span>
                         </button>
                     ` : ''}
                 </div>
@@ -1664,7 +1663,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                 const name = escapeHtmlAttribute(char.name_uk || char.name || 'Без назви');
                 const charLink = char.cv_slug ? `#/characters/${char.id}-${char.cv_slug}` : `#/characters/${char.id}`;
                 return `
-                    <div class="character-card">
+                    <a href="${charLink}" class="character-card" style="text-decoration: none; color: inherit;">
                         <div class="char-cover-wrap">
                             ${cover
                                 ? `<img class="char-cover" src="${escapeHtmlAttribute(cover)}" alt="${name}" loading="lazy">`
@@ -1672,9 +1671,9 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                             }
                         </div>
                         <div class="char-info">
-                            <a href="${charLink}" class="char-name" title="${name}" style="text-decoration: none;">${name}</a>
+                            <span class="char-name" title="${name}">${name}</span>
                         </div>
-                    </div>
+                    </a>
                 `;
             };
 
@@ -1884,7 +1883,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                     const isOwned = res.status === 'added';
                     
                     toggleBtn.classList.toggle('is-owned', isOwned);
-                    toggleBtn.innerHTML = isOwned ? ICON.trash : ICON.plus;
+                    toggleBtn.innerHTML = isOwned ? icon('trash', 14) : icon('plus', 14);
                     toggleBtn.title = isOwned ? 'Видалити з колекції' : 'Додати в колекцію';
 
                     // Update local items if they are in the current view
@@ -2152,7 +2151,7 @@ function renderCollectionsFromIssues(container, collections, options = {}) {
                                 ${col.issue_number ? `<div class="issue-grid-number">#${escapeHtmlAttribute(col.issue_number)}</div>` : ''}
                                 <div class="issue-grid-actions">
                                     <button class="issue-grid-toggle-btn ${col.is_owned ? 'is-owned' : ''}" data-id="${col.id}" title="${col.is_owned ? 'Видалити з колекції' : 'Додати в колекцію'}">
-                                        ${col.is_owned ? ICON.trash : ICON.plus}
+                                        ${col.is_owned ? icon('trash', 14) : icon('plus', 14)}
                                     </button>
                                 </div>
                             </div>

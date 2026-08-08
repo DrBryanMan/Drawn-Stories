@@ -48,3 +48,16 @@ async def get_themes(
     )
 
     return { "items": rows }
+
+
+@router.get("/{theme_id}")
+async def get_theme(theme_id: int):
+    db = get_db()
+    theme = db.get_one(
+        "SELECT id, cv_id, name, ua_name, COALESCE(type, 'theme') as type FROM themes WHERE id = %s",
+        [theme_id]
+    )
+    if not theme:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Тему не знайдено")
+    return {"theme": dict(theme)}

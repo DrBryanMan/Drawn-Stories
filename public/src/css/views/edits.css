@@ -610,6 +610,9 @@
     border-radius: 20px;
     font-size: 12px;
     color: var(--text-2);
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
 }
 
 .edit-card-actions {
@@ -755,6 +758,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+    margin-top: 2px;
 }
 
 .diff-theme-chip {
@@ -766,6 +770,30 @@
     font-family: var(--font-monos);
     color: var(--text-2);
     font-weight: 500;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.diff-chip-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.diff-theme-chip--added {
+    background: color-mix(in srgb, #059669 15%, transparent);
+    border-color: color-mix(in srgb, #059669 40%, transparent);
+    color: #059669;
+    font-weight: 600;
+}
+
+.diff-theme-chip--removed {
+    background: color-mix(in srgb, #dc2626 10%, transparent);
+    border-color: color-mix(in srgb, #dc2626 30%, transparent);
+    color: #dc2626;
+    opacity: 0.85;
 }
 
 /* Image Previews styling */

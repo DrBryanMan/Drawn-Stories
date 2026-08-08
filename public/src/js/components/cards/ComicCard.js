@@ -24,7 +24,7 @@ const LIST_LABELS = {
  */
 export function createComicCard(item) {
     const isIssue = item.type === 'issue';
-    const isCollection = item.type === 'collection';
+    const isCollection = item.type === 'collection' || item.is_collection;
     const isVolume = item.type === 'volume';
 
     const publisher = item.publisher_name || '';
@@ -43,10 +43,12 @@ export function createComicCard(item) {
     } else if (isIssue) {
         a.href = `#/issues/${item.id}`;
         a.dataset.issueId = item.id;
+    } else if (isCollection) {
+        a.href = `#/collections/${item.id}`;
+        a.dataset.collectionId = item.id;
     } else {
         const volId = item.volume_id;
         a.href = volId ? `#/volumes/${volId}` : '#';
-        if (isCollection) a.dataset.collectionId = item.id;
     }
 
     const coverHTML = coverUrl

@@ -4,8 +4,10 @@ import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { openAddIssueModal } from '../components/addIssueModal.js';
 import { renderIssueGridCard } from '../components/cards/IssueGridCard.js';
 import { CollectionEditor } from '../components/modals/EditCollectionModal.js';
-import { formatDate } from '../helpers/lang.js';
+import { formatDate, formatIssueRanges } from '../helpers/lang.js';
 import { icon } from '../helpers/icons.js';
+import { t } from '../helpers/i18n.js';
+import { fetchEntityEdits, renderEditorsHistoryBlock, initEditorsHistoryBlock } from '../components/editorsHistoryBlock.js';
 
 let issuesSortDir = 'asc'; // 'asc' or 'desc'
 let relatedPage = 1;
@@ -29,30 +31,6 @@ function renderSkeleton(container) {
             </div>
         </div>
     `;
-}
-
-
-function formatIssueRanges(nums) {
-    if (!nums || !nums.length) return '';
-    const sorted = [...nums].map(n => parseFloat(n)).filter(n => !isNaN(n)).sort((a, b) => a - b);
-    if (!sorted.length) return '';
-    
-    const parts = [];
-    let start = sorted[0];
-    let prev = sorted[0];
-
-    for (let i = 1; i <= sorted.length; i++) {
-        const curr = sorted[i];
-        if (curr === prev + 1) {
-            prev = curr;
-        } else {
-            if (start === prev) parts.push(start);
-            else parts.push(`${start}-${prev}`);
-            start = curr;
-            prev = curr;
-        }
-    }
-    return parts.join(', ');
 }
 
 function getVerificationBadgeHTML(collection) {
@@ -571,7 +549,7 @@ export async function renderCollectionDetail(main, params = {}) {
             issuesSortDir = issuesSortDir === 'asc' ? 'desc' : 'asc';
             // Update button icon
             const btn = main.querySelector('#btn-sort-related');
-            btn.innerHTML = issuesSortDir === 'asc' ? ICON.sortAsc : ICON.sortDesc;
+            btn.innerHTML = issuesSortDir === 'asc' ? icon('sortAsc', 14) : icon('sortDesc', 14);
             // Also resort the issues list since it's logical to keep them in sync
             renderCollectionDetail(main, params);
         });

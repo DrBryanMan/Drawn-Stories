@@ -1614,7 +1614,11 @@ def m042_user_follows(conn):
         CONSTRAINT unique_user_follow UNIQUE (follower_id, following_id)
     )""")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_user_follows_follower ON user_follows(follower_id)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_user_follows_following ON user_follows(following_id)")
+
+# ── M065: унікальний індекс для volume_characters ───────────────────────────
+@migration("M065_volume_characters_unique")
+def m065_volume_characters_unique(conn):
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_vol_char_unique ON volume_characters(volume_id, character_id)")
 
 
 def apply_migrations(conn):

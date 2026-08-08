@@ -237,7 +237,7 @@ export function generateDiffHTML(before = {}, after = {}, themesCache = []) {
     if (JSON.stringify(beforeIds) !== JSON.stringify(afterIds)) {
       hasChanges = true;
 
-      const getThemeChipHTML = (id, list) => {
+      const getThemeChipHTML = (id, list, isAdded = false, isRemoved = false) => {
         const found = (list || []).find(t => t.id === id);
         let name = found ? found.name : '';
         if (!name && Array.isArray(themesCache)) {
@@ -245,11 +245,27 @@ export function generateDiffHTML(before = {}, after = {}, themesCache = []) {
           name = cached ? (cached.ua_name || cached.name) : '';
         }
         const label = name ? `#${id} ${name}` : `#${id}`;
-        return `<span class="diff-theme-chip" title="${escapeHtml(name)}">${escapeHtml(label)}</span>`;
+        let chipClass = 'diff-theme-chip';
+        let prefixIcon = '';
+
+        if (isAdded) {
+          chipClass += ' diff-theme-chip--added';
+          prefixIcon = icon('plus', 11) || '+';
+        } else if (isRemoved) {
+          chipClass += ' diff-theme-chip--removed';
+          prefixIcon = icon('minus', 11) || '-';
+        }
+
+        const iconHtml = prefixIcon ? `<span class="diff-chip-icon">${prefixIcon}</span>` : '';
+        return `<span class="${chipClass}" title="${escapeHtml(name)}">${iconHtml}${escapeHtml(label)}</span>`;
       };
 
-      const beforeText = beforeIds.map(id => getThemeChipHTML(id, before.themes)).join('') || '—';
-      const afterText = afterIds.map(id => getThemeChipHTML(id, after.themes)).join('') || '—';
+      const beforeText = beforeIds.length
+        ? `<div class="diff-theme-chips">${beforeIds.map(id => getThemeChipHTML(id, before.themes, false, !afterIds.includes(id))).join('')}</div>`
+        : '—';
+      const afterText = afterIds.length
+        ? `<div class="diff-theme-chips">${afterIds.map(id => getThemeChipHTML(id, after.themes, !beforeIds.includes(id), false)).join('')}</div>`
+        : '—';
       html += renderDiffField(t('themes'), icon('tag', 14) || '', beforeText, afterText, 'themes');
     }
   }

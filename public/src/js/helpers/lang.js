@@ -155,3 +155,26 @@ export function getEntityUrl(entityType, entityId) {
     if (type === 'event') return `#/events/${entityId}`;
     return '#/';
 }
+
+export function formatIssueRanges(nums) {
+    if (!nums || !nums.length) return '';
+    const sorted = [...nums].map(n => parseFloat(n)).filter(n => !isNaN(n)).sort((a, b) => a - b);
+    if (!sorted.length) return '';
+    
+    const parts = [];
+    let start = sorted[0];
+    let prev = sorted[0];
+
+    for (let i = 1; i <= sorted.length; i++) {
+        const curr = sorted[i];
+        if (curr === prev + 1) {
+            prev = curr;
+        } else {
+            if (start === prev) parts.push(start);
+            else parts.push(`${start}-${prev}`);
+            start = curr;
+            prev = curr;
+        }
+    }
+    return parts.join(', ');
+}

@@ -2,7 +2,7 @@ import asyncio
 from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import StreamingResponse
 from ..db import get_db
-from server.services.appearances import create_scraper_instance, scrape_issue_appearances_logic, scrape_volume_appearances_logic, scrape_manga_characters_logic
+from server.services.appearances import create_scraper_instance, scrape_issue_appearances_logic, scrape_volume_appearances_logic, scrape_hikka_characters_logic
 
 router = APIRouter(prefix="/api/scrape", tags=["scrape"])
 
@@ -99,7 +99,7 @@ async def scrape_manga_characters(volume_id: int, request: Request, _ = Depends(
         # Run synchronous scraping in a separate thread to prevent blocking the event loop
         task = asyncio.create_task(
             asyncio.to_thread(
-                scrape_manga_characters_logic,
+                scrape_hikka_characters_logic,
                 db, volume_id, log_callback
             )
         )
