@@ -839,7 +839,12 @@ async def get_volume_collections_from_issues(volume_id: int, request: Request):
             )
             { "AND (pv.lang = %s OR pv.lang IS NULL)" if vol_lang else "" }
         ) sub
-        ORDER BY parent_vol_name ASC, CASE WHEN issue_number ~ '^[0-9]' THEN CAST(substring(issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, name ASC
+        ORDER BY 
+            parent_vol_name ASC,
+            parent_vol_id ASC,
+            CASE WHEN issue_number ~ '^[0-9]' THEN CAST(substring(issue_number from '^[0-9]+(?:\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST,
+            COALESCE(release_date, cover_date) ASC NULLS LAST,
+            name ASC
         """,
         [user_id] + vol_ids + vol_ids + ([vol_lang] if vol_lang else [])
     )
@@ -854,7 +859,7 @@ async def get_volume_collections_from_issues(volume_id: int, request: Request):
             WHERE ci.collection_id = %s 
               AND i.volume_id IN ({placeholders})
               AND i.issue_number IS NOT NULL
-            ORDER BY CASE WHEN i.issue_number ~ '^[0-9]' THEN CAST(substring(i.issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST
+            ORDER BY CASE WHEN i.issue_number ~ '^[0-9]' THEN CAST(substring(i.issue_number from '^[0-9]+(?:\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST
             """,
             [col["id"]] + vol_ids
         )

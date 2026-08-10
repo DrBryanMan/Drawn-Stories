@@ -1,4 +1,5 @@
 // admin/js/editorUtils.js
+import { getCurrentLanguage } from '../../helpers/i18n.js';
 
 export const PINNED_PUBLISHER_IDS = [
   11,  // Marvel
@@ -24,12 +25,17 @@ export function chipClassByType(type) {
 }
 
 export function buildThemeChipsHTML(allThemes, removeFnName) {
+  const lang = getCurrentLanguage() || 'uk';
+  const getThemeLabel = (t) => {
+    const raw = (lang === 'en' ? (t.name || t.ua_name) : (t.ua_name || t.name)) || '';
+    return raw ? `${raw.charAt(0).toUpperCase()}${raw.slice(1)}` : '';
+  };
   const types   = allThemes.filter(t => t.type === 'type');
   const genres  = allThemes.filter(t => t.type === 'genre');
   const themes  = allThemes.filter(t => t.type === 'theme' || !t.type);
 
   const makeChips = (arr) => arr.map(t => {
-    const label = t.ua_name || t.name;
+    const label = getThemeLabel(t);
     return `
       <span class="chip ${chipClassByType(t.type)}" data-id="${t.id}">
         ${label}
@@ -58,8 +64,21 @@ export function buildThemeCheckboxListHTML(allThemes, selectedIds, onChangeFn) {
   const genres  = allThemes.filter(t => !pinnedIds.has(t.id) && t.type === 'genre');
   const themes  = allThemes.filter(t => !pinnedIds.has(t.id) && (t.type === 'theme' || !t.type));
 
+  const lang = getCurrentLanguage() || 'uk';
+  const locale = lang === 'en' ? 'en' : 'uk';
+  const getThemeLabel = (t) => {
+    const raw = (lang === 'en' ? (t.name || t.ua_name) : (t.ua_name || t.name)) || '';
+    return raw ? `${raw.charAt(0).toUpperCase()}${raw.slice(1)}` : '';
+  };
+  const sortAlphabetically = (a, b) => getThemeLabel(a).localeCompare(getThemeLabel(b), locale, { sensitivity: 'base' });
+
+  pinned.sort(sortAlphabetically);
+  types.sort(sortAlphabetically);
+  genres.sort(sortAlphabetically);
+  themes.sort(sortAlphabetically);
+
   const renderItem = (t) => {
-    const label = t.ua_name || t.name;
+    const label = getThemeLabel(t);
     const checked = selectedIds.has(t.id);
     return `
       <label class="theme-checkbox-item${checked ? ' theme-checkbox-item--checked' : ''}">

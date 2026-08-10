@@ -561,7 +561,7 @@ async def get_collection_detail(collection_id: int, request: Request):
             SELECT id, name, issue_number, image
             FROM collections
             WHERE volume_id = %s
-            ORDER BY CASE WHEN issue_number ~ '^[0-9]' THEN CAST(substring(issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, issue_number ASC
+            ORDER BY CASE WHEN issue_number ~ '^[0-9]' THEN CAST(substring(issue_number from '^[0-9]+(?:\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, issue_number ASC
             """,
             [collection['volume_id']]
         )

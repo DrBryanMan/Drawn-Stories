@@ -422,29 +422,95 @@ function renderItems(container, items) {
 }
 
 // ── Sort ─────────────────────────────────────────────
-function sortItems(items, order) {
+function sortItems(items, order = 'number_asc') {
+    const isDesc = order.endsWith('_desc');
+    const field = order.replace(/_(asc|desc)$/, '');
+
     return [...items].sort((a, b) => {
-        if (order === 'series_asc') {
+        if (field === 'series') {
             const volA = (a.volume_name_uk || a.volume_name || '').toLowerCase();
             const volB = (b.volume_name_uk || b.volume_name || '').toLowerCase();
             const volCmp = volA.localeCompare(volB, 'uk');
-            if (volCmp !== 0) return volCmp;
+            if (volCmp !== 0) return isDesc ? -volCmp : volCmp;
             const nA = Number.parseFloat(a.issue_number);
             const nB = Number.parseFloat(b.issue_number);
-            if (Number.isFinite(nA) && Number.isFinite(nB) && nA !== nB) return nA - nB;
-            return String(a.issue_number || '').localeCompare(String(b.issue_number || ''), 'uk', { numeric: true });
+            if (Number.isFinite(nA) && Number.isFinite(nB) && nA !== nB) {
+                return isDesc ? nB - nA : nA - nB;
+            }
+            const strCmp = String(a.issue_number || '').localeCompare(String(b.issue_number || ''), 'uk', { numeric: true });
+            return isDesc ? -strCmp : strCmp;
         }
-        if (order === 'date_desc' || order === 'date_asc') {
+
+        if (field === 'date') {
             const dateA = a.cover_date || a.release_date || '';
             const dateB = b.cover_date || b.release_date || '';
-            return order === 'date_desc' ? dateB.localeCompare(dateA) : dateA.localeCompare(dateB);
+            if (dateA && dateB && dateA !== dateB) {
+                return isDesc ? dateB.localeCompare(dateA) : dateA.localeCompare(dateB);
+            }
+            if (dateA && !dateB) return -1;
+            if (!dateA && dateB) return 1;
+            const numA = Number.parseFloat(a.issue_number);
+            const numB = Number.parseFloat(b.issue_number);
+            if (Number.isFinite(numA) && Number.isFinite(numB) && numA !== numB) {
+                return isDesc ? numB - numA : numA - numB;
+            }
+            return 0;
         }
+
+        // Default: sort by number
         const numA = Number.parseFloat(a.issue_number);
         const numB = Number.parseFloat(b.issue_number);
         if (Number.isFinite(numA) && Number.isFinite(numB) && numA !== numB) {
-            return order === 'number_desc' ? numB - numA : numA - numB;
+            return isDesc ? numB - numA : numA - numB;
         }
-        return String(a.issue_number || '').localeCompare(String(b.issue_number || ''), 'uk', { numeric: true });
+        const strCmp = String(a.issue_number || '').localeCompare(String(b.issue_number || ''), 'uk', { numeric: true });
+        return isDesc ? -strCmp : strCmp;
+    });
+}
+
+function sortCollections(collections, order = 'number_asc') {
+    const isDesc = order.endsWith('_desc');
+    const field = order.replace(/_(asc|desc)$/, '');
+
+    return [...collections].sort((a, b) => {
+        // Спочатку групуємо за батьківською серією
+        const volA = (a.parent_vol_name || '').toLowerCase();
+        const volB = (b.parent_vol_name || '').toLowerCase();
+        const volCmp = volA.localeCompare(volB, 'uk');
+        if (volCmp !== 0) return volCmp;
+
+        const parentIdA = a.parent_vol_id || 0;
+        const parentIdB = b.parent_vol_id || 0;
+        if (parentIdA !== parentIdB) return parentIdA - parentIdB;
+
+        // Всередині групи
+        if (field === 'date') {
+            const dateA = a.release_date || a.cover_date || '';
+            const dateB = b.release_date || b.cover_date || '';
+            if (dateA && dateB && dateA !== dateB) {
+                return isDesc ? dateB.localeCompare(dateA) : dateA.localeCompare(dateB);
+            }
+            if (dateA && !dateB) return isDesc ? 1 : -1;
+            if (!dateA && dateB) return isDesc ? -1 : 1;
+        }
+
+        if (field === 'name') {
+            const nameA = (a.name || '').toLowerCase();
+            const nameB = (b.name || '').toLowerCase();
+            const nameCmp = nameA.localeCompare(nameB, 'uk');
+            if (nameCmp !== 0) return isDesc ? -nameCmp : nameCmp;
+        }
+
+        // За замовчуванням: за числовим номером
+        const numA = Number.parseFloat(a.issue_number);
+        const numB = Number.parseFloat(b.issue_number);
+        if (Number.isFinite(numA) && Number.isFinite(numB) && numA !== numB) {
+            return isDesc ? numB - numA : numA - numB;
+        }
+        const strCmp = String(a.issue_number || '').localeCompare(String(b.issue_number || ''), 'uk', { numeric: true });
+        if (strCmp !== 0) return isDesc ? -strCmp : strCmp;
+
+        return (a.name || '').localeCompare(b.name || '', 'uk');
     });
 }
 
@@ -927,16 +993,20 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                                     <div class="filter-group volume-sort-group">
                                         <select class="filter-select" id="volume-issue-sort">
                                             <button>
-                                                <span class="select-label">За номером (1-9)</span>
+                                                <span class="select-label">За номером</span>
                                                 <span class="select-chevron-v">
                                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg>
                                                 </span>
                                             </button>
-                                            <option value="number_asc" selected>За номером (1-9)</option>
-                                            <option value="number_desc">За номером (9-1)</option>
-                                            <option value="date_desc">Спочатку нові</option>
-                                            <option value="date_asc">Спочатку старі</option>
+                                            <option value="number" selected>За номером</option>
+                                            <option value="date">За датою</option>
+                                            ${isCollection ? '<option value="series">За серією</option>' : ''}
                                         </select>
+                                        <button class="filter-btn-icon sort-order-btn" id="volume-issue-sort-order-btn" type="button" title="Змінити напрямок сортування">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" data-sort-order-icon>
+                                                <path d="m3 8 4-4 4 4M7 4v16M15 4h6M15 10h4M15 16h2"/>
+                                            </svg>
+                                        </button>
                                     </div>
                                     <div class="view-toggle-mini" id="issues-view-switcher">
                                         <button class="view-toggle-btn ${currentView === 'grid' ? 'is-active' : ''}" data-view="grid" title="Плитка">${icon('all', 18)}</button>
@@ -967,6 +1037,24 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                             <div class="volume-issues-toolbar block">
                                 <div class="volume-toolbar-right" id="collections-toolbar-right" style="margin-left: auto;">
                                     <div id="volume-collections-pagination-container"></div>
+                                    <div class="filter-group volume-sort-group">
+                                        <select class="filter-select" id="volume-collection-sort">
+                                            <button>
+                                                <span class="select-label">За номером</span>
+                                                <span class="select-chevron-v">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg>
+                                                </span>
+                                            </button>
+                                            <option value="number" selected>За номером</option>
+                                            <option value="date">За датою</option>
+                                            <option value="name">За назвою</option>
+                                        </select>
+                                        <button class="filter-btn-icon sort-order-btn" id="volume-collection-sort-order-btn" type="button" title="Змінити напрямок сортування">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" data-sort-order-icon>
+                                                <path d="m3 8 4-4 4 4M7 4v16M15 4h6M15 10h4M15 16h2"/>
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                             <div id="volume-collections-view-container" class="volume-items-content-fade"></div>
@@ -1502,10 +1590,19 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
         const itemsView = document.getElementById('volume-items-view-container');
         const viewSwitcher = document.getElementById('issues-view-switcher');
         const sortSelect = document.getElementById('volume-issue-sort');
+        const sortOrderBtn = document.getElementById('volume-issue-sort-order-btn');
+        let currentSortField = sortSelect ? sortSelect.value : 'number';
+        let currentSortDir = 'asc';
+        const getCurrentOrder = () => `${currentSortField}_${currentSortDir}`;
         const paginationContainer = document.getElementById('volume-pagination-container');
 
         const collsView = document.getElementById('volume-collections-view-container');
         const collsPaginationContainer = document.getElementById('volume-collections-pagination-container');
+        const collSortSelect = document.getElementById('volume-collection-sort');
+        const collSortOrderBtn = document.getElementById('volume-collection-sort-order-btn');
+        let currentCollsSortField = collSortSelect ? collSortSelect.value : 'number';
+        let currentCollsSortDir = 'asc';
+        const getCurrentCollsOrder = () => `${currentCollsSortField}_${currentCollsSortDir}`;
 
         if (isMagazine) {
             currentCollections = magazineChildren;
@@ -1535,7 +1632,8 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
             const end = start + pageSize;
 
             collsView.innerHTML = '';
-            const sliced = source.slice(start, end);
+            const sorted = sortCollections([...source], getCurrentCollsOrder());
+            const sliced = sorted.slice(start, end);
             if (isMagazine) {
                 renderItems(collsView, sliced);
             } else {
@@ -1556,7 +1654,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
             if (parentVolumesContainer) {
                 if (isCollection && currentItems.length > 0) {
                     const volumesMap = new Map();
-                    const sortedItems = sortItems([...currentItems], sortSelect ? sortSelect.value : 'number_asc');
+                    const sortedItems = sortItems([...currentItems], getCurrentOrder());
                     for (const item of sortedItems) {
                         const volId = item.volume_db_id || item.volume_id;
                         if (!volId) continue;
@@ -1628,7 +1726,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
             const end = start + pageSize;
 
             itemsView.innerHTML = '';
-            const sorted = sortItems([...currentItems], sortSelect ? sortSelect.value : 'number_asc');
+            const sorted = sortItems([...currentItems], getCurrentOrder());
             const sliced = sorted.slice(start, end);
             renderItems(itemsView, sliced);
         };
@@ -1850,11 +1948,51 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
 
         if (sortSelect) {
             sortSelect.addEventListener('change', (e) => {
+                currentSortField = e.target.value;
                 const selectedOption = e.target.options[e.target.selectedIndex];
                 const label = main.querySelector('.volume-sort-group .select-label');
                 if (label) label.textContent = selectedOption.text;
                 paginator.reset();
                 refreshItems();
+            });
+        }
+
+        if (sortOrderBtn) {
+            sortOrderBtn.addEventListener('click', () => {
+                currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+                const iconSvg = sortOrderBtn.querySelector('[data-sort-order-icon]');
+                if (iconSvg) {
+                    iconSvg.innerHTML = currentSortDir === 'asc'
+                        ? '<path d="m3 8 4-4 4 4M7 4v16M15 4h6M15 10h4M15 16h2"/>'
+                        : '<path d="m3 16 4 4 4-4M7 20V4M15 4h6M15 10h4M15 16h2"/>';
+                }
+                paginator.reset();
+                refreshItems();
+            });
+        }
+
+        if (collSortSelect) {
+            collSortSelect.addEventListener('change', (e) => {
+                currentCollsSortField = e.target.value;
+                const selectedOption = e.target.options[e.target.selectedIndex];
+                const label = main.querySelector('#collections-toolbar-right .volume-sort-group .select-label');
+                if (label) label.textContent = selectedOption.text;
+                collsPaginator.reset();
+                refreshCollections();
+            });
+        }
+
+        if (collSortOrderBtn) {
+            collSortOrderBtn.addEventListener('click', () => {
+                currentCollsSortDir = currentCollsSortDir === 'asc' ? 'desc' : 'asc';
+                const iconSvg = collSortOrderBtn.querySelector('[data-sort-order-icon]');
+                if (iconSvg) {
+                    iconSvg.innerHTML = currentCollsSortDir === 'asc'
+                        ? '<path d="m3 8 4-4 4 4M7 4v16M15 4h6M15 10h4M15 16h2"/>'
+                        : '<path d="m3 16 4 4 4-4M7 20V4M15 4h6M15 10h4M15 16h2"/>';
+                }
+                collsPaginator.reset();
+                refreshCollections();
             });
         }
 

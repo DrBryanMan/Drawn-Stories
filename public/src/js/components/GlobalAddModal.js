@@ -3,16 +3,22 @@ import { LANG_MAP } from '../helpers/lang.js';
 import { normalizeImageUrl } from '../helpers/image.js';
 import { CharacterPicker } from './CharacterPicker.js';
 import { icon } from '../helpers/icons.js';
+import { getCurrentLanguage } from '../helpers/i18n.js';
 
 // Local helper functions for rendering themes (identical to VolumeEditor / editorUtils)
 function buildThemeChipsHTML(selectedThemes) {
+  const lang = getCurrentLanguage() || 'uk';
+  const getLabel = (t) => {
+    const raw = (lang === 'en' ? (t.name || t.ua_name) : (t.ua_name || t.name)) || '';
+    return raw ? `${raw.charAt(0).toUpperCase()}${raw.slice(1)}` : '';
+  };
   const chipClassByType = (type) => {
       if (type === 'genre') return ' chip-genre';
       if (type === 'type')  return ' chip-type';
       return ' chip-theme';
   };
   const makeChips = (arr) => arr.map(t => {
-    const label = t.ua_name || t.name;
+    const label = getLabel(t);
     return `
       <span class="chip ${chipClassByType(t.type)}" data-id="${t.id}">
         ${label}
@@ -23,8 +29,20 @@ function buildThemeChipsHTML(selectedThemes) {
 }
 
 function buildThemeCheckboxListHTML(allThemes, selectedIds) {
+  const lang = getCurrentLanguage() || 'uk';
+  const locale = lang === 'en' ? 'en' : 'uk';
+  const getThemeLabel = (t) => {
+    const raw = (lang === 'en' ? (t.name || t.ua_name) : (t.ua_name || t.name)) || '';
+    return raw ? `${raw.charAt(0).toUpperCase()}${raw.slice(1)}` : '';
+  };
+  const sortAlphabetically = (a, b) => getThemeLabel(a).localeCompare(getThemeLabel(b), locale, { sensitivity: 'base' });
+
+  const types   = allThemes.filter(t => t.type === 'type').sort(sortAlphabetically);
+  const genres  = allThemes.filter(t => t.type === 'genre').sort(sortAlphabetically);
+  const themes  = allThemes.filter(t => t.type === 'theme' || !t.type).sort(sortAlphabetically);
+
   const renderItem = (t) => {
-    const label = t.ua_name || t.name;
+    const label = getThemeLabel(t);
     const checked = selectedIds.has(t.id);
     return `
       <label class="theme-checkbox-item${checked ? ' theme-checkbox-item--checked' : ''}">
@@ -43,10 +61,6 @@ function buildThemeCheckboxListHTML(allThemes, selectedIds) {
       </label>
     `;
   };
-
-  const types   = allThemes.filter(t => t.type === 'type');
-  const genres  = allThemes.filter(t => t.type === 'genre');
-  const themes  = allThemes.filter(t => t.type === 'theme' || !t.type);
 
   const parts = [];
   if (types.length) {

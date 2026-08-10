@@ -153,8 +153,8 @@ def filter_patch_data(before_state: dict | None, after_data: dict) -> tuple[dict
 
         is_equal = False
 
-        # Автоматична десеріалізація JSON рядків для спискових полів на кшталт personas або aliases
-        if key in ("personas", "aliases"):
+        # Автоматична десеріалізація JSON рядків для спискових полів на кшталт personas, aliases, contents
+        if key in ("personas", "aliases", "contents"):
             if isinstance(before_val, str):
                 try:
                     before_val = json.loads(before_val)

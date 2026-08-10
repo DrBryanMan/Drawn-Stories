@@ -6,6 +6,7 @@ server/helpers/scores.py
 from __future__ import annotations
 from typing import Any
 import difflib
+import json
 
 # ─── Рівні ───────────────────────────────────────────────────────────────────
 
@@ -52,6 +53,42 @@ def _is_local_webp(value: str | None) -> bool:
     return lower.endswith(".webp") and not lower.startswith("http")
 
 
+def _is_empty(val: Any) -> bool:
+    """Перевіряє, чи значення порожнє (None, '', [], {}, '[]', 'null', тощо)."""
+    if val is None:
+        return True
+    if isinstance(val, (list, tuple, set, dict)):
+        return len(val) == 0
+    if isinstance(val, str):
+        s = val.strip()
+        return s == "" or s == "[]" or s == "{}" or s == "null" or s == "None"
+    return False
+
+
+def _extract_list_items(val: Any) -> set:
+    """Витягує множину унікальних ідентифікаторів або рядків зі спискового поля чи JSON-рядка."""
+    if not val:
+        return set()
+    if isinstance(val, str):
+        try:
+            val = json.loads(val)
+        except Exception:
+            val = [val.strip()]
+    if isinstance(val, list):
+        items = set()
+        for item in val:
+            if isinstance(item, dict):
+                item_id = item.get("id") or item.get("person_id") or item.get("character_id")
+                if item_id:
+                    items.add(f"id:{item_id}")
+                else:
+                    items.add(tuple(sorted((str(k), str(v)) for k, v in item.items() if v not in (None, ""))))
+            elif item not in (None, ""):
+                items.add(str(item).strip())
+        return items
+    return {str(val).strip()} if str(val).strip() else set()
+
+
 def calculate_edit_score(
     before: dict[str, Any],
     after: dict[str, Any],
@@ -74,7 +111,7 @@ def calculate_edit_score(
       • synopsis / description / bio:
           - новий текст → кількість слів > 2 символи, поділена на 2
           - змінений текст → залежно від % змін (1-20%: +2 б., 21-30%: +5 б., 31-60%: +10 б., 61-100%: +20 б.)
-      • Нові зв'язки (автори, випуски, персонажі, зв'язані томи) → +2 б. за кожен
+      • Нові зв'язки (автори, випуски, персонажі, зміст, зв'язані томи) → +2 б. за кожен
       • Нова версія персонажа (persona) → +3 б.
     """
     total = 0
@@ -90,7 +127,7 @@ def calculate_edit_score(
     # Великі текстові поля
     TEXT_FIELDS = {"synopsis_ua", "synopsis", "description", "bio"}
     # Поля списків / відносин
-    LIST_FIELDS = {"staff", "characters", "issues", "volumes", "creators", "related_collections"}
+    LIST_FIELDS = {"staff", "characters", "issues", "volumes", "creators", "related_collections", "contents"}
     
     SKIP_FIELDS = {"themes", "theme_ids", "personas"} | TEXT_FIELDS | IMAGE_FIELDS | LIST_FIELDS
 
@@ -138,17 +175,24 @@ def calculate_edit_score(
         "issues": "випуски",
         "volumes": "томи",
         "related_collections": "пов'язані колекції",
+        "contents": "зміст",
     }
 
     # ── 1. Звичайні текстові та числові поля ────────────────────────────────
     for field, new_val in after.items():
         if field in SKIP_FIELDS:
             continue
-        if new_val is None or new_val == "":
+        if _is_empty(new_val):
             continue
 
         old_val = before.get(field)
-        is_empty_before = old_val is None or old_val == ""
+        is_empty_before = _is_empty(old_val)
+
+        if _is_empty(old_val) and _is_empty(new_val):
+            continue
+
+        if old_val == new_val:
+            continue
 
         pts = 5 if is_empty_before else 2
         if field == "lang":
@@ -157,10 +201,6 @@ def calculate_edit_score(
             pts = 5 if is_empty_before else 2
 
         label = FIELD_LABELS.get(field, field)
-
-        if old_val == new_val:
-            continue
-
         total += pts
         action = "додано" if is_empty_before else "змінено"
         parts.append(f"{action} {label} (+{pts} б.)")
@@ -226,20 +266,20 @@ def calculate_edit_score(
 
         total += pts
 
-    # ── 4. Списки та відношення (автори, персонажі, випуски тощо) ───────────
+    # ── 4. Списки та відношення (автори, персонажі, випуски, зміст тощо) ───
     for field in LIST_FIELDS:
         if field not in after:
             continue
-        new_val = after.get(field) or []
-        old_val = before.get(field) or []
+        new_set = _extract_list_items(after.get(field))
+        old_set = _extract_list_items(before.get(field))
         
-        if isinstance(new_val, list) and isinstance(old_val, list):
-            new_ids = set(x.get("id") if isinstance(x, dict) else x for x in new_val)
-            old_ids = set(x.get("id") if isinstance(x, dict) else x for x in old_val)
-            added = new_ids - old_ids
-            if added:
-                pts = len(added) * 2
-                total += pts
+        added = new_set - old_set
+        if added:
+            pts = len(added) * 2
+            total += pts
+            if field == "contents":
+                parts.append(f"додано зміст: {len(added)} розд. (+{pts} б.)")
+            else:
                 label = FIELD_LABELS.get(field, field)
                 parts.append(f"додано {label}: {len(added)} шт. (+{pts} б.)")
 

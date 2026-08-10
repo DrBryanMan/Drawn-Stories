@@ -248,6 +248,8 @@ select.filter-select option {
   .select-label {
     color: #64748b;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .select-chevron-v {

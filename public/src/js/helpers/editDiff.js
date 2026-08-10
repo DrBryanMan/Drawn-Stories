@@ -71,6 +71,7 @@ export const FIELD_DEFINITIONS = {
   'staff': { uk: 'Персонал', en: 'Staff', iconName: 'users' },
   'characters': { uk: 'Персонажі', en: 'Characters', iconName: 'users' },
   'personas': { uk: 'Альтер-его / Версії', en: 'Alter-ego / Versions', iconName: 'users' },
+  'contents': { uk: 'Зміст', en: 'Contents', iconName: 'list' },
 };
 
 export function getFieldLabel(key) {
@@ -98,6 +99,25 @@ function parsePersonas(personasVal) {
 }
 
 /**
+ * Нормалізує значення contents (якщо воно рядок JSON або масив)
+ */
+export function parseContents(contentsVal) {
+  if (!contentsVal) return [];
+  if (Array.isArray(contentsVal)) return contentsVal.filter(Boolean);
+  if (typeof contentsVal === 'string') {
+    const trimmed = contentsVal.trim();
+    if (!trimmed || trimmed === '[]' || trimmed === 'null') return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : (trimmed ? [trimmed] : []);
+    } catch (e) {
+      return trimmed ? [trimmed] : [];
+    }
+  }
+  return [];
+}
+
+/**
  * Форматує список personas у зрозумілий рядок
  */
 function formatPersonas(personasVal) {
@@ -116,8 +136,16 @@ function formatPersonas(personasVal) {
  */
 function normalizeVal(val) {
   if (val === undefined || val === null) return '';
-  if (typeof val === 'string') return val.trim();
+  if (typeof val === 'string') {
+    const s = val.trim();
+    if (s === '[]' || s === '{}' || s === 'null') return '';
+    return s;
+  }
   if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+  if (Array.isArray(val)) {
+    const filtered = val.filter(Boolean);
+    return filtered.length ? JSON.stringify(filtered) : '';
+  }
   return JSON.stringify(val);
 }
 
@@ -222,6 +250,14 @@ export function generateDiffHTML(before = {}, after = {}, themesCache = []) {
           const genders = { 1: t('male'), 2: t('female'), 3: t('other_gender') };
           displayBefore = genders[beforeVal] || beforeVal || '—';
           displayAfter = genders[afterVal] || afterVal || '—';
+        } else if (key === 'contents') {
+          const listBefore = parseContents(beforeVal);
+          const listAfter = parseContents(afterVal);
+          if (!listBefore.length && !listAfter.length) {
+            continue;
+          }
+          displayBefore = listBefore.length ? listBefore.map((item, idx) => `${idx + 1}. ${item}`).join('\n') : '—';
+          displayAfter = listAfter.length ? listAfter.map((item, idx) => `${idx + 1}. ${item}`).join('\n') : '—';
         }
 
         html += renderDiffField(fieldLabel, iconSvg, displayBefore, displayAfter, key, imageKeys.has(key));

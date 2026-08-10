@@ -181,7 +181,7 @@ async def get_issue_detail(issue_id: int):
             SELECT id, issue_number, name, image
             FROM issues
             WHERE volume_id = %s
-            ORDER BY CASE WHEN issue_number ~ '^[0-9]' THEN CAST(substring(issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, issue_number ASC
+            ORDER BY CASE WHEN issue_number ~ '^[0-9]' THEN CAST(substring(issue_number from '^[0-9]+(?:\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, issue_number ASC
             """,
             [volume_id],
         )

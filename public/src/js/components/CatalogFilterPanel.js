@@ -2,12 +2,19 @@ import { API } from '../helpers/api.js';
 import { escapeHtmlAttribute } from '../helpers/image.js';
 import Fuse from 'https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.mjs';
 import { icon } from '../helpers/icons.js';
+import { getCurrentLanguage, t } from '../helpers/i18n.js';
 
 export const THEME_GROUP_LABELS = {
   type: 'Тип',
   genre: 'Жанр',
   theme: 'Тема',
 };
+
+export const getThemeGroupLabels = () => ({
+  type: getCurrentLanguage() === 'en' ? 'Type' : 'Тип',
+  genre: getCurrentLanguage() === 'en' ? 'Genre' : 'Жанр',
+  theme: getCurrentLanguage() === 'en' ? 'Theme' : 'Тема',
+});
 
 const LANG_LABELS = {
   'uk': 'Українська',
@@ -42,6 +49,13 @@ export const loadAllThemes = async () => {
     try {
       const data = await API.get('/themes', { limit: 1000 }); // backend allows 1000
       allThemes = data.items || [];
+      const lang = getCurrentLanguage() || 'uk';
+      const locale = lang === 'en' ? 'en' : 'uk';
+      allThemes.sort((a, b) => {
+        const nameA = themeLabel(a);
+        const nameB = themeLabel(b);
+        return nameA.localeCompare(nameB, locale, { sensitivity: 'base' });
+      });
       themesFuse = new Fuse(allThemes, {
         keys: ['name', 'ua_name'],
         threshold: 0.35,
@@ -105,9 +119,10 @@ export const loadAllMagazines = async () => {
 };
 
 export function themeLabel(theme) {
-  return theme.ua_name
-    ? `${theme.ua_name.charAt(0).toUpperCase()}${theme.ua_name.slice(1)}`
-    : theme.name;
+  if (!theme) return '';
+  const lang = getCurrentLanguage();
+  const raw = (lang === 'en' ? (theme.name || theme.ua_name) : (theme.ua_name || theme.name)) || '';
+  return raw ? `${raw.charAt(0).toUpperCase()}${raw.slice(1)}` : '';
 }
 
 export function themeIcon(type) {
@@ -456,16 +471,28 @@ export function mountCatalogFilters({
       items = themesFuse.search(query).map(r => r.item);
     }
 
+    const lang = getCurrentLanguage() || 'uk';
+    const locale = lang === 'en' ? 'en' : 'uk';
+
     const groups = { type: [], genre: [], theme: [] };
     items.forEach((theme) => {
       const group = groups[theme.type] ? theme.type : 'theme';
       groups[group].push(theme);
     });
 
+    Object.keys(groups).forEach((groupKey) => {
+      groups[groupKey].sort((a, b) => {
+        const nameA = themeLabel(a);
+        const nameB = themeLabel(b);
+        return nameA.localeCompare(nameB, locale, { sensitivity: 'base' });
+      });
+    });
+
+    const groupLabels = getThemeGroupLabels();
     let html = '';
     Object.entries(groups).forEach(([group, items]) => {
       if (!items.length) return;
-      html += `<div class="catalog-filter-dropdown__group">${themeIcon(group)}<span>${THEME_GROUP_LABELS[group]}</span></div>`;
+      html += `<div class="catalog-filter-dropdown__group">${themeIcon(group)}<span>${groupLabels[group] || THEME_GROUP_LABELS[group] || group}</span></div>`;
       html += items.map((theme) => {
         const existing = themes.find((item) => item.id === theme.id);
         const included = existing && !existing.exclude;
@@ -475,7 +502,7 @@ export function mountCatalogFilters({
           <div class="catalog-filter-dropdown__item catalog-filter-dropdown__item--theme${included ? ' is-included' : ''}${excluded ? ' is-excluded' : ''}" data-theme-id="${theme.id}" data-theme-name="${escapeHtmlAttribute(name)}" data-theme-type="${theme.type || 'theme'}">
             <span class="catalog-filter-dropdown__name">${escapeHtmlAttribute(name)}</span>
             <span class="catalog-filter-dropdown__actions">
-              ${included ? `<span class="catalog-filter-state catalog-filter-state--include">icon('check', 13, { strokeWidth: 2.8 })</span>` : ''}
+              ${included ? `<span class="catalog-filter-state catalog-filter-state--include">${icon('check', 13, { strokeWidth: 2.8 })}</span>` : ''}
               ${excluded ? '<span class="catalog-filter-state catalog-filter-state--exclude">−</span>' : ''}
               <button type="button" data-theme-action="include" title="Включити">＋</button>
               <button type="button" data-theme-action="exclude" title="Виключити">−</button>

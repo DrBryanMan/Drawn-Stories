@@ -1268,13 +1268,43 @@
 }
 
 .volume-sort-group {
+  display: inline-flex;
+  align-items: stretch;
   height: 38px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-s);
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 .volume-sort-group select.filter-select {
-  min-width: 160px;
+  min-width: 130px;
   font-size: 13px;
-  border-radius: 10px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  height: 100%;
+}
+
+.volume-sort-group .sort-order-btn {
+  width: 36px;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  border-left: 1px solid var(--border-s);
+  cursor: pointer;
+  transition: all var(--t);
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.volume-sort-group .sort-order-btn:hover {
+  color: var(--text);
+  background: var(--bg-card-hover);
 }
 
 /* ── Grid View ────────────────────────────────────── */

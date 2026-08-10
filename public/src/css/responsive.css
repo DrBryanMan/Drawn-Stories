@@ -160,16 +160,74 @@
 
   /* components/filter-bar.css */
   .filter-bar {
-    grid-template-columns: 1fr;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .filter-section + .filter-section {
     border-left: none;
-    border-top: 1px solid var(--border-s);
   }
 
   .results-section {
+    grid-column: 1;
+    grid-row: 1;
+    padding: 6px 10px;
+    border-right: 1px solid var(--border-s);
+    border-bottom: 1px solid var(--border-s);
     min-width: unset;
+  }
+
+  .search-section {
+    grid-column: 2;
+    grid-row: 1;
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--border-s);
+    min-width: 0;
+  }
+
+  .filter-bar:not(:has(.results-section)) .search-section {
+    grid-column: 1 / -1;
+  }
+
+  .filters-section {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 8px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .filters-section .catalog-sort-slot {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .filters-section .filter-group {
+    width: 100%;
+    display: flex;
+  }
+
+  .filters-section select.filter-select {
+    min-width: 0;
+    flex: 1;
+    width: 100%;
+  }
+
+  .filters-section select.filter-select button {
+    width: 100%;
+    justify-content: space-between;
+    padding: 0 10px;
+    gap: 8px;
+  }
+
+  .filters-section .btn-filters-panel {
+    flex-shrink: 0;
   }
 
   /* components/header.css */
@@ -198,7 +256,7 @@
   }
 
   .logo-text {
-    font-size: 13px;
+    display: none;
   }
 
   .header-nav {
@@ -452,12 +510,44 @@
     font-size: 13px;
   }
 
-  .catalog-segmented {
+  .catalog-primary-actions {
     width: 100%;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .catalog-segmented {
+    flex: 2 1 0;
+    min-width: 0;
+    display: flex;
+    gap: 4px;
+    padding: 3px;
+    box-sizing: border-box;
   }
 
   .catalog-segment {
-    flex: 1;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 6px;
+    font-size: 13px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .catalog-filter-chip {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 8px;
+    font-size: 13px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
   }
 
   /* components/cards/comic-card.css & views/catalog.css & views/home.css */
