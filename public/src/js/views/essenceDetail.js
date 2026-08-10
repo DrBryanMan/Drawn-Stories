@@ -834,7 +834,7 @@ function initModeratorHandlers(container, essence) {
       return `
         <div style="display:inline-flex; align-items:center; gap:8px; padding:6px 10px; background:var(--bg-2); border:1px solid ${isEditingThis ? 'var(--accent)' : 'var(--border-s)'}; border-radius:6px; font-size:12px;">
           <span style="width:20px; height:20px; border-radius:50%; overflow:hidden; display:inline-flex; align-items:center; justify-content:center; background:var(--bg-hover);">
-            ${img ? `<img src="${escapeHtmlAttribute(img)}" style="width:100%;height:100%;object-fit:cover;">` : ICON.user}
+            ${img ? `<img src="${escapeHtmlAttribute(img)}" style="width:100%;height:100%;object-fit:cover;">` : icon('user', 14)}
           </span>
           <span>${escapeHtmlAttribute(charName)} ${essLabel ? `<small style="color:#15803d; font-weight:700; font-style:italic;">(${t('currently_essence', { name: escapeHtmlAttribute(essLabel) })})</small>` : ''}</span>
           <button type="button" class="other-ess-edit-btn" data-idx="${idx}" style="background:none; border:none; cursor:pointer; color:var(--text-muted); padding:2px;" title="${escapeHtmlAttribute(t('edit'))}">${icon('edit', 16)}</button>

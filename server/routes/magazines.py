@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request
 from ..db import get_db
+from ..helpers.themes import THEME_MAGAZINE, THEME_MANGA
 from typing import Optional
 
 def check_moderator(request: Request):
@@ -293,9 +294,8 @@ async def convert_from_volume(volume_id: int):
         raise HTTPException(status_code=404, detail="Том не знайдено")
         
     # 2. Check if volume is indeed a manga magazine (has themes 35 and 36)
-    # Theme 35 = Magazine, Theme 36 = Manga
-    has_mag_theme = db.get_one("SELECT 1 FROM volume_themes WHERE volume_id = %s AND theme_id = 35", [volume_id])
-    has_manga_theme = db.get_one("SELECT 1 FROM volume_themes WHERE volume_id = %s AND theme_id = 36", [volume_id])
+    has_mag_theme = db.get_one("SELECT 1 FROM volume_themes WHERE volume_id = %s AND theme_id = %s", [volume_id, THEME_MAGAZINE])
+    has_manga_theme = db.get_one("SELECT 1 FROM volume_themes WHERE volume_id = %s AND theme_id = %s", [volume_id, THEME_MANGA])
     
     if not has_mag_theme or not has_manga_theme:
         raise HTTPException(status_code=400, detail="Том не є журналом манґи (не має тем журналу та манґи)")

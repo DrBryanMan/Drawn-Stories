@@ -692,6 +692,22 @@ function buildAddPanel(config) {
           <div class="wanted-add-card-status"></div>
         </div>
 
+        <!-- Парсер манґи з Hikka -->
+        <div class="wanted-add-card" id="card-hikka-manga-parser">
+          <div class="wanted-add-card-title">
+            ${icon('refreshCw', 18)}
+            Парсер манґи з Hikka
+          </div>
+          <div class="wanted-add-card-desc">
+            Імпорт останніх доданих тайтлів або актуалізація статусу онгоінгів (знімає тему онгоїнгу, якщо тайтл вже завершено).
+          </div>
+          <div class="wanted-add-card-row" style="display: flex; gap: 8px;">
+            <button class="wanted-add-btn" id="btn-hikka-missing" style="flex: 1;">Парсити останні додані</button>
+            <button class="wanted-add-btn" id="btn-hikka-ongoing" style="flex: 1;">Перевірити онгоінги</button>
+          </div>
+          <div class="wanted-add-card-status"></div>
+        </div>
+
         <!-- Оновити укр. назви та рейтинги манґи -->
         <div class="wanted-add-card" id="card-update-manga-meta">
           <div class="wanted-add-card-title">
@@ -725,6 +741,28 @@ function attachAddPanelEvents(content) {
     const id = match ? parseInt(match[1], 10) : parseInt(val, 10);
     return { cv_id: id };
   });
+
+  const hikkaMissingBtn = content.querySelector('#btn-hikka-missing');
+  if (hikkaMissingBtn) {
+    hikkaMissingBtn.addEventListener('click', () => {
+      openTerminalLogModal({
+        title: 'Парсинг останніх доданих тайтлів з Hikka',
+        sseUrl: '/api/parser/stream/hikka-manga/missing',
+        autoReload: false
+      });
+    });
+  }
+
+  const hikkaOngoingBtn = content.querySelector('#btn-hikka-ongoing');
+  if (hikkaOngoingBtn) {
+    hikkaOngoingBtn.addEventListener('click', () => {
+      openTerminalLogModal({
+        title: 'Перевірка онгоінгів з Hikka',
+        sseUrl: '/api/parser/stream/hikka-manga/ongoing',
+        autoReload: false
+      });
+    });
+  }
 
   const updateMangaBtn = content.querySelector('#card-update-manga-meta .wanted-add-btn');
   if (updateMangaBtn) {

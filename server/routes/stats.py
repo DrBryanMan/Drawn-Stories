@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from ..db import get_db
+from ..helpers.themes import THEME_MANGA
 
 router = APIRouter(prefix="/api/stats", tags=["stats"])
 
@@ -27,7 +28,6 @@ async def get_stats():
 @router.get("/popular")
 async def get_popular_content():
     db = get_db()
-    manga_theme_id = 36
     
     # 1. Top 5 publishers for comics (by volumes that are not manga)
     popular_publishers = db.get_all(f"""
@@ -35,7 +35,7 @@ async def get_popular_content():
         FROM publishers p
         JOIN volumes v ON v.publisher = p.id
         WHERE v.id NOT IN (
-            SELECT volume_id FROM volume_themes WHERE theme_id = {manga_theme_id}
+            SELECT volume_id FROM volume_themes WHERE theme_id = {THEME_MANGA}
         )
         GROUP BY p.id, p.name, p.image, p.cv_slug
         ORDER BY volume_count DESC, p.name ASC
@@ -47,7 +47,7 @@ async def get_popular_content():
         SELECT v.id, v.name, v.name_uk, v.cover_img, v.image, v.mal_score, v.mal_scored_by
         FROM volumes v
         JOIN volume_themes vt ON v.id = vt.volume_id
-        WHERE vt.theme_id = {manga_theme_id} AND v.mal_score IS NOT NULL AND v.mal_score > 0
+        WHERE vt.theme_id = {THEME_MANGA} AND v.mal_score IS NOT NULL AND v.mal_score > 0
         ORDER BY v.mal_score DESC, v.mal_scored_by DESC
         LIMIT 8
     """)

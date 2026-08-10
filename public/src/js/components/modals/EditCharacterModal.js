@@ -285,7 +285,7 @@ export function openEditCharacterModal(char, onUpdate) {
       return `
         <span class="creator-badge-tag" style="display:inline-flex; align-items:center; gap:6px; padding:4px 8px; background:var(--bg-2); border:1px solid var(--border-s); border-radius:12px; font-size:11px;">
           <span style="width:16px; height:16px; border-radius:50%; overflow:hidden; display:inline-block;">
-            ${imgUrl ? `<img src="${escapeHtmlAttribute(imgUrl)}" style="width:100%;height:100%;object-fit:cover;">` : ICON.user}
+            ${imgUrl ? `<img src="${escapeHtmlAttribute(imgUrl)}" style="width:100%;height:100%;object-fit:cover;">` : icon('user', 14)}
           </span>
           <span>${displayName}</span>
           <button type="button" class="creator-badge-remove" data-remove-name="${displayName}" style="background:none; border:none; cursor:pointer; font-weight:bold; margin-left:4px;">&times;</button>
@@ -353,7 +353,7 @@ export function openEditCharacterModal(char, onUpdate) {
           return `
             <div class="creator-search-item" data-person-name="${escapeHtmlAttribute(person.name)}" data-person-img="${escapeHtmlAttribute(person.image || '')}" style="display:flex; align-items:center; gap:8px; padding:6px 12px; cursor:pointer; border-bottom:1px solid var(--border-s); font-size:12px;">
               <span style="width:20px; height:20px; border-radius:50%; overflow:hidden; display:inline-block;">
-                ${pImg ? `<img src="${escapeHtmlAttribute(pImg)}" style="width:100%;height:100%;object-fit:cover;">` : ICON.user}
+                ${pImg ? `<img src="${escapeHtmlAttribute(pImg)}" style="width:100%;height:100%;object-fit:cover;">` : icon('user', 14)}
               </span>
               <span>${escapeHtmlAttribute(pName)}</span>
               ${isAlreadyAdded ? `<span style="margin-left:auto; font-size:10px; color:var(--accent); font-weight:700;">${t('selected')}</span>` : ''}
@@ -464,7 +464,7 @@ export function openEditCharacterModal(char, onUpdate) {
       return `
         <div style="display:inline-flex; align-items:center; gap:8px; padding:4px 8px; background:var(--bg-2); border:1px solid ${isEditingThis ? 'var(--accent)' : 'var(--border-s)'}; border-radius:6px; font-size:11px;">
           <span style="width:16px; height:16px; border-radius:50%; overflow:hidden; display:inline-block;">
-            ${pImg ? `<img src="${escapeHtmlAttribute(pImg)}" style="width:100%;height:100%;object-fit:cover;">` : ICON.user}
+            ${pImg ? `<img src="${escapeHtmlAttribute(pImg)}" style="width:100%;height:100%;object-fit:cover;">` : icon('user', 14)}
           </span>
           <span>${escapeHtmlAttribute(p.name_uk || p.name)}</span>
           <button type="button" class="persona-edit-btn-u" data-idx="${idx}" style="background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:10px;">✏️</button>

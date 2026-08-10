@@ -807,16 +807,16 @@ export async function renderIssueDetail(container, params = {}) {
                     `;
                 };
 
-                const teamsHTML = renderSimpleAppearances(t('teams_orgs'), apps.teams, ICON.users, 'team');
+                const teamsHTML = renderSimpleAppearances(t('teams_orgs'), apps.teams, icon('users', 18), 'team');
                 if (teamsHTML) groups.push(teamsHTML);
                 
-                const objectsHTML = renderSimpleAppearances(t('objects'), apps.objects, ICON.box, 'object');
+                const objectsHTML = renderSimpleAppearances(t('objects'), apps.objects, icon('box', 18), 'object');
                 if (objectsHTML) groups.push(objectsHTML);
                 
-                const locationsHTML = renderSimpleAppearances(t('locations'), apps.locations, ICON.mapPin, 'location');
+                const locationsHTML = renderSimpleAppearances(t('locations'), apps.locations, icon('mapPin', 18), 'location');
                 if (locationsHTML) groups.push(locationsHTML);
                 
-                const conceptsHTML = renderSimpleAppearances(t('concepts'), apps.concepts, ICON.helpCircle, 'concept');
+                const conceptsHTML = renderSimpleAppearances(t('concepts'), apps.concepts, icon('helpCircle', 18), 'concept');
                 if (conceptsHTML) groups.push(conceptsHTML);
 
                 appearancesHTML = `<div class="issue-story-appearances-groups">${groups.join('')}</div>`;

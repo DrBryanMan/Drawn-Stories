@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 import json
 from ..db import get_db
+from ..helpers.themes import THEME_COLLECTION, THEME_TRANSLATED, THEME_MAGAZINE
 
 router = APIRouter(prefix="/api/volumes", tags=["volumes"])
 
@@ -538,14 +539,12 @@ async def convert_all_to_collections(volume_id: int):
             converted += 1
             
         if converted > 0 or skipped > 0:
-            # COLLECTION_THEME_ID = 44
-            db.conn.execute("INSERT INTO volume_themes (volume_id, theme_id) VALUES (%s, %s) ON CONFLICT DO NOTHING", [volume_id, 44])
+            db.conn.execute("INSERT INTO volume_themes (volume_id, theme_id) VALUES (%s, %s) ON CONFLICT DO NOTHING", [volume_id, THEME_COLLECTION])
             
             # Handle magazine parent logic from DSA
             has_magazine_parent = db.get_one("SELECT id FROM magazine_volumes WHERE volume_id = %s", [volume_id])
             if has_magazine_parent:
-                # TRANSLATED_THEME_ID = 51
-                db.conn.execute("DELETE FROM volume_themes WHERE volume_id = %s AND theme_id = %s", [volume_id, 51])
+                db.conn.execute("DELETE FROM volume_themes WHERE volume_id = %s AND theme_id = %s", [volume_id, THEME_TRANSLATED])
                 if not volume.get("lang"):
                     db.conn.execute("UPDATE volumes SET lang = 'ja' WHERE id = %s", [volume_id])
                     
@@ -614,8 +613,8 @@ async def convert_all_collections_to_issues(volume_id: int):
             db.conn.execute("DELETE FROM collections WHERE id = %s", [col_id])
             converted += 1
             
-        # COLLECTION_THEME_ID = 44
-        db.conn.execute("DELETE FROM volume_themes WHERE volume_id = %s AND theme_id = %s", [volume_id, 44])
+        # Видалення теми збірника
+        db.conn.execute("DELETE FROM volume_themes WHERE volume_id = %s AND theme_id = %s", [volume_id, THEME_COLLECTION])
         
         db.conn.commit()
     except Exception as e:
@@ -721,17 +720,15 @@ async def add_volume_translation(volume_id: int, data: dict):
         [volume_id, child_id, rel_type]
     )
     
-    # Auto-add 'Translated' theme (ID 51) only if languages are different
+    # Auto-add 'Translated' theme only if languages are different
     parent_vol = db.get_one("SELECT lang FROM volumes WHERE id = %s", [volume_id])
     child_vol = db.get_one("SELECT lang FROM volumes WHERE id = %s", [child_id])
     
     if parent_vol and child_vol and parent_vol['lang'] != child_vol['lang']:
-        translated_theme = db.get_one("SELECT id FROM themes WHERE id = 51")
-        if translated_theme:
-            db.execute(
-                "INSERT INTO volume_themes (volume_id, theme_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
-                [child_id, 51]
-            )
+        db.execute(
+            "INSERT INTO volume_themes (volume_id, theme_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+            [child_id, THEME_TRANSLATED]
+        )
         
     return {"message": "Переклад додано"}
 
@@ -765,13 +762,11 @@ async def add_volume_to_magazine(volume_id: int, data: dict):
         [magazine["id"], child_id]
     )
     
-    # Auto-add 'Magazine' theme (ID 35) to magazine if it exists
-    magazine_theme = db.get_one("SELECT id FROM themes WHERE id = 35")
-    if magazine_theme:
-        db.execute(
-            "INSERT INTO volume_themes (volume_id, theme_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
-            [volume_id, 35]
-        )
+    # Auto-add 'Magazine' theme to magazine if not exists
+    db.execute(
+        "INSERT INTO volume_themes (volume_id, theme_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+        [volume_id, THEME_MAGAZINE]
+    )
         
     return {"message": "Том додано до журналу"}
 

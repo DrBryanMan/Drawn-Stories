@@ -143,14 +143,7 @@ export async function renderSettings(main, user) {
     saveUsernameBtn.textContent = t('saving');
 
     try {
-      const response = await fetch('/api/auth/update-profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ new_username: newUsername })
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || t('error_update'));
+      const data = await API.put('/auth/update-profile', { new_username: newUsername });
 
       user.username = data.username;
       window.dispatchEvent(new CustomEvent('auth-changed', { detail: user }));
@@ -174,14 +167,7 @@ export async function renderSettings(main, user) {
     saveNicknameBtn.textContent = t('saving');
 
     try {
-      const response = await fetch('/api/auth/update-profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ new_nickname: newNickname })
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || t('error_update'));
+      const data = await API.put('/auth/update-profile', { new_nickname: newNickname });
 
       user.nickname = data.nickname;
       window.dispatchEvent(new CustomEvent('auth-changed', { detail: user }));
@@ -205,14 +191,7 @@ export async function renderSettings(main, user) {
     savePasswordBtn.textContent = t('saving');
 
     try {
-      const response = await fetch('/api/auth/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || t('error_update'));
+      await API.post('/auth/change-password', { old_password: oldPassword, new_password: newPassword });
 
       alert(t('success_password'));
       oldPasswordInput.value = '';
@@ -239,14 +218,7 @@ export async function renderSettings(main, user) {
     formData.append('avatar', file);
 
     try {
-      const response = await fetch('/api/auth/upload-avatar', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) throw new Error(t('error_upload'));
-
-      const data = await response.json();
+      const data = await API.upload('/auth/upload-avatar', formData);
       const container = document.getElementById('avatar-container');
       container.innerHTML = getPreviewHtml(data.url + '&t=' + new Date().getTime());
 

@@ -258,4 +258,87 @@ async def stream_update_manga_meta():
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
+# ── GET /api/parser/stream/hikka-manga/missing ─────────────────────────────────
+@router.get("/stream/hikka-manga/missing", dependencies=[Depends(require_moderator)])
+async def stream_hikka_manga_missing():
+    async def event_generator():
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        script_path = os.path.abspath(os.path.join(script_dir, "..", "scripts", "hikka_manga_parser.py"))
+        
+        if not os.path.exists(script_path):
+            yield "data: [ERROR] Скрипт hikka_manga_parser.py не знайдено.\n\n"
+            return
+
+        cmd = [sys.executable, "-u", script_path, "missing"]
+        env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            env=env
+        )
+
+        yield "data: [SYSTEM] Запуск парсингу останніх доданих тайтлів (missing)...\n\n"
+
+        while True:
+            line = await process.stdout.readline()
+            if not line:
+                break
+            decoded_line = line.decode('utf-8', errors='replace').rstrip('\r\n')
+            if decoded_line:
+                yield f"data: {decoded_line}\n\n"
+
+        await process.wait()
+
+        if process.returncode == 0:
+            yield "data: [DONE] Парсинг нових тайтлів успішно завершено!\n\n"
+        else:
+            yield f"data: [ERROR] Скрипт завершився з помилкою (код {process.returncode})\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+# ── GET /api/parser/stream/hikka-manga/ongoing ─────────────────────────────────
+@router.get("/stream/hikka-manga/ongoing", dependencies=[Depends(require_moderator)])
+async def stream_hikka_manga_ongoing():
+    async def event_generator():
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        script_path = os.path.abspath(os.path.join(script_dir, "..", "scripts", "hikka_manga_parser.py"))
+        
+        if not os.path.exists(script_path):
+            yield "data: [ERROR] Скрипт hikka_manga_parser.py не знайдено.\n\n"
+            return
+
+        cmd = [sys.executable, "-u", script_path, "ongoing"]
+        env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            env=env
+        )
+
+        yield "data: [SYSTEM] Запуск перевірки онгоінгів у базі...\n\n"
+
+        while True:
+            line = await process.stdout.readline()
+            if not line:
+                break
+            decoded_line = line.decode('utf-8', errors='replace').rstrip('\r\n')
+            if decoded_line:
+                yield f"data: {decoded_line}\n\n"
+
+        await process.wait()
+
+        if process.returncode == 0:
+            yield "data: [DONE] Перевірку онгоінгів успішно завершено!\n\n"
+        else:
+            yield f"data: [ERROR] Скрипт завершився з помилкою (код {process.returncode})\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+
 

@@ -1,13 +1,9 @@
 from fastapi import APIRouter, Query, Request, HTTPException
 from typing import Optional
 from ..db import get_db
+from ..helpers.themes import THEME_MANGA, THEME_TRANSLATED, THEME_COLLECTION
 
 router = APIRouter(prefix="/api/wanted", tags=["wanted"])
-
-# ── Theme IDs ────────────────────────────────────────────────
-THEME_MANGA       = 36
-THEME_TRANSLATED  = 51
-THEME_COLLECTION  = 44
 
 # ── Sections config ──────────────────────────────────────────
 SECTIONS = ["volumes", "collections", "issues", "characters", "personnel", "publishers"]

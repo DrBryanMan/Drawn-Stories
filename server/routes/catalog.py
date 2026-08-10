@@ -3,6 +3,7 @@ from typing import Optional, List
 from pydantic import BaseModel
 from ..db import get_db
 from ..utils import parse_id_list
+from ..helpers.themes import THEME_COLLECTION, THEME_MAGAZINE, ASIAN_COMICS_THEME_IDS
 import time
 
 router = APIRouter(prefix="/api/catalog", tags=["catalog"])
@@ -106,16 +107,15 @@ async def get_catalog(
         view_type = "issues"
 
     db = get_db()
-    manga_theme_id = 36
     
     # We maintain separate lists for filter clauses and their parameters
     filter_clauses = []
     filter_params = []
 
     # Subqueries for high-performance ID set filtering
-    manga_id_sql = f"SELECT volume_id FROM volume_themes WHERE theme_id = {manga_theme_id} AND volume_id IS NOT NULL"
-    
-    collected_vol_id_sql = "SELECT volume_id FROM collections WHERE volume_id IS NOT NULL"
+    asian_ids_sql = ",".join(str(tid) for tid in ASIAN_COMICS_THEME_IDS)
+    manga_id_sql = f"SELECT volume_id FROM volume_themes WHERE theme_id IN ({asian_ids_sql}) AND volume_id IS NOT NULL"
+    collection_id_sql = f"SELECT volume_id FROM volume_themes WHERE theme_id = {THEME_COLLECTION} AND volume_id IS NOT NULL"
 
     if view_type == "series":
         base = "FROM volumes v LEFT JOIN publishers p ON v.publisher = p.id"
@@ -129,7 +129,9 @@ async def get_catalog(
             filter_clauses.append(f"v.id NOT IN ({manga_id_sql})")
 
         if collection:
-            filter_clauses.append(f"v.id IN ({collected_vol_id_sql})")
+            filter_clauses.append(f"v.id IN ({collection_id_sql})")
+        else:
+            filter_clauses.append(f"v.id NOT IN ({collection_id_sql})")
 
         if search:
             words = [w.strip() for w in search.split() if w.strip()]
@@ -415,15 +417,15 @@ async def get_volume_suggestions(
 ):
     db = get_db()
     
-    # If theme_id is 35 (Magazine), order by number of children in magazine_volumes
-    if theme_id == 35:
+    # If theme_id is THEME_MAGAZINE (Magazine), order by number of children in magazine_volumes
+    if theme_id == THEME_MAGAZINE:
         query = f"""
             SELECT v.*, p.name as publisher_name, 'volume' as type,
                    (SELECT COUNT(*) FROM magazine_volumes vm WHERE vm.magazine_id = v.id) as children_count
             FROM volumes v
             JOIN volume_themes vt ON v.id = vt.volume_id
             LEFT JOIN publishers p ON v.publisher = p.id
-            WHERE vt.theme_id = 35
+            WHERE vt.theme_id = {THEME_MAGAZINE}
             ORDER BY children_count DESC, v.name ASC
             LIMIT %s
         """

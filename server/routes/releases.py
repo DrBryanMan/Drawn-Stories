@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from ..db import get_db
+from ..helpers.themes import ASIAN_COMICS_THEME_IDS
 from typing import Optional
 
 router = APIRouter(prefix="/api/releases", tags=["releases"])
@@ -27,8 +28,9 @@ async def get_releases_calendar(
     results = []
 
     # 2. Отримуємо випуски (Issues) якщо розглядаються випуски
+    asian_ids_sql = ",".join(str(tid) for tid in ASIAN_COMICS_THEME_IDS)
     if release_type == "issues":
-        sql = """
+        sql = f"""
             SELECT 
                 i.id,
                 'issue' as item_type,
@@ -45,7 +47,7 @@ async def get_releases_calendar(
                 p.name as publisher_name,
                 EXISTS (
                     SELECT 1 FROM volume_themes vt 
-                    WHERE vt.volume_id = v.id AND vt.theme_id IN (36, 140, 141)
+                    WHERE vt.volume_id = v.id AND vt.theme_id IN ({asian_ids_sql})
                 ) as is_manga
             FROM issues i
             LEFT JOIN volumes v ON i.volume_id = v.id
@@ -60,14 +62,14 @@ async def get_releases_calendar(
             params.append(publisher_id)
 
         if category == "manga":
-            sql += """ AND EXISTS (
+            sql += f""" AND EXISTS (
                 SELECT 1 FROM volume_themes vt 
-                WHERE vt.volume_id = v.id AND vt.theme_id IN (36, 140, 141)
+                WHERE vt.volume_id = v.id AND vt.theme_id IN ({asian_ids_sql})
             )"""
         elif category == "comics":
-            sql += """ AND NOT EXISTS (
+            sql += f""" AND NOT EXISTS (
                 SELECT 1 FROM volume_themes vt 
-                WHERE vt.volume_id = v.id AND vt.theme_id IN (36, 140, 141)
+                WHERE vt.volume_id = v.id AND vt.theme_id IN ({asian_ids_sql})
             )"""
 
         sql += " ORDER BY COALESCE(i.release_date, i.cover_date) ASC, v.name ASC, i.issue_number ASC"
@@ -75,7 +77,7 @@ async def get_releases_calendar(
 
     # 3. Отримуємо збірники (Collections) якщо розглядаються збірники
     elif release_type == "collections":
-        sql = """
+        sql = f"""
             SELECT 
                 c.id,
                 'collection' as item_type,
@@ -92,7 +94,7 @@ async def get_releases_calendar(
                 p.name as publisher_name,
                 EXISTS (
                     SELECT 1 FROM volume_themes vt 
-                    WHERE vt.volume_id = v.id AND vt.theme_id IN (36, 140, 141)
+                    WHERE vt.volume_id = v.id AND vt.theme_id IN ({asian_ids_sql})
                 ) as is_manga
             FROM collections c
             LEFT JOIN volumes v ON c.volume_id = v.id
@@ -107,14 +109,14 @@ async def get_releases_calendar(
             params.append(publisher_id)
 
         if category == "manga":
-            sql += """ AND EXISTS (
+            sql += f""" AND EXISTS (
                 SELECT 1 FROM volume_themes vt 
-                WHERE vt.volume_id = v.id AND vt.theme_id IN (36, 140, 141)
+                WHERE vt.volume_id = v.id AND vt.theme_id IN ({asian_ids_sql})
             )"""
         elif category == "comics":
-            sql += """ AND NOT EXISTS (
+            sql += f""" AND NOT EXISTS (
                 SELECT 1 FROM volume_themes vt 
-                WHERE vt.volume_id = v.id AND vt.theme_id IN (36, 140, 141)
+                WHERE vt.volume_id = v.id AND vt.theme_id IN ({asian_ids_sql})
             )"""
 
         sql += " ORDER BY COALESCE(c.release_date, c.cover_date) ASC, c.name ASC"
