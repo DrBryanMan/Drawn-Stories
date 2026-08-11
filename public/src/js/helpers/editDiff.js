@@ -20,6 +20,7 @@ export const FIELD_DEFINITIONS = {
   // Назви та імена
   'name': { uk: 'Назва оригінальна', en: 'Original title', iconName: 'edit' },
   'name_uk': { uk: 'Назва UA', en: 'Title (UA)', iconName: 'edit' },
+  'name_en': { uk: 'Назва EN', en: 'Title (EN)', iconName: 'edit' },
   'name_ro': { uk: 'Назва (Трансліт)', en: 'Title (Translit)', iconName: 'edit' },
   'name_native': { uk: 'Рідна назва', en: 'Native title', iconName: 'edit' },
   'real_name': { uk: 'Справжнє ім\'я (Оригінал)', en: 'Real name (Original)', iconName: 'user' },

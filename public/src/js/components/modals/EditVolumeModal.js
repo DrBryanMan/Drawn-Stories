@@ -655,6 +655,11 @@ export class VolumeEditor {
                                 </div>
 
                                 <div class="admin-form-group">
+                                    <label class="admin-label">${icon('type', 14)} Назва EN</label>
+                                    <input type="text" name="name_en" class="admin-input" value="${v.name_en || ''}">
+                                </div>
+
+                                <div class="admin-form-group">
                                     <label class="admin-label">${icon('type', 14)} Рідна назва</label>
                                     <input type="text" name="name_native" class="admin-input" value="${v.name_native || ''}">
                                 </div>

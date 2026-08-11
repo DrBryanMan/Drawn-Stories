@@ -419,7 +419,7 @@ def apply_volume_update_in_db(db, volume_id: int, data: dict):
     params = []
     
     allowed_fields = [
-        "name", "name_uk", "name_native", "description", "synopsis", "synopsis_ua", "start_year", 
+        "name", "name_uk", "name_en", "name_native", "description", "synopsis", "synopsis_ua", "start_year", 
         "status", "lang", "publisher", "image", "cover_img",
         "cv_id", "cv_slug", "hikka_slug", "mal_id", "locg_id", "locg_slug", "site_link"
     ]

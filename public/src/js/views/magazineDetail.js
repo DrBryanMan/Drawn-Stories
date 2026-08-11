@@ -46,6 +46,17 @@ export async function renderMagazineDetail(main, params = {}) {
                             ${coverUrl
                                 ? `<img class="volume-cover" src="${escapeHtmlAttribute(coverUrl)}" alt="${title}">`
                                 : `<div class="volume-cover volume-cover--empty"></div>`}
+                            ${magazine.cv_id ? `
+                                <div class="volume-cover-ext-sources" style="margin-top: 16px; border-top: 1px solid var(--border-s); padding-top: 16px; width: 100%;">
+                                    <div style="font-family: var(--font-oswald); font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; text-align: center;">Зовнішні джерела</div>
+                                    <div class="source-links" style="display: flex; justify-content: center; gap: 8px;">
+                                        <a href="${magazine.cv_slug ? `https://comicvine.gamespot.com/${magazine.cv_slug}/4050-${magazine.cv_id}/` : `https://comicvine.gamespot.com/4050-${magazine.cv_id}/`}" class="source-link-cv" target="_blank" rel="noreferrer">
+                                            CV
+                                            ${icon('externalLink', 12, { strokeWidth: 2.2 })}
+                                        </a>
+                                    </div>
+                                </div>
+                            ` : ''}
                         </div>
                         <div class="volume-hero-info">
                             <div class="volume-header">
@@ -57,10 +68,17 @@ export async function renderMagazineDetail(main, params = {}) {
                                 </div>
                             </div>
                             <div class="volume-hero-badges">
-                                <span class="volume-badge volume-publisher-badge">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg>
-                                    ${publisherName}
-                                </span>
+                                ${magazine.publisher ? `
+                                    <a href="#/publishers/${magazine.publisher}" class="volume-badge volume-publisher-badge" style="text-decoration: none; color: inherit;">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg>
+                                        ${publisherName}
+                                    </a>
+                                ` : `
+                                    <span class="volume-badge volume-publisher-badge">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg>
+                                        ${publisherName}
+                                    </span>
+                                `}
                                 <span class="volume-badge volume-year-badge">
                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
                                     з ${magazine.start_year || 'невідомо'} року

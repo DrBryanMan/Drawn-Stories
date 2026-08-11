@@ -134,6 +134,7 @@ def calculate_edit_score(
     FIELD_LABELS: dict[str, str] = {
         "name": "оригінальну назву",
         "name_uk": "українську назву",
+        "name_en": "англійську назву",
         "name_ro": "транслітеровану назву",
         "name_native": "рідну назву",
         "real_name": "оригінальне справжнє ім'я",
