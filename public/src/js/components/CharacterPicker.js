@@ -2,24 +2,7 @@
 import { API } from '../helpers/api.js';
 import { normalizeImageUrl } from '../helpers/image.js';
 import { icon } from '../helpers/icons.js';
-
-let _FuseModule = null;
-
-async function getFuse() {
-  if (_FuseModule) return _FuseModule;
-  if (typeof window !== 'undefined' && window.Fuse) {
-    _FuseModule = window.Fuse;
-    return _FuseModule;
-  }
-  try {
-    const mod = await import('https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.mjs');
-    _FuseModule = mod.default || mod;
-    return _FuseModule;
-  } catch (e) {
-    console.warn('Fuse.js CDN load failed, falling back to standard search', e);
-    return null;
-  }
-}
+import { getFuse } from '../helpers/fuse.js';
 
 /**
  * Створює або ініціалізує CharacterPicker у вказаному контейнері.

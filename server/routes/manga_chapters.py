@@ -33,6 +33,32 @@ async def get_chapter_detail(chapter_id: int, request: Request):
     if not chapter:
         raise HTTPException(status_code=404, detail="Розділ не знайдено")
 
+    # Навігація: попередній та наступний розділи в межах тому
+    prev_chapter = None
+    next_chapter = None
+
+    if chapter.get("volume_id"):
+        volume_id = chapter["volume_id"]
+        siblings = db.get_all(
+            """
+            SELECT id, chapter_number, name, name_uk, name_en, image
+            FROM manga_chapters
+            WHERE volume_id = %s
+            ORDER BY CASE WHEN chapter_number ~ '^[0-9]' THEN CAST(substring(chapter_number from '^[0-9]+(?:\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, chapter_number ASC, id ASC
+            """,
+            [volume_id],
+        )
+
+        current_idx = next(
+            (i for i, s in enumerate(siblings) if s["id"] == chapter_id), None
+        )
+
+        if current_idx is not None:
+            if current_idx > 0:
+                prev_chapter = dict(siblings[current_idx - 1])
+            if current_idx < len(siblings) - 1:
+                next_chapter = dict(siblings[current_idx + 1])
+
     # Отримуємо появи персонажів
     characters = db.get_all(
         """
@@ -47,6 +73,8 @@ async def get_chapter_detail(chapter_id: int, request: Request):
 
     return {
         "chapter": dict(chapter),
+        "prev_chapter": prev_chapter,
+        "next_chapter": next_chapter,
         "appearances": {
             "characters": [dict(c) for c in characters]
         }
@@ -83,6 +111,27 @@ async def update_chapter(chapter_id: int, request: Request):
             chapter_id
         ]
     )
+
+    # Синхронізація персонажів (якщо передано)
+    if "characters" in data and isinstance(data["characters"], list):
+        chapter = db.get_one("SELECT volume_id FROM manga_chapters WHERE id = %s", [chapter_id])
+        volume_id = chapter["volume_id"] if chapter else None
+
+        db.execute("DELETE FROM manga_chapter_characters WHERE chapter_id = %s", [chapter_id])
+        for c in data["characters"]:
+            char_id = c.get("id") or c.get("character_id")
+            role = c.get("role", "main")
+            if char_id:
+                db.execute(
+                    "INSERT INTO manga_chapter_characters (chapter_id, character_id, role) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+                    [chapter_id, char_id, role]
+                )
+                if volume_id:
+                    db.execute(
+                        "INSERT INTO volume_characters (volume_id, character_id, role) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+                        [volume_id, char_id, "minor"]
+                    )
+
     return {"message": "Розділ успішно оновлено"}
 
 @router.delete("/{chapter_id}")
@@ -102,11 +151,19 @@ async def add_appearance(chapter_id: int, request: Request):
     
     if not character_id:
         raise HTTPException(status_code=400, detail="character_id обов'язковий")
-        
+
+    chapter = db.get_one("SELECT volume_id FROM manga_chapters WHERE id = %s", [chapter_id])
+    volume_id = chapter["volume_id"] if chapter else None
+
     db.execute(
         "INSERT INTO manga_chapter_characters (chapter_id, character_id, role) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
         [chapter_id, character_id, role]
     )
+    if volume_id:
+        db.execute(
+            "INSERT INTO volume_characters (volume_id, character_id, role) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+            [volume_id, character_id, "minor"]
+        )
     return {"message": "Появу додано"}
 
 @router.delete("/{chapter_id}/appearances/{character_id}")

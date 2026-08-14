@@ -40,9 +40,9 @@ async def get_edit_requests(
     
     query = """
         SELECT er.*, u.username as proposer_username, COALESCE(u.nickname, u.username) as proposer_nickname, u.score as proposer_score, m.username as moderator_username, COALESCE(m.nickname, m.username) as moderator_nickname,
-               COALESCE(v.name, i.name, c.name, p.name, pub.name, col.name) as volume_name,
-               COALESCE(v.name_uk, i.name_uk, c.name_uk, p.name_uk) as volume_name_uk,
-               COALESCE(v.image, i.image, c.image, p.image, pub.image, col.image) as volume_cv_img,
+               COALESCE(v.name, i.name, c.name, p.name, pub.name, col.name, mc.name) as volume_name,
+               COALESCE(v.name_uk, i.name_uk, c.name_uk, p.name_uk, mc.name_uk) as volume_name_uk,
+               COALESCE(v.image, i.image, c.image, p.image, pub.image, col.image, mc.image) as volume_cv_img,
                NULL as volume_hikka_img,
                COALESCE((
                    SELECT SUM(sh.delta)
@@ -58,6 +58,7 @@ async def get_edit_requests(
         LEFT JOIN persons p ON er.entity_type = 'person' AND er.entity_id = p.id
         LEFT JOIN publishers pub ON er.entity_type = 'publisher' AND er.entity_id = pub.id
         LEFT JOIN collections col ON er.entity_type = 'collection' AND er.entity_id = col.id
+        LEFT JOIN manga_chapters mc ON er.entity_type = 'manga_chapter' AND er.entity_id = mc.id
         WHERE 1=1
     """
     params = []
@@ -96,7 +97,8 @@ def get_entity_current_state(db, entity_type: str, entity_id: int):
         "character": "characters",
         "person": "persons",
         "publisher": "publishers",
-        "collection": "collections"
+        "collection": "collections",
+        "manga_chapter": "manga_chapters"
     }
     table = ENTITY_TABLES.get(entity_type)
     if not table:
@@ -131,6 +133,10 @@ def get_entity_current_state(db, entity_type: str, entity_id: int):
         state["staff"] = [{"person_id": s["person_id"], "role": s["role"]} for s in staff]
 
         chars = db.get_all("SELECT character_id, role FROM issue_characters WHERE issue_id = %s", [entity_id])
+        state["characters"] = [{"character_id": c["character_id"], "role": c["role"]} for c in chars]
+
+    elif entity_type == "manga_chapter":
+        chars = db.get_all("SELECT character_id, role FROM manga_chapter_characters WHERE chapter_id = %s", [entity_id])
         state["characters"] = [{"character_id": c["character_id"], "role": c["role"]} for c in chars]
 
     return state
@@ -275,9 +281,9 @@ async def get_edit_request(edit_id: int, request: Request):
     db = get_db()
     query = """
         SELECT er.*, u.username as proposer_username, COALESCE(u.nickname, u.username) as proposer_nickname, m.username as moderator_username, COALESCE(m.nickname, m.username) as moderator_nickname,
-               COALESCE(v.name, i.name, c.name, p.name, pub.name, col.name) as volume_name,
-               COALESCE(v.name_uk, i.name_uk, c.name_uk, p.name_uk) as volume_name_uk,
-               COALESCE(v.image, i.image, c.image, p.image, pub.image, col.image) as volume_cv_img,
+               COALESCE(v.name, i.name, c.name, p.name, pub.name, col.name, mc.name) as volume_name,
+               COALESCE(v.name_uk, i.name_uk, c.name_uk, p.name_uk, mc.name_uk) as volume_name_uk,
+               COALESCE(v.image, i.image, c.image, p.image, pub.image, col.image, mc.image) as volume_cv_img,
                NULL as volume_hikka_img
         FROM edit_requests er
         JOIN users u ON er.user_id = u.id
@@ -288,6 +294,7 @@ async def get_edit_request(edit_id: int, request: Request):
         LEFT JOIN persons p ON er.entity_type = 'person' AND er.entity_id = p.id
         LEFT JOIN publishers pub ON er.entity_type = 'publisher' AND er.entity_id = pub.id
         LEFT JOIN collections col ON er.entity_type = 'collection' AND er.entity_id = col.id
+        LEFT JOIN manga_chapters mc ON er.entity_type = 'manga_chapter' AND er.entity_id = mc.id
         WHERE er.id = %s
     """
     row = db.get_one(query, [edit_id])
@@ -328,7 +335,8 @@ def apply_entity_update_in_db(db, entity_type: str, entity_id: int, data: dict):
         ]),
         "person": ("persons", ["name", "name_uk", "name_native", "pseudo", "occupation", "birth", "birth_place", "website", "image", "cv_id"]),
         "publisher": ("publishers", ["name", "name_uk", "country", "website", "image", "logo", "cv_id"]),
-        "collection": ("collections", ["name", "name_uk", "description", "image", "cover_img"])
+        "collection": ("collections", ["name", "name_uk", "description", "image", "cover_img"]),
+        "manga_chapter": ("manga_chapters", ["name", "name_uk", "name_en", "name_native", "chapter_number", "release_date", "synopsis", "pages", "image"])
     }
 
     if entity_type not in ENTITY_TABLES:
@@ -377,6 +385,17 @@ def apply_entity_update_in_db(db, entity_type: str, entity_id: int, data: dict):
         params.append(entity_id)
         db.execute(f"UPDATE {table} SET {', '.join(fields)} WHERE id = %s", params)
 
+    if entity_type == "manga_chapter" and "characters" in data and isinstance(data["characters"], list):
+        db.execute("DELETE FROM manga_chapter_characters WHERE chapter_id = %s", [entity_id])
+        for c in data["characters"]:
+            char_id = c.get("id") or c.get("character_id")
+            role = c.get("role", "main")
+            if char_id:
+                db.execute(
+                    "INSERT INTO manga_chapter_characters (chapter_id, character_id, role) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+                    [entity_id, char_id, role]
+                )
+
 @router.post("")
 async def create_edit_request(req: EditRequestSchema, request: Request):
     user = get_current_user(request)
@@ -391,7 +410,8 @@ async def create_edit_request(req: EditRequestSchema, request: Request):
         "character": "characters",
         "person": "persons",
         "publisher": "publishers",
-        "collection": "collections"
+        "collection": "collections",
+        "manga_chapter": "manga_chapters"
     }
 
     if req.entity_type not in ENTITY_TABLES:

@@ -74,6 +74,14 @@
   font-weight: 600;
 }
 
+.terminal-character {
+  color: #38bdf8; /* light cyan */
+}
+
+.terminal-creator {
+  color: #c084fc; /* light purple */
+}
+
 .terminal-info {
   color: #cbd5e1; /* cool gray */
 }

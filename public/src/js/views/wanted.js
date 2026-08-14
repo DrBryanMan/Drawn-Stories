@@ -7,16 +7,18 @@ import { createWantedCard } from './wantedCard.js';
 import { createPaginator } from '../components/Pagination.js';
 import { icon } from '../helpers/icons.js';
 import { openTerminalLogModal } from '../components/ScrapeProgressModal.js';
+import { createWantedDuplicatesView } from './wantedDuplicates.js';
 
 // ── Sections config ───────────────────────────────────────
 const SECTIONS = [
-  { key: 'volumes',     label: 'Томи',        iconName: 'volumes' },
-  { key: 'collections', label: 'Збірники',    iconName: 'collections' },
-  { key: 'issues',      label: 'Випуски',     iconName: 'issues' },
-  { key: 'characters',  label: 'Персонажі',   iconName: 'characters' },
-  { key: 'personnel',   label: 'Персонал',    iconName: 'personnel' },
-  { key: 'publishers',  label: 'Видавництва', iconName: 'publishers' },
-  { key: 'add',         label: 'Додавання',   iconName: 'plus' },
+  { key: 'volumes',           label: 'Томи',             iconName: 'volumes' },
+  { key: 'collections',       label: 'Збірники',         iconName: 'collections' },
+  { key: 'issues',            label: 'Випуски',          iconName: 'issues' },
+  { key: 'characters',        label: 'Персонажі',        iconName: 'characters' },
+  { key: 'personnel',         label: 'Персонал',         iconName: 'personnel' },
+  { key: 'publishers',        label: 'Видавництва',      iconName: 'publishers' },
+  { key: 'person_duplicates', label: 'Дублікати персон', iconName: 'copy' },
+  { key: 'add',               label: 'Додавання',        iconName: 'plus' },
 ];
 
 // ── Volume categories ─────────────────────────────────────
@@ -295,6 +297,12 @@ async function renderSection(root) {
     return;
   }
 
+  if (state.section === 'person_duplicates') {
+    const dupView = createWantedDuplicatesView();
+    await dupView.mount(content);
+    return;
+  }
+
   const categories    = SECTION_CATEGORIES[state.section] || [];
 
   // Reset category counts before loading new section
@@ -307,12 +315,21 @@ async function renderSection(root) {
 
   const showContentType = ['volumes', 'issues'].includes(state.section);
 
+  const isCharactersSection = state.section === 'characters';
+  const actionButtonHtml = isCharactersSection ? `
+    <button class="wanted-action-btn" id="btn-scrape-character-images" title="Оновити зображення персонажів з ComicVine">
+      ${icon('refreshCw', 15)}
+      <span>Оновити зображення</span>
+    </button>
+  ` : '';
+
   content.innerHTML = `
-    <div class="wanted-section-header">
+    <div class="wanted-section-header ${isCharactersSection ? 'wanted-section-header--row' : ''}">
       <div class="wanted-section-title">
         ${icon(sectionConfig?.iconName || 'volumes', 22)}
         ${sectionConfig?.label || state.section}
       </div>
+      ${actionButtonHtml}
     </div>
 
     ${buildCategories(categories)}
@@ -420,6 +437,25 @@ function buildToolbar(showContentType = false) {
 
 // ── Toolbar events ─────────────────────────────────────────
 function attachToolbarEvents(root, content) {
+  // Characters re-scrape images button
+  const scrapeCharImgsBtn = content.querySelector('#btn-scrape-character-images');
+  if (scrapeCharImgsBtn) {
+    scrapeCharImgsBtn.addEventListener('click', () => {
+      openTerminalLogModal({
+        title: 'Оновлення зображень персонажів (ComicVine)',
+        sseUrl: '/api/scrape/characters-images',
+        autoReload: false,
+        onFinish: (success) => {
+          if (success) {
+            loadItems(content);
+            loadCategoryCounts(root);
+            loadSummary(root);
+          }
+        }
+      });
+    });
+  }
+
   // Category chips
   content.querySelectorAll('.wanted-category-chip').forEach(chip => {
     chip.addEventListener('click', () => {

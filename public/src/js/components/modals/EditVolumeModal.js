@@ -405,7 +405,7 @@ export class VolumeEditor {
                  
                 timeout = setTimeout(async () => {
                      try {
-                         const res = await API.get('/personnel', { search: q, limit: 8 });
+                         const res = await API.get('/persons', { search: q, limit: 8 });
                          const items = res.items || [];
                          if (items.length === 0) {
                              results.innerHTML = '<div style="padding: 8px; font-size: 12px; color: var(--text-muted);">Нічого не знайдено</div>';

@@ -213,3 +213,88 @@
   border-color: rgba(107, 114, 128, 0.3);
   color: var(--text-muted, #6b7280);
 }
+
+/* ── External Source Links ────────────────────────── */
+.entity-cover-ext-sources,
+.volume-cover-ext-sources,
+.character-cover-ext-sources,
+.personnel-cover-ext-sources {
+  margin-top: 16px;
+  border-top: 1px solid var(--border-s);
+  padding-top: 16px;
+  width: 100%;
+}
+
+.ext-sources-title {
+  font-family: var(--font-oswald, inherit);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.source-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.source-links > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: var(--r, 6px);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  transition: all var(--t);
+}
+
+.source-links > a[href*='comicvine'] {
+  color: var(--source-cv, #059669) !important;
+  background: color-mix(in srgb, var(--source-cv, #059669) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--source-cv, #059669) 20%, var(--border-s));
+}
+.source-links > a[href*='comicvine']:hover {
+  background: color-mix(in srgb, var(--source-cv, #059669) 16%, transparent);
+}
+
+.source-links > a[href*='hikka.io'] {
+  color: var(--source-hikka, #993bf6) !important;
+  background: color-mix(in srgb, var(--source-hikka, #993bf6) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--source-hikka, #993bf6) 20%, var(--border-s));
+}
+.source-links > a[href*='hikka.io']:hover {
+  background: color-mix(in srgb, var(--source-hikka, #993bf6) 16%, transparent);
+}
+
+.source-links > a[href*='myanimelist'] {
+  color: var(--source-mal, #3469e5) !important;
+  background: color-mix(in srgb, var(--source-mal, #3469e5) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--source-mal, #3469e5) 20%, var(--border-s));
+}
+.source-links > a[href*='myanimelist']:hover {
+  background: color-mix(in srgb, var(--source-mal, #3469e5) 16%, transparent);
+}
+
+.source-links > a:not([href*='comicvine']):not([href*='hikka']):not([href*='myanimelist']) {
+  color: var(--accent) !important;
+  background: var(--accent-glow, rgba(108, 92, 231, 0.08));
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border-s));
+}
+.source-links > a:not([href*='comicvine']):not([href*='hikka']):not([href*='myanimelist']):hover {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.source-links > a svg {
+  margin-left: 0;
+  opacity: 1;
+}

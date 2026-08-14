@@ -123,7 +123,7 @@ async def get_users(
     if sort == "last_activity":
         order_sql = "ORDER BY COALESCE(u.last_activity, u.last_login, u.created_at) DESC, u.score DESC, u.username ASC"
     elif sort == "username":
-        order_sql = "ORDER BY LOWER(u.username) ASC"
+        order_sql = "ORDER BY LOWER(COALESCE(u.nickname, u.username)) ASC"
     else:  # score
         order_sql = "ORDER BY u.score DESC, COALESCE(e.approved_count, 0) DESC, u.username ASC"
 

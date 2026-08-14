@@ -49,9 +49,11 @@ async def get_characters(
         order_clause = f"c.name {order_dir.upper()}"
     elif sort == "recent":
         order_clause = f"c.created_at {order_dir.upper()}, c.name ASC"
+    elif sort == "volumes":
+        order_clause = f"volume_count {order_dir.upper()}, issue_count DESC, c.name ASC"
     else:
         # Default to issue appearances
-        order_clause = f"issue_count {order_dir.upper()}, c.name ASC"
+        order_clause = f"issue_count {order_dir.upper()}, volume_count DESC, c.name ASC"
 
     count_sql = f"""
         SELECT COUNT(DISTINCT c.id) as count
@@ -67,8 +69,19 @@ async def get_characters(
         f"""
         SELECT c.id, c.cv_id, c.name, c.name_uk, c.name_ro, c.real_name, c.real_name_uk, c.name_native,
                c.earth, c.franchise, c.essence, c.aliases, c.cv_slug, c.image, c.gender,
-               (SELECT COUNT(*) FROM issue_characters ic WHERE ic.character_id = c.id) as issue_count
+               COALESCE(ic_agg.issue_count, 0) AS issue_count,
+               COALESCE(vc_agg.volume_count, 0) AS volume_count
         FROM characters c
+        LEFT JOIN (
+            SELECT character_id, COUNT(DISTINCT issue_id) AS issue_count
+            FROM issue_characters
+            GROUP BY character_id
+        ) ic_agg ON ic_agg.character_id = c.id
+        LEFT JOIN (
+            SELECT character_id, COUNT(DISTINCT volume_id) AS volume_count
+            FROM volume_characters
+            GROUP BY character_id
+        ) vc_agg ON vc_agg.character_id = c.id
         {where_clause}
         ORDER BY {order_clause}
         LIMIT %s OFFSET %s
@@ -86,7 +99,7 @@ async def get_character(character_id: int):
         """
         SELECT c.*,
                (SELECT COUNT(DISTINCT ic.issue_id) FROM issue_characters ic WHERE ic.character_id = c.id) as issue_count,
-               (SELECT COUNT(DISTINCT i.volume_id) FROM issue_characters ic JOIN issues i ON ic.issue_id = i.id WHERE ic.character_id = c.id) as volume_count
+               (SELECT COUNT(DISTINCT vc.volume_id) FROM volume_characters vc WHERE vc.character_id = c.id) as volume_count
         FROM characters c
         WHERE c.id = %s
         """,
@@ -120,30 +133,27 @@ async def get_character(character_id: int):
         """
         SELECT v.id, v.name, v.name_uk, v.cover_img, v.image, v.lang,
                (SELECT COUNT(*) FROM issues i2 WHERE i2.volume_id = v.id) AS issue_count,
-               (SELECT COUNT(*) FROM issue_characters ic2 JOIN issues i3 ON ic2.issue_id = i3.id WHERE ic2.character_id = %s AND i3.volume_id = v.id) AS char_issue_count
+               (SELECT COUNT(DISTINCT ic2.issue_id) FROM issue_characters ic2 JOIN issues i3 ON ic2.issue_id = i3.id WHERE ic2.character_id = %s AND i3.volume_id = v.id) AS char_issue_count
         FROM volumes v
         WHERE v.id IN (
             SELECT volume_id FROM volume_characters WHERE character_id = %s
-            UNION
-            SELECT i.volume_id FROM issue_characters ic JOIN issues i ON ic.issue_id = i.id WHERE ic.character_id = %s
         )
         ORDER BY char_issue_count DESC, v.name_uk ASC, v.name ASC
-        LIMIT 40
         """,
-        [character_id, character_id, character_id]
+        [character_id, character_id]
     )
 
     # Issues where character appears
     char["issues"] = db.get_all(
         """
         SELECT i.id, i.name, i.issue_number, i.image, i.release_date, i.cover_date, ic.role, ic.story_num, ic.comment, ic.persona_idx,
-               v.id as volume_id, v.name_uk as volume_name_uk, v.name as volume_name
+               v.id as volume_id, v.name_uk as volume_name_uk, v.name as volume_name,
+               v.image as volume_image, v.cover_img as volume_cover_img
         FROM issue_characters ic
         JOIN issues i ON ic.issue_id = i.id
         JOIN volumes v ON i.volume_id = v.id
         WHERE ic.character_id = %s
         ORDER BY i.created_at DESC, i.id DESC
-        LIMIT 60
         """,
         [character_id]
     )
@@ -152,13 +162,13 @@ async def get_character(character_id: int):
     char["manga_chapters"] = db.get_all(
         """
         SELECT mc.id, mc.chapter_number, mc.name AS title, mcc.role,
-               v.id AS volume_id, v.name_uk AS volume_name_uk, v.name AS volume_name
+               v.id AS volume_id, v.name_uk AS volume_name_uk, v.name AS volume_name,
+               v.image AS volume_image, v.cover_img AS volume_cover_img
         FROM manga_chapter_characters mcc
         JOIN manga_chapters mc ON mcc.chapter_id = mc.id
         LEFT JOIN volumes v ON mc.volume_id = v.id
         WHERE mcc.character_id = %s
         ORDER BY mc.chapter_number ASC
-        LIMIT 50
         """,
         [character_id]
     )

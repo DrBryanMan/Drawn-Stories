@@ -42,6 +42,9 @@ export const FIELD_DEFINITIONS = {
   // Дати та класифікація
   'start_year': { uk: 'Рік початку', en: 'Start year', iconName: 'calendar' },
   'issue_number': { uk: 'Номер випуску', en: 'Issue number', iconName: 'hash' },
+  'chapter_number': { uk: 'Номер розділу', en: 'Chapter number', iconName: 'hash' },
+  'pages': { uk: 'Кількість сторінок', en: 'Pages count', iconName: 'book' },
+  'release_date': { uk: 'Дата виходу', en: 'Release date', iconName: 'calendar' },
   'publication_date': { uk: 'Дата публікації', en: 'Publication date', iconName: 'calendar' },
   'country': { uk: 'Країна', en: 'Country', iconName: 'globe' },
   'publisher': { uk: 'Видавництво', en: 'Publisher', iconName: 'building' },

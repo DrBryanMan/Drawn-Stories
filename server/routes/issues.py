@@ -96,28 +96,49 @@ async def search_appearance_entities(app_type: str, search: str = ""):
     if app_type not in ["characters", "teams", "locations", "concepts", "objects"]:
         raise HTTPException(status_code=400, detail="Некоректний тип появи")
     
-    query = f"%{search}%"
+    clean_search = search.strip()
+    query = f"%{clean_search}%"
     
     if app_type == "characters":
         rows = db.get_all(
             """
-            SELECT id, name, real_name, name_uk, name_ro, real_name_uk, creators, cv_slug, image, 
+            SELECT id, name, real_name, name_uk, name_ro, real_name_uk, name_native, creators, cv_slug, image, 
                    portret_img, costume_img, portret_costume_img, personas
             FROM characters 
-            WHERE name LIKE %s OR real_name LIKE %s OR name_uk LIKE %s OR name_ro LIKE %s OR real_name_uk LIKE %s
-            ORDER BY COALESCE(name_uk, name) ASC LIMIT 30
+            WHERE name ILIKE %s 
+               OR real_name ILIKE %s 
+               OR name_uk ILIKE %s 
+               OR name_ro ILIKE %s 
+               OR real_name_uk ILIKE %s
+               OR name_native ILIKE %s
+               OR aliases::text ILIKE %s
+            ORDER BY 
+                CASE 
+                    WHEN name_uk ILIKE %s THEN 1
+                    WHEN name ILIKE %s THEN 2
+                    ELSE 3
+                END,
+                COALESCE(name_uk, name) ASC 
+            LIMIT 50
             """,
-            [query, query, query, query, query]
+            [query, query, query, query, query, query, query, f"{clean_search}%", f"{clean_search}%"]
         )
     else:
         rows = db.get_all(
             f"""
             SELECT id, name, name_uk, cv_slug 
             FROM {app_type} 
-            WHERE name LIKE %s OR name_uk LIKE %s
-            ORDER BY COALESCE(name_uk, name) ASC LIMIT 30
+            WHERE name ILIKE %s OR name_uk ILIKE %s
+            ORDER BY 
+                CASE 
+                    WHEN name_uk ILIKE %s THEN 1
+                    WHEN name ILIKE %s THEN 2
+                    ELSE 3
+                END,
+                COALESCE(name_uk, name) ASC 
+            LIMIT 50
             """,
-            [query, query]
+            [query, query, f"{clean_search}%", f"{clean_search}%"]
         )
         
     return [dict(r) for r in rows]
@@ -285,7 +306,7 @@ async def get_issue_detail(issue_id: int):
     # Отримуємо творців випуску
     persons = db.get_all(
         """
-        SELECT ip.id, ip.person_id, ip.role, ip.story_id,
+        SELECT ip.id AS link_id, ip.person_id, p.id, ip.role, ip.story_id,
                p.name, p.image, p.cv_slug
         FROM issue_persons ip
         JOIN persons p ON ip.person_id = p.id
@@ -376,7 +397,7 @@ async def get_issue_detail(issue_id: int):
                 
                 p_list = db.get_all(
                     """
-                    SELECT ip.id, ip.person_id, ip.role, ip.story_id,
+                    SELECT ip.id AS link_id, ip.person_id, p.id, ip.role, ip.story_id,
                            p.name, p.image, p.cv_slug
                     FROM issue_persons ip
                     JOIN persons p ON ip.person_id = p.id
@@ -418,7 +439,7 @@ async def get_issue_detail(issue_id: int):
                 # Завантажуємо стаф випуску, не прив'язаний до конкретних історій (тобто основний стаф оригінального випуску)
                 p_list = db.get_all(
                     """
-                    SELECT ip.id, ip.person_id, ip.role, ip.story_id,
+                    SELECT ip.id AS link_id, ip.person_id, p.id, ip.role, ip.story_id,
                            p.name, p.image, p.cv_slug
                     FROM issue_persons ip
                     JOIN persons p ON ip.person_id = p.id
@@ -460,7 +481,7 @@ async def get_issue_detail(issue_id: int):
                 
                 p_list = db.get_all(
                     """
-                    SELECT ip.id, ip.person_id, ip.role, ip.story_id,
+                    SELECT ip.id AS link_id, ip.person_id, p.id, ip.role, ip.story_id,
                            p.name, p.image, p.cv_slug
                     FROM issue_persons ip
                     JOIN persons p ON ip.person_id = p.id
@@ -493,7 +514,7 @@ async def get_issue_detail(issue_id: int):
                     
                     p_list = db.get_all(
                         """
-                        SELECT ip.id, ip.person_id, ip.role, ip.story_id,
+                        SELECT ip.id AS link_id, ip.person_id, p.id, ip.role, ip.story_id,
                                p.name, p.image, p.cv_slug
                         FROM issue_persons ip
                         JOIN persons p ON ip.person_id = p.id
@@ -512,7 +533,7 @@ async def get_issue_detail(issue_id: int):
                 
                 p_list = db.get_all(
                     """
-                    SELECT ip.id, ip.person_id, ip.role, ip.story_id,
+                    SELECT ip.id AS link_id, ip.person_id, p.id, ip.role, ip.story_id,
                            p.name, p.image, p.cv_slug
                     FROM issue_persons ip
                     JOIN persons p ON ip.person_id = p.id
@@ -556,12 +577,13 @@ async def get_issue_detail(issue_id: int):
         stories_list = stories_list + imported_stories
 
     def filter_appearances_by_story(appearances, story_num):
+        target_num = story_num if story_num is not None else 0
         return {
-            "characters": [c for c in appearances.get("characters", []) if c.get("story_num") == story_num],
-            "teams": [t for t in appearances.get("teams", []) if t.get("story_num") == story_num],
-            "locations": [l for l in appearances.get("locations", []) if l.get("story_num") == story_num],
-            "concepts": [c for c in appearances.get("concepts", []) if c.get("story_num") == story_num],
-            "objects": [o for o in appearances.get("objects", []) if o.get("story_num") == story_num],
+            "characters": [c for c in appearances.get("characters", []) if (c.get("story_num") or 0) == target_num],
+            "teams": [t for t in appearances.get("teams", []) if (t.get("story_num") or 0) == target_num],
+            "locations": [l for l in appearances.get("locations", []) if (l.get("story_num") or 0) == target_num],
+            "concepts": [c for c in appearances.get("concepts", []) if (c.get("story_num") or 0) == target_num],
+            "objects": [o for o in appearances.get("objects", []) if (o.get("story_num") or 0) == target_num],
         }
 
     # Прив'язуємо появи
@@ -731,9 +753,11 @@ async def update_issue(issue_id: int, data: dict, request: Request):
     db = get_db()
     
     # Check if issue exists
-    issue = db.get_one("SELECT id FROM issues WHERE id = %s", [issue_id])
+    issue = db.get_one("SELECT id, volume_id FROM issues WHERE id = %s", [issue_id])
     if not issue:
         raise HTTPException(status_code=404, detail="Випуск не знайдено")
+
+    volume_id = issue["volume_id"]
 
     fields = []
     params = []
@@ -879,6 +903,11 @@ async def update_issue(issue_id: int, data: dict, request: Request):
                             """,
                             [issue_id, entity_id, story_num, status, comment, role, team_id, persona_idx]
                         )
+                        if volume_id:
+                            db.execute(
+                                "INSERT INTO volume_characters (volume_id, character_id, role) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+                                [volume_id, entity_id, "minor"]
+                            )
                     else:
                         db.execute(
                             f"""

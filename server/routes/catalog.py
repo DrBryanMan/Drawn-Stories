@@ -150,7 +150,7 @@ async def get_catalog(
                 JOIN volumes v ON i.volume_id = v.id
                 LEFT JOIN publishers p ON v.publisher = p.id
             """
-            select_fields = "i.*, v.name as volume_name, v.id as volume_id, p.name as publisher_name, v.lang, 'issue' as type"
+            select_fields = "i.*, v.name as volume_name, v.name_uk as volume_name_uk, v.image as volume_image, v.cover_img as volume_cover_img, v.id as volume_id, p.name as publisher_name, v.lang, 'issue' as type"
             ISSUE_SORT_MAP = {"name": "i.name", "recent": "i.created_at", "date": "COALESCE(i.release_date, i.cover_date)"}
             primary_sort = ISSUE_SORT_MAP.get(sort, "i.created_at")
             unique_key = "i.id"
@@ -169,7 +169,7 @@ async def get_catalog(
                 LEFT JOIN volumes v ON c.volume_id = v.id
                 LEFT JOIN publishers p ON v.publisher = p.id
             """
-            select_fields = "c.*, v.name as volume_name, v.id as volume_id, p.name as publisher_name, v.lang, 'collection' as type"
+            select_fields = "c.*, v.name as volume_name, v.name_uk as volume_name_uk, v.image as volume_image, v.cover_img as volume_cover_img, v.id as volume_id, p.name as publisher_name, v.lang, 'collection' as type"
             COLLECTION_SORT_MAP = {"name": "c.name", "recent": "c.created_at", "date": "COALESCE(c.release_date, c.cover_date)"}
             primary_sort = COLLECTION_SORT_MAP.get(sort, "c.created_at")
             unique_key = "c.id"

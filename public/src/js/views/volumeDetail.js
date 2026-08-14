@@ -594,7 +594,9 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
             if (!groupedStaff.has(person.id)) {
                 groupedStaff.set(person.id, {
                     id: person.id,
-                    name: person.name,
+                    name: person.name_uk || person.name,
+                    nameEn: person.name,
+                    nameNative: person.name_native,
                     image: person.image,
                     roles: [person.role]
                 });
@@ -611,7 +613,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
             const name = escapeHtmlAttribute(person.name);
             const rolesLabel = person.roles.filter(Boolean).map(r => translateStaffRole(r)).join(', ');
             return `
-                <a class="volume-staff-card" href="#/personnel/${person.id}">
+                <a class="volume-staff-card" href="#/persons/${person.id}">
                     <span class="volume-staff-avatar">
                         ${cover
                             ? `<img src="${escapeHtmlAttribute(cover)}" alt="${name}" loading="lazy">`

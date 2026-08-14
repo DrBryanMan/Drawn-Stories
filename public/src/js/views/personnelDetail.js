@@ -2,8 +2,8 @@ import { API } from '../helpers/api.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { currentUser } from '../shell.js';
 import { createPaginator } from '../components/Pagination.js';
-import { createComicCard } from '../components/cards/ComicCard.js';
 import { mountFilterBar } from '../components/FilterBar.js';
+import { renderEntityIssueCard, renderEntityVolumeCard } from '../components/cards/EntityReleaseCard.js';
 import { t } from '../helpers/i18n.js';
 import { parseAliases } from '../helpers/lang.js';
 import { openEditPersonModal } from '../components/modals/EditPersonModal.js';
@@ -46,46 +46,6 @@ function factItemHTML(label, valueHTML) {
   `;
 }
 
-function volumeReleaseCardHTML(vol) {
-  const imgUrl = normalizeImageUrl(vol.image);
-  const title = escapeHtmlAttribute(vol.name_uk || vol.name || 'Без назви');
-  const issueCount = vol.issue_count || 0;
-  const coverHtml = imgUrl
-    ? `<img src="${escapeHtmlAttribute(imgUrl)}" alt="${title}" loading="lazy">`
-    : `<div class="entity-release-cover-empty">${icon('imagePlaceholder', 36, { strokeWidth: 1.5 })}</div>`;
-
-  return `
-    <a href="#/volumes/${vol.id}" class="entity-release-card">
-      <div class="entity-release-cover">${coverHtml}</div>
-      <div class="entity-release-body">
-        <div class="entity-release-title" title="${title}">${title}</div>
-        <div class="entity-release-sub">${issueCount} вип.</div>
-      </div>
-    </a>
-  `;
-}
-
-function issueReleaseCardHTML(issue) {
-  const imgUrl = normalizeImageUrl(issue.image);
-  const title = escapeHtmlAttribute(issue.name || `Випуск #${issue.issue_number || '?'}`);
-  const volName = escapeHtmlAttribute(issue.volume_name_uk || issue.volume_name || '');
-  const numText = issue.issue_number ? `#${issue.issue_number}` : '';
-  const displayTitle = numText ? `${volName} ${numText}` : volName;
-  const coverHtml = imgUrl
-    ? `<img src="${escapeHtmlAttribute(imgUrl)}" alt="${title}" loading="lazy">`
-    : `<div class="entity-release-cover-empty">${icon('imagePlaceholder', 36, { strokeWidth: 1.5 })}</div>`;
-
-  return `
-    <a href="#/issues/${issue.id}" class="entity-release-card">
-      <div class="entity-release-cover">${coverHtml}</div>
-      <div class="entity-release-body">
-        <div class="entity-release-title" title="${displayTitle}">${displayTitle}</div>
-        <div class="entity-release-sub">${title}</div>
-      </div>
-    </a>
-  `;
-}
-
 // ── Skeleton ──────────────────────────────────────────
 function renderSkeleton(container) {
   container.innerHTML = `
@@ -119,28 +79,30 @@ function renderSkeleton(container) {
 }
 
 // ── Main render ───────────────────────────────────────
-export async function renderPersonnelDetail(container, params) {
+export async function renderPersonnelDetail(container, params, query = {}) {
   const id = params.id;
-  currentWorkType = 'volumes';
-  worksSearchQuery = '';
+  const initialTab = query?.tab === 'works' ? 'works' : 'overview';
+  const initialType = (query?.type === 'issues' || query?.mode === 'issues') ? 'issues' : 'volumes';
+  currentWorkType = initialType;
+  worksSearchQuery = query?.search || '';
 
   renderSkeleton(container);
 
   try {
-    const person = await API.get(`/personnel/${id}`);
+    const person = await API.get(`/persons/${id}`);
 
     const displayName = person.name_uk || person.name;
     document.title = `${displayName} — Drawn Stories`;
 
     const edits = await fetchEntityEdits('person', id);
-    container.innerHTML = buildDetailHTML(person, edits);
+    container.innerHTML = buildDetailHTML(person, edits, initialTab);
 
-    initTabs(container, person, id);
+    initTabs(container, person, id, initialTab);
     worksPaginator.reset();
 
     // Edit button click
     container.querySelector('#person-edit-btn')?.addEventListener('click', () => {
-      openEditPersonModal(person, () => renderPersonnelDetail(container, params));
+      openEditPersonModal(person, () => renderPersonnelDetail(container, params, query));
     });
 
     initEditorsHistoryBlock(container, edits);
@@ -159,7 +121,7 @@ export async function renderPersonnelDetail(container, params) {
 }
 
 // ── Build HTML ────────────────────────────────────────
-function buildDetailHTML(person, edits = []) {
+function buildDetailHTML(person, edits = [], initialTab = 'overview') {
   const latestVolumes = person.latest_volumes || [];
   const latestIssues = person.latest_issues || [];
 
@@ -169,6 +131,7 @@ function buildDetailHTML(person, edits = []) {
 
   const displayName = escapeHtmlAttribute(person.name_uk || person.name);
   const originalName = person.name_uk && person.name_uk !== person.name ? person.name : '';
+  const nativeName = person.name_native && person.name_native !== displayName && person.name_native !== originalName ? person.name_native : '';
 
   // Location string
   const locationParts = [person.hometown, person.country].filter(Boolean);
@@ -176,6 +139,8 @@ function buildDetailHTML(person, edits = []) {
 
   // Aliases
   const aliases = parseAliases(person.aliases);
+
+  const hasExternalLinks = person.cv_id || person.hikka_slug || person.website;
 
   return `
     <div class="personnel-detail">
@@ -185,12 +150,38 @@ function buildDetailHTML(person, edits = []) {
           <!-- Avatar Column -->
           <div class="personnel-detail-avatar-col">
             <div class="personnel-detail-avatar">${avatarHTML(person)}</div>
+            ${hasExternalLinks ? `
+              <div class="personnel-cover-ext-sources">
+                <div class="ext-sources-title">${t('external_sources') || 'Зовнішні джерела'}</div>
+                <div class="source-links">
+                  ${person.cv_id ? `
+                    <a href="https://comicvine.gamespot.com/${person.cv_slug ? escapeHtmlAttribute(person.cv_slug) + '/' : 'person/'}4040-${person.cv_id}/" target="_blank" rel="noreferrer">
+                      CV
+                      ${icon('externalLink', 12, { strokeWidth: 2.2 })}
+                    </a>
+                  ` : ''}
+                  ${person.hikka_slug ? `
+                    <a href="https://hikka.io/people/${escapeHtmlAttribute(person.hikka_slug)}" target="_blank" rel="noreferrer">
+                      Hikka
+                      ${icon('externalLink', 12, { strokeWidth: 2.2 })}
+                    </a>
+                  ` : ''}
+                  ${person.website ? `
+                    <a href="${escapeHtmlAttribute(person.website)}" target="_blank" rel="noreferrer">
+                      Site
+                      ${icon('externalLink', 12, { strokeWidth: 2.2 })}
+                    </a>
+                  ` : ''}
+                </div>
+              </div>
+            ` : ''}
           </div>
 
           <!-- Info Column -->
           <div class="personnel-detail-info">
             <h1>${displayName}</h1>
             ${originalName ? `<div class="personnel-detail-subname">${escapeHtmlAttribute(originalName)}</div>` : ''}
+            ${nativeName ? `<div class="personnel-detail-subname" style="font-size:0.95em; opacity:0.85;">${escapeHtmlAttribute(nativeName)}</div>` : ''}
 
             <div class="personnel-detail-badges-row">
               ${person.occupation ? `<span class="personnel-detail-type-badge">${icon('layers', 14, { strokeWidth: 2.1 })} ${escapeHtmlAttribute(person.occupation)}</span>` : ''}
@@ -212,14 +203,6 @@ function buildDetailHTML(person, edits = []) {
                 <span class="personnel-detail-stat-label">Випусків</span>
               </div>
             </div>
-
-            <div class="personnel-detail-actions">
-              ${person.website ? `
-                <a href="${escapeHtmlAttribute(person.website)}" class="personnel-detail-action-btn" target="_blank" rel="noopener noreferrer">
-                  ${icon('globe', 14, { strokeWidth: 2.1 })} Сайт ${icon('externalLink', 12, { strokeWidth: 2.2 })}
-                </a>
-              ` : ''}
-            </div>
           </div>
 
           ${renderEditorsHistoryBlock(edits, currentUser, { editButtonId: 'person-edit-btn', editTitle: 'Редагувати' })}
@@ -230,10 +213,10 @@ function buildDetailHTML(person, edits = []) {
       <div class="personnel-detail-tabs-band">
         <div class="container">
           <div class="personnel-detail-tabs" role="tablist">
-            <button class="personnel-detail-tab-btn is-active" data-tab="overview" role="tab" aria-selected="true">
+            <button class="personnel-detail-tab-btn ${initialTab === 'overview' ? 'is-active' : ''}" data-tab="overview" role="tab" aria-selected="${initialTab === 'overview'}">
               Огляд
             </button>
-            <button class="personnel-detail-tab-btn" data-tab="works" role="tab" aria-selected="false">
+            <button class="personnel-detail-tab-btn ${initialTab === 'works' ? 'is-active' : ''}" data-tab="works" role="tab" aria-selected="${initialTab === 'works'}">
               ${icon('book', 14, { strokeWidth: 2.1 })} Роботи <span class="tab-count">${totalWorks.toLocaleString('uk-UA')}</span>
             </button>
           </div>
@@ -243,7 +226,7 @@ function buildDetailHTML(person, edits = []) {
       <!-- Tab Panes -->
       <div class="container" style="margin-top: 0;">
         <!-- Overview -->
-        <div class="personnel-detail-pane is-active" data-pane="overview">
+        <div class="personnel-detail-pane ${initialTab === 'overview' ? 'is-active' : ''}" data-pane="overview">
           <div class="personnel-detail-overview">
             <!-- Info block -->
             <aside>
@@ -259,7 +242,8 @@ function buildDetailHTML(person, edits = []) {
                   ${factItemHTML('Країна', person.country ? escapeHtmlAttribute(person.country) : null)}
                   ${factItemHTML('Сайт', person.website ? `<a href="${escapeHtmlAttribute(person.website)}" target="_blank" rel="noopener">${escapeHtmlAttribute(person.website)} ${icon('externalLink', 12, { strokeWidth: 2.2 })}</a>` : null)}
                   ${factItemHTML('Псевдоніми', aliases.length ? escapeHtmlAttribute(aliases.join(', ')) : null)}
-                  ${factItemHTML('CV ID', person.cv_id ? `<a href="https://comicvine.gamespot.com/person/${person.cv_slug || person.cv_id}/" target="_blank" rel="noopener">${escapeHtmlAttribute(String(person.cv_id))} ${icon('externalLink', 12, { strokeWidth: 2.2 })}</a>` : null)}
+                  ${factItemHTML('ComicVine', person.cv_id ? `<a href="https://comicvine.gamespot.com/${person.cv_slug ? escapeHtmlAttribute(person.cv_slug) + '/' : 'person/'}4040-${person.cv_id}/" target="_blank" rel="noopener">${escapeHtmlAttribute(String(person.cv_id))} ${icon('externalLink', 12, { strokeWidth: 2.2 })}</a>` : null)}
+                  ${factItemHTML('Hikka', person.hikka_slug ? `<a href="https://hikka.io/people/${escapeHtmlAttribute(person.hikka_slug)}" target="_blank" rel="noopener">${escapeHtmlAttribute(person.hikka_slug)} ${icon('externalLink', 12, { strokeWidth: 2.2 })}</a>` : null)}
                 </ul>
               </div>
             </aside>
@@ -272,7 +256,7 @@ function buildDetailHTML(person, edits = []) {
                   <span class="entity-section-title">Нові серії</span>
                 </div>
                 ${latestVolumes.length > 0
-                  ? `<div class="entity-releases-grid">${latestVolumes.map(volumeReleaseCardHTML).join('')}</div>`
+                  ? `<div class="entity-releases-grid">${latestVolumes.map(v => renderEntityVolumeCard(v)).join('')}</div>`
                   : `<div class="entity-releases-empty">Серій поки немає</div>`
                 }
               </div>
@@ -283,7 +267,7 @@ function buildDetailHTML(person, edits = []) {
                   <span class="entity-section-title">Крайні випуски</span>
                 </div>
                 ${latestIssues.length > 0
-                  ? `<div class="entity-releases-grid">${latestIssues.map(issueReleaseCardHTML).join('')}</div>`
+                  ? `<div class="entity-releases-grid">${latestIssues.map(i => renderEntityIssueCard(i)).join('')}</div>`
                   : `<div class="entity-releases-empty">Випусків поки немає</div>`
                 }
               </div>
@@ -292,10 +276,10 @@ function buildDetailHTML(person, edits = []) {
         </div>
 
         <!-- Works tab -->
-        <div class="personnel-detail-pane" data-pane="works">
+        <div class="personnel-detail-pane ${initialTab === 'works' ? 'is-active' : ''}" data-pane="works">
           <div class="personnel-detail-works-pane">
             <div id="person-works-filter-bar-container" style="margin-bottom: 20px;"></div>
-            <div id="person-works-grid" class="personnel-detail-works-grid">
+            <div id="person-works-content">
               ${buildWorkSkeletons(8)}
             </div>
             <div id="person-works-pagination" style="margin-top: 24px;"></div>
@@ -307,13 +291,31 @@ function buildDetailHTML(person, edits = []) {
 }
 
 function buildWorkSkeletons(count) {
-  return Array.from({ length: count }).map(() =>
-    `<div class="skeleton" style="aspect-ratio: 2/3; border-radius: var(--r-lg);"></div>`
-  ).join('');
+  return `
+    <div class="entity-releases-grid">
+      ${Array.from({ length: count }).map(() =>
+        `<div class="skeleton" style="aspect-ratio: 2/3; border-radius: var(--r-lg);"></div>`
+      ).join('')}
+    </div>
+  `;
+}
+
+function updatePersonnelUrl(personId, tab, workType) {
+  const hashWithoutQuery = window.location.hash.split('?')[0] || `#/persons/${personId}`;
+  const q = new URLSearchParams();
+  if (tab && tab !== 'overview') {
+    q.set('tab', tab);
+    if (tab === 'works' && workType) {
+      q.set('type', workType);
+    }
+  }
+  const qs = q.toString();
+  const newHash = qs ? `${hashWithoutQuery}?${qs}` : hashWithoutQuery;
+  window.history.replaceState(null, '', newHash);
 }
 
 // ── Tab switching ─────────────────────────────────────
-function initTabs(container, person, personId) {
+function initTabs(container, person, personId, initialTab = 'overview') {
   const tabs = container.querySelectorAll('.personnel-detail-tab-btn');
   const panes = container.querySelectorAll('.personnel-detail-pane');
 
@@ -332,6 +334,8 @@ function initTabs(container, person, personId) {
       const activePane = container.querySelector(`[data-pane="${target}"]`);
       if (activePane) activePane.classList.add('is-active');
 
+      updatePersonnelUrl(personId, target, currentWorkType);
+
       // Lazy load works tab
       if (target === 'works') {
         const filterContainer = container.querySelector('#person-works-filter-bar-container');
@@ -341,6 +345,60 @@ function initTabs(container, person, personId) {
       }
     });
   });
+
+  if (initialTab === 'works') {
+    mountWorksFilterBar(container, personId);
+  }
+}
+
+function initCollapsibleSections(container, toggleBtnSelector) {
+  const sections = container.querySelectorAll('.entity-recent-section[data-volume-id]');
+  const toggleBtn = container.querySelector(toggleBtnSelector);
+
+  sections.forEach(section => {
+    const header = section.querySelector('.entity-section-header--collapsible');
+    if (!header || header.dataset.bound === 'true') return;
+    header.dataset.bound = 'true';
+
+    header.addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;
+      section.classList.toggle('is-collapsed');
+      const isCollapsed = section.classList.contains('is-collapsed');
+      header.setAttribute('aria-expanded', !isCollapsed);
+      updateToggleAllBtn(container, toggleBtn);
+    });
+  });
+
+  if (toggleBtn && toggleBtn.dataset.bound !== 'true') {
+    toggleBtn.dataset.bound = 'true';
+    toggleBtn.addEventListener('click', () => {
+      const currentSections = container.querySelectorAll('.entity-recent-section[data-volume-id]');
+      const anyCollapsed = Array.from(currentSections).some(s => s.classList.contains('is-collapsed'));
+      currentSections.forEach(s => {
+        if (anyCollapsed) {
+          s.classList.remove('is-collapsed');
+          s.querySelector('.entity-section-header--collapsible')?.setAttribute('aria-expanded', 'true');
+        } else {
+          s.classList.add('is-collapsed');
+          s.querySelector('.entity-section-header--collapsible')?.setAttribute('aria-expanded', 'false');
+        }
+      });
+      updateToggleAllBtn(container, toggleBtn);
+    });
+  }
+
+  updateToggleAllBtn(container, toggleBtn);
+}
+
+function updateToggleAllBtn(container, toggleBtn) {
+  if (!toggleBtn) return;
+  const sections = container.querySelectorAll('.entity-recent-section[data-volume-id]');
+  if (sections.length === 0) return;
+  const anyCollapsed = Array.from(sections).some(s => s.classList.contains('is-collapsed'));
+  const span = toggleBtn.querySelector('span');
+  if (span) {
+    span.textContent = anyCollapsed ? 'Розгорнути все' : 'Згорнути все';
+  }
 }
 
 function mountWorksFilterBar(container, personId) {
@@ -362,9 +420,14 @@ function mountWorksFilterBar(container, personId) {
     showSort: false,
     showSortOrder: false,
     extraMiddleHtml: `
-      <div class="wanted-ct-group" role="group">
-        <button class="wanted-ct-btn ${currentWorkType === 'volumes' ? 'is-active' : ''}" data-type="volumes">Серії</button>
-        <button class="wanted-ct-btn ${currentWorkType === 'issues' ? 'is-active' : ''}" data-type="issues">Випуски</button>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button class="entity-toggle-all-btn" id="person-toggle-all-btn" type="button" style="${currentWorkType === 'issues' ? '' : 'display: none;'}">
+          ${icon('chevronsUpDown', 13)} <span>Розгорнути все</span>
+        </button>
+        <div class="wanted-ct-group" role="group">
+          <button class="wanted-ct-btn ${currentWorkType === 'volumes' ? 'is-active' : ''}" data-type="volumes">Серії</button>
+          <button class="wanted-ct-btn ${currentWorkType === 'issues' ? 'is-active' : ''}" data-type="issues">Випуски</button>
+        </div>
       </div>
     `
   });
@@ -379,6 +442,13 @@ function mountWorksFilterBar(container, personId) {
       btn.classList.add('is-active');
 
       currentWorkType = type;
+      updatePersonnelUrl(personId, 'works', currentWorkType);
+
+      const toggleAllBtn = filterContainer.querySelector('#person-toggle-all-btn');
+      if (toggleAllBtn) {
+        toggleAllBtn.style.display = currentWorkType === 'issues' ? '' : 'none';
+      }
+
       worksPaginator.reset();
       fetchAndRenderWorks(container, personId, filterBar);
     });
@@ -390,11 +460,11 @@ function mountWorksFilterBar(container, personId) {
 
 // ── Works loading ─────────────────────────────────────
 async function fetchAndRenderWorks(container, personId, filterBar) {
-  const grid = container.querySelector('#person-works-grid');
+  const content = container.querySelector('#person-works-content');
   const paginationWrap = container.querySelector('#person-works-pagination');
-  if (!grid) return;
+  if (!content) return;
 
-  grid.innerHTML = buildWorkSkeletons(12);
+  content.innerHTML = buildWorkSkeletons(12);
 
   const params = {
     person_ids: personId,
@@ -413,8 +483,8 @@ async function fetchAndRenderWorks(container, personId, filterBar) {
     }
 
     if (items.length === 0) {
-      grid.innerHTML = `
-        <div class="personnel-detail-empty" style="grid-column: 1 / -1;">
+      content.innerHTML = `
+        <div class="personnel-detail-empty">
           ${icon('book', 14, { strokeWidth: 2.1 })}
           <h3>Робіт не знайдено</h3>
           <p>У цієї особи поки немає доданих ${currentWorkType === 'volumes' ? 'серій' : 'випусків'}</p>
@@ -424,12 +494,56 @@ async function fetchAndRenderWorks(container, personId, filterBar) {
       return;
     }
 
-    grid.innerHTML = '';
-    items.forEach(item => {
-      item.type = currentWorkType === 'volumes' ? 'volume' : 'issue';
-      const card = createComicCard(item);
-      grid.appendChild(card);
-    });
+    if (currentWorkType === 'volumes') {
+      content.innerHTML = `
+        <div class="entity-releases-grid">
+          ${items.map(v => renderEntityVolumeCard(v)).join('')}
+        </div>
+      `;
+    } else {
+      // Group issues by volume_id (as in characterDetail)
+      const volumeMap = new Map();
+      items.forEach(iss => {
+        const volId = iss.volume_id;
+        if (!volumeMap.has(volId)) {
+          const title = iss.volume_name_uk || iss.volume_name || t('series') || 'Серія';
+          const image = iss.volume_image || iss.volume_cover_img || null;
+          volumeMap.set(volId, { id: volId, title, image, issues: [] });
+        }
+        volumeMap.get(volId).issues.push(iss);
+      });
+
+      let html = '';
+      const isAutoExpanded = !!worksSearchQuery;
+      volumeMap.forEach(group => {
+        const cover = normalizeImageUrl(group.image);
+        html += `
+          <div class="entity-recent-section ${isAutoExpanded ? '' : 'is-collapsed'}" style="margin-bottom: 16px;" data-volume-id="${group.id}">
+            <div class="entity-section-header entity-section-header--collapsible" role="button" tabindex="0" aria-expanded="${isAutoExpanded}">
+              <div class="entity-section-header-left">
+                <div class="entity-section-vol-thumb">
+                  ${cover ? `<img src="${escapeHtmlAttribute(cover)}" alt="${escapeHtmlAttribute(group.title)}" loading="lazy">` : `<div class="entity-section-vol-thumb-empty">${icon('book', 14)}</div>`}
+                </div>
+                <a href="#/volumes/${group.id}" class="entity-section-vol-title" onclick="event.stopPropagation();" title="${escapeHtmlAttribute(group.title)}">
+                  ${escapeHtmlAttribute(group.title)}
+                </a>
+                <span class="entity-section-count-badge">${group.issues.length} вип.</span>
+              </div>
+              <div class="entity-section-header-right">
+                <span class="entity-section-chevron">${icon('chevronDown', 16, { strokeWidth: 2.2 })}</span>
+              </div>
+            </div>
+            <div class="entity-section-content">
+              <div class="entity-releases-grid">
+                ${group.issues.map(i => renderEntityIssueCard(i)).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      content.innerHTML = html;
+      initCollapsibleSections(container, '#person-toggle-all-btn');
+    }
 
     if (paginationWrap) {
       paginationWrap.innerHTML = '';
@@ -440,8 +554,8 @@ async function fetchAndRenderWorks(container, personId, filterBar) {
     }
 
   } catch (err) {
-    grid.innerHTML = `
-      <div class="personnel-detail-empty" style="grid-column: 1 / -1;">
+    content.innerHTML = `
+      <div class="personnel-detail-empty">
         ${icon('imagePlaceholder', 36, { strokeWidth: 1.5 })}
         <h3>Помилка завантаження</h3>
         <p>${escapeHtmlAttribute(err.message)}</p>

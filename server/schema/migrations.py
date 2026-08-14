@@ -1621,6 +1621,25 @@ def m065_volume_characters_unique(conn):
     conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_vol_char_unique ON volume_characters(volume_id, character_id)")
 
 
+# ── M066: підтримка авторів Hikka для persons та volume_persons ─────────────
+@migration("M066_hikka_persons")
+def m066_hikka_persons(conn):
+    try:
+        conn.execute("ALTER TABLE persons ALTER COLUMN cv_id DROP NOT NULL")
+    except Exception:
+        pass
+
+    for col, col_type in [("hikka_slug", "TEXT"), ("name_native", "TEXT")]:
+        try:
+            conn.execute(f"ALTER TABLE persons ADD COLUMN {col} {col_type}")
+        except Exception as e:
+            if "duplicate column" not in str(e) and "already exists" not in str(e):
+                raise
+
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_persons_hikka_slug ON persons(hikka_slug)")
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_vol_pers_unique ON volume_persons(volume_id, person_id, role)")
+
+
 def apply_migrations(conn):
     ensure_migrations_table(conn)
 

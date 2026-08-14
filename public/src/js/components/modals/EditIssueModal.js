@@ -6,6 +6,7 @@ import { openEditCharacterModal } from '/static/js/components/modals/EditCharact
 import { currentUser } from '/static/js/shell.js';
 import { icon } from '../../helpers/icons.js';
 import { t } from '../../helpers/i18n.js';
+import { fuzzySearchCharacters } from '../../helpers/fuse.js';
 
 function parsePersonas(raw) {
     if (!raw) return [];
@@ -30,11 +31,14 @@ export class IssueEditor {
                 id: null,
                 name_original: this.issue.name || '',
                 name_ua: this.issue.name_uk || '',
-                order_num: 1
+                order_num: 0
             });
         } else if (this.stories.length > 0) {
             this.stories[0].name_original = this.issue.name || '';
             this.stories[0].name_ua = this.issue.name_uk || '';
+            if (this.stories[0].order_num === undefined || this.stories[0].order_num === null) {
+                this.stories[0].order_num = 0;
+            }
         }
         this.reprints = JSON.parse(JSON.stringify(reprints || []));
         this.onSave = onSave;
@@ -277,11 +281,12 @@ export class IssueEditor {
     }
 
     _buildAppearanceStorySelect(currentStoryNum, typeKey, globalIdx) {
-        let options = `<option value="0" ${currentStoryNum === 0 ? 'selected' : ''}>Основна історія</option>`;
+        let options = '';
         this.stories.forEach((story, idx) => {
-            const orderNum = story.order_num ?? (idx + 1);
-            const title = story.name_ua || story.name_original || `Історія ${orderNum}`;
-            options += `<option value="${orderNum}" ${currentStoryNum === orderNum ? 'selected' : ''}>Історія ${orderNum}: ${escapeHtmlAttribute(title)}</option>`;
+            const orderNum = story.order_num ?? idx;
+            const title = story.name_ua || story.name_original || (orderNum === 0 ? 'Основна історія' : `Історія ${orderNum}`);
+            const label = orderNum === 0 ? `Основна історія` : `Історія ${orderNum}`;
+            options += `<option value="${orderNum}" ${currentStoryNum === orderNum ? 'selected' : ''}>${label}: ${escapeHtmlAttribute(title)}</option>`;
         });
         return `
             <select class="admin-input appearance-story-assignment-select" data-type="${typeKey}" data-index="${globalIdx}" style="height: 32px; padding: 2px 8px; font-size: 12px; max-width: 150px;">
@@ -636,9 +641,11 @@ export class IssueEditor {
                 
                 timeout = setTimeout(async () => {
                     try {
-                        const res = await API.get(`/issues/appearances/search/${typeKey}`, { search: q });
-                        const items = res || [];
-                        if (items.length === 0) {
+                        let items = await API.get(`/issues/appearances/search/${typeKey}`, { search: q });
+                        if (typeKey === 'characters') {
+                            items = await fuzzySearchCharacters(items || [], q);
+                        }
+                        if (!items || items.length === 0) {
                             results.innerHTML = '<div style="padding: 8px; font-size: 12px; color: var(--text-muted);">Нічого не знайдено</div>';
                             return;
                         }
@@ -817,10 +824,10 @@ export class IssueEditor {
         
         let html = '';
         this.stories.forEach((story, idx) => {
-            const orderNum = story.order_num ?? (idx + 1);
-            const title = story.name_ua || story.name_original || `Історія ${idx + 1}`;
-            const val = idx === 0 ? 0 : orderNum;
-            html += `<option value="${val}">Історія ${idx + 1}: ${escapeHtmlAttribute(title)}</option>`;
+            const orderNum = story.order_num ?? idx;
+            const title = story.name_ua || story.name_original || (orderNum === 0 ? 'Основна історія' : `Історія ${orderNum}`);
+            const label = orderNum === 0 ? `Основна історія` : `Історія ${orderNum}`;
+            html += `<option value="${orderNum}">${label}: ${escapeHtmlAttribute(title)}</option>`;
         });
         
         select.innerHTML = html;
@@ -1092,7 +1099,7 @@ export class IssueEditor {
                 
                 timeout = setTimeout(async () => {
                     try {
-                        const res = await API.get('/personnel', { search: q, limit: 8 });
+                        const res = await API.get('/persons', { search: q, limit: 8 });
                         const items = res.items || [];
                         if (items.length === 0) {
                             results.innerHTML = '<div style="padding: 8px; font-size: 12px; color: var(--text-muted);">Нічого не знайдено</div>';
@@ -1373,9 +1380,6 @@ export class IssueEditor {
                 </div>
                 <div class="ds-modal-footer" style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-top:1px solid var(--border-s);">
                     <div style="display:flex; gap:8px; align-items:center;">
-                        ${currentUser && currentUser.role === 'admin' && this.issue && this.issue.id ? `
-                            <button type="button" class="btn-admin btn-admin--danger" id="edit-delete-btn" title="${t('delete_from_db')}" style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">${icon('trash', 14)}</button>
-                        ` : ''}
                         ${(!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'moderator' && currentUser.role !== 'editor')) ? `
                             <input type="text" id="edit-propose-comment" class="admin-input" placeholder="${t('edit_comment_placeholder')}" style="max-width: 260px; font-size: 12px; height: 32px; margin-bottom: 0;">
                         ` : ''}
@@ -1406,20 +1410,6 @@ export class IssueEditor {
 
         modal.querySelector('.ds-modal-close').addEventListener('click', () => this.close());
         modal.querySelector('#edit-cancel').addEventListener('click', () => this.close());
-        
-        const deleteBtn = modal.querySelector('#edit-delete-btn');
-        if (deleteBtn) {
-            deleteBtn.addEventListener('click', async () => {
-                if (!confirm(`Ви дійсно бажаєте видалити випуск з бази даних?`)) return;
-                try {
-                    await API.delete(`/issues/${this.issue.id}`);
-                    this.close();
-                    if (this.onUpdate) this.onUpdate(null);
-                } catch (err) {
-                    alert('Помилка видалення: ' + (err.message || err));
-                }
-            });
-        }
 
         modal.querySelector('#edit-save-direct')?.addEventListener('click', () => this.save('direct'));
         modal.querySelector('#edit-save-approve')?.addEventListener('click', () => this.save('approve'));
@@ -1441,8 +1431,8 @@ export class IssueEditor {
 
         modal.querySelector('#btn-add-story-row').addEventListener('click', () => {
             const nextOrder = this.stories.length 
-                ? Math.max(...this.stories.map(s => s.order_num || 0)) + 1 
-                : 1;
+                ? Math.max(...this.stories.map(s => s.order_num ?? 0)) + 1 
+                : 0;
             this.stories.push({
                 id: null,
                 name_original: '',

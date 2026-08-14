@@ -87,8 +87,9 @@ function renderStaffGroups(personsList) {
             ? `<img class="issue-staff-avatar" src="${escapeHtmlAttribute(personImg)}" alt="${escapeHtmlAttribute(person.name)}">`
             : `<div class="issue-staff-avatar--empty">${icon('imagePlaceholder', 20, { strokeWidth: 1.5 })}</div>`;
         const rolesJoined = person.roles.map(r => translateStaffRole(r)).join(', ');
+        const personId = person.person_id || person.id;
         return `
-            <a class="issue-staff-card" href="#/persons/${person.id || person.person_id}">
+            <a class="issue-staff-card" href="#/persons/${personId}">
                 ${imgHTML}
                 <div class="issue-staff-info">
                     <span class="issue-staff-role-label">${escapeHtmlAttribute(rolesJoined)}</span>
@@ -642,6 +643,7 @@ export async function renderIssueDetail(container, params = {}) {
                 const renderCharacterCard = (c) => {
                     const costumeImg = c.portret_costume_img || c.costume_img || null;
                     const regularImg = c.portret_img || c.image || null;
+                    const charHref = c.id ? `#/characters/${c.id}` : null;
                     
                     let imgHTML = '';
                     if (costumeImg && regularImg) {
@@ -661,6 +663,10 @@ export async function renderIssueDetail(container, params = {}) {
                                </div>`
                             : `<div class="story-appearance-avatar--empty">${icon('imagePlaceholder', 20, { strokeWidth: 1.5 })}</div>`;
                     }
+
+                    const avatarContentHTML = charHref
+                        ? `<a href="${charHref}" class="story-appearance-avatar-link" style="display: block; width: 100%; text-decoration: none;">${imgHTML}</a>`
+                        : imgHTML;
                     
                     const details = [];
                     if (c.status) details.push(translateAppearanceStatus(c.status));
@@ -698,12 +704,16 @@ export async function renderIssueDetail(container, params = {}) {
                         }
                     }
 
+                    const nameHTML = charHref
+                        ? `<a href="${charHref}" class="story-appearance-name-link" style="text-decoration: none; color: inherit;"><span class="story-appearance-name">${escapeHtmlAttribute(primaryName)}</span></a>`
+                        : `<span class="story-appearance-name">${escapeHtmlAttribute(primaryName)}</span>`;
+
                     return `
                         <div class="story-appearance-card character">
                             <span class="character-card-role ${roleKey}">${roleLabel}</span>
-                            ${imgHTML}
+                            ${avatarContentHTML}
                             <div class="story-appearance-info">
-                                <span class="story-appearance-name">${escapeHtmlAttribute(primaryName)}</span>
+                                ${nameHTML}
                                 ${realNameHTML}
                                 ${personaBadgeHTML}
                                 ${detailsText ? `<span class="story-appearance-details" title="${escapeHtmlAttribute(detailsText)}">${escapeHtmlAttribute(detailsText)}</span>` : ''}
@@ -1075,6 +1085,20 @@ export async function renderIssueDetail(container, params = {}) {
                     ${reprintsHTML}
                 </div>
             </div>
+
+            ${isModerator ? `
+                <div class="volume-hero-admin-actions">
+                    <button class="btn-admin btn-admin--danger" id="issue-delete-btn" title="Видалити випуск">
+                        ${icon('trash', 14, { strokeWidth: 2.2 })}
+                    </button>
+                    ${issue.cv_id ? `
+                        <button class="btn-admin btn-admin--warning" id="issue-scrape-appearances-btn" title="Скрапити стаф та появи випуску з ComicVine">
+                            ${icon('refreshCw', 14, { strokeWidth: 2.2 })}
+                            <span>Скрапити стаф та появи</span>
+                        </button>
+                    ` : ''}
+                </div>
+            ` : ''}
         </div>
     `;
 

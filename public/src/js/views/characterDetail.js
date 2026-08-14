@@ -6,7 +6,16 @@ import { parseAliases } from '../helpers/lang.js';
 import { translateOrigin } from '../helpers/character.js';
 import { openEditCharacterModal } from '../components/modals/EditCharacterModal.js';
 import { fetchEntityEdits, renderEditorsHistoryBlock, initEditorsHistoryBlock } from '../components/editorsHistoryBlock.js';
+import { mountFilterBar } from '../components/FilterBar.js';
+import { 
+  renderEntityIssueCard, 
+  renderEntityVolumeCard, 
+  renderEntityMangaChapterCard 
+} from '../components/cards/EntityReleaseCard.js';
 import { icon } from '../helpers/icons.js';
+
+let currentAppearanceType = 'volumes'; // 'volumes' | 'issues' | 'manga'
+let appearancesSearchQuery = '';
 
 function genderText(g) {
   if (g === 1) return t('gender_male') || 'Чоловік';
@@ -42,7 +51,7 @@ function factItemHTML(iconSvg, label, valueHTML) {
 
 const NAME_RULES = { uk: ['real_name_uk', 'name_uk', 'name'], en: ['name'] };
 
-export async function renderCharacterDetail(container, params) {
+export async function renderCharacterDetail(container, params, query = {}) {
   const characterId = params.id ? parseInt(params.id, 10) : null;
   if (!characterId) {
     container.innerHTML = `<div class="container"><div class="error-state">${t('loading_error')}</div></div>`;
@@ -62,7 +71,7 @@ export async function renderCharacterDetail(container, params) {
     ]);
     const charTitle = l(char, 'name', NAME_RULES) || char.name;
     document.title = `${charTitle} — Drawn Stories`;
-    renderCharacterContent(container, char, params, edits);
+    renderCharacterContent(container, char, params, edits, query);
   } catch (err) {
     console.error(err);
     container.innerHTML = `
@@ -76,7 +85,7 @@ export async function renderCharacterDetail(container, params) {
   }
 }
 
-function renderCharacterContent(container, char, params, edits = []) {
+function renderCharacterContent(container, char, params, edits = [], query = {}) {
   const displayName = l(char, 'name', NAME_RULES) || char.name;
   const rawSubName = l(char, 'subname', { uk: ['real_name', 'name'], en: ['real_name', 'real_name_uk'] });
   const subName = rawSubName && rawSubName !== displayName ? rawSubName : null;
@@ -104,7 +113,16 @@ function renderCharacterContent(container, char, params, edits = []) {
   const teams = char.teams || [];
   const aliases = parseAliases(char.aliases);
   const personas = parsePersonas(char.personas);
-  const totalAppearances = volumes.length + issues.length + mangaChapters.length;
+  const issueVolumeIds = new Set(issues.map(iss => iss.volume_id));
+  const standaloneVolumes = volumes.filter(v => !issueVolumeIds.has(v.id));
+  const totalAppearances = standaloneVolumes.length + issues.length + mangaChapters.length;
+
+  const availableTabs = ['overview', 'appearances'];
+  if (teams.length > 0) availableTabs.push('teams');
+  const initialTab = availableTabs.includes(query?.tab) ? query.tab : 'overview';
+  const initialType = ['volumes', 'issues', 'manga'].includes(query?.type) ? query.type : 'volumes';
+  currentAppearanceType = initialType;
+  appearancesSearchQuery = query?.search || '';
 
   // Persona Subpage Mode
   if (params && params.personaIdx !== undefined) {
@@ -164,7 +182,7 @@ function renderCharacterContent(container, char, params, edits = []) {
         </div>
       `;
 
-      setupEventListeners(container, char, personaVolumes, personaIssues, [], edits);
+      setupEventListeners(container, char, personaVolumes, personaIssues, [], edits, initialTab);
       return;
     }
   }
@@ -189,6 +207,25 @@ function renderCharacterContent(container, char, params, edits = []) {
                     ${imgObj.label}
                   </button>
                 `).join('')}
+              </div>
+            ` : ''}
+            ${char.cv_id || char.hikka_slug ? `
+              <div class="character-cover-ext-sources">
+                <div class="ext-sources-title">${t('external_sources') || 'Зовнішні джерела'}</div>
+                <div class="source-links">
+                  ${char.cv_id ? `
+                    <a href="https://comicvine.gamespot.com/${char.cv_slug ? escapeHtmlAttribute(char.cv_slug) + '/' : ''}4005-${char.cv_id}/" target="_blank" rel="noreferrer">
+                      CV
+                      ${icon('externalLink', 12, { strokeWidth: 2.2 })}
+                    </a>
+                  ` : ''}
+                  ${char.hikka_slug ? `
+                    <a href="https://hikka.io/characters/${escapeHtmlAttribute(char.hikka_slug)}" target="_blank" rel="noreferrer">
+                      Hikka
+                      ${icon('externalLink', 12, { strokeWidth: 2.2 })}
+                    </a>
+                  ` : ''}
+                </div>
               </div>
             ` : ''}
           </div>
@@ -253,14 +290,14 @@ function renderCharacterContent(container, char, params, edits = []) {
       <div class="personnel-detail-tabs-band">
         <div class="container">
           <div class="personnel-detail-tabs" role="tablist">
-            <button class="personnel-detail-tab-btn is-active" data-tab="overview" role="tab">
+            <button class="personnel-detail-tab-btn ${initialTab === 'overview' ? 'is-active' : ''}" data-tab="overview" role="tab" aria-selected="${initialTab === 'overview'}">
               ${t('tab_overview')}
             </button>
-            <button class="personnel-detail-tab-btn" data-tab="appearances" role="tab">
+            <button class="personnel-detail-tab-btn ${initialTab === 'appearances' ? 'is-active' : ''}" data-tab="appearances" role="tab" aria-selected="${initialTab === 'appearances'}">
               ${icon('book', 14)} ${t('tab_appearances')} <span class="tab-count">${totalAppearances.toLocaleString()}</span>
             </button>
             ${teams.length > 0 ? `
-              <button class="personnel-detail-tab-btn" data-tab="teams" role="tab">
+              <button class="personnel-detail-tab-btn ${initialTab === 'teams' ? 'is-active' : ''}" data-tab="teams" role="tab" aria-selected="${initialTab === 'teams'}">
                 ${icon('users', 14)} ${t('tab_teams')} <span class="tab-count">${teams.length}</span>
               </button>
             ` : ''}
@@ -271,7 +308,7 @@ function renderCharacterContent(container, char, params, edits = []) {
       <!-- Main Container -->
       <div class="container" style="margin-top: 0;">
         <!-- Tab 1: Overview -->
-        <div class="personnel-detail-pane is-active" data-pane="overview">
+        <div class="personnel-detail-pane ${initialTab === 'overview' ? 'is-active' : ''}" data-pane="overview">
           <div class="character-detail-overview">
             <!-- Sidebar Custom Character Info Block -->
             <aside>
@@ -291,7 +328,7 @@ function renderCharacterContent(container, char, params, edits = []) {
                       const pImg = found && found.image ? normalizeImageUrl(found.image) : null;
                       const pDisplayName = found ? (found.name_uk || found.name) : name;
                       const tag = pId ? 'a' : 'div';
-                      const hrefAttr = pId ? `href="#/personnel/${pId}"` : '';
+                      const hrefAttr = pId ? `href="#/persons/${pId}"` : '';
 
                       return `
                         <${tag} ${hrefAttr} style="margin-top: 5px; display: flex; align-items: center; gap: .5em;">
@@ -320,7 +357,8 @@ function renderCharacterContent(container, char, params, edits = []) {
                     ? `<a href="#/issues/${firstApp.id}">${escapeHtmlAttribute(firstApp.volume_name_uk || firstApp.volume_name)} #${firstApp.issue_number}</a>`
                     : (char.first_appearance ? `#${char.first_appearance}` : null))}
                   ${factItemHTML(icon('sparkles'), t('aliases'), aliases.length ? escapeHtmlAttribute(aliases.join(', ')) : null)}
-                  ${factItemHTML(icon('externalLink'), "ComicVine", char.cv_slug ? `<a href="https://comicvine.gamespot.com/${char.cv_slug}/4005-${char.cv_id}/" target="_blank" rel="noopener">${escapeHtmlAttribute(String(char.cv_id || 'CV'))} ${icon('externalLink', 12)}</a>` : null)}
+                  ${factItemHTML(icon('externalLink'), "ComicVine", char.cv_id ? `<a href="https://comicvine.gamespot.com/${char.cv_slug ? escapeHtmlAttribute(char.cv_slug) + '/' : ''}4005-${char.cv_id}/" target="_blank" rel="noopener">${escapeHtmlAttribute(String(char.cv_id))} ${icon('externalLink', 12)}</a>` : null)}
+                  ${factItemHTML(icon('externalLink'), "Hikka", char.hikka_slug ? `<a href="https://hikka.io/characters/${escapeHtmlAttribute(char.hikka_slug)}" target="_blank" rel="noopener">${escapeHtmlAttribute(char.hikka_slug)} ${icon('externalLink', 12)}</a>` : null)}
                 </ul>
               </div>
             </aside>
@@ -333,7 +371,7 @@ function renderCharacterContent(container, char, params, edits = []) {
                     <span class="entity-section-title">${t('series_volumes')}</span>
                   </div>
                   <div class="entity-releases-grid">
-                    ${volumes.slice(0, 8).map(v => renderVolumeCardHTML(v)).join('')}
+                    ${volumes.slice(0, 8).map(v => renderEntityVolumeCard(v)).join('')}
                   </div>
                 </div>
               ` : ''}
@@ -344,7 +382,7 @@ function renderCharacterContent(container, char, params, edits = []) {
                     <span class="entity-section-title">${t('releases')}</span>
                   </div>
                   <div class="entity-releases-grid">
-                    ${issues.slice(0, 12).map(i => renderIssueCardHTML(i)).join('')}
+                    ${issues.slice(0, 12).map(i => renderEntityIssueCard(i)).join('')}
                   </div>
                 </div>
               ` : ''}
@@ -354,16 +392,17 @@ function renderCharacterContent(container, char, params, edits = []) {
           </div>
         </div>
 
-        <!-- Tab 2: Appearances Pane (Grouped by Series) -->
-        <div class="personnel-detail-pane" data-pane="appearances" style="padding-top: 28px;">
-          <div id="appearances-content">
-            ${renderAppearancesHTML(volumes, issues, mangaChapters)}
+        <!-- Tab 2: Appearances Pane -->
+        <div class="personnel-detail-pane ${initialTab === 'appearances' ? 'is-active' : ''}" data-pane="appearances" style="padding-top: 20px;">
+          <div class="personnel-detail-works-pane">
+            <div id="char-appearances-filter-bar-container" style="margin-bottom: 20px;"></div>
+            <div id="appearances-content"></div>
           </div>
         </div>
 
         <!-- Tab 3: Teams Pane (Full width, no sidebar) -->
         ${teams.length > 0 ? `
-          <div class="personnel-detail-pane" data-pane="teams" style="padding-top: 28px;">
+          <div class="personnel-detail-pane ${initialTab === 'teams' ? 'is-active' : ''}" data-pane="teams" style="padding-top: 28px;">
             <div class="character-teams-grid">
               ${teams.map(t => {
                 const tName = escapeHtmlAttribute(t.name_uk || t.name);
@@ -382,7 +421,273 @@ function renderCharacterContent(container, char, params, edits = []) {
   `;
 
   // Attach event listeners
-  setupEventListeners(container, char, volumes, issues, mangaChapters, edits);
+  setupEventListeners(container, char, volumes, issues, mangaChapters, edits, initialTab);
+}
+
+function updateCharacterUrl(charId, tab, appType) {
+  const hashWithoutQuery = window.location.hash.split('?')[0] || `#/characters/${charId}`;
+  const q = new URLSearchParams();
+  if (tab && tab !== 'overview') {
+    q.set('tab', tab);
+    if (tab === 'appearances' && appType) {
+      q.set('type', appType);
+    }
+  }
+  const qs = q.toString();
+  const newHash = qs ? `${hashWithoutQuery}?${qs}` : hashWithoutQuery;
+  window.history.replaceState(null, '', newHash);
+}
+
+function initCollapsibleSections(container, toggleBtnSelector) {
+  const sections = container.querySelectorAll('.entity-recent-section[data-volume-id]');
+  const toggleBtn = container.querySelector(toggleBtnSelector);
+
+  sections.forEach(section => {
+    const header = section.querySelector('.entity-section-header--collapsible');
+    if (!header || header.dataset.bound === 'true') return;
+    header.dataset.bound = 'true';
+
+    header.addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;
+      section.classList.toggle('is-collapsed');
+      const isCollapsed = section.classList.contains('is-collapsed');
+      header.setAttribute('aria-expanded', !isCollapsed);
+      updateToggleAllBtn(container, toggleBtn);
+    });
+  });
+
+  if (toggleBtn && toggleBtn.dataset.bound !== 'true') {
+    toggleBtn.dataset.bound = 'true';
+    toggleBtn.addEventListener('click', () => {
+      const currentSections = container.querySelectorAll('.entity-recent-section[data-volume-id]');
+      const anyCollapsed = Array.from(currentSections).some(s => s.classList.contains('is-collapsed'));
+      currentSections.forEach(s => {
+        if (anyCollapsed) {
+          s.classList.remove('is-collapsed');
+          s.querySelector('.entity-section-header--collapsible')?.setAttribute('aria-expanded', 'true');
+        } else {
+          s.classList.add('is-collapsed');
+          s.querySelector('.entity-section-header--collapsible')?.setAttribute('aria-expanded', 'false');
+        }
+      });
+      updateToggleAllBtn(container, toggleBtn);
+    });
+  }
+
+  updateToggleAllBtn(container, toggleBtn);
+}
+
+function updateToggleAllBtn(container, toggleBtn) {
+  if (!toggleBtn) return;
+  const sections = container.querySelectorAll('.entity-recent-section[data-volume-id]');
+  if (sections.length === 0) return;
+  const anyCollapsed = Array.from(sections).some(s => s.classList.contains('is-collapsed'));
+  const span = toggleBtn.querySelector('span');
+  if (span) {
+    span.textContent = anyCollapsed ? 'Розгорнути все' : 'Згорнути все';
+  }
+}
+
+function mountAppearancesFilterBar(container, charId, volumes, issues, mangaChapters) {
+  const filterContainer = container.querySelector('#char-appearances-filter-bar-container');
+  if (!filterContainer) return;
+
+  const hasManga = mangaChapters && mangaChapters.length > 0;
+
+  const filterBar = mountFilterBar(filterContainer, {
+    resultsCount: 0,
+    resultsLabel: 'Знайдено',
+    showResults: true,
+    showSearch: true,
+    searchPlaceholder: 'Шукати в появах...',
+    searchValue: appearancesSearchQuery,
+    onSearch: (val) => {
+      appearancesSearchQuery = val.trim().toLowerCase();
+      renderFilteredAppearances(container, volumes, issues, mangaChapters, filterBar);
+    },
+    showSort: false,
+    showSortOrder: false,
+    extraMiddleHtml: `
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button class="entity-toggle-all-btn" id="appearances-toggle-all-btn" type="button" style="${(currentAppearanceType === 'issues' || currentAppearanceType === 'manga') ? '' : 'display: none;'}">
+          ${icon('chevronsUpDown', 13)} <span>Розгорнути все</span>
+        </button>
+        <div class="wanted-ct-group" role="group">
+          <button class="wanted-ct-btn ${currentAppearanceType === 'volumes' ? 'is-active' : ''}" data-type="volumes">Серії</button>
+          <button class="wanted-ct-btn ${currentAppearanceType === 'issues' ? 'is-active' : ''}" data-type="issues">Випуски</button>
+          ${hasManga ? `<button class="wanted-ct-btn ${currentAppearanceType === 'manga' ? 'is-active' : ''}" data-type="manga">Манґа</button>` : ''}
+        </div>
+      </div>
+    `
+  });
+
+  filterContainer.querySelectorAll('.wanted-ct-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const type = btn.dataset.type;
+      if (type === currentAppearanceType) return;
+
+      filterContainer.querySelectorAll('.wanted-ct-btn').forEach(b => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+
+      currentAppearanceType = type;
+      updateCharacterUrl(charId, 'appearances', currentAppearanceType);
+
+      const toggleAllBtn = filterContainer.querySelector('#appearances-toggle-all-btn');
+      if (toggleAllBtn) {
+        toggleAllBtn.style.display = (currentAppearanceType === 'issues' || currentAppearanceType === 'manga') ? '' : 'none';
+      }
+
+      renderFilteredAppearances(container, volumes, issues, mangaChapters, filterBar);
+    });
+  });
+
+  renderFilteredAppearances(container, volumes, issues, mangaChapters, filterBar);
+}
+
+function renderFilteredAppearances(container, volumes, issues, mangaChapters, filterBar) {
+  const appearancesContent = container.querySelector('#appearances-content');
+  if (!appearancesContent) return;
+
+  const q = (appearancesSearchQuery || '').trim().toLowerCase();
+
+  if (currentAppearanceType === 'volumes') {
+    const filtered = (volumes || []).filter(v => {
+      if (!q) return true;
+      const name = (v.name || '').toLowerCase();
+      const nameUk = (v.name_uk || '').toLowerCase();
+      return name.includes(q) || nameUk.includes(q);
+    });
+
+    if (filterBar) filterBar.updateCount(filtered.length);
+
+    if (filtered.length === 0) {
+      appearancesContent.innerHTML = `<div class="entity-releases-empty">${t('no_appearances_found') || 'Серій не знайдено'}</div>`;
+    } else {
+      appearancesContent.innerHTML = `
+        <div class="entity-releases-grid">
+          ${filtered.map(v => renderEntityVolumeCard(v)).join('')}
+        </div>
+      `;
+    }
+  } else if (currentAppearanceType === 'issues') {
+    const filtered = (issues || []).filter(iss => {
+      if (!q) return true;
+      const name = (iss.name || '').toLowerCase();
+      const volName = (iss.volume_name || '').toLowerCase();
+      const volNameUk = (iss.volume_name_uk || '').toLowerCase();
+      const num = String(iss.issue_number || '').toLowerCase();
+      return name.includes(q) || volName.includes(q) || volNameUk.includes(q) || num.includes(q);
+    });
+
+    if (filterBar) filterBar.updateCount(filtered.length);
+
+    if (filtered.length === 0) {
+      appearancesContent.innerHTML = `<div class="entity-releases-empty">${t('no_appearances_found') || 'Випусків не знайдено'}</div>`;
+    } else {
+      const volumeMap = new Map();
+      filtered.forEach(iss => {
+        const volId = iss.volume_id;
+        if (!volumeMap.has(volId)) {
+          const title = iss.volume_name_uk || iss.volume_name || t('series') || 'Серія';
+          const image = iss.volume_image || iss.volume_cover_img || null;
+          volumeMap.set(volId, { id: volId, title, image, issues: [] });
+        }
+        volumeMap.get(volId).issues.push(iss);
+      });
+
+      let html = '';
+      const isAutoExpanded = !!q;
+      volumeMap.forEach(group => {
+        const cover = normalizeImageUrl(group.image);
+        html += `
+          <div class="entity-recent-section ${isAutoExpanded ? '' : 'is-collapsed'}" style="margin-bottom: 16px;" data-volume-id="${group.id}">
+            <div class="entity-section-header entity-section-header--collapsible" role="button" tabindex="0" aria-expanded="${isAutoExpanded}">
+              <div class="entity-section-header-left">
+                <div class="entity-section-vol-thumb">
+                  ${cover ? `<img src="${escapeHtmlAttribute(cover)}" alt="${escapeHtmlAttribute(group.title)}" loading="lazy">` : `<div class="entity-section-vol-thumb-empty">${icon('book', 14)}</div>`}
+                </div>
+                <a href="#/volumes/${group.id}" class="entity-section-vol-title" onclick="event.stopPropagation();" title="${escapeHtmlAttribute(group.title)}">
+                  ${escapeHtmlAttribute(group.title)}
+                </a>
+                <span class="entity-section-count-badge">${group.issues.length} вип.</span>
+              </div>
+              <div class="entity-section-header-right">
+                <span class="entity-section-chevron">${icon('chevronDown', 16, { strokeWidth: 2.2 })}</span>
+              </div>
+            </div>
+            <div class="entity-section-content">
+              <div class="entity-releases-grid">
+                ${group.issues.map(i => renderEntityIssueCard(i)).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      appearancesContent.innerHTML = html;
+      initCollapsibleSections(container, '#appearances-toggle-all-btn');
+    }
+  } else if (currentAppearanceType === 'manga') {
+    const filtered = (mangaChapters || []).filter(mc => {
+      if (!q) return true;
+      const title = (mc.title || '').toLowerCase();
+      const volName = (mc.volume_name || '').toLowerCase();
+      const volNameUk = (mc.volume_name_uk || '').toLowerCase();
+      const num = String(mc.chapter_number || '').toLowerCase();
+      return title.includes(q) || volName.includes(q) || volNameUk.includes(q) || num.includes(q);
+    });
+
+    if (filterBar) filterBar.updateCount(filtered.length);
+
+    if (filtered.length === 0) {
+      appearancesContent.innerHTML = `<div class="entity-releases-empty">${t('no_appearances_found') || 'Глав манґи не знайдено'}</div>`;
+    } else {
+      const volumeMap = new Map();
+      filtered.forEach(mc => {
+        const volId = mc.volume_id || 0;
+        if (!volumeMap.has(volId)) {
+          const title = mc.volume_name_uk || mc.volume_name || t('manga_chapters') || 'Манґа';
+          const image = mc.volume_image || mc.volume_cover_img || null;
+          volumeMap.set(volId, { id: volId, title, image, chapters: [] });
+        }
+        volumeMap.get(volId).chapters.push(mc);
+      });
+
+      let html = '';
+      const isAutoExpanded = !!q;
+      volumeMap.forEach(group => {
+        const cover = normalizeImageUrl(group.image);
+        html += `
+          <div class="entity-recent-section ${isAutoExpanded ? '' : 'is-collapsed'}" style="margin-bottom: 16px;" data-volume-id="${group.id}">
+            <div class="entity-section-header entity-section-header--collapsible" role="button" tabindex="0" aria-expanded="${isAutoExpanded}">
+              <div class="entity-section-header-left">
+                <div class="entity-section-vol-thumb">
+                  ${cover ? `<img src="${escapeHtmlAttribute(cover)}" alt="${escapeHtmlAttribute(group.title)}" loading="lazy">` : `<div class="entity-section-vol-thumb-empty">${icon('book', 14)}</div>`}
+                </div>
+                ${group.id ? `
+                  <a href="#/volumes/${group.id}" class="entity-section-vol-title" onclick="event.stopPropagation();" title="${escapeHtmlAttribute(group.title)}">
+                    ${escapeHtmlAttribute(group.title)}
+                  </a>
+                ` : `
+                  <span class="entity-section-vol-title">${escapeHtmlAttribute(group.title)}</span>
+                `}
+                <span class="entity-section-count-badge">${group.chapters.length} вип.</span>
+              </div>
+              <div class="entity-section-header-right">
+                <span class="entity-section-chevron">${icon('chevronDown', 16, { strokeWidth: 2.2 })}</span>
+              </div>
+            </div>
+            <div class="entity-section-content">
+              <div class="entity-releases-grid">
+                ${group.chapters.map(mc => renderEntityMangaChapterCard(mc)).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      appearancesContent.innerHTML = html;
+      initCollapsibleSections(container, '#appearances-toggle-all-btn');
+    }
+  }
 }
 
 function renderAppearancesHTML(volumes, issues, mangaChapters) {
@@ -398,6 +703,7 @@ function renderAppearancesHTML(volumes, issues, mangaChapters) {
       volumeMap.set(v.id, {
         id: v.id,
         title: v.name_uk || v.name || t('series'),
+        image: v.image || v.cover_img || null,
         volume: v,
         issues: []
       });
@@ -410,9 +716,11 @@ function renderAppearancesHTML(volumes, issues, mangaChapters) {
       const volId = iss.volume_id;
       if (!volumeMap.has(volId)) {
         const title = iss.volume_name_uk || iss.volume_name || t('series');
+        const image = iss.volume_image || iss.volume_cover_img || null;
         volumeMap.set(volId, {
           id: volId,
           title: title,
+          image: image,
           volume: null,
           issues: []
         });
@@ -425,37 +733,50 @@ function renderAppearancesHTML(volumes, issues, mangaChapters) {
 
   // Render each volume section block
   volumeMap.forEach(group => {
+    const cover = normalizeImageUrl(group.image);
     if (group.issues.length === 0) {
       if (group.volume) {
         html += `
-          <div class="entity-recent-section" style="margin-bottom: 24px;">
+          <div class="entity-recent-section" style="margin-bottom: 16px;">
             <div class="entity-section-header">
-              <a href="#/volumes/${group.id}" class="entity-section-title" style="font-size: 15px; font-weight: 700; text-decoration: none; color: var(--text);">
-                ${escapeHtmlAttribute(group.title)}
-              </a>
-              <a href="#/volumes/${group.id}" class="entity-section-link">
-                ${t('go_to_series')} ${icon('chevronRight', 14)}
-              </a>
+              <div class="entity-section-header-left">
+                <div class="entity-section-vol-thumb">
+                  ${cover ? `<img src="${escapeHtmlAttribute(cover)}" alt="${escapeHtmlAttribute(group.title)}" loading="lazy">` : `<div class="entity-section-vol-thumb-empty">${icon('book', 14)}</div>`}
+                </div>
+                <a href="#/volumes/${group.id}" class="entity-section-vol-title" title="${escapeHtmlAttribute(group.title)}">
+                  ${escapeHtmlAttribute(group.title)}
+                </a>
+              </div>
             </div>
-            <div class="entity-releases-grid">
-              ${renderVolumeCardHTML(group.volume)}
+            <div class="entity-section-content">
+              <div class="entity-releases-grid">
+                ${renderEntityVolumeCard(group.volume)}
+              </div>
             </div>
           </div>
         `;
       }
     } else {
       html += `
-        <div class="entity-recent-section" style="margin-bottom: 24px;">
-          <div class="entity-section-header">
-            <a href="#/volumes/${group.id}" class="entity-section-title" style="font-size: 15px; font-weight: 700; text-decoration: none; color: var(--text);">
-              ${escapeHtmlAttribute(group.title)}
-            </a>
-            <a href="#/volumes/${group.id}" class="entity-section-link">
-              ${t('go_to_series')} ${icon('chevronRight', 14)}
-            </a>
+        <div class="entity-recent-section is-collapsed" style="margin-bottom: 16px;" data-volume-id="${group.id}">
+          <div class="entity-section-header entity-section-header--collapsible" role="button" tabindex="0" aria-expanded="false">
+            <div class="entity-section-header-left">
+              <div class="entity-section-vol-thumb">
+                ${cover ? `<img src="${escapeHtmlAttribute(cover)}" alt="${escapeHtmlAttribute(group.title)}" loading="lazy">` : `<div class="entity-section-vol-thumb-empty">${icon('book', 14)}</div>`}
+              </div>
+              <a href="#/volumes/${group.id}" class="entity-section-vol-title" onclick="event.stopPropagation();" title="${escapeHtmlAttribute(group.title)}">
+                ${escapeHtmlAttribute(group.title)}
+              </a>
+              <span class="entity-section-count-badge">${group.issues.length} вип.</span>
+            </div>
+            <div class="entity-section-header-right">
+              <span class="entity-section-chevron">${icon('chevronDown', 16, { strokeWidth: 2.2 })}</span>
+            </div>
           </div>
-          <div class="entity-releases-grid">
-            ${group.issues.map(i => renderIssueCardHTML(i)).join('')}
+          <div class="entity-section-content">
+            <div class="entity-releases-grid">
+              ${group.issues.map(i => renderEntityIssueCard(i)).join('')}
+            </div>
           </div>
         </div>
       `;
@@ -465,14 +786,14 @@ function renderAppearancesHTML(volumes, issues, mangaChapters) {
   // Render Manga Chapters if any
   if (mangaChapters && mangaChapters.length > 0) {
     html += `
-      <div class="entity-recent-section" style="margin-bottom: 24px;">
+      <div class="entity-recent-section" style="margin-bottom: 16px;">
         <div class="entity-section-header">
-          <span class="entity-section-title" style="font-size: 15px; font-weight: 700; color: var(--text);">
+          <span class="entity-section-title" style="font-size: 14px; font-weight: 700; color: var(--text);">
             ${t('manga_chapters_count', { count: mangaChapters.length })}
           </span>
         </div>
         <div class="entity-releases-grid">
-          ${mangaChapters.map(mc => renderMangaChapterCardHTML(mc)).join('')}
+          ${mangaChapters.map(mc => renderEntityMangaChapterCard(mc)).join('')}
         </div>
       </div>
     `;
@@ -481,67 +802,7 @@ function renderAppearancesHTML(volumes, issues, mangaChapters) {
   return html;
 }
 
-function renderVolumeCardHTML(vol) {
-  const cover = normalizeImageUrl(vol.image);
-  const title = escapeHtmlAttribute(vol.name_uk || vol.name || t('no_title'));
-  const countText = vol.char_issue_count ? t('issues_abbr', { count: vol.char_issue_count }) : t('issues_abbr', { count: vol.issue_count || 0 });
-
-  return `
-    <a href="#/volumes/${vol.id}" class="entity-release-card">
-      <div class="entity-release-cover">
-        ${cover ? `<img src="${escapeHtmlAttribute(cover)}" alt="${title}" loading="lazy">` : `<div class="entity-release-cover-empty">${icon('imagePlaceholder', 32, { strokeWidth: 1.5 })}</div>`}
-        <span class="entity-role-badge">${countText}</span>
-      </div>
-      <div class="entity-release-body">
-        <div class="entity-release-title" title="${title}">${title}</div>
-        <div class="entity-release-sub">${vol.name || ''}</div>
-      </div>
-    </a>
-  `;
-}
-
-function renderIssueCardHTML(issue) {
-  const cover = normalizeImageUrl(issue.image);
-  const volName = escapeHtmlAttribute(issue.volume_name_uk || issue.volume_name || '');
-  const numText = issue.issue_number ? `#${issue.issue_number}` : '';
-  const displayTitle = numText ? `${volName} ${numText}` : volName;
-  const issueTitle = escapeHtmlAttribute(issue.name || '');
-
-  return `
-    <a href="#/issues/${issue.id}" class="entity-release-card">
-      <div class="entity-release-cover">
-        ${cover ? `<img src="${escapeHtmlAttribute(cover)}" alt="${displayTitle}" loading="lazy">` : `<div class="entity-release-cover-empty">${icon('imagePlaceholder', 32, { strokeWidth: 1.5 })}</div>`}
-        ${issue.role ? `<span class="entity-role-badge">${escapeHtmlAttribute(issue.role)}</span>` : ''}
-      </div>
-      <div class="entity-release-body">
-        <div class="entity-release-title" title="${displayTitle}">${displayTitle}</div>
-        ${issueTitle ? `<div class="entity-release-sub" title="${issueTitle}">${issueTitle}</div>` : ''}
-      </div>
-    </a>
-  `;
-}
-
-function renderMangaChapterCardHTML(mc) {
-  const displayTitle = t('manga_chapter_num', { num: mc.chapter_number });
-  const subTitle = escapeHtmlAttribute(mc.title || mc.volume_name || '');
-
-  return `
-    <a href="#/manga-chapters/${mc.id}" class="entity-release-card">
-      <div class="entity-release-cover">
-        <div class="entity-release-cover-empty">${icon('book', 14)}</div>
-        ${mc.role ? `<span class="entity-role-badge">${escapeHtmlAttribute(mc.role)}</span>` : ''}
-      </div>
-      <div class="entity-release-body">
-        <div class="entity-release-title">${displayTitle}</div>
-        ${subTitle ? `<div class="entity-release-sub">${subTitle}</div>` : ''}
-      </div>
-    </a>
-  `;
-}
-
-
-
-function setupEventListeners(container, char, volumes, issues, mangaChapters, edits) {
+function setupEventListeners(container, char, volumes, issues, mangaChapters, edits, initialTab = 'overview') {
   // Image switcher
   const mainImg = container.querySelector('#char-main-img');
   container.querySelectorAll('.character-img-thumb').forEach(btn => {
@@ -558,25 +819,24 @@ function setupEventListeners(container, char, volumes, issues, mangaChapters, ed
   container.querySelectorAll('.personnel-detail-tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const tabId = btn.dataset.tab;
-      container.querySelectorAll('.personnel-detail-tab-btn').forEach(b => b.classList.remove('is-active'));
+      container.querySelectorAll('.personnel-detail-tab-btn').forEach(b => {
+        b.classList.remove('is-active');
+        b.setAttribute('aria-selected', 'false');
+      });
       container.querySelectorAll('.personnel-detail-pane').forEach(p => p.classList.remove('is-active'));
 
       btn.classList.add('is-active');
+      btn.setAttribute('aria-selected', 'true');
       const targetPane = container.querySelector(`.personnel-detail-pane[data-pane="${tabId}"]`);
       if (targetPane) targetPane.classList.add('is-active');
-    });
-  });
 
-  // Appearances Subtabs switching
-  const appearancesContent = container.querySelector('#appearances-content');
-  container.querySelectorAll('.subtab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const subtab = btn.dataset.subtab;
-      container.querySelectorAll('.subtab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+      updateCharacterUrl(char.id, tabId, currentAppearanceType);
 
-      if (appearancesContent) {
-        appearancesContent.innerHTML = renderAppearancesHTML(volumes, issues, mangaChapters, subtab);
+      if (tabId === 'appearances') {
+        const filterContainer = container.querySelector('#char-appearances-filter-bar-container');
+        if (filterContainer && !filterContainer.querySelector('.filter-bar')) {
+          mountAppearancesFilterBar(container, char.id, volumes, issues, mangaChapters);
+        }
       }
     });
   });
@@ -591,6 +851,10 @@ function setupEventListeners(container, char, volumes, issues, mangaChapters, ed
       }
     });
   });
+
+  if (initialTab === 'appearances') {
+    mountAppearancesFilterBar(container, char.id, volumes, issues, mangaChapters);
+  }
 
   initEditorsHistoryBlock(container, edits);
 }

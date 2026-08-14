@@ -3,6 +3,11 @@ import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { currentUser } from '../shell.js';
 import { createPaginator } from '../components/Pagination.js';
 import { createComicCard } from '../components/cards/ComicCard.js';
+import { 
+  renderEntityVolumeCard, 
+  renderEntityIssueCard, 
+  renderEntityCollectionCard 
+} from '../components/cards/EntityReleaseCard.js';
 import { getPublisherColor } from '../helpers/publisher.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { t } from '../helpers/i18n.js';
@@ -74,67 +79,6 @@ function factItemHTML(label, valueHTML) {
       <span class="pub-detail-fact-label">${label}</span>
       <span class="pub-detail-fact-value">${valueHTML}</span>
     </li>
-  `;
-}
-
-function volumeReleaseCardHTML(vol) {
-  const imgUrl = normalizeImageUrl(vol.image);
-  const title = escapeHtmlAttribute(vol.name_uk || vol.name || 'Без назви');
-  const issueCount = vol.issue_count || 0;
-  const coverHtml = imgUrl
-    ? `<img src="${escapeHtmlAttribute(imgUrl)}" alt="${title}" loading="lazy">`
-    : `<div class="entity-release-cover-empty">${icon('imagePlaceholder', 36, { strokeWidth: 1.5 })}</div>`;
-
-  return `
-    <a href="#/volumes/${vol.id}" class="entity-release-card">
-      <div class="entity-release-cover">${coverHtml}</div>
-      <div class="entity-release-body">
-        <div class="entity-release-title" title="${title}">${title}</div>
-        <div class="entity-release-sub">${issueCount} вип.</div>
-      </div>
-    </a>
-  `;
-}
-
-function issueReleaseCardHTML(issue) {
-  const imgUrl = normalizeImageUrl(issue.image);
-  const title = escapeHtmlAttribute(issue.name || `Випуск #${issue.issue_number || '?'}`);
-  const volName = escapeHtmlAttribute(issue.volume_name_uk || issue.volume_name || '');
-  const numText = issue.issue_number ? `#${issue.issue_number}` : '';
-  const displayTitle = numText ? `${volName} ${numText}` : volName;
-  const coverHtml = imgUrl
-    ? `<img src="${escapeHtmlAttribute(imgUrl)}" alt="${title}" loading="lazy">`
-    : `<div class="entity-release-cover-empty">${icon('imagePlaceholder', 36, { strokeWidth: 1.5 })}</div>`;
-
-  return `
-    <a href="#/issues/${issue.id}" class="entity-release-card">
-      <div class="entity-release-cover">${coverHtml}</div>
-      <div class="entity-release-body">
-        <div class="entity-release-title" title="${displayTitle}">${displayTitle}</div>
-        <div class="entity-release-sub">${title}</div>
-      </div>
-    </a>
-  `;
-}
-
-function collectionReleaseCardHTML(coll) {
-  const imgUrl = normalizeImageUrl(coll.image);
-  const title = escapeHtmlAttribute(coll.name || `Збірник #${coll.issue_number || '?'}`);
-  const volName = escapeHtmlAttribute(coll.volume_name_uk || coll.volume_name || '');
-  const numText = coll.issue_number ? `#${coll.issue_number}` : '';
-  const displayTitle = numText ? `${volName} ${numText}` : volName;
-  const coverHtml = imgUrl
-    ? `<img src="${escapeHtmlAttribute(imgUrl)}" alt="${title}" loading="lazy">`
-    : `<div class="entity-release-cover-empty">${icon('imagePlaceholder', 36, { strokeWidth: 1.5 })}</div>`;
-
-  return `
-    <a href="#/collections/${coll.id}" class="entity-release-card">
-      <div class="entity-release-cover">${coverHtml}</div>
-      <div class="entity-release-body">
-        <div class="entity-release-title" title="${displayTitle}">${displayTitle}</div>
-        <div class="entity-release-sub">${title}</div>
-      </div>
-    </a>
   `;
 }
 
@@ -314,7 +258,7 @@ function buildDetailHTML(pub, edits = []) {
                   </a>
                 </div>
                 ${latestVolumes.length > 0
-                  ? `<div class="entity-releases-grid">${latestVolumes.map(volumeReleaseCardHTML).join('')}</div>`
+                  ? `<div class="entity-releases-grid">${latestVolumes.map(v => renderEntityVolumeCard(v)).join('')}</div>`
                   : `<div class="entity-releases-empty">Серій поки немає</div>`
                 }
               </div>
@@ -328,7 +272,7 @@ function buildDetailHTML(pub, edits = []) {
                   </a>
                 </div>
                 ${latestIssues.length > 0
-                  ? `<div class="entity-releases-grid">${latestIssues.map(issueReleaseCardHTML).join('')}</div>`
+                  ? `<div class="entity-releases-grid">${latestIssues.map(i => renderEntityIssueCard(i)).join('')}</div>`
                   : `<div class="entity-releases-empty">Випусків поки немає</div>`
                 }
               </div>
@@ -342,7 +286,7 @@ function buildDetailHTML(pub, edits = []) {
                   </a>
                 </div>
                 ${latestCollections.length > 0
-                  ? `<div class="entity-releases-grid">${latestCollections.map(collectionReleaseCardHTML).join('')}</div>`
+                  ? `<div class="entity-releases-grid">${latestCollections.map(c => renderEntityCollectionCard(c)).join('')}</div>`
                   : `<div class="entity-releases-empty">Збірників поки немає</div>`
                 }
               </div>

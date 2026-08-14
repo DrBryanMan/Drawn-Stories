@@ -99,7 +99,14 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 12px;
+  gap: 6px;
+  font-size: 11px;
+}
+.char-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
 }
 .char-stat-label {
   color: var(--text-muted);

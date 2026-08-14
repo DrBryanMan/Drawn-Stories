@@ -134,6 +134,8 @@ export function openTerminalLogModal({ title, sseUrl, onFinish, autoReload = fal
             else if (lower.includes('попередження')) cat = 'warning';
             else if (lower.includes('успішно') || data.includes('[~]')) cat = 'success';
             else if (lower.includes('початок') || data.includes('[system]') || lower.includes('запуск')) cat = 'system';
+            else if (lower.includes('персонаж')) cat = 'character';
+            else if (lower.includes('творц') || lower.includes('автор')) cat = 'creator';
             
             appendLog(data, cat);
             statusText.textContent = 'Виконується обробка даних...';

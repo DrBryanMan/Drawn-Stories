@@ -134,107 +134,243 @@ def get_or_create_entity(db, table_name, cv_id, name, cv_slug):
     new_row = db.get_one(f"SELECT id FROM {table_name} WHERE cv_id = %s", [cv_id])
     return new_row['id']
 
-# ── API character parser helpers ─────────────────────
-API_KEY = os.environ.get("CV_API_KEY", "99b8aaa60addd5a3a119afbb1c57625e4c808c26")
 
+# ── HTML parser helpers ──────────────────────────────
 def extract_image_path(image_url):
     if not image_url:
         return None
-    match = re.search(r'(\d+/\d+/[^/\s]+(?:\.(?:jpg|jpeg|png|gif|webp))?)', image_url)
-    return f"/{match.group(1)}" if match else None
+    match = re.search(r'/(?:uploads/|a/uploads/)?(?:[a-zA-Z0-9_]+/)?(\d+/\d+/[^/\s?#]+(?:\.(?:jpg|jpeg|png|gif|webp))?)', image_url)
+    if match:
+        return f"/{match.group(1)}"
+    match2 = re.search(r'(\d+/\d+/[^/\s?#]+)', image_url)
+    return f"/{match2.group(1)}" if match2 else image_url
 
-def extract_slug(site_url, cv_prefix):
-    if not site_url:
-        return None
-    match = re.search(rf'/([^/]+)/{cv_prefix}-\d+/?$', site_url)
-    return match.group(1) if match else None
 
-def normalize_aliases(raw):
-    if not raw:
+def parse_gender(gender_str):
+    if not gender_str:
         return None
-    if isinstance(raw, list):
-        lines = [str(x).strip() for x in raw if x]
-    else:
-        lines = [line.strip() for line in str(raw).replace("\r", "").split("\n") if line.strip()]
-    return json.dumps(lines, ensure_ascii=False) if lines else None
+    g = gender_str.strip().lower()
+    if g in ("male", "чоловіча"):
+        return 1
+    if g in ("female", "жіноча"):
+        return 2
+    return 0
+
+
+def parse_character_html(html, cv_id, default_name="", default_slug=""):
+    if not html:
+        return None
+    soup = BeautifulSoup(html, "html.parser")
+    
+    img_el = soup.select_one(".wiki-hdr .wiki-boxart img")
+    img_src = img_el.get("src") if img_el else None
+    image_path = extract_image_path(img_src)
+
+    table = soup.select_one("aside.secondary-content .wiki-details .table, aside.secondary-content table, .wiki-details table")
+    fields = {}
+    links_map = {}
+    
+    if table:
+        for row in table.find_all("tr"):
+            th = row.find(["th", "td", "span"], class_=lambda c: c and ("field-label" in c or "label" in c)) or row.find("th")
+            td = row.find("td")
+            if not th or not td:
+                continue
+            th_text = th.get_text(strip=True).lower()
+            display_el = td.find(class_=lambda c: c and "wiki-item-display" in c) or td
+            val_text = display_el.get_text("\n", strip=True)
+            fields[th_text] = val_text
+            
+            links = []
+            for a in td.find_all("a"):
+                href = a.get("href", "")
+                if href:
+                    links.append({"text": a.get_text(strip=True), "href": href})
+            links_map[th_text] = links
+
+    name = fields.get("super name") or fields.get("name") or default_name
+    real_name = fields.get("real name") or None
+    
+    raw_aliases = fields.get("aliases", "")
+    aliases_list = [line.strip() for line in raw_aliases.split("\n") if line.strip() and line.strip().lower() != "none"]
+    aliases_json = json.dumps(aliases_list, ensure_ascii=False) if aliases_list else None
+
+    gender = parse_gender(fields.get("gender"))
+    origin = fields.get("character type") or None
+
+    birth = fields.get("birthday") or fields.get("birth")
+    if birth and birth.strip().lower() in ("n/a", "none", ""):
+        birth = None
+
+    pub_cv_id = None
+    pub_name = None
+    pub_links = links_map.get("publisher", [])
+    if pub_links:
+        m = re.search(r'/4010-(\d+)/?$', pub_links[0]["href"])
+        if m:
+            pub_cv_id = int(m.group(1))
+            pub_name = pub_links[0]["text"]
+
+    first_app_cv_id = None
+    fa_links = links_map.get("first appearance", [])
+    if fa_links:
+        m = re.search(r'/4000-(\d+)/?$', fa_links[0]["href"])
+        if m:
+            first_app_cv_id = int(m.group(1))
+
+    return {
+        "cv_id": cv_id,
+        "name": name,
+        "real_name": real_name,
+        "cv_slug": default_slug,
+        "image": image_path,
+        "aliases": aliases_json,
+        "gender": gender,
+        "origin": origin,
+        "birth": birth,
+        "publisher_cv_id": pub_cv_id,
+        "publisher_name": pub_name,
+        "first_app_cv_id": first_app_cv_id
+    }
+
+
+def parse_person_html(html, cv_id, default_name="", default_slug=""):
+    if not html:
+        return None
+    soup = BeautifulSoup(html, "html.parser")
+    
+    img_el = soup.select_one(".wiki-hdr .wiki-boxart img")
+    img_src = img_el.get("src") if img_el else None
+    image_path = extract_image_path(img_src)
+
+    table = soup.select_one("aside.secondary-content .wiki-details .table, aside.secondary-content table, .wiki-details table")
+    fields = {}
+    links_map = {}
+    
+    if table:
+        for row in table.find_all("tr"):
+            th = row.find(["th", "td", "span"], class_=lambda c: c and ("field-label" in c or "label" in c)) or row.find("th")
+            td = row.find("td")
+            if not th or not td:
+                continue
+            th_text = th.get_text(strip=True).lower()
+            display_el = td.find(class_=lambda c: c and "wiki-item-display" in c) or td
+            val_text = display_el.get_text("\n", strip=True)
+            fields[th_text] = val_text
+            
+            links = []
+            for a in td.find_all("a"):
+                href = a.get("href", "")
+                if href:
+                    links.append({"text": a.get_text(strip=True), "href": href})
+            links_map[th_text] = links
+
+    name = fields.get("name") or default_name
+    gender = parse_gender(fields.get("gender"))
+
+    birth = fields.get("birth")
+    if birth and birth.strip().lower() in ("n/a", "none", ""):
+        birth = None
+    death = fields.get("death")
+    if death and death.strip().lower() in ("n/a", "none", ""):
+        death = None
+
+    hometown = fields.get("town") or fields.get("hometown") or None
+    if hometown and hometown.strip().lower() in ("n/a", "none", ""):
+        hometown = None
+
+    country = fields.get("country") or None
+    if country and country.strip().lower() in ("n/a", "none", ""):
+        country = None
+
+    website = fields.get("website") or None
+    web_links = links_map.get("website", [])
+    if web_links and web_links[0]["href"]:
+        website = web_links[0]["href"]
+    if website and website.strip().lower() in ("n/a", "none", "", "http://", "https://"):
+        website = None
+
+    raw_aliases = fields.get("aliases", "")
+    aliases_list = [line.strip() for line in raw_aliases.split("\n") if line.strip() and line.strip().lower() != "none"]
+    aliases_json = json.dumps(aliases_list, ensure_ascii=False) if aliases_list else None
+
+    return {
+        "cv_id": cv_id,
+        "name": name,
+        "cv_slug": default_slug,
+        "image": image_path,
+        "aliases": aliases_json,
+        "gender": gender,
+        "birth": birth,
+        "death": death,
+        "hometown": hometown,
+        "country": country,
+        "website": website
+    }
+
 
 def get_or_create_character(db, scraper, cv_id, default_name, default_cv_slug, log_callback):
     row = db.get_one("SELECT id FROM characters WHERE cv_id = %s", [cv_id])
     if row:
         return row['id']
-        
-    log_callback(f"Персонажа '{default_name}' (CV ID: {cv_id}) немає в базі. Запит до ComicVine API...")
-    url = f"https://comicvine.gamespot.com/api/character/4005-{cv_id}/"
-    params = {
-        "api_key": API_KEY,
-        "format": "json",
-        "field_list": "id,name,real_name,site_detail_url,image,aliases,birth,death,gender,origin,first_appeared_in_issue,publisher"
-    }
-    
+
+    log_callback(f"Персонажа '{default_name}' (CV ID: {cv_id}) немає в базі. Скрапінг сторінки ComicVine...")
+    slug = default_cv_slug or 'character'
+    url = f"https://comicvine.gamespot.com/{slug}/4005-{cv_id}/"
+
     try:
-        response = scraper.get(url, params=params, timeout=20)
-        if response.status_code == 200:
-            data = response.json()
-            if data.get("status_code") == 1 and data.get("results"):
-                res = data["results"]
-                
-                char_name = res.get("name") or default_name
-                real_name = res.get("real_name")
-                cv_slug = extract_slug(res.get("site_detail_url"), "4005") or default_cv_slug
-                image_path = extract_image_path(res.get("image", {}).get("original_url")) if res.get("image") else None
-                aliases = normalize_aliases(res.get("aliases"))
-                birth = res.get("birth")
-                death = res.get("death")
-                gender = res.get("gender")
-                origin = res.get("origin", {}).get("name") if res.get("origin") else None
-                
-                # Resolve publisher
-                publisher_id = None
-                pub_data = res.get("publisher")
-                if pub_data and pub_data.get("id"):
-                    pub_cv_id = pub_data["id"]
-                    pub_name = pub_data.get("name")
-                    pub_row = db.get_one("SELECT id FROM publishers WHERE cv_id = %s", [pub_cv_id])
-                    if pub_row:
-                        publisher_id = pub_row["id"]
-                    else:
-                        db.execute("INSERT INTO publishers (cv_id, name) VALUES (%s, %s)", [pub_cv_id, pub_name])
-                        new_pub = db.get_one("SELECT id FROM publishers WHERE cv_id = %s", [pub_cv_id])
-                        publisher_id = new_pub["id"]
-                        log_callback(f"Створено видавництво для персонажа: {pub_name} (CV ID: {pub_cv_id})")
-                
-                # Resolve first appearance
-                first_app_id = None
-                first_app_data = res.get("first_appeared_in_issue")
-                if first_app_data and first_app_data.get("id"):
-                    fa_cv_id = first_app_data["id"]
-                    issue_row = db.get_one("SELECT id FROM issues WHERE cv_id = %s", [fa_cv_id])
-                    if issue_row:
-                        first_app_id = issue_row["id"]
-                
-                db.execute(
-                    """
-                    INSERT INTO characters (
-                        cv_id, name, real_name, cv_slug, image, aliases, birth, death, gender, origin, first_appearance, publisher
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """,
-                    [
-                        cv_id, char_name, real_name, cv_slug, image_path, aliases, birth, death, gender, origin, first_app_id, publisher_id
-                    ]
-                )
-                
-                new_char = db.get_one("SELECT id FROM characters WHERE cv_id = %s", [cv_id])
-                log_callback(f"Персонажа {char_name} успішно імпортовано з ComicVine API!")
-                return new_char["id"]
-            else:
-                log_callback(f"Попередження: ComicVine API повернув статус {data.get('status_code')} або результати порожні.")
-        else:
-            log_callback(f"Попередження: Не вдалося отримати дані з ComicVine API. Статус-код: {response.status_code}")
-    except Exception as api_err:
-        log_callback(f"Помилка при запиті до API ComicVine для персонажа: {api_err}")
-        
+        html = fetch_page(scraper, url, log_callback, max_retries=2)
+        char_data = parse_character_html(html, cv_id, default_name, default_cv_slug) if html else None
+
+        if char_data:
+            # 1. Resolve publisher
+            publisher_id = None
+            if char_data["publisher_cv_id"]:
+                pub_cv_id = char_data["publisher_cv_id"]
+                pub_name = char_data["publisher_name"] or "Unknown Publisher"
+                pub_row = db.get_one("SELECT id FROM publishers WHERE cv_id = %s", [pub_cv_id])
+                if pub_row:
+                    publisher_id = pub_row["id"]
+                else:
+                    db.execute("INSERT INTO publishers (cv_id, name) VALUES (%s, %s)", [pub_cv_id, pub_name])
+                    new_pub = db.get_one("SELECT id FROM publishers WHERE cv_id = %s", [pub_cv_id])
+                    publisher_id = new_pub["id"] if new_pub else None
+
+            # 2. Resolve first appearance (пошук issues.id за cv_id випуску)
+            first_app_id = None
+            if char_data["first_app_cv_id"]:
+                fa_cv_id = char_data["first_app_cv_id"]
+                iss_row = db.get_one("SELECT id FROM issues WHERE cv_id = %s", [fa_cv_id])
+                if iss_row:
+                    first_app_id = iss_row["id"]
+
+            db.execute(
+                """
+                INSERT INTO characters (
+                    cv_id, name, real_name, cv_slug, image, aliases, birth, gender, origin, first_appearance, publisher
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                [
+                    cv_id,
+                    char_data["name"],
+                    char_data["real_name"],
+                    char_data["cv_slug"],
+                    char_data["image"],
+                    char_data["aliases"],
+                    char_data["birth"],
+                    char_data["gender"],
+                    char_data["origin"],
+                    first_app_id,
+                    publisher_id
+                ]
+            )
+            new_char = db.get_one("SELECT id FROM characters WHERE cv_id = %s", [cv_id])
+            log_callback(f"Персонажа '{char_data['name']}' успішно зіскраплено та додано в БД!")
+            return new_char["id"]
+    except Exception as e:
+        log_callback(f"Помилка скрапінгу персонажа {default_name}: {e}")
+
     # Fallback
-    log_callback(f"Створюємо персонажа {default_name} за спрощеною схемою...")
     db.execute(
         "INSERT INTO characters (cv_id, name, cv_slug) VALUES (%s, %s, %s)",
         [cv_id, default_name, default_cv_slug]
@@ -242,10 +378,60 @@ def get_or_create_character(db, scraper, cv_id, default_name, default_cv_slug, l
     new_char = db.get_one("SELECT id FROM characters WHERE cv_id = %s", [cv_id])
     return new_char["id"]
 
+
+def get_or_create_person(db, scraper, cv_id, default_name, default_cv_slug, log_callback):
+    row = db.get_one("SELECT id FROM persons WHERE cv_id = %s", [cv_id])
+    if row:
+        return row['id']
+
+    log_callback(f"Творця '{default_name}' (CV ID: {cv_id}) немає в базі. Скрапінг сторінки ComicVine...")
+    slug = default_cv_slug or 'person'
+    url = f"https://comicvine.gamespot.com/{slug}/4040-{cv_id}/"
+
+    try:
+        html = fetch_page(scraper, url, log_callback, max_retries=2)
+        person_data = parse_person_html(html, cv_id, default_name, default_cv_slug) if html else None
+
+        if person_data:
+            db.execute(
+                """
+                INSERT INTO persons (
+                    cv_id, name, cv_slug, image, aliases, gender, birth, death, hometown, country, website
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                [
+                    cv_id,
+                    person_data["name"],
+                    person_data["cv_slug"],
+                    person_data["image"],
+                    person_data["aliases"],
+                    person_data["gender"],
+                    person_data["birth"],
+                    person_data["death"],
+                    person_data["hometown"],
+                    person_data["country"],
+                    person_data["website"]
+                ]
+            )
+            new_person = db.get_one("SELECT id FROM persons WHERE cv_id = %s", [cv_id])
+            log_callback(f"Творця '{person_data['name']}' успішно зіскраплено та додано в БД!")
+            return new_person["id"]
+    except Exception as e:
+        log_callback(f"Помилка скрапінгу творця {default_name}: {e}")
+
+    # Fallback
+    db.execute(
+        "INSERT INTO persons (cv_id, name, cv_slug) VALUES (%s, %s, %s)",
+        [cv_id, default_name, default_cv_slug]
+    )
+    new_person = db.get_one("SELECT id FROM persons WHERE cv_id = %s", [cv_id])
+    return new_person["id"]
+
+
 # ── Scraper services ─────────────────────────────────
 def scrape_issue_appearances_logic(db, scraper, issue_id, log_callback):
     # 1. Get issue from DB
-    issue = db.get_one("SELECT cv_id, cv_slug, name, issue_number FROM issues WHERE id = %s", [issue_id])
+    issue = db.get_one("SELECT id, volume_id, cv_id, cv_slug, name, issue_number FROM issues WHERE id = %s", [issue_id])
     if not issue:
         log_callback(f"Помилка: Випуск з ID {issue_id} не знайдено в БД.")
         return False
@@ -289,10 +475,16 @@ def scrape_issue_appearances_logic(db, scraper, issue_id, log_callback):
     # Characters
     db.execute("DELETE FROM issue_characters WHERE issue_id = %s", [issue_id])
     added_chars = 0
+    volume_id = issue.get('volume_id')
     for char in appearances['characters']:
         try:
             char_id = get_or_create_character(db, scraper, char['cv_id'], char['name'], char['cv_slug'], log_callback)
             db.execute("INSERT INTO issue_characters (issue_id, character_id, story_num) VALUES (%s, %s, 0) ON CONFLICT DO NOTHING", [issue_id, char_id])
+            if volume_id:
+                db.execute(
+                    "INSERT INTO volume_characters (volume_id, character_id, role) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+                    [volume_id, char_id, 'minor']
+                )
             added_chars += 1
         except Exception as e:
             log_callback(f"Помилка збереження персонажа {char['name']}: {e}")
@@ -303,7 +495,7 @@ def scrape_issue_appearances_logic(db, scraper, issue_id, log_callback):
     added_persons = 0
     for creator in appearances['creators']:
         try:
-            person_id = get_or_create_entity(db, 'persons', creator['cv_id'], creator['name'], creator['cv_slug'])
+            person_id = get_or_create_person(db, scraper, creator['cv_id'], creator['name'], creator['cv_slug'], log_callback)
             for role in creator['roles']:
                 db.execute("INSERT INTO issue_persons (issue_id, person_id, role) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING", [issue_id, person_id, role])
                 added_persons += 1
@@ -596,168 +788,98 @@ def scrape_manga_characters_logic(db, volume_id, log_callback):
 
 def scrape_hikka_characters_logic(db, volume_id: int, log_callback) -> bool:
     """
-    Парсить персонажів з Hikka API (https://api.hikka.io/manga/{hikka_slug}/characters) для тому volume_id,
-    створює чи оновлює записи у таблиці characters та пов'язує їх у volume_characters.
+    Парсить персонажів з Hikka API для тому volume_id,
+    використовуючи єдину спільну логіку з server.scripts.hikka_characters_parser.
     """
-    import urllib.request
-    import urllib.error
-    import json
+    from server.scripts.hikka_characters_parser import scrape_hikka_characters_for_volume
+    return scrape_hikka_characters_for_volume(db, volume_id, log_callback=log_callback)
 
-    # 1. Отримуємо дані тому з БД
-    vol = db.get_one("SELECT id, name, name_uk, hikka_slug FROM volumes WHERE id = %s", [volume_id])
-    if not vol:
-        log_callback(f"Помилка: Том з ID {volume_id} не знайдено.")
-        return False
 
-    hikka_slug = vol.get("hikka_slug")
-    vol_name = vol.get('name_uk') or vol.get('name') or f"Volume #{volume_id}"
-    
-    if not hikka_slug:
-        log_callback(f"Помилка: У тому '{vol_name}' відсутній Hikka slug.")
-        return False
+def scrape_hikka_authors_logic(db, volume_id: int, log_callback) -> bool:
+    """
+    Парсить авторів з Hikka API для тому volume_id,
+    використовуючи єдину спільну логіку з server.scripts.hikka_authors_parser.
+    """
+    from server.scripts.hikka_authors_parser import scrape_hikka_authors_for_volume
+    return scrape_hikka_authors_for_volume(db, volume_id, log_callback=log_callback)
 
-    log_callback(f"Початок парсингу персонажів з Hikka для тому '{vol_name}' (ID: {volume_id}, Hikka slug: {hikka_slug})")
-    
-    url = f"https://api.hikka.io/manga/{hikka_slug}/characters"
-    log_callback(f"Запит до Hikka API: {url}")
-    
-    req = urllib.request.Request(
-        url,
-        headers={
-            'User-Agent': 'DrawnStoriesAdmin/1.0 (Windows NT 10.0)',
-            'Accept': 'application/json'
-        }
+
+def scrape_character_images_logic(db, scraper, log_callback) -> bool:
+    """
+    Повторно скрапить зображення персонажів з ComicVine за селектором
+    .imgboxart img, .wiki-image img для всіх персонажів з cv_id.
+    """
+    characters = db.get_all(
+        "SELECT id, cv_id, cv_slug, name, image FROM characters WHERE cv_id IS NOT NULL ORDER BY id"
     )
-    
-    try:
-        with urllib.request.urlopen(req, timeout=25) as response:
-            if response.status == 200:
-                raw_content = response.read().decode('utf-8')
-                characters_data = json.loads(raw_content)
-            else:
-                log_callback(f"Помилка: Hikka API повернув статус {response.status}")
-                return False
-    except urllib.error.HTTPError as he:
-        log_callback(f"Помилка HTTP під час запиту до Hikka: {he.code} {he.reason}")
-        return False
-    except Exception as e:
-        log_callback(f"Помилка мережі при запиті до Hikka: {e}")
-        return False
-
-    if isinstance(characters_data, dict):
-        characters_list = characters_data.get("list") or characters_data.get("data") or characters_data.get("characters") or []
-    elif isinstance(characters_data, list):
-        characters_list = characters_data
-    else:
-        characters_list = []
-
-    if not characters_list:
-        log_callback("Попередження: Для цієї манґи не знайдено персонажів в Hikka API.")
+    total = len(characters)
+    if total == 0:
+        log_callback("Не знайдено персонажів з ComicVine ID в базі даних.")
         return True
 
-    log_callback(f"Отримано персонажів з Hikka API: {len(characters_list)}")
+    log_callback(f"[SYSTEM] Початок оновлення зображень: знайдено {total} персонажів з ComicVine ID...")
 
-    try:
-        added_or_updated_count = 0
+    updated_count = 0
+    unchanged_count = 0
+    not_found_count = 0
+    error_count = 0
 
-        for item in characters_list:
-            char_obj = item.get("character") if isinstance(item, dict) and "character" in item else item
-            if not isinstance(char_obj, dict):
+    for idx, char in enumerate(characters, 1):
+        char_id = char["id"]
+        cv_id = char["cv_id"]
+        cv_slug = char["cv_slug"] or "character"
+        char_name = char["name"] or f"Character #{char_id}"
+        current_img = char["image"]
+
+        url = f"https://comicvine.gamespot.com/{cv_slug}/4005-{cv_id}/"
+        log_callback(f"[{idx}/{total}] Скрапінг '{char_name}' (CV ID: {cv_id})...")
+
+        try:
+            html = fetch_page(scraper, url, log_callback, max_retries=2)
+            if not html:
+                log_callback(f"  [x] Не вдалося завантажити сторінку для '{char_name}'")
+                error_count += 1
+                time.sleep(1.0)
                 continue
 
-            c_slug = char_obj.get("slug") or char_obj.get("hikka_slug")
-            c_name_ua = char_obj.get("name_ua") or char_obj.get("name_uk")
-            c_name_en = char_obj.get("name_en") or char_obj.get("name")
-            c_name_ja = char_obj.get("name_ja") or char_obj.get("name_native") or char_obj.get("native_name")
-            c_image = char_obj.get("image") or char_obj.get("avatar") or char_obj.get("picture")
-            
-            is_main = item.get("main") if isinstance(item, dict) and "main" in item else None
-            raw_role = item.get("role") or char_obj.get("role") or "supporting"
-            if is_main is True:
-                role = "main"
-            elif is_main is False:
-                role = "supporting"
-            else:
-                role = "main" if str(raw_role).lower() in ("main", "головний", "главный") else "supporting"
-
-            if not c_slug and not c_name_en and not c_name_ua:
+            soup = BeautifulSoup(html, "html.parser")
+            img_el = soup.select_one(".imgboxart img, .wiki-image img")
+            if not img_el:
+                log_callback(f"  [-] Зображення (.imgboxart img, .wiki-image img) не знайдено для '{char_name}'")
+                not_found_count += 1
+                time.sleep(1.0)
                 continue
 
-            # 1. Пошук персонажа в БД
-            char_db = None
-            if c_slug:
-                char_db = db.get_one("SELECT id, name, name_uk, name_native, image, hikka_slug FROM characters WHERE hikka_slug = %s LIMIT 1", [c_slug])
+            img_src = img_el.get("src")
+            new_image_path = extract_image_path(img_src)
 
-            if not char_db and c_name_en:
-                char_db = db.get_one("SELECT id, name, name_uk, name_native, image, hikka_slug FROM characters WHERE LOWER(name) = %s LIMIT 1", [c_name_en.lower()])
-            if not char_db and c_name_ua:
-                char_db = db.get_one("SELECT id, name, name_uk, name_native, image, hikka_slug FROM characters WHERE LOWER(name_uk) = %s LIMIT 1", [c_name_ua.lower()])
+            if not new_image_path:
+                log_callback(f"  [-] Не вдалося розпізнати шлях зображення з '{img_src}'")
+                not_found_count += 1
+                time.sleep(1.0)
+                continue
 
-            if char_db:
-                char_id = char_db["id"]
-                updates = []
-                params = []
-
-                if c_name_ua and char_db.get("name_uk") != c_name_ua:
-                    updates.append("name_uk = %s")
-                    params.append(c_name_ua)
-                if c_name_en and char_db.get("name") != c_name_en:
-                    updates.append("name = %s")
-                    params.append(c_name_en)
-                if c_name_ja and char_db.get("name_native") != c_name_ja:
-                    updates.append("name_native = %s")
-                    params.append(c_name_ja)
-                if c_image and char_db.get("image") != c_image:
-                    updates.append("image = %s")
-                    params.append(c_image)
-                if c_slug and char_db.get("hikka_slug") != c_slug:
-                    updates.append("hikka_slug = %s")
-                    params.append(c_slug)
-
-                if updates:
-                    params.append(char_id)
-                    sql = f"UPDATE characters SET {', '.join(updates)} WHERE id = %s"
-                    db.conn.execute(sql, params)
-                    log_callback(f"Оновлено персонажа '{c_name_ua or c_name_en}' (ID: {char_id}) в БД.")
-                else:
-                    log_callback(f"Персонаж '{c_name_ua or c_name_en}' вже є в БД (ID: {char_id}).")
-            else:
-                primary_name = c_name_en or c_name_ua or "Unknown Character"
-                res = db.conn.execute(
-                    """
-                    INSERT INTO characters (name, name_uk, name_native, image, hikka_slug)
-                    VALUES (%s, %s, %s, %s, %s)
-                    RETURNING id
-                    """,
-                    [primary_name, c_name_ua, c_name_ja, c_image, c_slug]
+            if new_image_path != current_img:
+                db.execute(
+                    "UPDATE characters SET image = %s WHERE id = %s",
+                    [new_image_path, char_id]
                 )
-                row = res.fetchone()
-                char_id = row["id"] if isinstance(row, dict) else row[0]
-                log_callback(f"Створено нового персонажа '{primary_name}' в БД (ID: {char_id}).")
-
-            # 3. Зв'язок з томом
-            ex_rel = db.get_one(
-                "SELECT id, role FROM volume_characters WHERE volume_id = %s AND character_id = %s LIMIT 1",
-                [volume_id, char_id]
-            )
-            if ex_rel:
-                if ex_rel.get("role") != role:
-                    db.conn.execute(
-                        "UPDATE volume_characters SET role = %s WHERE id = %s",
-                        [role, ex_rel["id"]]
-                    )
+                log_callback(f"  [+] Оновлено зображення: {new_image_path}")
+                updated_count += 1
             else:
-                db.conn.execute(
-                    "INSERT INTO volume_characters (volume_id, character_id, role) VALUES (%s, %s, %s)",
-                    [volume_id, char_id, role]
-                )
-            added_or_updated_count += 1
+                log_callback(f"  [~] Зображення актуальне (без змін)")
+                unchanged_count += 1
 
-        db.conn.commit()
-        log_callback(f"Успішно оброблено персонажів Hikka для тому: {added_or_updated_count}.")
-        return True
+            time.sleep(1.2)
 
-    except Exception as e:
-        db.conn.rollback()
-        log_callback(f"Помилка під час збереження персонажів Hikka у БД: {e}")
-        return False
+        except Exception as e:
+            log_callback(f"  [x] Помилка під час скрапінгу '{char_name}': {e}")
+            error_count += 1
+            time.sleep(1.0)
+
+    log_callback(
+        f"[DONE] Завершено! Оновлено: {updated_count}, без змін: {unchanged_count}, "
+        f"не знайдено: {not_found_count}, помилок: {error_count}."
+    )
+    return True
+

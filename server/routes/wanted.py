@@ -1,12 +1,40 @@
+import json
+import os
 from fastapi import APIRouter, Query, Request, HTTPException
+from pydantic import BaseModel
 from typing import Optional
 from ..db import get_db
 from ..helpers.themes import THEME_MANGA, THEME_TRANSLATED, THEME_COLLECTION
 
 router = APIRouter(prefix="/api/wanted", tags=["wanted"])
 
+# ── Ignored duplicates persistence ────────────────────────────
+IGNORED_PERSON_DUPLICATES_FILE = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "data", "ignored_person_duplicates.json")
+)
+
+def load_ignored_person_duplicates() -> list[str]:
+    try:
+        if os.path.exists(IGNORED_PERSON_DUPLICATES_FILE):
+            with open(IGNORED_PERSON_DUPLICATES_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    return [str(x).strip().lower() for x in data if str(x).strip()]
+    except Exception as e:
+        print("Error loading ignored person duplicates:", e)
+    return []
+
+def save_ignored_person_duplicates(ignored_list: list[str]):
+    try:
+        os.makedirs(os.path.dirname(IGNORED_PERSON_DUPLICATES_FILE), exist_ok=True)
+        unique_sorted = sorted(list(set(str(x).strip().lower() for x in ignored_list if str(x).strip())))
+        with open(IGNORED_PERSON_DUPLICATES_FILE, "w", encoding="utf-8") as f:
+            json.dump(unique_sorted, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print("Error saving ignored person duplicates:", e)
+
 # ── Sections config ──────────────────────────────────────────
-SECTIONS = ["volumes", "collections", "issues", "characters", "personnel", "publishers"]
+SECTIONS = ["volumes", "collections", "issues", "characters", "personnel", "publishers", "person_duplicates"]
 
 # ── Volume categories ────────────────────────────────────────
 VOLUME_CATEGORIES = {
@@ -284,6 +312,28 @@ async def get_wanted_summary(request: Request):
     # Publishers
     pub_total = _count_all_categories(db, "publishers", PUBLISHER_CATEGORIES, "p")
     summary["publishers"] = pub_total
+
+    # Person duplicates (total duplicate persons)
+    ignored = load_ignored_person_duplicates()
+    ignored_clause = ""
+    ignored_params = []
+    if ignored:
+        ignored_clause = " AND LOWER(TRIM(p.name)) != ALL(%s)"
+        ignored_params.append(ignored)
+
+    dup_row = db.get_one(f"""
+        SELECT COUNT(*) as cnt
+        FROM persons p
+        WHERE p.name IS NOT NULL AND TRIM(p.name) != ''
+          {ignored_clause}
+          AND EXISTS (
+              SELECT 1 
+              FROM persons p2 
+              WHERE p2.id != p.id 
+                AND LOWER(TRIM(p2.name)) = LOWER(TRIM(p.name))
+          )
+    """, ignored_params)
+    summary["person_duplicates"] = dup_row["cnt"] if dup_row else 0
 
     return summary
 
@@ -667,6 +717,280 @@ async def get_personnel_category_counts(request: Request):
         row = db.get_one(f"SELECT COUNT(*) as cnt FROM persons p WHERE {cat['clause']}", [])
         counts[key] = row["cnt"]
     return counts
+
+
+# ── Person Duplicates ─────────────────────────────────────────
+@router.get("/person-duplicates")
+async def get_wanted_person_duplicates(
+    request: Request,
+    search: Optional[str] = None,
+    sort: str = Query("count", pattern="^(count|name|recent)$"),
+    order_dir: str = Query("desc", pattern="^(asc|desc)$"),
+    page: int = Query(1, ge=1),
+    limit: int = Query(12, ge=1, le=100),
+):
+    get_admin_user(request)
+    db = get_db()
+
+    where_clauses = ["p.name IS NOT NULL", "TRIM(p.name) != ''"]
+    params = []
+
+    ignored = load_ignored_person_duplicates()
+    if ignored:
+        where_clauses.append("LOWER(TRIM(p.name)) != ALL(%s)")
+        params.append(ignored)
+
+    if search:
+        words = [w.strip() for w in search.split() if w.strip()]
+        if words:
+            parts = []
+            for word in words:
+                parts.append("(LOWER(p.name) LIKE %s OR LOWER(COALESCE(p.name_uk, '')) LIKE %s)")
+                params.extend([f"%{word.lower()}%"] * 2)
+            where_clauses.append(f"({' AND '.join(parts)})")
+
+    where_str = " AND ".join(where_clauses)
+
+    count_sql = f"""
+        SELECT COUNT(*) as total_groups, COALESCE(SUM(grp.cnt), 0) as total_persons
+        FROM (
+            SELECT LOWER(TRIM(p.name)) as norm_name, COUNT(*) as cnt
+            FROM persons p
+            WHERE {where_str}
+            GROUP BY LOWER(TRIM(p.name))
+            HAVING COUNT(*) > 1
+        ) grp
+    """
+    count_res = db.get_one(count_sql, params)
+    total_groups = int(count_res["total_groups"]) if count_res and count_res.get("total_groups") else 0
+    total_persons = int(count_res["total_persons"]) if count_res and count_res.get("total_persons") else 0
+
+    if total_groups == 0:
+        return {
+            "items": [],
+            "total": 0,
+            "total_persons": 0,
+            "page": page,
+            "limit": limit,
+            "pages": 1,
+        }
+
+    if sort == "name":
+        group_order = f"MIN(p.name) {order_dir.upper()}"
+    elif sort == "recent":
+        group_order = f"MAX(p.created_at) {order_dir.upper()}, COUNT(*) DESC"
+    else:  # count
+        group_order = f"COUNT(*) {order_dir.upper()}, MIN(p.name) ASC"
+
+    offset = (page - 1) * limit
+
+    groups_sql = f"""
+        SELECT 
+            LOWER(TRIM(p.name)) as norm_name, 
+            MIN(p.name) as display_name,
+            COUNT(*) as duplicate_count,
+            ARRAY_AGG(p.id ORDER BY p.id ASC) as person_ids
+        FROM persons p
+        WHERE {where_str}
+        GROUP BY LOWER(TRIM(p.name))
+        HAVING COUNT(*) > 1
+        ORDER BY {group_order}
+        LIMIT %s OFFSET %s
+    """
+    groups = db.get_all(groups_sql, params + [limit, offset])
+
+    all_pids = []
+    for g in groups:
+        all_pids.extend(g["person_ids"])
+
+    if not all_pids:
+        return {
+            "items": [],
+            "total": total_groups,
+            "total_persons": total_persons,
+            "page": page,
+            "limit": limit,
+            "pages": max(1, (total_groups + limit - 1) // limit),
+        }
+
+    persons_sql = """
+        SELECT 
+            p.id, p.name, p.name_uk, p.name_native, p.pseudo, p.image, p.country, p.hometown,
+            p.birth, p.death, p.gender, p.website, p.occupation, p.aliases, p.created_at, p.cv_id, p.cv_slug, p.hikka_slug,
+            (SELECT COUNT(*) FROM volume_persons vp WHERE vp.person_id = p.id) as volumes_count,
+            (SELECT COUNT(*) FROM issue_persons ip WHERE ip.person_id = p.id) as issues_count
+        FROM persons p
+        WHERE p.id = ANY(%s)
+        ORDER BY p.id ASC
+    """
+    persons_raw = db.get_all(persons_sql, [all_pids])
+    persons_by_id = {row["id"]: dict(row) for row in persons_raw}
+
+    items = []
+    for g in groups:
+        group_persons = []
+        for pid in g["person_ids"]:
+            if pid in persons_by_id:
+                p_item = persons_by_id[pid]
+                p_item["_type"] = "person"
+                p_item["missing_fields"] = _compute_personnel_missing(p_item, None)
+                group_persons.append(p_item)
+
+        items.append({
+            "norm_name": g["norm_name"],
+            "name": g["display_name"],
+            "duplicate_count": g["duplicate_count"],
+            "persons": group_persons,
+        })
+
+    return {
+        "items": items,
+        "total": total_groups,
+        "total_persons": total_persons,
+        "page": page,
+        "limit": limit,
+        "pages": max(1, (total_groups + limit - 1) // limit),
+    }
+
+
+class IgnoreDuplicateRequest(BaseModel):
+    name: str
+
+
+class MergePersonsRequest(BaseModel):
+    primary_id: int
+    secondary_id: int
+    image_choice: Optional[str] = "primary"  # "primary" | "secondary" | "auto"
+
+
+@router.post("/person-duplicates/ignore")
+async def ignore_person_duplicate(req: IgnoreDuplicateRequest, request: Request):
+    get_admin_user(request)
+    norm = req.name.strip().lower()
+    if not norm:
+        raise HTTPException(status_code=400, detail="Назва не може бути порожньою")
+    ignored = load_ignored_person_duplicates()
+    if norm not in ignored:
+        ignored.append(norm)
+        save_ignored_person_duplicates(ignored)
+    return {"status": "ok", "name": norm, "total_ignored": len(ignored)}
+
+
+@router.post("/person-duplicates/unignore")
+async def unignore_person_duplicate(req: IgnoreDuplicateRequest, request: Request):
+    get_admin_user(request)
+    norm = req.name.strip().lower()
+    ignored = load_ignored_person_duplicates()
+    if norm in ignored:
+        ignored.remove(norm)
+        save_ignored_person_duplicates(ignored)
+    return {"status": "ok", "name": norm, "total_ignored": len(ignored)}
+
+
+@router.post("/person-duplicates/merge")
+async def merge_persons(req: MergePersonsRequest, request: Request):
+    get_admin_user(request)
+    if req.primary_id == req.secondary_id:
+        raise HTTPException(status_code=400, detail="Неможливо злити персону саму з собою")
+
+    db = get_db()
+    primary = db.get_one("SELECT * FROM persons WHERE id = %s", [req.primary_id])
+    secondary = db.get_one("SELECT * FROM persons WHERE id = %s", [req.secondary_id])
+
+    if not primary or not secondary:
+        raise HTTPException(status_code=404, detail="Одну або обидві персони не знайдено")
+
+    # Image selection
+    final_image = primary.get("image")
+    if req.image_choice == "secondary":
+        final_image = secondary.get("image") or primary.get("image")
+    elif not final_image:
+        final_image = secondary.get("image")
+
+    # Aliases
+    p_aliases = primary.get("aliases") or []
+    s_aliases = secondary.get("aliases") or []
+    if isinstance(p_aliases, str):
+        p_aliases = [x.strip() for x in p_aliases.split(",") if x.strip()]
+    if isinstance(s_aliases, str):
+        s_aliases = [x.strip() for x in s_aliases.split(",") if x.strip()]
+    merged_aliases = list(dict.fromkeys(p_aliases + s_aliases))
+
+    # Merged fields for primary person
+    merged_fields = {
+        "name_uk": primary.get("name_uk") or secondary.get("name_uk"),
+        "pseudo": primary.get("pseudo") or secondary.get("pseudo"),
+        "name_native": primary.get("name_native") or secondary.get("name_native"),
+        "country": primary.get("country") or secondary.get("country"),
+        "hometown": primary.get("hometown") or secondary.get("hometown"),
+        "birth": primary.get("birth") or secondary.get("birth"),
+        "death": primary.get("death") or secondary.get("death"),
+        "gender": primary.get("gender") if primary.get("gender") is not None else secondary.get("gender"),
+        "website": primary.get("website") or secondary.get("website"),
+        "occupation": primary.get("occupation") or secondary.get("occupation"),
+        "cv_id": primary.get("cv_id") or secondary.get("cv_id"),
+        "cv_slug": primary.get("cv_slug") or secondary.get("cv_slug"),
+        "hikka_slug": primary.get("hikka_slug") or secondary.get("hikka_slug"),
+        "image": final_image,
+        "aliases": merged_aliases if merged_aliases else None,
+    }
+
+    try:
+        # 1. Deduplicate & transfer volume_persons
+        existing_vol_persons = db.get_all(
+            "SELECT volume_id, role FROM volume_persons WHERE person_id = %s", [req.primary_id]
+        )
+        existing_vp_set = set((vp["volume_id"], vp["role"]) for vp in existing_vol_persons)
+
+        secondary_vol_persons = db.get_all(
+            "SELECT id, volume_id, role FROM volume_persons WHERE person_id = %s", [req.secondary_id]
+        )
+        for vp in secondary_vol_persons:
+            key = (vp["volume_id"], vp["role"])
+            if key in existing_vp_set:
+                db.execute("DELETE FROM volume_persons WHERE id = %s", [vp["id"]])
+            else:
+                db.execute("UPDATE volume_persons SET person_id = %s WHERE id = %s", [req.primary_id, vp["id"]])
+                existing_vp_set.add(key)
+
+        # 2. Transfer & deduplicate issue_persons
+        existing_issue_persons = db.get_all(
+            "SELECT issue_id, role, COALESCE(story_id, -1) as story_id FROM issue_persons WHERE person_id = %s", [req.primary_id]
+        )
+        existing_ip_set = set((ip["issue_id"], ip["role"], ip["story_id"]) for ip in existing_issue_persons)
+
+        secondary_issue_persons = db.get_all(
+            "SELECT id, issue_id, role, COALESCE(story_id, -1) as story_id FROM issue_persons WHERE person_id = %s", [req.secondary_id]
+        )
+        for ip in secondary_issue_persons:
+            key = (ip["issue_id"], ip["role"], ip["story_id"])
+            if key in existing_ip_set:
+                db.execute("DELETE FROM issue_persons WHERE id = %s", [ip["id"]])
+            else:
+                db.execute("UPDATE issue_persons SET person_id = %s WHERE id = %s", [req.primary_id, ip["id"]])
+                existing_ip_set.add(key)
+
+        # 3. Update primary person
+        update_set_clauses = []
+        update_vals = []
+        for k, v in merged_fields.items():
+            update_set_clauses.append(f"{k} = %s")
+            update_vals.append(v)
+        update_vals.append(req.primary_id)
+
+        db.execute(f"UPDATE persons SET {', '.join(update_set_clauses)} WHERE id = %s", update_vals)
+
+        # 4. Delete secondary person
+        db.execute("DELETE FROM persons WHERE id = %s", [req.secondary_id])
+
+        return {
+            "status": "ok",
+            "message": f"Персону #{req.secondary_id} успішно злито з #{req.primary_id}",
+            "primary_id": req.primary_id,
+            "deleted_id": req.secondary_id,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Помилка при злитті персон: {str(e)}")
 
 
 # ── Publishers ────────────────────────────────────────────────

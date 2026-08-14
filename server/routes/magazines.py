@@ -398,10 +398,10 @@ async def list_magazines(
     params = []
 
     if id:
-        conditions.append("mm.id = ?")
+        conditions.append("mm.id = %s")
         params.append(id)
     elif cv_id:
-        conditions.append("mm.cv_id = ?")
+        conditions.append("mm.cv_id = %s")
         params.append(cv_id)
     elif search:
         conditions.append("(mm.name LIKE %s OR mm.name_native LIKE %s)")

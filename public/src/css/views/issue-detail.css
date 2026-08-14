@@ -1469,6 +1469,19 @@
   overflow: hidden;
   line-height: 1.25;
   margin-top: 2px;
+  transition: color var(--t);
+}
+
+.story-appearance-card.character .story-appearance-name-link:hover .story-appearance-name {
+  color: var(--accent);
+}
+
+.story-appearance-avatar-link {
+  transition: transform var(--t);
+}
+
+.story-appearance-avatar-link:hover .story-appearance-avatar-wrap {
+  border-color: var(--accent-glow);
 }
 
 .story-appearance-real-name {

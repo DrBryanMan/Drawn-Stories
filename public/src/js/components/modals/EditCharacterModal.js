@@ -261,7 +261,7 @@ export function openEditCharacterModal(char, onUpdate) {
   let creatorDetails = {};
 
   if (selectedCreators.length > 0) {
-    API.get('/personnel', { search: selectedCreators[0], limit: 10 }).then(res => {
+    API.get('/persons', { search: selectedCreators[0], limit: 10 }).then(res => {
       (res.items || []).forEach(p => {
         creatorDetails[p.name.toLowerCase()] = p;
         if (p.name_uk) creatorDetails[p.name_uk.toLowerCase()] = p;
@@ -331,7 +331,7 @@ export function openEditCharacterModal(char, onUpdate) {
 
     searchDebounceTimer = setTimeout(async () => {
       try {
-        const res = await API.get('/personnel', { search: query, limit: 6 });
+        const res = await API.get('/persons', { search: query, limit: 6 });
         const items = res.items || [];
         creatorDropdown.style.display = 'block';
 

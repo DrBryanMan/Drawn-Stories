@@ -2,7 +2,7 @@ from fastapi import APIRouter, Query, HTTPException, Request
 from typing import Optional
 from ..db import get_db
 
-router = APIRouter(prefix="/api/personnel", tags=["personnel"])
+router = APIRouter(tags=["persons"])
 
 def require_moderator(request: Request):
     role = request.cookies.get("role")
@@ -32,7 +32,7 @@ async def get_person_detail(person_id: int):
 
     person = db.get_one(
         """
-        SELECT p.id, p.cv_id, p.name, p.name_uk, p.pseudo, p.cv_slug, p.image,
+        SELECT p.id, p.cv_id, p.name, p.name_uk, p.name_native, p.pseudo, p.cv_slug, p.hikka_slug, p.image,
                p.aliases, p.birth, p.death, p.country, p.gender, p.hometown,
                p.website, p.occupation, p.created_at,
                (SELECT COUNT(DISTINCT vp.volume_id) FROM volume_persons vp WHERE vp.person_id = p.id) as volume_count,
@@ -98,6 +98,8 @@ async def update_person(person_id: int, data: dict, request: Request):
         UPDATE persons
         SET name = %s,
             name_uk = %s,
+            name_native = %s,
+            hikka_slug = %s,
             pseudo = %s,
             cv_id = %s,
             cv_slug = %s,
@@ -115,6 +117,8 @@ async def update_person(person_id: int, data: dict, request: Request):
         [
             name,
             to_null(data.get("name_uk")),
+            to_null(data.get("name_native")),
+            to_null(data.get("hikka_slug")),
             to_null(data.get("pseudo")),
             to_null(data.get("cv_id")),
             to_null(data.get("cv_slug")),
@@ -147,8 +151,9 @@ async def get_personnel(
     params = []
 
     if search:
-        where_parts.append("LOWER(p.name) LIKE %s")
-        params.append(f"%{search.lower()}%")
+        where_parts.append("(LOWER(p.name) LIKE %s OR LOWER(COALESCE(p.name_uk, '')) LIKE %s OR LOWER(COALESCE(p.name_native, '')) LIKE %s)")
+        s_param = f"%{search.lower()}%"
+        params.extend([s_param, s_param, s_param])
 
     if ids:
         id_list = [int(x.strip()) for x in ids.split(",") if x.strip().isdigit()]
@@ -161,7 +166,7 @@ async def get_personnel(
 
     # Sort logic
     if sort == "name":
-        order_clause = f"p.name {order_dir.upper()}"
+        order_clause = f"COALESCE(p.name_uk, p.name) {order_dir.upper()}"
     elif sort == "recent":
         order_clause = f"p.created_at {order_dir.upper()}, p.name ASC"
     else:
@@ -180,9 +185,14 @@ async def get_personnel(
 
     rows = db.get_all(
         f"""
-        SELECT p.id, p.cv_id, p.name, p.cv_slug, p.image, p.country, p.hometown, p.occupation,
-               (SELECT COUNT(*) FROM issue_persons ip WHERE ip.person_id = p.id) as issue_count
+        SELECT p.id, p.cv_id, p.name, p.name_uk, p.name_native, p.cv_slug, p.hikka_slug, p.image, p.country, p.hometown, p.occupation,
+               COALESCE(ip_agg.issue_count, 0) AS issue_count
         FROM persons p
+        LEFT JOIN (
+            SELECT person_id, COUNT(DISTINCT issue_id) AS issue_count
+            FROM issue_persons
+            GROUP BY person_id
+        ) ip_agg ON ip_agg.person_id = p.id
         {where_clause}
         ORDER BY {order_clause}
         LIMIT %s OFFSET %s

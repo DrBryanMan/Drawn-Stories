@@ -522,29 +522,34 @@ function syncActiveNav(path, query) {
   });
 }
 
-function getLevelProgress(score) {
-  const LEVELS = [
-    { threshold: 0, title: "Новачок" },
-    { threshold: 50, title: "Учень" },
-    { threshold: 150, title: "Редактор" },
-    { threshold: 350, title: "Досвідчений" },
-    { threshold: 700, title: "Провідний" },
-    { threshold: 1200, title: "Експерт" },
-    { threshold: 2000, title: "Майстер" },
-    { threshold: 3500, title: "Гросмейстер" }
-  ];
+const LEVEL_THRESHOLDS = Object.freeze([
+  { threshold: 0, title: "Новачок" },
+  { threshold: 500, title: "Маска" },
+  { threshold: 2000, title: "Месник" },
+  { threshold: 5000, title: "Супергерой" },
+  { threshold: 10000, title: "Захисник" },
+  { threshold: 20000, title: "Чемпіон" },
+  { threshold: 40000, title: "Легенда" },
+  { threshold: 75000, title: "Титан" },
+  { threshold: 125000, title: "Вершитель" },
+  { threshold: 250000, title: "Надлюдина" },
+  { threshold: 500000, title: "Богоподібний" },
+  { threshold: 750000, title: "Володар реальності" },
+  { threshold: 1000000, title: "Володар всесвіту" }
+]);
 
+function getLevelProgress(score) {
   let currentIdx = 0;
-  for (let i = 0; i < LEVELS.length; i++) {
-    if (score >= LEVELS[i].threshold) {
+  for (let i = 0; i < LEVEL_THRESHOLDS.length; i++) {
+    if (score >= LEVEL_THRESHOLDS[i].threshold) {
       currentIdx = i;
     } else {
       break;
     }
   }
 
-  const currentLevel = LEVELS[currentIdx];
-  const nextLevel = LEVELS[currentIdx + 1];
+  const currentLevel = LEVEL_THRESHOLDS[currentIdx];
+  const nextLevel = LEVEL_THRESHOLDS[currentIdx + 1];
 
   if (!nextLevel) {
     return {

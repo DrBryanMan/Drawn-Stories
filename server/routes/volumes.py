@@ -233,11 +233,11 @@ async def get_volume_detail(volume_id: int, request: Request):
 
     staff = db.get_all(
         """
-        SELECT p.id, p.name, p.image, p.cv_slug, vp.role
+        SELECT p.id, p.name, p.name_uk, p.name_native, p.image, p.cv_slug, p.hikka_slug, vp.role
         FROM volume_persons vp
         JOIN persons p ON vp.person_id = p.id
         WHERE vp.volume_id = %s
-        ORDER BY vp.role ASC, p.name ASC
+        ORDER BY vp.role ASC, COALESCE(p.name_uk, p.name) ASC
         """,
         [volume_id]
     )

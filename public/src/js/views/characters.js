@@ -6,9 +6,10 @@ import { t } from '../helpers/i18n.js';
 
 const paginator = createPaginator({ pageSize: 20 });
 const getSortOptions = () => [
-  { value: 'issues', label: t('sort_popularity') },
-  { value: 'name', label: t('sort_char_name') },
-  { value: 'recent', label: t('sort_recent') },
+  { value: 'issues', label: t('sort_by_issues') || 'За кількістю випусків' },
+  { value: 'volumes', label: t('sort_by_volumes') || 'За кількістю серій' },
+  { value: 'name', label: t('sort_char_name') || 'За ім\'ям' },
+  { value: 'recent', label: t('sort_recent') || 'За датою додавання' },
 ];
 let searchQuery = '';
 let sortField = 'issues';
@@ -136,8 +137,14 @@ async function fetchAndRenderCharacters(filterBar) {
             <h3 class="char-name" title="${escapeHtmlAttribute(item.name_uk || item.name)}">${escapeHtmlAttribute(item.name_uk || item.name)}</h3>
             ${item.real_name ? `<p class="char-real-name" title="${escapeHtmlAttribute(item.real_name)}">${escapeHtmlAttribute(item.real_name)}</p>` : ''}
             <div class="char-stats">
-              <span class="char-stat-label">${t('section_issues')}:</span>
-              <strong class="char-stat-value">${item.issue_count}</strong>
+              <div class="char-stat-item" title="${t('series') || 'Серії'}">
+                <span class="char-stat-label">${t('series') || 'Серій'}:</span>
+                <strong class="char-stat-value">${item.volume_count || 0}</strong>
+              </div>
+              <div class="char-stat-item" title="${t('section_issues') || 'Випуски'}">
+                <span class="char-stat-label">${t('section_issues') || 'Випусків'}:</span>
+                <strong class="char-stat-value">${item.issue_count || 0}</strong>
+              </div>
             </div>
           </div>
         </a>

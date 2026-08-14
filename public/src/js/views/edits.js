@@ -129,15 +129,15 @@ export async function renderEdits(main, query = {}) {
         const container = main.querySelector('#contributors-container');
         if (!container) return;
 
-        // Group edits by proposer_username
+        // Group edits by nickname (fallback to username)
         const userStats = {};
         allEdits.forEach(e => {
-            const username = e.proposer_username;
-            if (!username) return;
+            const displayName = e.proposer_nickname || e.proposer_username;
+            if (!displayName) return;
 
-            if (!userStats[username]) {
-                userStats[username] = {
-                    username: username,
+            if (!userStats[displayName]) {
+                userStats[displayName] = {
+                    username: displayName,
                     totalScore: 0,
                     approved: 0,
                     rejected: 0,
@@ -147,12 +147,12 @@ export async function renderEdits(main, query = {}) {
             }
             
             const pts = Number(e.score_awarded) || 0;
-            userStats[username].totalScore += pts;
+            userStats[displayName].totalScore += pts;
 
-            if (e.status === 'approved') userStats[username].approved++;
-            else if (e.status === 'rejected') userStats[username].rejected++;
-            else if (e.status === 'pending') userStats[username].pending++;
-            else if (e.status === 'closed') userStats[username].closed++;
+            if (e.status === 'approved') userStats[displayName].approved++;
+            else if (e.status === 'rejected') userStats[displayName].rejected++;
+            else if (e.status === 'pending') userStats[displayName].pending++;
+            else if (e.status === 'closed') userStats[displayName].closed++;
         });
 
         // Convert to array and sort by totalScore desc, then approved desc, then rejected asc
@@ -185,7 +185,7 @@ export async function renderEdits(main, query = {}) {
             else if (index === 1) starHtml = starSvg('rank-star--silver');
             else if (index === 2) starHtml = starSvg('rank-star--bronze');
 
-            const contributorDisp = c.nickname || c.username;
+            const contributorDisp = c.username;
             const avatarUrl = `/api/auth/avatar/${encodeURIComponent(contributorDisp)}`;
             const avatarHtml = getAvatarHtml(avatarUrl, 'contributor-avatar', 44);
 
@@ -248,8 +248,10 @@ export async function renderEdits(main, query = {}) {
         const entityTypes = new Set();
         
         allEdits.forEach(e => {
-            if (e.proposer_username) proposers.add(e.proposer_username);
-            if (e.moderator_username) moderators.add(e.moderator_username);
+            const proposerDisp = e.proposer_nickname || e.proposer_username;
+            const moderatorDisp = e.moderator_nickname || e.moderator_username;
+            if (proposerDisp) proposers.add(proposerDisp);
+            if (moderatorDisp) moderators.add(moderatorDisp);
             if (e.entity_type) entityTypes.add(e.entity_type);
         });
 
@@ -339,8 +341,10 @@ export async function renderEdits(main, query = {}) {
         const filtered = allEdits.filter(e => {
             if (state.status !== 'all' && e.status !== state.status) return false;
             if (state.entityType && e.entity_type !== state.entityType) return false;
-            if (state.proposer && e.proposer_username !== state.proposer) return false;
-            if (state.moderator && e.moderator_username !== state.moderator) return false;
+            const proposerDisp = e.proposer_nickname || e.proposer_username;
+            const moderatorDisp = e.moderator_nickname || e.moderator_username;
+            if (state.proposer && proposerDisp !== state.proposer) return false;
+            if (state.moderator && moderatorDisp !== state.moderator) return false;
             
             if (state.search) {
                 const title = (e.volume_name_uk || e.volume_name || '').toLowerCase();

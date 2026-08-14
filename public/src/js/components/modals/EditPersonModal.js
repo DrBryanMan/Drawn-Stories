@@ -67,10 +67,14 @@ export function openEditPersonModal(person, onUpdate) {
                             <input type="text" id="edit-person-name-uk" class="admin-input" value="${escapeHtmlAttribute(person.name_uk || '')}" style="margin-bottom: 0;">
                         </div>
                         <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Назва мовою оригіналу (Native)</label>
+                            <input type="text" id="edit-person-name-native" class="admin-input" value="${escapeHtmlAttribute(person.name_native || '')}" placeholder="японська/корейська тощо" style="margin-bottom: 0;">
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
                             <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Псевдонім</label>
                             <input type="text" id="edit-person-pseudo" class="admin-input" value="${escapeHtmlAttribute(person.pseudo || '')}" style="margin-bottom: 0;">
                         </div>
-                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div style="display: flex; flex-direction: column; gap: 4px; grid-column: span 2;">
                             <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Професія / Роль</label>
                             <input type="text" id="edit-person-occupation" class="admin-input" value="${escapeHtmlAttribute(person.occupation || '')}" style="margin-bottom: 0;">
                         </div>
@@ -122,6 +126,7 @@ export function openEditPersonModal(person, onUpdate) {
         const updated = {
             name: modal.querySelector('#edit-person-name').value.trim(),
             name_uk: modal.querySelector('#edit-person-name-uk').value.trim() || null,
+            name_native: modal.querySelector('#edit-person-name-native')?.value.trim() || null,
             pseudo: modal.querySelector('#edit-person-pseudo').value.trim() || null,
             occupation: modal.querySelector('#edit-person-occupation').value.trim() || null,
             birth: modal.querySelector('#edit-person-birth').value.trim() || null,
@@ -140,7 +145,7 @@ export function openEditPersonModal(person, onUpdate) {
 
         try {
             if (actionType === 'direct') {
-                await API.put(`/personnel/${person.id}`, updated);
+                await API.put(`/persons/${person.id}`, updated);
             } else {
                 const autoApprove = actionType === 'approve';
                 await API.post('/edits', {
@@ -167,7 +172,7 @@ export function openEditPersonModal(person, onUpdate) {
         deleteBtn.addEventListener('click', async () => {
             if (!confirm(`Ви впевнені, що хочете остаточно видалити персону "${person.name}"?`)) return;
             try {
-                await API.delete(`/personnel/${person.id}`);
+                await API.delete(`/persons/${person.id}`);
                 if (onUpdate) onUpdate(null);
                 close();
             } catch (err) {

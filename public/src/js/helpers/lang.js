@@ -148,7 +148,7 @@ export function getEntityUrl(entityType, entityId) {
     if (type === 'volume' || type === 'series') return `#/volumes/${entityId}`;
     if (type === 'issue' || type === 'reprint') return `#/issues/${entityId}`;
     if (type === 'character') return `#/characters/${entityId}`;
-    if (type === 'person' || type === 'personnel') return `#/personnel/${entityId}`;
+    if (type === 'person' || type === 'personnel') return `#/persons/${entityId}`;
     if (type === 'publisher') return `#/publishers/${entityId}`;
     if (type === 'collection') return `#/collections/${entityId}`;
     if (type === 'magazine') return `#/magazines/${entityId}`;

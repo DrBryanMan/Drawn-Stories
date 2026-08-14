@@ -47,7 +47,7 @@ function resolveCardMeta(item) {
       };
     case 'person':
       return {
-        href:     `/#/personnel/${item.id}`,
+        href:     `/#/persons/${item.id}`,
         imageUrl: normalizeImageUrl(item.image),
         subtitle: item.name_uk || null,
         placeholder: PERSON_PLACEHOLDER,
