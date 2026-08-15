@@ -916,7 +916,7 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
                         ${editorsHistoryBlockHTML}
                     </div>
                     <div class="volume-hero-tabs-band">
-                        <div class="container" style="display: flex; justify-content: center;">
+                        <div style="display: flex; justify-content: center;">
                             <div class="volume-page-tabs">
                                 <button class="volume-page-tab-btn" data-page-tab="main">${t('tab_main')}</button>
                                 <button class="volume-page-tab-btn" data-page-tab="issues" ${currentItems.length === 0 ? 'disabled' : ''}>
@@ -1092,34 +1092,34 @@ export async function renderVolumeDetail(main, params = {}, query = {}) {
             ${isModerator ? `
                 <div class="volume-hero-admin-actions">
                     <button class="btn-admin btn-admin--danger" id="volume-delete-btn" title="Видалити том">
-                        <i class="bi bi-trash"></i>
+                        ${icon('trash', 15, { strokeWidth: 2.2 })}
                     </button>
                     ${!isMagazine && !isCollection ? `
                         <button class="btn-admin btn-admin--secondary" id="volume-add-magazine-btn" title="Додати до журналу">
-                            <i class="bi bi-book"></i>
+                            ${icon('bookOpen', 15, { strokeWidth: 2.2 })}
                         </button>
                     ` : ''}
                     ${!isMagazine ? `
                         <button class="btn-admin btn-admin--secondary" id="volume-add-original-btn" title="Додати до оригіналу">
-                            <i class="bi bi-bookmark-star"></i>
+                            ${icon('bookmark', 15, { strokeWidth: 2.2 })}
                         </button>
                     ` : ''}
                     ${!isMagazine && !volume.mal_id && data.convertable_count > 0 ? `
                         <button class="btn-admin btn-admin--warning" id="volume-convert-btn" title="Конвертувати всі випуски у збірники">
                             ${icon('layers', 14, { strokeWidth: 2.2 })}
-                            У збірники (${data.convertable_count})
+                            <span>У збірники (${data.convertable_count})</span>
                         </button>
                     ` : ''}
                     ${isMagazine && isManga ? `
                         <button class="btn-admin btn-admin--warning" id="volume-convert-to-magazine-btn" title="Конвертувати том у повноцінний журнал манґи">
                             ${icon('magazine', 14, { strokeWidth: 2.2 })}
-                            У журнал манґи
-                            </button>
+                            <span>У журнал манґи</span>
+                        </button>
                     ` : ''}
                     ${isCollection && data.collections.length > 0 ? `
                         <button class="btn-admin btn-admin--danger" id="volume-revert-btn" title="Конвертувати всі збірники у випуски">
                             ${icon('hash', 13, { strokeWidth: 2.2 })}
-                            У випуски (${data.collections.length})
+                            <span>У випуски (${data.collections.length})</span>
                         </button>
                     ` : ''}
                     ${!isManga ? `

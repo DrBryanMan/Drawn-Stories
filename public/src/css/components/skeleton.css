@@ -4,13 +4,13 @@
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, var(--skeleton-base, #e5e9f0) 25%, var(--skeleton-shine, #f4f6fa) 50%, var(--skeleton-base, #e5e9f0) 75%);
   background-size: 200% 100%;
   animation: skeleton-loading 1.5s infinite linear;
 }
 
 .skeleton--dark {
-  background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+  background: linear-gradient(90deg, var(--skeleton-base, #1a2233) 25%, var(--skeleton-shine, #242e44) 50%, var(--skeleton-base, #1a2233) 75%);
   background-size: 200% 100%;
 }
 

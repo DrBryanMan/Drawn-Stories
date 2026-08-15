@@ -1,8 +1,20 @@
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
+import sys
 from typing import List, Optional, Any
 from dotenv import load_dotenv
+
+if sys.stdout and hasattr(sys.stdout, "reconfigure") and sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+if sys.stderr and hasattr(sys.stderr, "reconfigure") and sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
+    try:
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 # Завантажуємо змінні оточення з .env файлу
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -118,7 +130,11 @@ db_instance = Database()
 
 def init_db():
     db_instance.connect()
-    pass
+    try:
+        from server.schema.migrations import apply_migrations
+        apply_migrations(db_instance.conn)
+    except Exception as e:
+        print(f"[Помилка міграцій] Не вдалося застосувати міграції: {e}")
 
 def close_db():
     db_instance.close()

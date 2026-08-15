@@ -736,4 +736,12 @@ export const en = {
   period_month: "month",
   chapter_num_prefix: "Chapter",
   issue_num_prefix: "Iss.",
+
+  // Theme settings
+  theme_settings: "Theme Settings",
+  site_theme: "Site Theme",
+  theme_light: "Light",
+  theme_dark: "Dark",
+  theme_toggle_tip_dark: "Switch to dark theme",
+  theme_toggle_tip_light: "Switch to light theme",
 };

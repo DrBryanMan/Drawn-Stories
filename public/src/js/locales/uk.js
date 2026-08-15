@@ -739,4 +739,12 @@ export const uk = {
   period_month: "місяць",
   chapter_num_prefix: "Розділ",
   issue_num_prefix: "Вип.",
+
+  // Theme settings
+  theme_settings: "Тема оформлення",
+  site_theme: "Тема сайту",
+  theme_light: "Світла",
+  theme_dark: "Темна",
+  theme_toggle_tip_dark: "Увімкнути темну тему",
+  theme_toggle_tip_light: "Увімкнути світлу тему",
 };

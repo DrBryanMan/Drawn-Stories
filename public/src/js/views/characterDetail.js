@@ -288,7 +288,7 @@ function renderCharacterContent(container, char, params, edits = [], query = {})
 
       <!-- Tabs Band with "Огляд", "Появи", "Команди" -->
       <div class="personnel-detail-tabs-band">
-        <div class="container">
+        <div class="container" style="padding: 0 2em;">
           <div class="personnel-detail-tabs" role="tablist">
             <button class="personnel-detail-tab-btn ${initialTab === 'overview' ? 'is-active' : ''}" data-tab="overview" role="tab" aria-selected="${initialTab === 'overview'}">
               ${t('tab_overview')}

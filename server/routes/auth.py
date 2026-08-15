@@ -215,8 +215,9 @@ async def login(req: LoginRequest, response: Response):
     response.set_cookie(key="username", value=urllib.parse.quote(user['username']), httponly=True)
     response.set_cookie(key="role", value=user['role'], httponly=True)
     
-    pref = db.get_one("SELECT site_lang FROM user_preferences WHERE user_id = %s", [user['id']])
+    pref = db.get_one("SELECT site_lang, site_theme FROM user_preferences WHERE user_id = %s", [user['id']])
     site_lang = pref['site_lang'] if pref else 'uk'
+    site_theme = pref['site_theme'] if pref and pref.get('site_theme') else 'light'
 
     score = user.get('score', 0) or 0
     level = user.get('level', 1) or 1
@@ -227,6 +228,7 @@ async def login(req: LoginRequest, response: Response):
         "nickname": user['nickname'] or user['username'],
         "role": user['role'],
         "site_lang": site_lang,
+        "site_theme": site_theme,
         "score": score,
         "level": level,
         "level_title": get_level_title(level),
@@ -244,6 +246,7 @@ async def me(request: Request):
 
     user = db.get_one("SELECT id, nickname, score, level FROM users WHERE username = %s", [username])
     site_lang = 'uk'
+    site_theme = 'light'
     nickname = username
     score = 0
     level = 1
@@ -251,9 +254,10 @@ async def me(request: Request):
         nickname = user['nickname'] or username
         score = user.get('score', 0) or 0
         level = user.get('level', 1) or 1
-        pref = db.get_one("SELECT site_lang FROM user_preferences WHERE user_id = %s", [user['id']])
+        pref = db.get_one("SELECT site_lang, site_theme FROM user_preferences WHERE user_id = %s", [user['id']])
         if pref:
             site_lang = pref['site_lang']
+            site_theme = pref.get('site_theme', 'light')
 
     return {
         "logged_in": True,
@@ -261,6 +265,7 @@ async def me(request: Request):
         "nickname": nickname,
         "role": role,
         "site_lang": site_lang,
+        "site_theme": site_theme,
         "score": score,
         "level": level,
         "level_title": get_level_title(level),
@@ -294,7 +299,8 @@ async def logout(response: Response):
     return {"status": "ok"}
 
 class PreferencesUpdateRequest(BaseModel):
-    site_lang: str
+    site_lang: Optional[str] = None
+    site_theme: Optional[str] = None
 
 @router.get("/preferences")
 async def get_preferences(request: Request):
@@ -307,31 +313,41 @@ async def get_preferences(request: Request):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
-    pref = db.get_one("SELECT site_lang FROM user_preferences WHERE user_id = %s", [user["id"]])
+    pref = db.get_one("SELECT site_lang, site_theme FROM user_preferences WHERE user_id = %s", [user["id"]])
     if not pref:
-        return {"site_lang": "uk"}
-    return {"site_lang": pref["site_lang"]}
+        return {"site_lang": "uk", "site_theme": "light"}
+    return {"site_lang": pref["site_lang"], "site_theme": pref.get("site_theme", "light")}
 
 @router.post("/preferences")
 async def update_preferences(req: PreferencesUpdateRequest, request: Request):
     username = request.cookies.get("username")
     if not username:
         raise HTTPException(status_code=401, detail="Not logged in")
-        
-    if req.site_lang not in ["uk", "en"]:
+    
+    if req.site_lang is not None and req.site_lang not in ["uk", "en"]:
         raise HTTPException(status_code=400, detail="Invalid language")
+    if req.site_theme is not None and req.site_theme not in ["light", "dark"]:
+        raise HTTPException(status_code=400, detail="Invalid theme")
+    if req.site_lang is None and req.site_theme is None:
+        raise HTTPException(status_code=400, detail="No preferences to update")
         
     db = get_db()
     user = db.get_one("SELECT id FROM users WHERE username = %s", [username])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-        
-    db.execute("""
-        INSERT INTO user_preferences (user_id, site_lang, updated_at)
-        VALUES (%s, %s, CURRENT_TIMESTAMP)
-        ON CONFLICT(user_id) DO UPDATE SET
-            site_lang = excluded.site_lang,
-            updated_at = CURRENT_TIMESTAMP
-    """, [user["id"], req.site_lang])
     
-    return {"status": "ok", "site_lang": req.site_lang}
+    db.execute("""
+        INSERT INTO user_preferences (user_id, site_lang, site_theme, updated_at)
+        VALUES (%s, COALESCE(%s, 'uk'), COALESCE(%s, 'light'), CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id) DO UPDATE SET
+            site_lang = COALESCE(%s, user_preferences.site_lang),
+            site_theme = COALESCE(%s, user_preferences.site_theme),
+            updated_at = CURRENT_TIMESTAMP
+    """, [user["id"], req.site_lang, req.site_theme, req.site_lang, req.site_theme])
+    
+    result = {"status": "ok"}
+    if req.site_lang is not None:
+        result["site_lang"] = req.site_lang
+    if req.site_theme is not None:
+        result["site_theme"] = req.site_theme
+    return result

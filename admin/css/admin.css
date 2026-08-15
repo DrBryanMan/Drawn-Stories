@@ -194,27 +194,27 @@
 }
 
 .chip-publisher {
-    background: #e0f2fe;
-    color: #0369a1;
-    border: 1px solid #bae6fd;
+    background: color-mix(in srgb, #0284c7 14%, var(--bg-card));
+    color: #38bdf8;
+    border: 1px solid color-mix(in srgb, #0284c7 30%, transparent);
 }
 
 .chip-theme {
-    background: #f1f5f9;
-    color: #475569;
-    border: 1px solid #e2e8f0;
+    background: var(--bg-2);
+    color: var(--text);
+    border: 1px solid var(--border-s);
 }
 
 .chip-genre {
-    background: #f0fdf4;
-    color: #166534;
-    border: 1px solid #dcfce7;
+    background: color-mix(in srgb, #10b981 14%, var(--bg-card));
+    color: #34d399;
+    border: 1px solid color-mix(in srgb, #10b981 30%, transparent);
 }
 
 .chip-type {
-    background: #fef2f2;
-    color: #991b1b;
-    border: 1px solid #fee2e2;
+    background: color-mix(in srgb, #ef4444 14%, var(--bg-card));
+    color: #f87171;
+    border: 1px solid color-mix(in srgb, #ef4444 30%, transparent);
 }
 
 .theme-chip-group-label {

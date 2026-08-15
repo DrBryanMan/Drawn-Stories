@@ -2,7 +2,7 @@
     font-size: 32px;
     font-weight: 800;
     margin-bottom: 8px;
-    color: var(--text-main);
+    color: var(--text);
 }
 
 .bookmarks-subtitle {
@@ -15,8 +15,8 @@
     align-items: center;
     gap: 20px;
     padding: 24px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    border: 1px solid var(--border-s);
     border-radius: 12px;
     margin-bottom: 40px;
 }
@@ -27,8 +27,8 @@
     justify-content: center;
     width: 48px;
     height: 48px;
-    background: var(--accent-light);
-    color: var(--accent-color);
+    background: var(--accent-glow);
+    color: var(--accent);
     border-radius: 10px;
 }
 
@@ -40,6 +40,7 @@
     font-size: 18px;
     font-weight: 700;
     margin-bottom: 4px;
+    color: var(--text);
 }
 
 .banner-content p {
@@ -51,7 +52,7 @@
     display: inline-flex;
     align-items: center;
     padding: 10px 20px;
-    background: var(--accent-color);
+    background: var(--accent);
     color: white;
     border-radius: 8px;
     font-weight: 600;
@@ -60,7 +61,7 @@
 }
 
 .banner-btn:hover {
-    background: var(--accent-hover);
+    background: var(--accent-h);
     transform: translateY(-1px);
 }
 
@@ -89,6 +90,7 @@
     font-size: 24px;
     font-weight: 700;
     margin-bottom: 12px;
+    color: var(--text);
 }
 
 .bookmarks-empty p {
@@ -100,7 +102,7 @@
     display: inline-flex;
     align-items: center;
     padding: 12px 28px;
-    background: var(--accent-color);
+    background: var(--accent);
     color: white;
     border-radius: 10px;
     font-weight: 600;
@@ -109,7 +111,6 @@
 }
 
 .bookmarks-empty-btn:hover {
-    background: var(--accent-hover);
+    background: var(--accent-h);
     transform: translateY(-1px);
 }
-

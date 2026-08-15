@@ -10,11 +10,10 @@
     justify-content: space-between;
     align-items: center;
     gap: 20px;
-    /* margin-bottom: 32px; */
-    background: var(--bg-card, #fff);
+    background: var(--bg-card);
     padding: 10px 12px;
     border-radius: var(--r);
-    border: 1px solid var(--border-color, #e5e7eb);
+    border: 1px solid var(--border-s);
 }
 
 .collection-segmented {
@@ -24,7 +23,7 @@
   padding: 4px;
   border: 1px solid var(--border-s);
   border-radius: var(--r);
-  background: #eef1f7;
+  background: var(--bg-2);
   align-self: flex-start;
 }
 
@@ -37,21 +36,19 @@
   color: var(--text-muted);
   font: inherit;
   font-size: 14px;
-  /* font-weight: 600; */
   cursor: pointer;
   transition: all var(--t);
 }
 
 .collection-segment:hover {
   color: var(--accent);
-  /* background: var(--accent-glow); */
 }
 
 .collection-segment.is-active {
   background: var(--bg-card);
   border-color: var(--border-s);
   color: var(--accent);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .collection-search-wrap {
@@ -65,7 +62,7 @@
     left: 14px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--text-muted, #6b7280);
+    color: var(--text-muted);
     pointer-events: none;
     display: flex;
 }
@@ -74,17 +71,17 @@
     width: 100%;
     padding: 10px 14px 10px 42px;
     border-radius: 8px;
-    border: 1px solid var(--border-color, #e5e7eb);
-    background: var(--bg-input, #f3f4f6);
-    color: var(--text-primary, #111827);
+    border: 1px solid var(--border-s);
+    background: var(--bg-input);
+    color: var(--text);
     font-size: 13px;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .collection-search-wrap input:focus {
     outline: none;
-    border-color: var(--accent-color, #2563eb);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color, #2563eb) 15%, transparent);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 .collection-stats {
@@ -105,8 +102,8 @@
     width: 36px;
     height: 36px;
     border-radius: 8px;
-    background: color-mix(in srgb, var(--accent-color, #2563eb) 10%, transparent);
-    color: var(--accent-color, #2563eb);
+    background: var(--accent-glow);
+    color: var(--accent);
 }
 
 .collection-stat-details {
@@ -116,7 +113,7 @@
 
 .collection-stat-label {
     font-size: 0.7rem;
-    color: var(--text-muted, #6b7280);
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-weight: 700;
@@ -127,18 +124,19 @@
     font-size: 1.25rem;
     font-weight: 800;
     font-family: var(--font-monos);
-    color: var(--text-primary, #111827);
+    color: var(--text);
     line-height: 1;
     margin-top: 2px;
 }
 
 .collection-volume-card {
-    background: var(--bg-secondary, #f9fafb);
+    background: var(--bg-card);
     border-radius: var(--r-lg);
     padding: 1em 1.5em;
     width: 100%;
-    border: 1px solid var(--border-color, #e5e7eb);
+    border: 1px solid var(--border-s);
 }
+
 .volume-info {
     display: flex;
     justify-content: space-between;
@@ -146,7 +144,7 @@
     gap: 20px;
     margin-bottom: 20px;
     padding-bottom: 16px;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    border-bottom: 1px solid var(--border-s);
 }
 
 .volume-info-left {
@@ -190,7 +188,7 @@
 .volume-progress-text {
     font-size: 14px;
     font-weight: 700;
-    color: var(--text-primary, #111827);
+    color: var(--text);
     font-family: var(--font-monos, monospace);
     min-width: 35px;
     text-align: right;
@@ -207,26 +205,31 @@
 .volume-progress-bar-fill {
     height: 100%;
     border-radius: 9999px;
-    background: var(--success-color, #10b981);
+    background: #10b981;
     transition: width 0.3s ease;
 }
 
-
-/* ... */
+/* Toggle collection buttons */
 .toggle-collection-btn.btn-remove {
-    background: var(--danger-color, #dc2626);
+    background: color-mix(in srgb, #dc2626 15%, var(--bg-card));
+    color: #ef4444;
+    border-color: color-mix(in srgb, #dc2626 30%, transparent);
 }
 
 .toggle-collection-btn.btn-remove:hover {
-    background: #b91c1c;
+    background: #dc2626;
+    color: #fff;
 }
 
 .toggle-collection-btn.btn-add {
-    background: var(--success-color, #16a34a);
+    background: color-mix(in srgb, #16a34a 15%, var(--bg-card));
+    color: #16a34a;
+    border-color: color-mix(in srgb, #16a34a 30%, transparent);
 }
 
 .toggle-collection-btn.btn-add:hover {
-    background: #15803d;
+    background: #16a34a;
+    color: #fff;
 }
 
 .empty-thumb {
@@ -235,11 +238,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--bg-input, #f3f4f6);
-    color: var(--text-muted, #6b7280);
+    background: var(--bg-2);
+    color: var(--text-muted);
 }
-
-
 
 .volume-title {
     font-size: 1.5rem;
@@ -248,17 +249,17 @@
 }
 
 .volume-title a {
-    color: var(--text-primary, #111827);
+    color: var(--text);
     text-decoration: none;
 }
 
 .volume-title a:hover {
-    color: var(--accent-color, #2563eb);
+    color: var(--accent);
 }
 
 .volume-publisher {
     font-size: 0.9rem;
-    color: var(--text-muted, #6b7280);
+    color: var(--text-2);
     font-weight: 500;
 }
 
@@ -269,16 +270,15 @@
 }
 
 .collection-item-wrapper {
-    /* width: 120px; */
     display: flex;
     flex-direction: column;
     gap: 8px;
     transition: opacity 0.3s ease;
-    opacity: 0.4; /* Default transparent as per request */
+    opacity: 0.4;
 }
 
 .collection-item-wrapper.is-owned {
-    opacity: 1; /* Opaque if owned */
+    opacity: 1;
 }
 
 .collection-item-thumb {
@@ -286,8 +286,9 @@
     aspect-ratio: 2/3;
     border-radius: 6px;
     overflow: hidden;
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-    background: #eee;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
+    background: var(--bg-2);
+    border: 1px solid var(--border-s);
 }
 
 .collection-item-thumb img {
@@ -299,8 +300,9 @@
 .item-overlay {
     position: absolute;
     inset: 0;
-    pointer-events: none; /* Let clicks pass through if needed, but the button will have pointer-events: auto */
+    pointer-events: none;
 }
+
 .toggle-collection-btn {
     position: absolute;
     top: 6px;
@@ -315,24 +317,8 @@
     cursor: pointer;
     transition: all 0.2s ease;
     z-index: 10;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
     pointer-events: auto;
-}
-
-/* Base states similar to btn-remove-rel */
-/* Base states similar to btn-remove-rel */
-.toggle-collection-btn.btn-remove {
-    background: #fee2e2;
-    color: #ef4444;
-    border-color: #fecaca;
-    opacity: 0.6; /* Lower opacity until hover */
-}
-
-.toggle-collection-btn.btn-add {
-    background: #dcfce7;
-    color: #16a34a;
-    border-color: #bbf7d0;
-    opacity: 0.6;
 }
 
 .collection-item-wrapper:hover .toggle-collection-btn {
@@ -349,12 +335,6 @@
     background: #16a34a;
     color: #fff;
     transform: scale(1.1);
-}
-
-.collection-item-thumb img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
 }
 
 .collection-item-thumb .item-number {
@@ -374,14 +354,12 @@
 
 .item-name {
     font-size: 0.75rem;
-    color: var(--text-muted, #6b7280);
+    color: var(--text-2);
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
-
-
 
 /* Button for volume detail page */
 .btn-add-all-collection {
@@ -391,7 +369,7 @@
     gap: 8px;
     width: 100%;
     padding: 10px 16px;
-    background: var(--accent-color, #2563eb);
+    background: var(--accent);
     color: white;
     border: none;
     border-radius: 8px;
@@ -402,7 +380,7 @@
 }
 
 .btn-add-all-collection:hover:not(:disabled) {
-    background: var(--accent-hover, #1d4ed8);
+    background: var(--accent-h);
 }
 
 .btn-add-all-collection:active:not(:disabled) {
@@ -415,13 +393,13 @@
 }
 
 .btn-add-all-collection.btn-all-owned {
-    background: #059669; /* Success green */
+    background: #059669;
     opacity: 1 !important;
     cursor: default;
 }
 
 .btn-add-all-collection.btn-some-owned {
-    background: #d97706; /* Warning amber */
+    background: #d97706;
 }
 
 .btn-add-all-collection.btn-some-owned:hover {

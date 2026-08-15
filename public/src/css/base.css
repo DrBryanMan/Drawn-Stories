@@ -10,12 +10,25 @@
   --bg-input:     #ffffff;
   --border:       #d4dae8;
   --border-s:     #e8ecf5;
-  
+  --border-color: #e8ecf5;
+  --header-bg:    rgba(255, 255, 255, 0.8);
+
+  --skeleton-base:  #e5e9f0;
+  --skeleton-shine: #f4f6fa;
+
   --text:         #1a2235;
+  --text-main:    #1a2235;
+  --text-primary: #1a2235;
+  --text-color:   #1a2235;
   --text-2:       #5a6b88;
+  --text-secondary: #5a6b88;
   --text-muted:   #9caabb;
 
+  --bg-body:      #f2f4f8;
+
   --accent:       #6c5ce7;
+  --accent-color: #6c5ce7;
+  --primary:      #6c5ce7;
   --accent-50:    color-mix(in srgb, var(--accent) 50%, transparent);
   --accent-h:     #5849c2;
   --accent-glow:  #2563eb18;

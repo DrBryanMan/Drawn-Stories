@@ -53,7 +53,7 @@
   padding: 10px 12px;
   border: 1px solid var(--border-s);
   border-radius: var(--r-lg);
-  background: rgba(255, 255, 255, .78);
+  background: var(--bg-card);
 }
 
 .catalog-layout.is-filters-open .catalog-actions-panel {
@@ -79,7 +79,7 @@
   padding: 4px;
   border: 1px solid var(--border-s);
   border-radius: var(--r);
-  background: #eef1f7;
+  background: var(--bg-2);
 }
 
 .catalog-segment,
@@ -103,10 +103,10 @@
 
 .catalog-segment.is-active,
 .catalog-filter-chip.is-active {
-  background: #ffffff;
+  background: var(--bg-card);
   border-color: var(--border-s);
-  color: #6d4cff;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, .08);
+  color: var(--accent);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, .15);
 }
 
 .catalog-filter-chip {
@@ -126,8 +126,8 @@
   border-radius: 10px;
   font-size: 13px;
   font-weight: 500;
-  color: #334155;
-  background: #eef1f7;
+  color: var(--text);
+  background: var(--bg-card);
   cursor: pointer;
   appearance: none;
   transition: all var(--t);
@@ -161,19 +161,19 @@
 
 .catalog-selected-filter--source[data-source-id="hikka"] {
   border-color: color-mix(in srgb, var(--source-hikka) 20%, var(--border-s));
-  background: color-mix(in srgb, var(--source-hikka) 6%, white);
+  background: color-mix(in srgb, var(--source-hikka) 12%, var(--bg-card));
   color: var(--source-hikka);
 }
 
 .catalog-selected-filter--source[data-source-id="mal"] {
   border-color: color-mix(in srgb, var(--source-mal) 20%, var(--border-s));
-  background: color-mix(in srgb, var(--source-mal) 6%, white);
+  background: color-mix(in srgb, var(--source-mal) 12%, var(--bg-card));
   color: var(--source-mal);
 }
 
 .catalog-selected-filter--source[data-source-id="cv"] {
   border-color: color-mix(in srgb, var(--source-cv) 20%, var(--border-s));
-  background: color-mix(in srgb, var(--source-cv) 6%, white);
+  background: color-mix(in srgb, var(--source-cv) 12%, var(--bg-card));
   color: var(--source-cv);
 }
 
@@ -315,9 +315,9 @@
   width: 100%;
   height: 36px;
   padding: 0 12px;
-  border: 1px solid #d6ddec;
+  border: 1px solid var(--border-s);
   border-radius: 8px;
-  background: #f4f6fb;
+  background: var(--bg-input);
   color: var(--text);
   font: inherit;
   font-size: 13px;
@@ -326,12 +326,12 @@
 }
 
 .catalog-inline-filter__input::placeholder {
-  color: #8c96b4;
+  color: var(--text-muted);
 }
 
 .catalog-inline-filter__input:focus {
-  border-color: color-mix(in srgb, var(--accent) 45%, #d6ddec);
-  background: #ffffff;
+  border-color: var(--accent);
+  background: var(--bg-card);
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
@@ -365,21 +365,21 @@
 }
 
 .catalog-selected-filter--theme {
-  border: 1px solid color-mix(in srgb, var(--purple) 22%, transparent);
-  background: color-mix(in srgb, var(--purple) 8%, #ffffff);
-  color: #5b21b6;
+  border: 1px solid color-mix(in srgb, var(--purple) 25%, transparent);
+  background: color-mix(in srgb, var(--purple) 12%, var(--bg-card));
+  color: var(--purple);
 }
 
 .catalog-selected-filter--magazine {
-  border: 1px solid color-mix(in srgb, var(--orange) 22%, transparent);
-  background: color-mix(in srgb, var(--orange) 8%, #ffffff);
-  color: #9a3412;
+  border: 1px solid color-mix(in srgb, var(--orange) 25%, transparent);
+  background: color-mix(in srgb, var(--orange) 12%, var(--bg-card));
+  color: var(--orange);
 }
 
 .catalog-selected-filter--language {
-  border: 1px solid color-mix(in srgb, #10b981 22%, transparent);
-  background: color-mix(in srgb, #10b981 8%, #ffffff);
-  color: #065f46;
+  border: 1px solid color-mix(in srgb, #10b981 25%, transparent);
+  background: color-mix(in srgb, #10b981 12%, var(--bg-card));
+  color: #10b981;
 }
 
 .catalog-selected-filter.is-excluded {
@@ -425,10 +425,10 @@
   width: min(360px, calc(100vw - 32px));
   max-height: 320px;
   overflow: auto;
-  border: 1px solid #d6ddec;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #ffffff;
-  box-shadow: 0 18px 36px rgba(15, 23, 42, .14);
+  background: var(--bg-card);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, .25);
 }
 
 .catalog-filter-dropdown--themes {
@@ -444,8 +444,8 @@
   gap: 7px;
   padding: 7px 12px;
   border-bottom: 1px solid var(--border-s);
-  background: #f4f6fb;
-  color: #64748b;
+  background: var(--bg-card-h);
+  color: var(--text-2);
   font-size: 12px;
   font-weight: 750;
   text-transform: uppercase;
@@ -461,7 +461,7 @@
   padding: 8px 10px 8px 12px;
   border: 0;
   border-bottom: 1px solid var(--border-s);
-  background: #ffffff;
+  background: var(--bg-card);
   color: var(--text);
   font: inherit;
   font-size: 13px;
@@ -471,7 +471,7 @@
 }
 
 .catalog-filter-dropdown__item:hover {
-  background: #f8fafc;
+  background: var(--bg-card-h);
 }
 
 .catalog-filter-dropdown__item.is-selected {
@@ -658,9 +658,9 @@
   width: 100%;
   padding: 6px 10px;
   border-radius: 6px;
-  border: 1px solid var(--border-s, #e2e8f0);
-  background: #f8fafc;
-  color: #0f172a;
+  border: 1px solid var(--border-s);
+  background: var(--bg-input);
+  color: var(--text);
   font-size: 13px;
   outline: none;
   transition: border-color 0.15s;
@@ -683,7 +683,7 @@
   text-align: left;
   background: transparent;
   border: none;
-  color: #475569;
+  color: var(--text-2);
   font-size: 13px;
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
@@ -693,8 +693,8 @@
 }
 
 .chapter-mag-filter__item:hover {
-  background: #f1f5f9;
-  color: #0f172a;
+  background: var(--bg-card-h);
+  color: var(--text);
 }
 
 .chapter-mag-filter__item.is-selected {

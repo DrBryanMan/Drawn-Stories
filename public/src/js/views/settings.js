@@ -1,5 +1,6 @@
 import { API } from '../helpers/api.js';
 import { t, getCurrentLanguage, setLanguage } from '../helpers/i18n.js';
+import { getTheme, setTheme } from '../helpers/themeManager.js';
 
 export async function renderSettings(main, user) {
   const avatarUrl = `/api/auth/avatar/${encodeURIComponent(user.nickname || user.username)}?t=${new Date().getTime()}`;
@@ -100,6 +101,19 @@ export async function renderSettings(main, user) {
             </div>
           </div>
         </div>
+
+        <div class="block">
+          <h3>${icon('<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>')} ${t('theme_settings') || 'Тема оформлення'}</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">${t('site_theme') || 'Тема сайту'}</span>
+              <select id="theme-select" class="settings-input" style="width: 100%; max-width: 300px;">
+                <option value="light" ${getTheme() === 'light' ? 'selected' : ''}>${t('theme_light') || 'Світла'}</option>
+                <option value="dark" ${getTheme() === 'dark' ? 'selected' : ''}>${t('theme_dark') || 'Темна'}</option>
+              </select>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   `;
@@ -121,6 +135,18 @@ export async function renderSettings(main, user) {
   const savePasswordBtn = document.getElementById('save-password-btn');
   
   const languageSelect = document.getElementById('language-select');
+  const themeSelect = document.getElementById('theme-select');
+
+  // Theme update
+  themeSelect.addEventListener('change', async (e) => {
+    const newTheme = e.target.value;
+    setTheme(newTheme);
+    try {
+      await API.post('/auth/preferences', { site_theme: newTheme });
+    } catch (err) {
+      console.error('Failed to save theme preference:', err);
+    }
+  });
 
   // Language update
   languageSelect.addEventListener('change', async (e) => {

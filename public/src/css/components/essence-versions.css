@@ -281,13 +281,14 @@
 }
 
 .essence-version-action-btn--edit {
-  background: #ffffff !important;
-  color: var(--text-primary, #334155) !important;
+  background: var(--bg-card) !important;
+  color: var(--text-2) !important;
+  border: 1px solid var(--border-s);
 }
 
 .essence-version-action-btn--edit:hover {
-  background: #f8fafc !important;
-  color: var(--accent, #0284c7) !important;
+  background: var(--bg-card-h) !important;
+  color: var(--accent) !important;
   transform: scale(1.1);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }

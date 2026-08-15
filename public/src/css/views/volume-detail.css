@@ -39,7 +39,7 @@
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: linear-gradient(0deg, rgba(255, 255, 255, 9) 0%, rgba(255, 256, 255, 0.9) 50%, rgba(255, 255, 255, .8) 100%);
+  background: linear-gradient(0deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 92%, transparent) 50%, color-mix(in srgb, var(--bg) 80%, transparent) 100%);
 }
 
 .volume-hero {
@@ -304,8 +304,8 @@
 }
 
 .readlist-btn.is-active {
-  background: #fee2e2;
-  border-color: #fecaca;
+  background: color-mix(in srgb, #ef4444 15%, var(--bg-card));
+  border-color: color-mix(in srgb, #ef4444 40%, transparent);
   color: #ef4444;
 }
 
@@ -752,7 +752,7 @@
   padding: 3px 10px;
   border: 1px solid var(--border-s);
   border-radius: 999px;
-  background: #ffffff;
+  background: var(--bg-card);
   color: var(--text-2);
   font-size: 12px;
   font-weight: 650;
@@ -1068,20 +1068,20 @@
 
 .volume-theme-chip--type {
   border: 1px solid color-mix(in srgb, var(--green) 24%, transparent);
-  background: color-mix(in srgb, var(--green) 7%, #ffffff);
-  color: #047857;
+  background: color-mix(in srgb, var(--green) 12%, var(--bg-card));
+  color: var(--green);
 }
 
 .volume-theme-chip--genre {
   border: 1px solid color-mix(in srgb, var(--gold) 22%, transparent);
-  background: color-mix(in srgb, var(--gold) 7%, #ffffff);
-  color: #92400e;
+  background: color-mix(in srgb, var(--gold) 12%, var(--bg-card));
+  color: var(--gold);
 }
 
 .volume-theme-chip--theme {
   border: 1px solid color-mix(in srgb, var(--purple) 20%, transparent);
-  background: color-mix(in srgb, var(--purple) 6%, #ffffff);
-  color: #5b21b6;
+  background: color-mix(in srgb, var(--purple) 12%, var(--bg-card));
+  color: var(--purple);
 }
 
 .volume-translations-grid {
@@ -1609,7 +1609,7 @@
   padding: 0 10px;
   border: 1px solid var(--border-s);
   border-radius: var(--r);
-  background: #fff;
+  background: var(--bg-card);
   color: var(--text-2);
   font-size: 11px;
   font-weight: 700;
@@ -1620,7 +1620,7 @@
 
 .table-membership-btn:hover {
   border-color: var(--purple);
-  background: color-mix(in srgb, var(--purple) 5%, #ffffff);
+  background: color-mix(in srgb, var(--purple) 10%, var(--bg-card));
   color: var(--purple);
 }
 
@@ -1994,7 +1994,7 @@
 
 .table-membership-btn.is-disabled:hover {
   border-color: var(--border-s) !important;
-  background: #fff !important;
+  background: var(--bg-card) !important;
   color: var(--text-2) !important;
 }
 

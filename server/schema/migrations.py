@@ -1640,6 +1640,15 @@ def m066_hikka_persons(conn):
     conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_vol_pers_unique ON volume_persons(volume_id, person_id, role)")
 
 
+# ── M067: user_preferences — site_theme ──────────────────────────────────
+@migration("M067_user_preferences_site_theme")
+def m067_user_preferences_site_theme(conn):
+    try:
+        conn.execute("ALTER TABLE user_preferences ADD COLUMN site_theme TEXT DEFAULT 'light'")
+    except Exception as e:
+        if "duplicate column" not in str(e) and "already exists" not in str(e):
+            raise
+
 def apply_migrations(conn):
     ensure_migrations_table(conn)
 

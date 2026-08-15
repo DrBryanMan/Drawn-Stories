@@ -4,6 +4,7 @@ import { Bookmarks } from './helpers/bookmarks.js';
 import { openGlobalAddModal } from './components/GlobalAddModal.js';
 import { t, setLanguage, getCurrentLanguage } from './helpers/i18n.js';
 import { NotificationBell } from './components/NotificationBell.js';
+import { initTheme, toggleTheme, getToggleButtonHtml, getTheme, syncThemeFromServer } from './helpers/themeManager.js';
 
 // ── Nav config ───────────────────────────────────────
 // ── Nav config ───────────────────────────────────────
@@ -143,7 +144,7 @@ export function getAvatarHtml(avatarUrl, className, size = 20) {
 // ── Shell mount ──────────────────────────────────────
 export async function initShell() {
   const app = document.getElementById('app');
-  document.documentElement.dataset.theme = 'light';
+  initTheme();
   if ('scrollRestoration' in history) {
     history.scrollRestoration = 'manual';
   }
@@ -277,6 +278,9 @@ async function checkAuth() {
     const data = await API.get('/auth/me');
     if (data.logged_in) {
       currentUser = data;
+      if (data.site_theme) {
+        syncThemeFromServer(data.site_theme);
+      }
       if (data.site_lang && data.site_lang !== getCurrentLanguage()) {
         localStorage.setItem('site_lang', data.site_lang);
         window.location.reload();
@@ -361,6 +365,7 @@ function updateAuthUI() {
 
     container.innerHTML = `
       ${headerControlsHTML}
+      ${getToggleButtonHtml()}
       <div id="bell-mount-point" style="display: inline-flex; align-items: center; margin-right: 4px;"></div>
       <div class="nav-dropdown">
         <button class="nav-link nav-dropdown-trigger auth-user-btn">
@@ -446,6 +451,7 @@ function updateAuthUI() {
     if (isAdmin) {
       updateEditsPendingCount();
     }
+    bindThemeToggle(container);
 
     if (!notificationBellInstance) {
       notificationBellInstance = new NotificationBell();
@@ -462,12 +468,29 @@ function updateAuthUI() {
 
     container.innerHTML = `
       ${bookmarksGuestHTML}
+      ${getToggleButtonHtml()}
       <a href="${authHref}" class="auth-trigger" id="auth-btn">
         ${icon('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>')}
         <span>${t('login')}</span>
       </a>
     `;
+    bindThemeToggle(container);
   }
+}
+
+function bindThemeToggle(container) {
+  const btn = container.querySelector('#theme-toggle-btn');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    const newTheme = toggleTheme();
+    if (currentUser) {
+      try {
+        await API.post('/auth/preferences', { site_theme: newTheme });
+      } catch (err) {
+        console.error('Failed to save theme preference:', err);
+      }
+    }
+  });
 }
 
 function bindDropdown(dropdown) {

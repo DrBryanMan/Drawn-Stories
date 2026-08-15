@@ -173,7 +173,8 @@
   justify-content: center;
   margin-left: 2px;
   padding: 1px 4px;
-  background: #ffffff;
+  background: var(--bg-card);
+  border: 1px solid var(--border-s);
   border-radius: 4px;
   font-family: var(--font-monos);
   font-size: 9.5px;
