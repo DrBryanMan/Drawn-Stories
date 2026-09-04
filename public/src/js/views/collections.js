@@ -3,6 +3,7 @@ import { currentUser } from '../shell.js';
 import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { t } from '../helpers/i18n.js';
 import { icon } from '../helpers/icons.js';
+import { formatCurrency } from '../helpers/lang.js';
 
 let allVolumes = [];
 let searchQuery = '';
@@ -12,7 +13,11 @@ let hideMissing = false;
 
 export async function renderCollections(main, params) {
     const username = params.username;
-    const isMyCollection = !username || (currentUser && currentUser.username === username);
+    const isMyCollection = !username || (currentUser && (
+        (currentUser.nickname && currentUser.nickname.toLowerCase() === username.toLowerCase()) ||
+        (currentUser.login && currentUser.login.toLowerCase() === username.toLowerCase()) ||
+        (currentUser.username && currentUser.username.toLowerCase() === username.toLowerCase())
+    ));
     
     const pageTitle = username 
         ? t('collection_title_other').replace('{username}', username)
@@ -23,8 +28,8 @@ export async function renderCollections(main, params) {
     main.innerHTML = `
         <div class="container">
             <div class="page-header">
-            <div class="collection-controls-row" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 32px;">
-                <div class="collection-segmented-wrap" style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+            <div class="collection-controls-row">
+                <div class="collection-segmented-wrap">
                     <div class="catalog-segmented" role="group" aria-label="Тип контенту" id="collection-type-segmented">
                         <button class="catalog-segment ${currentType === 'collection' ? 'is-active' : ''}" data-type="collection">${t('collections')}</button>
                         <button class="catalog-segment ${currentType === 'issue' ? 'is-active' : ''}" data-type="issue">${t('releases')}</button>
@@ -37,13 +42,13 @@ export async function renderCollections(main, params) {
                 </div>
                 
                 <div class="collection-controls">
-                    <div style="display: flex; gap: 16px; align-items: center; flex: 1; flex-wrap: wrap;">
-                        <div class="collection-search-wrap" style="flex: 1; max-width: 320px;">
+                    <div class="collection-filters-left">
+                        <div class="collection-search-wrap">
                             <span class="search-icon">${icon('search', 18, 2.5)}</span>
                             <input type="text" id="collection-search" placeholder="${t('search_in_collection')}" value="${escapeHtmlAttribute(searchQuery)}">
                         </div>
-                        <label class="collection-hide-missing-label" style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; color: var(--text-2, #4b5563); user-select: none;">
-                            <input type="checkbox" id="collection-hide-missing-chk" ${hideMissing ? 'checked' : ''} style="width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--border-color, #d1d5db); cursor: pointer; accent-color: var(--accent-color, #2563eb);">
+                        <label class="collection-hide-missing-label">
+                            <input type="checkbox" id="collection-hide-missing-chk" class="collection-hide-missing-chk" ${hideMissing ? 'checked' : ''}>
                             <span>${t('hide_missing')}</span>
                         </label>
                     </div>
@@ -60,6 +65,13 @@ export async function renderCollections(main, params) {
                             <div class="collection-stat-details">
                                 <span class="collection-stat-label" id="stat-label-collections">${currentType === 'issue' ? t('releases') : t('collections')}:</span>
                                 <span class="collection-stat-value" id="stat-collections">0</span>
+                            </div>
+                        </div>
+                        <div class="collection-stat-item" id="stat-item-spent" style="${currentType === 'collection' ? '' : 'display: none;'}">
+                            <span class="collection-stat-icon">${icon('banknote', 18, 2)}</span>
+                            <div class="collection-stat-details">
+                                <span class="collection-stat-label">${t('total_spent_value') || 'Витрачено'}:</span>
+                                <span class="collection-stat-value" id="stat-purchase-price">—</span>
                             </div>
                         </div>
                     </div>
@@ -145,10 +157,31 @@ function updateStats() {
     const seriesCount = filteredItems.length;
     const collectionsCount = filteredItems.reduce((acc, vol) => acc + vol.items.length, 0);
 
+    let totalSpent = 0;
+    let hasSpent = false;
+
+    if (currentType === 'collection') {
+        filteredItems.forEach(vol => {
+            vol.items.forEach(item => {
+                const pPrice = parseFloat(item.purchase_price);
+                if (item.purchase_currency === 'UAH' && !isNaN(pPrice) && pPrice > 0) {
+                    totalSpent += pPrice;
+                    hasSpent = true;
+                }
+            });
+        });
+    }
+
     const sEl = document.getElementById('stat-series');
     const cEl = document.getElementById('stat-collections');
+    const spentEl = document.getElementById('stat-purchase-price');
+    const statItemSpent = document.getElementById('stat-item-spent');
+
     if (sEl) sEl.textContent = seriesCount;
     if (cEl) cEl.textContent = collectionsCount;
+    if (spentEl) spentEl.textContent = hasSpent ? formatCurrency(totalSpent, 'UAH') : '—';
+
+    if (statItemSpent) statItemSpent.style.display = currentType === 'collection' ? 'flex' : 'none';
 }
 
 function renderResults(main, isMyCollection = true) {
@@ -274,7 +307,8 @@ function renderResults(main, isMyCollection = true) {
                     }
                     
                     // Full refresh to ensure volume grouping is correct
-                    const apiParams = currentUser ? { username: currentUser.username } : {};
+                    const currHandle = currentUser ? (currentUser.nickname || currentUser.login || currentUser.username) : null;
+                    const apiParams = currHandle ? { username: currHandle } : {};
                     apiParams.content_type = currentType;
                     allVolumes = await API.get(`/collections`, apiParams);
                     updateStats();
@@ -301,7 +335,8 @@ function renderResults(main, isMyCollection = true) {
                     }
                     
                     // Refresh data
-                    const apiParams = currentUser ? { username: currentUser.username } : {};
+                    const currHandle = currentUser ? (currentUser.nickname || currentUser.login || currentUser.username) : null;
+                    const apiParams = currHandle ? { username: currHandle } : {};
                     apiParams.content_type = currentType;
                     allVolumes = await API.get(`/collections`, apiParams);
                     updateStats();

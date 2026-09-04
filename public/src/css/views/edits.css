@@ -74,6 +74,36 @@
     background: color-mix(in srgb, var(--text) 4%, var(--bg-card));
 }
 
+.edit-status-cell-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.edit-type-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+}
+
+.edit-type-icon--create {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.edit-type-icon--edit {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+
 /* Columns */
 .col-id {
     font-family: var(--font-monos);
@@ -145,13 +175,16 @@
 }
 
 .col-content {
-    min-width: 200px;
+    min-width: 180px;
+    max-width: 320px;
 }
 
 .edit-row-content-info {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .edit-row-content-title {
@@ -160,6 +193,11 @@
     color: var(--text);
     text-decoration: none;
     transition: color 0.2s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    max-width: 100%;
 }
 
 .edit-row-content-title:hover {
@@ -172,6 +210,7 @@
 }
 
 .col-changes {
+    min-width: 150px;
     max-width: 300px;
 }
 
@@ -794,6 +833,11 @@
     border-color: color-mix(in srgb, #dc2626 30%, transparent);
     color: #dc2626;
     opacity: 0.85;
+    text-decoration: line-through;
+}
+
+.diff-theme-chip--removed .diff-chip-icon {
+    text-decoration: none;
 }
 
 /* Image Previews styling */
@@ -824,6 +868,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+    align-items: center;
 }
 
 .changed-field-badge {
@@ -831,9 +876,12 @@
     border: 1px solid color-mix(in srgb, var(--text-muted) 30%, var(--border-s));
     color: var(--text-2);
     font-size: 11px;
-    padding: 3px 5px 2px;
+    padding: 3px 6px 2px;
     border-radius: var(--r);
-    letter-spacing: 0.08em;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    display: inline-block;
+    flex-shrink: 0;
 }
 
 .changed-field-badge--themes {

@@ -177,8 +177,9 @@ export class NotificationsView {
     const payload = item.payload || {};
     let imgUrl = null;
 
-    if (payload.actor_username) {
-      imgUrl = `/api/auth/avatar/${encodeURIComponent(payload.actor_username)}`;
+    const actorIdentifier = payload.actor_name || payload.actor_login || payload.actor_username;
+    if (actorIdentifier) {
+      imgUrl = `/api/auth/avatar/${encodeURIComponent(actorIdentifier)}`;
     } else if (payload.cover_image) {
       imgUrl = normalizeImageUrl(payload.cover_image);
     }
@@ -217,6 +218,8 @@ export class NotificationsView {
       iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`;
     } else if (type === 'new_issue') {
       iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>`;
+    } else if (type === 'level_up') {
+      iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.45 1-1 1H7"/><path d="M14 14.66V17c0 .55.45 1 1 1h2"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>`;
     } else {
       iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`;
     }
@@ -229,6 +232,7 @@ export class NotificationsView {
     if (item.type === 'edit_approved') return t('edit_approved_title');
     if (item.type === 'edit_rejected') return t('edit_rejected_title');
     if (item.type === 'new_issue') return t('new_issue_title');
+    if (item.type === 'level_up') return t('level_up_title');
     return this.escapeHtml(item.title);
   }
 
@@ -236,6 +240,13 @@ export class NotificationsView {
     const payload = item.payload || {};
     const actorName = payload.actor_name ? this.escapeHtml(payload.actor_name) : '';
 
+    if (item.type === 'level_up') {
+      const level = payload.level;
+      const title = payload.level_title || (level ? t(`level_title_${level}`) : '');
+      if (level && title) {
+        return t('level_up_msg', { level, title: `<strong>${this.escapeHtml(title)}</strong>` });
+      }
+    }
     if (item.type === 'new_follower' && actorName) {
       return t('new_follower_msg', { name: `<strong>${actorName}</strong>` });
     }

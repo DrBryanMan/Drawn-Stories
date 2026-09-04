@@ -192,7 +192,7 @@ export async function renderCatalog(main, query = {}) {
             <button class="catalog-segment" type="button" data-view-type="issues">${t('releases')}</button>
           </div>
           <button class="catalog-filter-chip" type="button" id="collection-filter-btn" aria-pressed="false">
-            ${currentContentType === 'manga' ? `${t('volumes')}` : `${t('collections')}`}
+            ${t('collections')}
           </button>
         </div>
         <div class="catalog-actions-panel" id="catalog-actions-panel" aria-label="Фільтри каталогу" style="display: ${filtersOpen ? 'flex' : 'none'};"></div>

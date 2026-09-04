@@ -32,8 +32,7 @@
 
 [data-theme] body,
 [data-theme] .site-header,
-[data-theme] .block,
-[data-theme] .nav-dropdown-content {
+[data-theme] .block {
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 

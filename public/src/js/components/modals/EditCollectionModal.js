@@ -157,6 +157,18 @@ export class CollectionEditor {
             this.contents = [];
         }
 
+        let tech = {};
+        if (c.tech_info) {
+            try {
+                tech = typeof c.tech_info === 'string' ? JSON.parse(c.tech_info) : (c.tech_info || {});
+            } catch (e) {
+                tech = {};
+            }
+        }
+        if (!tech.pages && c.pages) {
+            tech.pages = c.pages;
+        }
+
         modal.innerHTML = `
             <div class="ds-modal ds-modal--large" id="collection-editor-modal">
                 <div class="ds-modal-header">
@@ -168,8 +180,9 @@ export class CollectionEditor {
                 </div>
                 <div class="ds-modal-body">
                     <div class="editor-tabs-segmented" style="margin-bottom: 20px;">
-                        <button class="editor-tab-btn is-active" data-tab="info">Основна інформація</button>
-                        <button class="editor-tab-btn" data-tab="contents">Зміст</button>
+                        <button class="editor-tab-btn is-active" data-tab="info">${t('main_info') || 'Основна інформація'}</button>
+                        <button class="editor-tab-btn" data-tab="tech">${t('tech_info_tab') || 'Технічна інформація'}</button>
+                        <button class="editor-tab-btn" data-tab="contents">${t('contents') || 'Зміст'}</button>
                     </div>
 
                     <form id="edit-collection-form">
@@ -195,23 +208,14 @@ export class CollectionEditor {
                                 </div>
 
                                 <div class="admin-form-group">
-                                    <label class="admin-label">${icon('calendar', 14)} Дата обкладинки</label>
-                                    <input type="text" name="cover_date" class="admin-input" value="${fieldValue(c.cover_date)}" placeholder="YYYY-MM-DD">
-                                </div>
-                                <div class="admin-form-group">
                                     <label class="admin-label">${icon('calendar', 14)} Дата виходу</label>
-                                    <input type="text" name="release_date" class="admin-input" value="${fieldValue(c.release_date)}" placeholder="YYYY-MM-DD">
+                                    <input type="text" name="release_date" class="admin-input" value="${fieldValue(c.release_date)}" placeholder="YYYY-MM-DD або YYYY-MM">
                                 </div>
 
                                 <div class="admin-form-group">
                                     <label class="admin-label">${icon('hash', 14)} ISBN</label>
                                     <input type="text" name="isbn" class="admin-input" value="${fieldValue(c.isbn)}">
                                 </div>
-                                <div class="admin-form-group">
-                                    <label class="admin-label">${icon('hash', 14)} Сторінок</label>
-                                    <input type="number" name="pages" class="admin-input" value="${fieldValue(c.pages)}">
-                                </div>
-
                                 <div class="admin-form-group">
                                     <label class="admin-label">${icon('check', 14)} Статус достовірності</label>
                                     <select name="verification_status" class="admin-input">
@@ -224,7 +228,7 @@ export class CollectionEditor {
                                 ${this._imgFieldHTML('image', 'Обкладинка', c.image, icon('image', 14))}
 
                                 <div class="admin-form-group admin-form-group--full">
-                                    <label class="admin-label">${icon('externalLink', 14)} Посилання на сайт джерела</label>
+                                    <label class="admin-label">${icon('externalLink', 14)} Посилання на сайт видавництва</label>
                                     <input type="url" name="site_link" class="admin-input" value="${fieldValue(c.site_link)}" placeholder="https://...">
                                 </div>
 
@@ -245,9 +249,77 @@ export class CollectionEditor {
                             </div>
                         </div>
 
+                        <!-- Вкладка: Технічна інформація -->
+                        <div class="editor-tab-content" id="tab-tech">
+                            <div class="admin-form-grid">
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${icon('book', 14)} ${t('pages_count') || 'Кількість сторінок'}</label>
+                                    <input type="number" name="tech_pages" class="admin-input" value="${fieldValue(tech.pages)}" placeholder="наприклад, 160">
+                                </div>
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${icon('package', 14)} ${t('cover_type') || 'Тип видання'}</label>
+                                    <select name="tech_cover_type" class="admin-input">
+                                        <option value="">${t('unspecified') || 'Не вказано'}</option>
+                                        <option value="hardcover" ${tech.cover_type === 'hardcover' ? 'selected' : ''}>${t('cover_type_hardcover') || 'Тверда (Hardcover)'}</option>
+                                        <option value="softcover" ${tech.cover_type === 'softcover' ? 'selected' : ''}>${t('cover_type_softcover') || 'М\'яка (Softcover)'}</option>
+                                        <option value="digital" ${tech.cover_type === 'digital' ? 'selected' : ''}>${t('cover_type_digital') || 'Цифрова'}</option>
+                                    </select>
+                                </div>
+
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${icon('layers', 14)} ${t('dust_jacket') || 'Суперобкладинка'}</label>
+                                    <select name="tech_dust_jacket" class="admin-input">
+                                        <option value="">${t('unspecified') || 'Не вказано'}</option>
+                                        <option value="true" ${tech.dust_jacket === true || tech.dust_jacket === 'true' ? 'selected' : ''}>${t('yes') || 'Так'}</option>
+                                        <option value="false" ${tech.dust_jacket === false || tech.dust_jacket === 'false' ? 'selected' : ''}>${t('no') || 'Ні'}</option>
+                                    </select>
+                                </div>
+
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${icon('coins', 14)} ${t('release_price') || 'Ціна релізу'}</label>
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="number" step="any" min="0" name="tech_release_price" class="admin-input" value="${fieldValue(tech.release_price)}" placeholder="0.00" style="flex: 1;">
+                                        <select name="tech_release_currency" class="admin-input" style="width: 90px;">
+                                            <option value="UAH" ${(!tech.release_currency || tech.release_currency === 'UAH') ? 'selected' : ''}>UAH (₴)</option>
+                                            <option value="USD" ${tech.release_currency === 'USD' ? 'selected' : ''}>USD ($)</option>
+                                            <option value="EUR" ${tech.release_currency === 'EUR' ? 'selected' : ''}>EUR (€)</option>
+                                            <option value="GBP" ${tech.release_currency === 'GBP' ? 'selected' : ''}>GBP (£)</option>
+                                            <option value="JPY" ${tech.release_currency === 'JPY' ? 'selected' : ''}>JPY (¥)</option>
+                                            <option value="PLN" ${tech.release_currency === 'PLN' ? 'selected' : ''}>PLN (zł)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${icon('ruler', 14)} ${t('dimensions') || 'Розміри / Формат'}</label>
+                                    <input type="text" name="tech_dimensions" class="admin-input" value="${fieldValue(tech.dimensions)}" placeholder="наприклад, 165 x 250 мм">
+                                </div>
+
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${icon('hash', 14)} ${t('print_run') || 'Тираж'}</label>
+                                    <input type="text" name="tech_print_run" class="admin-input" value="${fieldValue(tech.print_run)}" placeholder="наприклад, 1000 прим.">
+                                </div>
+
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${icon('shieldAlert', 14)} ${t('age_rating') || 'Віковий рейтинг'}</label>
+                                    <input type="text" name="tech_age_rating" class="admin-input" value="${fieldValue(tech.age_rating)}" placeholder="наприклад, 16+, 18+">
+                                </div>
+
+                                <div class="admin-form-group">
+                                    <label class="admin-label">${icon('weight', 14)} ${t('weight') || 'Вага'}</label>
+                                    <input type="text" name="tech_weight" class="admin-input" value="${fieldValue(tech.weight)}" placeholder="наприклад, 450 г">
+                                </div>
+
+                                <div class="admin-form-group admin-form-group--full">
+                                    <label class="admin-label">${icon('sparkles', 14)} ${t('finish') || 'Особливості поліграфії'}</label>
+                                    <input type="text" name="tech_finish" class="admin-input" value="${fieldValue(tech.finish)}" placeholder="наприклад, вибірковий УФ-лак, тиснення фольгою, кольоровий зріз">
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Вкладка: Зміст -->
                         <div class="editor-tab-content" id="tab-contents">
-                            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--text);">Розділи</h3>
+                            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--text);">${t('chapters') || 'Розділи'}</h3>
                             <div id="col-contents-editor-container"></div>
                         </div>
                     </form>
@@ -445,6 +517,41 @@ export class CollectionEditor {
         ['cv_id', 'pages'].forEach(key => {
             data[key] = data[key] ? parseInt(data[key]) : null;
         });
+
+        // Parse and build tech_info object
+        const pagesVal = formData.get('tech_pages') ? parseInt(formData.get('tech_pages')) : (data.pages || null);
+        const relPriceVal = formData.get('tech_release_price');
+        const dustJacketVal = formData.get('tech_dust_jacket');
+
+        const techData = {
+            pages: pagesVal,
+            cover_type: formData.get('tech_cover_type') || null,
+            dust_jacket: dustJacketVal === 'true' ? true : (dustJacketVal === 'false' ? false : null),
+            release_price: relPriceVal && String(relPriceVal).trim() !== '' ? parseFloat(relPriceVal) : null,
+            release_currency: formData.get('tech_release_currency') || 'UAH',
+            dimensions: formData.get('tech_dimensions') ? formData.get('tech_dimensions').trim() : null,
+            print_run: formData.get('tech_print_run') ? formData.get('tech_print_run').trim() : null,
+            age_rating: formData.get('tech_age_rating') ? formData.get('tech_age_rating').trim() : null,
+            weight: formData.get('tech_weight') ? formData.get('tech_weight').trim() : null,
+            finish: formData.get('tech_finish') ? formData.get('tech_finish').trim() : null,
+        };
+
+        // Remove empty values
+        Object.keys(techData).forEach(k => {
+            if (techData[k] === null || techData[k] === undefined || techData[k] === '') {
+                delete techData[k];
+            }
+        });
+
+        // Clean up tech_ prefixed fields from top-level data dict
+        [
+            'tech_pages', 'tech_cover_type', 'tech_dust_jacket', 'tech_release_price',
+            'tech_release_currency', 'tech_dimensions', 'tech_print_run', 'tech_age_rating',
+            'tech_weight', 'tech_finish'
+        ].forEach(k => delete data[k]);
+
+        data.tech_info = techData;
+        data.pages = pagesVal ? String(pagesVal) : null;
 
         // Save stringified array of contents
         data.contents = JSON.stringify((this.contents || []).map(s => s.trim()).filter(s => s));

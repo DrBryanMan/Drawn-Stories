@@ -6,11 +6,11 @@ from ..helpers.themes import THEME_COLLECTION, THEME_TRANSLATED, THEME_MAGAZINE
 router = APIRouter(prefix="/api/volumes", tags=["volumes"])
 
 def get_current_user_id(request: Request):
-    username = request.cookies.get("username")
-    if not username:
+    user_login = request.cookies.get("login") or request.cookies.get("username")
+    if not user_login:
         return None
     db = get_db()
-    user = db.get_one("SELECT id FROM users WHERE username = %s", [username])
+    user = db.get_one("SELECT id FROM users WHERE login = %s", [user_login])
     return user['id'] if user else None
 
 @router.get("/{volume_id}")
@@ -249,9 +249,9 @@ async def get_volume_detail(volume_id: int, request: Request):
         if item.get("cover_date") or item.get("release_date")
     )
     collection_only_dates = sorted(
-        item.get("cover_date") or item.get("release_date")
+        item.get("release_date")
         for item in collections
-        if item.get("cover_date") or item.get("release_date")
+        if item.get("release_date")
     )
 
     def first_year(dates):
@@ -519,15 +519,15 @@ async def convert_all_to_collections(volume_id: int):
                 """
                 INSERT INTO collections (
                     cv_vol_id, volume_id, name, image, site_link, cv_id, cv_slug, 
-                    publisher, issue_number, cover_date, release_date, description, pages
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    publisher, issue_number, release_date, description, pages
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
                 [
                     item_cv_vol_id, item.get("volume_id") or volume_id, item.get("name") or "Без назви",
                     item.get("image"), item.get("site_link"), item.get("cv_id"), item.get("cv_slug"),
                     volume.get("publisher"), item.get("issue_number"), 
-                    item.get("cover_date") or item.get("release_date"), item.get("release_date"), item.get("description"), item.get("pages")
+                    item.get("release_date") or item.get("cover_date"), item.get("description"), item.get("pages")
                 ]
             )
             new_col_id = cursor.fetchone()["id"]
@@ -601,7 +601,7 @@ async def convert_all_collections_to_issues(volume_id: int):
                 [
                     col.get("cv_id"), col.get("cv_slug"), col.get("name") or "Без назви",
                     col.get("image"), col.get("cv_vol_id") or volume.get("cv_id"), volume_id,
-                    col.get("issue_number"), col.get("cover_date"), col.get("release_date"),
+                    col.get("issue_number"), col.get("release_date"), col.get("release_date"),
                     col.get("site_link"), col.get("description"), col.get("pages")
                 ]
             )
@@ -690,7 +690,7 @@ async def get_issue_collections_membership(issue_id: int, type: str = "issue"):
             JOIN collections c ON c.id = ci.collection_id
             LEFT JOIN volumes v ON c.volume_id = v.id
             WHERE ci.manga_chapter_id = %s
-            ORDER BY CASE WHEN c.issue_number ~ '^[0-9]' THEN CAST(substring(c.issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, COALESCE(c.release_date, c.cover_date) ASC
+            ORDER BY CASE WHEN c.issue_number ~ '^[0-9]' THEN CAST(substring(c.issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, c.release_date ASC NULLS LAST
         """
     else:
         query = """
@@ -699,7 +699,7 @@ async def get_issue_collections_membership(issue_id: int, type: str = "issue"):
             JOIN collections c ON c.id = ci.collection_id
             LEFT JOIN volumes v ON c.volume_id = v.id
             WHERE ci.issue_id = %s
-            ORDER BY CASE WHEN c.issue_number ~ '^[0-9]' THEN CAST(substring(c.issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, COALESCE(c.release_date, c.cover_date) ASC
+            ORDER BY CASE WHEN c.issue_number ~ '^[0-9]' THEN CAST(substring(c.issue_number from '^[0-9]+(\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST, c.release_date ASC NULLS LAST
         """
     collections = db.get_all(query, [issue_id])
     return {"data": collections}
@@ -843,7 +843,7 @@ async def get_volume_collections_from_issues(volume_id: int, request: Request):
             parent_vol_name ASC,
             parent_vol_id ASC,
             CASE WHEN issue_number ~ '^[0-9]' THEN CAST(substring(issue_number from '^[0-9]+(?:\\.[0-9]+)?') AS NUMERIC) ELSE NULL END ASC NULLS LAST,
-            COALESCE(release_date, cover_date) ASC NULLS LAST,
+            release_date ASC NULLS LAST,
             name ASC
         """,
         [user_id] + vol_ids + vol_ids + ([vol_lang] if vol_lang else [])
@@ -902,8 +902,8 @@ async def get_volume_edit_history(volume_id: int):
         raise HTTPException(status_code=404, detail="Том не знайдено")
         
     query = """
-        SELECT er.*, u.username as proposer_username, COALESCE(u.nickname, u.username) as proposer_nickname,
-               m.username as moderator_username, COALESCE(m.nickname, m.username) as moderator_nickname
+        SELECT er.*, u.login as proposer_username, u.login as proposer_login, COALESCE(u.nickname, u.login) as proposer_nickname,
+               m.login as moderator_username, m.login as moderator_login, COALESCE(m.nickname, m.login) as moderator_nickname
         FROM edit_requests er
         JOIN users u ON er.user_id = u.id
         LEFT JOIN users m ON er.moderator_id = m.id

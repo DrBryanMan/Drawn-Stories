@@ -75,7 +75,7 @@ async def get_publisher(publisher_id: int):
     # 3. Latest Collections
     pub["latest_collections"] = db.get_all(
         """
-        SELECT c.id, c.name, c.image, c.issue_number, c.release_date, c.cover_date,
+        SELECT c.id, c.name, c.image, c.issue_number, c.release_date,
                v.id as volume_id, v.name_uk as volume_name_uk, v.name as volume_name
         FROM collections c
         LEFT JOIN volumes v ON c.volume_id = v.id

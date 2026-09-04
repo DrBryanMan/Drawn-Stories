@@ -32,7 +32,10 @@ export function createComicCard(item) {
     const releaseDate = item.release_date ? item.release_date.split('-').reverse().join('.') : '';
     const lang = item.lang || '';
     const coverUrl = normalizeImageUrl(item.image || item.image || item.cover_img);
-    const title = escapeHtmlAttribute(item.name || 'Без назви');
+    const fallbackTitle = isCollection && item.issue_number
+        ? `Книга ${item.issue_number}`
+        : 'Без назви';
+    const title = escapeHtmlAttribute(item.name || fallbackTitle);
     const coverSrc = escapeHtmlAttribute(coverUrl);
 
     const a = document.createElement('a');
@@ -59,6 +62,7 @@ export function createComicCard(item) {
 
     let metaText = '';
     let statBadge = '';
+    let verificationBadge = '';
     const issueIcon = icon('issues', 11, { strokeWidth: 2.5 });
     const calendarIcon = icon('calendar', 11, { strokeWidth: 2.5 });
 
@@ -67,11 +71,33 @@ export function createComicCard(item) {
             <span class="comic-meta-item">${calendarIcon} ${releaseDate || year || '—'}</span>
         `;
     } else if (isCollection) {
-        metaText = `
-            <span class="comic-meta-item">${issueIcon} #${escapeHtmlAttribute(item.issue_number || '?')}</span>
-            <span class="comic-meta-sep">·</span>
-            <span class="comic-meta-item">${calendarIcon} ${year}</span>
-        `;
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const isAnnounced = item.release_date && item.release_date > today;
+        const verificationStatus = isAnnounced ? 'announced' : (item.verification_status || 'unverified');
+        const verificationMeta = {
+            announced: {
+                title: 'Збірник анонсовано, дата релізу в майбутньому',
+                icon: icon('clock', 12, { strokeWidth: 2.2 }),
+            },
+            physical: {
+                title: 'Інформація підтверджена з фізичного примірника',
+                icon: icon('book', 12, { strokeWidth: 2.2 }),
+            },
+            open_sources: {
+                title: 'Інформація взята з відкритих джерел',
+                icon: icon('globe', 12, { strokeWidth: 2.2 }),
+            },
+            unverified: {
+                title: 'Інформація ще не перевірена',
+                icon: icon('shieldAlert', 12, { strokeWidth: 2.2 }),
+            },
+        }[verificationStatus] || {
+            title: 'Інформація ще не перевірена',
+            icon: icon('shieldAlert', 12, { strokeWidth: 2.2 }),
+        };
+
+        verificationBadge = `<span class="comic-source-badge comic-source-badge--verification volume-status-${verificationStatus}" title="${escapeHtmlAttribute(verificationMeta.title)}">${verificationMeta.icon}</span>`;
     } else {
         const issueCount = item.issue_count || 0;
         const collectionCount = item.collection_count || 0;
@@ -103,7 +129,7 @@ export function createComicCard(item) {
         `;
     }
 
-    const langBadge = lang ? `<span class="comic-lang-badge">${escapeHtmlAttribute(lang)}</span>` : '';
+    const langBadge = lang && !isCollection ? `<span class="comic-lang-badge">${escapeHtmlAttribute(lang)}</span>` : '';
 
     const volumeIcon = icon('volumes', 11, { strokeWidth: 2.5 });
     const publisherIcon = icon('publishers', 11, { strokeWidth: 2.5 });
@@ -137,6 +163,7 @@ export function createComicCard(item) {
     if (item.mal_id) sources.push('<span class="comic-source-badge comic-source-badge--mal">MAL</span>');
     if (item.hikka_slug) sources.push('<span class="comic-source-badge comic-source-badge--hikka">HIKKA</span>');
     if (item.cv_id) sources.push('<span class="comic-source-badge comic-source-badge--cv">CV</span>');
+    if (verificationBadge) sources.push(verificationBadge);
     const sourcesHTML = sources.length > 0 ? `<div class="comic-sources-list">${sources.join('')}</div>` : '';
 
     a.innerHTML = `
@@ -149,10 +176,7 @@ export function createComicCard(item) {
         </div>
         <div class="comic-body">
             <div class="comic-title">${title}</div>
-            <div class="comic-meta-pill">
-                <span>${metaText}</span>
-                ${langBadge}
-            </div>
+            ${!isCollection ? `<div class="comic-meta-pill"><span>${metaText}</span>${langBadge}</div>` : ''}
             ${subTitle}
         </div>
     `;

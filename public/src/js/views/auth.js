@@ -32,10 +32,10 @@ export async function renderAuth(container) {
                     </div>
                     <form id="auth-form" class="auth-form">
                         <div class="form-group">
-                            <label for="username">${t('username')} *</label>
+                            <label for="login">${t('username')} *</label>
                             <div class="input-wrapper">
                                 ${icon('user', 16)}
-                                <input type="text" id="username" name="username" required maxlength="20" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ_]+$" title="Дозволено лише літери, цифри та нижнє підкреслення (від 1 до 20 симв.)" placeholder="${t('auth_username_placeholder')}">
+                                <input type="text" id="login" name="login" required maxlength="20" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ_]+$" title="Дозволено лише літери, цифри та нижнє підкреслення (від 1 до 20 симв.)" placeholder="${t('auth_username_placeholder')}">
                             </div>
                         </div>
                         ${mode === 'register' ? `

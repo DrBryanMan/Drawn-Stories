@@ -28,21 +28,30 @@ _PROGRESS_FILE = os.path.abspath(
 
 
 def _remove_issue_from_failed(issue_id: int) -> None:
-    """Видаляє issue_id зі списку failed_issue_ids у файлі прогресу CLI-скрапера."""
+    """Видаляє issue_id зі списків failed_issue_ids та failed_404_issue_ids у файлі прогресу CLI-скрапера."""
     try:
         if not os.path.exists(_PROGRESS_FILE):
             return
         with open(_PROGRESS_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
         failed: list = data.get('failed_issue_ids', [])
-        if issue_id not in failed:
-            return
-        failed.remove(issue_id)
-        data['failed_issue_ids'] = failed
-        tmp = _PROGRESS_FILE + ".tmp"
-        with open(tmp, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        os.replace(tmp, _PROGRESS_FILE)
+        failed_404: list = data.get('failed_404_issue_ids', [])
+        
+        changed = False
+        if issue_id in failed:
+            failed.remove(issue_id)
+            data['failed_issue_ids'] = failed
+            changed = True
+        if issue_id in failed_404:
+            failed_404.remove(issue_id)
+            data['failed_404_issue_ids'] = failed_404
+            changed = True
+
+        if changed:
+            tmp = _PROGRESS_FILE + ".tmp"
+            with open(tmp, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            os.replace(tmp, _PROGRESS_FILE)
     except Exception:
         pass  # не критично, якщо файл відсутній або пошкоджений
 

@@ -112,7 +112,7 @@ export async function renderHome(main) {
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                   Нові релізи
                 </div>
-                <a class="section-link" href="#/catalog?lang=uk&sort=date">Дивитись все →</a>
+                <a class="section-link" href="#/catalog?sort=date&content_type=manga&view_type=issues&collection=true&langs=uk">Дивитись все →</a>
               </div>
               <div class="comic-grid" id="uk-new-releases-grid">
                 <div class="loader-container"><div class="loader"></div></div>
@@ -125,7 +125,7 @@ export async function renderHome(main) {
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                   Останні додані серії
                 </div>
-                <a class="section-link" href="#/catalog?lang=uk&sort=recent">Дивитись все →</a>
+                <a class="section-link" href="#/catalog?lang=uk&sort=recent&content_type=manga&collection=true">Дивитись все →</a>
               </div>
               <div class="comic-grid" id="uk-recent-series-grid">
                 <div class="loader-container"><div class="loader"></div></div>
@@ -138,7 +138,7 @@ export async function renderHome(main) {
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-1.5Z"/></svg>
                   Останні додані збірники
                 </div>
-                <a class="section-link" href="#/catalog?lang=uk&view_type=collections&sort=recent">Дивитись все →</a>
+                <a class="section-link" href="#/catalog?lang=uk&sort=recent&view_type=issues&view_type=collections">Дивитись все →</a>
               </div>
               <div class="comic-grid" id="uk-recent-collections-grid">
                 <div class="loader-container"><div class="loader"></div></div>

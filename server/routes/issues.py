@@ -177,7 +177,7 @@ async def get_issue_detail(issue_id: int):
     collections = db.get_all(
         """
         SELECT c.id, c.name, c.image, c.cv_id, c.cv_slug,
-               c.volume_id, c.release_date, c.cover_date,
+               c.volume_id, c.release_date,
                v.name AS volume_name, v.name_uk AS volume_name_uk
         FROM collection_issues ci
         JOIN collections c ON ci.collection_id = c.id

@@ -26,7 +26,22 @@ async def delete_person(person_id: int, request: Request):
     db.execute("DELETE FROM persons WHERE id = %s", [person_id])
     return {"message": "Персону успішно видалено з БД"}
 
+@router.post("")
+async def create_person(req: dict, request: Request):
+    require_moderator(request)
+    db = get_db()
+    from .edits import create_entity_in_db
+    try:
+        new_id = create_entity_in_db(db, "person", req)
+        db.conn.commit()
+        return {"id": new_id, "message": "Персону успішно створено"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Помилка створення персони: {str(e)}")
+
 @router.get("/{person_id}")
+
 async def get_person_detail(person_id: int):
     db = get_db()
 

@@ -170,7 +170,7 @@ async def get_catalog(
                 LEFT JOIN publishers p ON v.publisher = p.id
             """
             select_fields = "c.*, v.name as volume_name, v.name_uk as volume_name_uk, v.image as volume_image, v.cover_img as volume_cover_img, v.id as volume_id, p.name as publisher_name, v.lang, 'collection' as type"
-            COLLECTION_SORT_MAP = {"name": "c.name", "recent": "c.created_at", "date": "COALESCE(c.release_date, c.cover_date)"}
+            COLLECTION_SORT_MAP = {"name": "c.name", "recent": "c.created_at", "date": "c.release_date"}
             primary_sort = COLLECTION_SORT_MAP.get(sort, "c.created_at")
             unique_key = "c.id"
             if search:
@@ -278,7 +278,7 @@ async def get_catalog(
                 # на зразок "1972-07-00" (день = 0 з Comic Vine). Текстове
                 # порівняння ISO-рядків дає правильний лексикографічний результат.
                 date_col = "COALESCE(i.release_date, i.cover_date)" if not collection \
-                    else "COALESCE(c.release_date, c.cover_date)"
+                    else "c.release_date"
                 if date_min:
                     filter_clauses.append(f"{date_col} >= %s")
                     filter_params.append(date_min)

@@ -48,6 +48,7 @@ export const FIELD_DEFINITIONS = {
   'publication_date': { uk: 'Дата публікації', en: 'Publication date', iconName: 'calendar' },
   'country': { uk: 'Країна', en: 'Country', iconName: 'globe' },
   'publisher': { uk: 'Видавництво', en: 'Publisher', iconName: 'building' },
+  'verification_status': { uk: 'Статус достовірності', en: 'Verification status', iconName: 'check' },
   'lang': { uk: 'Мова', en: 'Language', iconName: 'globe' },
 
   // Посилання
@@ -156,20 +157,25 @@ function normalizeVal(val) {
 /**
  * Генерує бейджики змінених полів для списку правок
  */
-export function getChangedFieldBadges(before = {}, after = {}) {
+export function getChangedFieldBadges(before = {}, after = {}, options = {}) {
   const badges = [];
   const processedKeys = new Set();
+  const isCreation = options?.isCreation || (Object.keys(before).length === 0 && Object.keys(after).length > 0);
+
+  if (isCreation) {
+    badges.push(`<span class="changed-field-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 700;">✨ Створення (+50 б.)</span>`);
+  }
 
   const allKeys = new Set([...Object.keys(before), ...Object.keys(after)]);
 
   for (const key of allKeys) {
-    if (['theme_ids', 'themes', 'staff', 'characters', 'personas', 'image_file', 'cover_img_file'].includes(key)) {
+    if (['theme_ids', 'themes', 'staff', 'characters', 'personas', 'image_file', 'cover_img_file', 'tech_info'].includes(key)) {
       continue;
     }
-    if (after[key] !== undefined && after[key] !== null) {
+    if (after[key] !== undefined && after[key] !== null && after[key] !== '') {
       const beforeStr = normalizeVal(before[key]);
       const afterStr = normalizeVal(after[key]);
-      if (beforeStr !== afterStr && !processedKeys.has(key)) {
+      if ((beforeStr !== afterStr || isCreation) && !processedKeys.has(key)) {
         processedKeys.add(key);
         const label = getFieldLabel(key);
         badges.push(`<span class="changed-field-badge">${escapeHtml(label)}</span>`);
@@ -177,10 +183,11 @@ export function getChangedFieldBadges(before = {}, after = {}) {
     }
   }
 
+
   // Теми
   if (after.theme_ids !== undefined && after.theme_ids !== null) {
-    const beforeIds = (before.theme_ids || []).map(id => Number(id)).sort();
-    const afterIds = (after.theme_ids || []).map(id => Number(id)).sort();
+    const beforeIds = [...new Set((before.theme_ids || []).map(id => Number(id)))].sort((a, b) => a - b);
+    const afterIds = [...new Set((after.theme_ids || []).map(id => Number(id)))].sort((a, b) => a - b);
     if (JSON.stringify(beforeIds) !== JSON.stringify(afterIds)) {
       badges.push(`<span class="changed-field-badge changed-field-badge--themes">${escapeHtml(t('themes'))}</span>`);
     }
@@ -228,7 +235,7 @@ export function generateDiffHTML(before = {}, after = {}, themesCache = []) {
   let hasChanges = false;
 
   const imageKeys = new Set(['image', 'cover_img', 'portret_img', 'costume_img', 'portret_costume_img', 'logo', 'photo']);
-  const ignoredKeys = new Set(['theme_ids', 'themes', 'staff', 'characters', 'personas', 'image_file', 'cover_img_file']);
+  const ignoredKeys = new Set(['theme_ids', 'themes', 'staff', 'characters', 'personas', 'image_file', 'cover_img_file', 'tech_info']);
 
   const allKeys = new Set([...Object.keys(before), ...Object.keys(after)]);
 
@@ -250,6 +257,14 @@ export function generateDiffHTML(before = {}, after = {}, themesCache = []) {
         if (key === 'lang') {
           displayBefore = beforeVal ? (langName(beforeVal) || beforeVal) : '—';
           displayAfter = afterVal ? (langName(afterVal) || afterVal) : '—';
+        } else if (key === 'verification_status') {
+          const verificationStatuses = {
+            unverified: 'Неперевірено',
+            open_sources: 'З відкритих джерел',
+            physical: 'З примірника'
+          };
+          displayBefore = verificationStatuses[beforeVal] || beforeVal || '—';
+          displayAfter = verificationStatuses[afterVal] || afterVal || '—';
         } else if (key === 'gender') {
           const genders = { 1: t('male'), 2: t('female'), 3: t('other_gender') };
           displayBefore = genders[beforeVal] || beforeVal || '—';
@@ -271,14 +286,15 @@ export function generateDiffHTML(before = {}, after = {}, themesCache = []) {
 
   // 2. Порівнюємо Теми
   if (after.theme_ids !== undefined && after.theme_ids !== null) {
-    const beforeIds = (before.theme_ids || []).map(id => Number(id)).sort();
-    const afterIds = (after.theme_ids || []).map(id => Number(id)).sort();
+    const beforeIds = [...new Set((before.theme_ids || []).map(id => Number(id)))].sort((a, b) => a - b);
+    const afterIds = [...new Set((after.theme_ids || []).map(id => Number(id)))].sort((a, b) => a - b);
 
     if (JSON.stringify(beforeIds) !== JSON.stringify(afterIds)) {
       hasChanges = true;
 
-      const getThemeChipHTML = (id, list, isAdded = false, isRemoved = false) => {
-        const found = (list || []).find(t => t.id === id);
+      const getThemeChipHTML = (id, isAdded = false, isRemoved = false) => {
+        const allThemes = [...(after.themes || []), ...(before.themes || [])];
+        const found = allThemes.find(t => t.id === id);
         let name = found ? found.name : '';
         if (!name && Array.isArray(themesCache)) {
           const cached = themesCache.find(t => t.id === id);
@@ -300,12 +316,24 @@ export function generateDiffHTML(before = {}, after = {}, themesCache = []) {
         return `<span class="${chipClass}" title="${escapeHtml(name)}">${iconHtml}${escapeHtml(label)}</span>`;
       };
 
-      const beforeText = beforeIds.length
-        ? `<div class="diff-theme-chips">${beforeIds.map(id => getThemeChipHTML(id, before.themes, false, !afterIds.includes(id))).join('')}</div>`
+      const removedIds = beforeIds.filter(id => !afterIds.includes(id));
+      const addedIds = afterIds.filter(id => !beforeIds.includes(id));
+      const keptIds = afterIds.filter(id => beforeIds.includes(id));
+
+      const beforeChips = beforeIds.map(id => getThemeChipHTML(id, false, removedIds.includes(id)));
+      const beforeText = beforeChips.length
+        ? `<div class="diff-theme-chips">${beforeChips.join('')}</div>`
         : '—';
-      const afterText = afterIds.length
-        ? `<div class="diff-theme-chips">${afterIds.map(id => getThemeChipHTML(id, after.themes, !beforeIds.includes(id), false)).join('')}</div>`
+
+      const afterChips = [
+        ...keptIds.map(id => getThemeChipHTML(id, false, false)),
+        ...addedIds.map(id => getThemeChipHTML(id, true, false)),
+        ...removedIds.map(id => getThemeChipHTML(id, false, true))
+      ];
+      const afterText = afterChips.length
+        ? `<div class="diff-theme-chips">${afterChips.join('')}</div>`
         : '—';
+
       html += renderDiffField(t('themes'), icon('tag', 14) || '', beforeText, afterText, 'themes');
     }
   }

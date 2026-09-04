@@ -2,6 +2,7 @@ import json
 import re
 from typing import Optional, Dict, Any
 from server.db import get_db
+from server.helpers.scores import get_level_title
 
 def create_notification(
     user_id: int,
@@ -44,10 +45,10 @@ def notify_edit_status_change(
     db = get_db()
     mod_info = None
     if moderator_id:
-        mod_info = db.get_one("SELECT username, nickname FROM users WHERE id = %s", [moderator_id])
+        mod_info = db.get_one("SELECT login, nickname FROM users WHERE id = %s", [moderator_id])
 
-    mod_name = (mod_info.get("nickname") or mod_info.get("username")) if mod_info else "Модератор"
-    mod_username = mod_info.get("username") if mod_info else None
+    mod_name = (mod_info.get("nickname") or mod_info.get("login")) if mod_info else "Модератор"
+    mod_login = mod_info.get("login") if mod_info else None
 
     if new_status == "approved":
         type_str = "edit_approved"
@@ -68,7 +69,8 @@ def notify_edit_status_change(
         "entity_type": entity_type,
         "status": new_status,
         "moderator_comment": moderator_comment,
-        "actor_username": mod_username,
+        "actor_login": mod_login,
+        "actor_username": mod_login,
         "actor_name": mod_name
     }
     
@@ -87,19 +89,20 @@ def notify_user_follow(follower_id: int, target_id: int):
     Сповіщає користувача (target_id) про те, що інший користувач (follower_id) підписався на його профіль.
     """
     db = get_db()
-    follower = db.get_one("SELECT username, nickname FROM users WHERE id = %s", [follower_id])
+    follower = db.get_one("SELECT login, nickname FROM users WHERE id = %s", [follower_id])
     if not follower:
         return
 
-    follower_name = follower.get("nickname") or follower.get("username")
-    follower_username = follower.get("username")
+    follower_name = follower.get("nickname") or follower.get("login")
+    follower_login = follower.get("login")
 
     title = "Нова підписка"
     msg = f"Користувач {follower_name} підписався на Ваш профіль"
     link = f"/user/{follower_name}"
     payload = {
         "follower_id": follower_id,
-        "actor_username": follower_username,
+        "actor_login": follower_login,
+        "actor_username": follower_login,
         "actor_name": follower_name
     }
 
@@ -212,3 +215,39 @@ def notify_new_issue_subscribers(
             link=link,
             payload=payload
         )
+
+
+def notify_level_up(user_id: int, new_level: int, new_score: int):
+    """
+    Сповіщає користувача про досягнення нового рівня.
+    """
+    db = get_db()
+    user = db.get_one("SELECT login, nickname FROM users WHERE id = %s", [user_id])
+    if not user:
+        return
+
+    level_title = get_level_title(new_level)
+    user_login = user.get("login")
+    nickname = user.get("nickname") or user_login
+
+    title = "Новий рівень!"
+    message = f"Вітаємо! Ви досягли {new_level} рівня: {level_title}"
+    link = f"/user/{nickname}"
+    payload = {
+        "level": new_level,
+        "level_title": level_title,
+        "score": new_score,
+        "actor_login": user_login,
+        "actor_username": user_login,
+        "actor_name": nickname
+    }
+
+    return create_notification(
+        user_id=user_id,
+        type_str="level_up",
+        title=title,
+        message=message,
+        link=link,
+        payload=payload
+    )
+

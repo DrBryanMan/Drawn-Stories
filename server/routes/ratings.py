@@ -10,11 +10,11 @@ class RatingUpdate(BaseModel):
     rating: int
 
 def get_current_user_id(request: Request):
-    username = request.cookies.get("username")
-    if not username:
+    user_login = request.cookies.get("login") or request.cookies.get("username")
+    if not user_login:
         return None
     db = get_db()
-    user = db.get_one("SELECT id FROM users WHERE username = %s", [username])
+    user = db.get_one("SELECT id FROM users WHERE login = %s", [user_login])
     return user["id"] if user else None
 
 @router.get("/{entity_type}/{entity_id}")

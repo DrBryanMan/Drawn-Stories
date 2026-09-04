@@ -1649,6 +1649,140 @@ def m067_user_preferences_site_theme(conn):
         if "duplicate column" not in str(e) and "already exists" not in str(e):
             raise
 
+
+# ── M068: collections — tech_info (jsonb) ────────────────────────────────
+@migration("M068_collections_tech_info")
+def m068_collections_tech_info(conn):
+    try:
+        conn.execute("ALTER TABLE collections ADD COLUMN IF NOT EXISTS tech_info JSONB DEFAULT '{}'::jsonb")
+    except Exception as e:
+        if "duplicate column" not in str(e) and "already exists" not in str(e):
+            raise
+
+    # Backfill existing pages into tech_info->'pages'
+    try:
+        conn.execute("""
+            UPDATE collections
+            SET tech_info = jsonb_build_object('pages', pages)
+            WHERE pages IS NOT NULL 
+              AND pages != '' 
+              AND (tech_info IS NULL OR tech_info = '{}'::jsonb)
+        """)
+    except Exception as e:
+        print(f"[M068] Попередження при переносі pages: {e}")
+
+
+# ── M069: user_volumes_collection — purchase_price ───────────────────────
+@migration("M069_user_collections_purchase_price")
+def m069_user_collections_purchase_price(conn):
+    try:
+        conn.execute("ALTER TABLE user_volumes_collection ADD COLUMN IF NOT EXISTS purchase_price NUMERIC(10, 2) DEFAULT NULL")
+    except Exception as e:
+        if "duplicate column" not in str(e) and "already exists" not in str(e):
+            raise
+
+    try:
+        conn.execute("ALTER TABLE user_volumes_collection ADD COLUMN IF NOT EXISTS purchase_currency TEXT DEFAULT 'UAH'")
+    except Exception as e:
+        if "duplicate column" not in str(e) and "already exists" not in str(e):
+            raise
+
+    try:
+        conn.execute("""
+            UPDATE user_volumes_collection uvc
+            SET purchase_price = CAST(c.tech_info->>'release_price' AS NUMERIC),
+                purchase_currency = 'UAH'
+            FROM collections c
+            WHERE uvc.collection_id = c.id
+              AND uvc.purchase_price IS NULL
+              AND c.tech_info->>'release_currency' = 'UAH'
+              AND c.tech_info->>'release_price' ~ '^[0-9]+(\\.[0-9]+)?$'
+        """)
+    except Exception as e:
+        print(f"[M069] Попередження при заповненні гривневої ціни покупки: {e}")
+
+# ── M070: users — перейменування username на login ───────────────────────
+@migration("M070_users_rename_username_to_login")
+def m070_users_rename_username_to_login(conn):
+    try:
+        conn.execute("ALTER TABLE users RENAME COLUMN username TO login")
+    except Exception as e:
+        if "does not exist" in str(e) or "already exists" in str(e):
+            pass
+        else:
+            raise
+
+
+# ── M071: remove release-price values from purchase-price fields ──────────
+@migration("M071_clear_derived_purchase_prices")
+def m071_clear_derived_purchase_prices(conn):
+    conn.execute("""
+        UPDATE user_volumes_collection uvc
+        SET purchase_price = NULL,
+            purchase_currency = 'UAH'
+        FROM collections c
+        WHERE uvc.collection_id = c.id
+          AND c.tech_info->>'release_currency' IS DISTINCT FROM 'UAH'
+          AND c.tech_info->>'release_price' ~ '^[0-9]+(\\.[0-9]+)?$'
+          AND uvc.purchase_price = CAST(c.tech_info->>'release_price' AS NUMERIC)
+          AND COALESCE(uvc.purchase_currency, 'UAH') = COALESCE(c.tech_info->>'release_currency', 'UAH')
+    """)
+
+
+# ── M072: backfill UAH release prices after derived-price cleanup ─────────
+@migration("M072_backfill_uah_purchase_prices")
+def m072_backfill_uah_purchase_prices(conn):
+    conn.execute("""
+        UPDATE user_volumes_collection uvc
+        SET purchase_price = CAST(c.tech_info->>'release_price' AS NUMERIC),
+            purchase_currency = 'UAH'
+        FROM collections c
+        WHERE uvc.collection_id = c.id
+          AND uvc.purchase_price IS NULL
+          AND c.tech_info->>'release_currency' = 'UAH'
+          AND c.tech_info->>'release_price' ~ '^[0-9]+(\\.[0-9]+)?$'
+    """)
+
+
+# ── M073: remove the accidental generic score for tech_info in edit #226 ──
+@migration("M073_correct_edit_226_tech_info_score")
+def m073_correct_edit_226_tech_info_score(conn):
+    corrected_rows = conn.execute("""
+        UPDATE score_history
+        SET delta = delta - 5,
+            reason = regexp_replace(
+                regexp_replace(reason, ',?\\s*додано tech_info \\(\\+5 б\\.\\)', '', 'g'),
+                'всього \\+59 б\\.',
+                'всього +54 б.'
+            )
+        WHERE edit_id = 226
+          AND delta > 0
+          AND reason LIKE '%додано tech_info (+5 б.)%'
+        RETURNING user_id
+    """).fetchall()
+
+    for row in corrected_rows:
+        conn.execute(
+            "UPDATE users SET score = GREATEST(0, score - 5) WHERE id = %s",
+            [row["user_id"]],
+        )
+
+
+# ── M071: підтримка створення сутностей у правках ───────────────────────
+@migration("M071_edit_requests_creation")
+def m071_edit_requests_creation(conn):
+    conn.execute("""
+        ALTER TABLE edit_requests 
+        ADD COLUMN IF NOT EXISTS is_creation BOOLEAN DEFAULT FALSE;
+    """)
+    conn.execute("""
+        ALTER TABLE edit_requests 
+        ADD COLUMN IF NOT EXISTS created_entity_id INTEGER;
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_edit_req_is_creation ON edit_requests(is_creation);
+    """)
+
 def apply_migrations(conn):
     ensure_migrations_table(conn)
 

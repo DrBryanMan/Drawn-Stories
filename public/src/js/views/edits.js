@@ -129,7 +129,7 @@ export async function renderEdits(main, query = {}) {
         const container = main.querySelector('#contributors-container');
         if (!container) return;
 
-        // Group edits by nickname (fallback to username)
+        // Group edits by nickname (fallback to username), track real user score
         const userStats = {};
         allEdits.forEach(e => {
             const displayName = e.proposer_nickname || e.proposer_username;
@@ -138,16 +138,20 @@ export async function renderEdits(main, query = {}) {
             if (!userStats[displayName]) {
                 userStats[displayName] = {
                     username: displayName,
-                    totalScore: 0,
+                    // proposer_score — реальний бал з users.score (враховує модераторські бонуси тощо)
+                    totalScore: Number(e.proposer_score) || 0,
                     approved: 0,
                     rejected: 0,
                     pending: 0,
                     closed: 0
                 };
+            } else {
+                // Оновлюємо score лише якщо нове значення більше (на випадок розходжень)
+                const latestScore = Number(e.proposer_score) || 0;
+                if (latestScore > userStats[displayName].totalScore) {
+                    userStats[displayName].totalScore = latestScore;
+                }
             }
-            
-            const pts = Number(e.score_awarded) || 0;
-            userStats[displayName].totalScore += pts;
 
             if (e.status === 'approved') userStats[displayName].approved++;
             else if (e.status === 'rejected') userStats[displayName].rejected++;
@@ -155,7 +159,7 @@ export async function renderEdits(main, query = {}) {
             else if (e.status === 'closed') userStats[displayName].closed++;
         });
 
-        // Convert to array and sort by totalScore desc, then approved desc, then rejected asc
+        // Sort by real user score desc, then approved desc, then rejected asc
         const sorted = Object.values(userStats).sort((a, b) => {
             if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
             if (b.approved !== a.approved) return b.approved - a.approved;
@@ -376,12 +380,12 @@ export async function renderEdits(main, query = {}) {
                 <table class="edits-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>${t('author_date')}</th>
-                            <th>${t('content_type')}</th>
-                            <th>${t('changes')}</th>
-                            <th>${t('points')}</th>
-                            <th style="text-align: right;">${t('status')}</th>
+                            <th class="col-id">ID</th>
+                            <th class="col-author">${t('author_date')}</th>
+                            <th class="col-content">${t('content_type')}</th>
+                            <th class="col-changes">${t('changes')}</th>
+                            <th class="col-score">${t('points')}</th>
+                            <th class="col-status" style="text-align: right;">${t('status')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -473,20 +477,27 @@ export async function renderEdits(main, query = {}) {
                 </td>
                 <td class="col-content">
                     <div class="edit-row-content-info">
-                        <a href="#/edits/${e.id}" class="edit-row-content-title">${escapeHtml(entityName)}</a>
+                        <a href="#/edits/${e.id}" class="edit-row-content-title" title="${escapeHtml(entityName)}">${escapeHtml(entityName)}</a>
                         <span class="edit-row-entity-badge">${entityLabel}</span>
                     </div>
                 </td>
                 <td class="col-changes">
-                    ${getChangedFieldBadges(beforeData, afterData)}
+                    ${getChangedFieldBadges(beforeData, afterData, { isCreation: e.is_creation })}
                 </td>
+
                 <td class="col-score">
                     ${renderScoreChip(e)}
                 </td>
                 <td class="col-status" style="white-space: nowrap;">
-                    ${statusBadgeHtml}
-                    ${deleteBtnHtml}
+                    <div class="edit-status-cell-wrap" style="justify-content: flex-end;">
+                        <span class="edit-type-icon ${e.is_creation ? 'edit-type-icon--create' : 'edit-type-icon--edit'}" title="${e.is_creation ? 'Створення' : 'Редагування'}">
+                            ${e.is_creation ? icon('plus', 13) : icon('edit', 13)}
+                        </span>
+                        ${statusBadgeHtml}
+                        ${deleteBtnHtml}
+                    </div>
                 </td>
+
             </tr>
         `;
     }

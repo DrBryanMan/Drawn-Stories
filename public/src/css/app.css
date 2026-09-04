@@ -23,6 +23,7 @@
 @import url('components/essence-versions.css');
 @import url('components/edit-diff.css');
 @import url('components/notifications.css');
+@import url('components/toast.css');
 
 /* Сторінки */
 @import url('views/volumeCharacters.css');

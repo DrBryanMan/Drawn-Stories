@@ -394,7 +394,7 @@ function renderItems(container, items) {
                                             ${isVolume ? '<span class="issue-grid-type-badge" style="position:static; margin-left:8px; padding:2px 6px;">Манґа</span>' : (isCollection ? '<span class="issue-grid-type-badge" style="position:static; margin-left:8px; padding:2px 6px;">Збірник</span>' : '')}
                                         </div>
                                     </td>
-                                    <td class="table-issue-date">${isVolume ? (item.start_year || '') : formatDate(item.cover_date || item.release_date, '—')}</td>
+                                    <td class="table-issue-date">${isVolume ? (item.start_year || '') : formatDate(item.release_date, '—')}</td>
                                     <td>
                                          ${isCollection ? `
                                              <button class="issue-grid-toggle-btn ${item.is_owned ? 'is-owned' : ''}" data-id="${item.id}" title="${item.is_owned ? 'Видалити з колекції' : 'Додати в колекцію'}" style="position: static; width: 28px; height: 28px;">
@@ -442,8 +442,8 @@ function sortItems(items, order = 'number_asc') {
         }
 
         if (field === 'date') {
-            const dateA = a.cover_date || a.release_date || '';
-            const dateB = b.cover_date || b.release_date || '';
+            const dateA = a.release_date || '';
+            const dateB = b.release_date || '';
             if (dateA && dateB && dateA !== dateB) {
                 return isDesc ? dateB.localeCompare(dateA) : dateA.localeCompare(dateB);
             }
@@ -485,8 +485,8 @@ function sortCollections(collections, order = 'number_asc') {
 
         // Всередині групи
         if (field === 'date') {
-            const dateA = a.release_date || a.cover_date || '';
-            const dateB = b.release_date || b.cover_date || '';
+            const dateA = a.release_date || '';
+            const dateB = b.release_date || '';
             if (dateA && dateB && dateA !== dateB) {
                 return isDesc ? dateB.localeCompare(dateA) : dateA.localeCompare(dateB);
             }
@@ -2299,7 +2299,7 @@ function renderCollectionsFromIssues(container, collections, options = {}) {
                                 <div class="issue-grid-title">${escapeHtmlAttribute(col.name || 'Без назви')}</div>
                                 <div class="issue-grid-meta">
                                     ${range ? `<span class="issue-grid-range">${icon('hash', 13, { strokeWidth: 2.2 })} ${range}</span>` : ''}
-                                    <span class="issue-grid-date">${formatDate(col.cover_date || col.release_date, '—')}</span>
+                                    <span class="issue-grid-date">${formatDate(col.release_date, '—')}</span>
                                 </div>
                             </div>
                         </a>

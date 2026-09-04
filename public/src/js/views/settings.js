@@ -3,7 +3,9 @@ import { t, getCurrentLanguage, setLanguage } from '../helpers/i18n.js';
 import { getTheme, setTheme } from '../helpers/themeManager.js';
 
 export async function renderSettings(main, user) {
-  const avatarUrl = `/api/auth/avatar/${encodeURIComponent(user.nickname || user.username)}?t=${new Date().getTime()}`;
+  const userLogin = user.login || user.username || '';
+  const userNickname = user.nickname || userLogin;
+  const avatarUrl = `/api/auth/avatar/${encodeURIComponent(userNickname)}?t=${new Date().getTime()}`;
 
   const icon = (d, size = 18) =>
     `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
@@ -51,7 +53,7 @@ export async function renderSettings(main, user) {
               <div class="info-item">
                 <span class="info-label">${t('username')}</span>
                 <div class="input-with-button">
-                  <input type="text" id="username-input" class="settings-input" value="${user.username}" required maxlength="20" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ_]+$" title="Дозволено лише літери, цифри та нижнє підкреслення (макс. 20 симв.)">
+                  <input type="text" id="username-input" class="settings-input" value="${userLogin}" required maxlength="20" pattern="^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ_]+$" title="Дозволено лише літери, цифри та нижнє підкреслення (макс. 20 симв.)">
                   <button type="submit" class="save-btn" id="save-username-btn">${t('save')}</button>
                 </div>
               </div>
@@ -163,20 +165,21 @@ export async function renderSettings(main, user) {
   usernameForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const newUsername = usernameInput.value.trim();
-    if (!newUsername || newUsername === user.username) return;
+    if (!newUsername || newUsername === (user.login || user.username)) return;
 
     saveUsernameBtn.disabled = true;
     saveUsernameBtn.textContent = t('saving');
 
     try {
-      const data = await API.put('/auth/update-profile', { new_username: newUsername });
+      const data = await API.put('/auth/update-profile', { new_login: newUsername, new_username: newUsername });
 
-      user.username = data.username;
+      user.login = data.login || data.username;
+      user.username = user.login;
       window.dispatchEvent(new CustomEvent('auth-changed', { detail: user }));
       alert(t('success_username'));
     } catch (err) {
       alert(err.message);
-      usernameInput.value = user.username;
+      usernameInput.value = user.login || user.username;
     } finally {
       saveUsernameBtn.disabled = false;
       saveUsernameBtn.textContent = t('save');

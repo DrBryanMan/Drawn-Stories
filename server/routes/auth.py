@@ -4,10 +4,11 @@ from typing import Optional
 import hashlib
 import os
 import shutil
+import urllib.parse
+import re
 from server.db import get_db
 from fastapi.responses import FileResponse
 from server.helpers.scores import get_level_for_score, get_level_title
-
 from server.helpers.avatar import generate_default_avatar_svg
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -16,18 +17,21 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 USERS_IMAGES_DIR = os.path.join(BASE_DIR, "images", "users")
 
+def get_auth_login_from_cookie(request: Request) -> Optional[str]:
+    return request.cookies.get("login") or request.cookies.get("username")
+
 @router.post("/upload-avatar")
 async def upload_avatar(request: Request, avatar: UploadFile = File(...)):
-    username = request.cookies.get("username")
-    if not username:
+    user_login = get_auth_login_from_cookie(request)
+    if not user_login:
         raise HTTPException(status_code=401, detail="Not logged in")
     
     db = get_db()
-    user = db.get_one("SELECT username, nickname FROM users WHERE username = %s", [username])
+    user = db.get_one("SELECT login, nickname FROM users WHERE login = %s", [user_login])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
-    display_name = user.get("nickname") or user["username"]
+    display_name = user.get("nickname") or user["login"]
 
     if avatar.content_type not in ["image/jpeg", "image/webp"]:
         raise HTTPException(status_code=400, detail="Invalid file type")
@@ -46,35 +50,33 @@ async def upload_avatar(request: Request, avatar: UploadFile = File(...)):
 @router.get("/avatar/{identifier}")
 async def get_avatar(identifier: str):
     db = get_db()
-    # 1. Direct file check by identifier (which can be nickname or username)
+    # 1. Direct file check by identifier (which can be nickname or login)
     for ext in [".jpg", ".webp"]:
         path = os.path.join(USERS_IMAGES_DIR, f"{identifier}_avatar{ext}")
         if os.path.exists(path):
-            return FileResponse(path, headers={"Cache-Control": "public, max-age=3600"})
+            return FileResponse(path, headers={"Cache-Control": "no-cache, must-revalidate"})
     
-    # 2. Lookup user by nickname or username to find target filename
+    # 2. Lookup user by nickname or login to find target filename
     user = db.get_one(
-        "SELECT username, COALESCE(nickname, username) as nickname FROM users WHERE LOWER(nickname) = LOWER(%s) OR LOWER(username) = LOWER(%s)",
+        "SELECT login, COALESCE(nickname, login) as nickname FROM users WHERE LOWER(nickname) = LOWER(%s) OR LOWER(login) = LOWER(%s)",
         [identifier, identifier]
     )
     if user:
-        for name_to_try in [user.get("nickname"), user["username"]]:
+        for name_to_try in [user.get("nickname"), user["login"]]:
             if not name_to_try:
                 continue
             for ext in [".jpg", ".webp"]:
                 path = os.path.join(USERS_IMAGES_DIR, f"{name_to_try}_avatar{ext}")
                 if os.path.exists(path):
-                    return FileResponse(path, headers={"Cache-Control": "public, max-age=3600"})
+                    return FileResponse(path, headers={"Cache-Control": "no-cache, must-revalidate"})
 
-    # 3. Return dynamic default avatar SVG (HTTP 200) with 24h browser caching
+    # 3. Return a dynamic default avatar SVG. It must also be revalidated after an upload.
     svg_content = generate_default_avatar_svg(identifier)
     return Response(
         content=svg_content,
         media_type="image/svg+xml",
-        headers={"Cache-Control": "public, max-age=86400"}
+        headers={"Cache-Control": "no-cache, must-revalidate"}
     )
-
-import re
 
 def validate_field(val: str) -> bool:
     if not val or len(val) > 20:
@@ -82,39 +84,41 @@ def validate_field(val: str) -> bool:
     return bool(re.match(r"^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ_]+$", val))
 
 class ProfileUpdateRequest(BaseModel):
-    new_username: Optional[str] = None
+    new_login: Optional[str] = None
+    new_username: Optional[str] = None  # fallback alias
     new_nickname: Optional[str] = None
 
 @router.put("/update-profile")
 async def update_profile(req: ProfileUpdateRequest, request: Request, response: Response):
-    old_username = request.cookies.get("username")
-    if not old_username:
+    old_login = get_auth_login_from_cookie(request)
+    if not old_login:
         raise HTTPException(status_code=401, detail="Not logged in")
     
     db = get_db()
-    user = db.get_one("SELECT * FROM users WHERE username = %s", [old_username])
+    user = db.get_one("SELECT * FROM users WHERE login = %s", [old_login])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
-    old_nickname = user.get("nickname") or old_username
+    old_nickname = user.get("nickname") or old_login
+    target_new_login = req.new_login or req.new_username
     
-    # 1. Зміна логіну (username)
-    if req.new_username is not None:
-        new_username = req.new_username.strip()
-        if not new_username:
+    # 1. Зміна логіну (login)
+    if target_new_login is not None:
+        new_login = target_new_login.strip()
+        if not new_login:
             raise HTTPException(status_code=400, detail="Логін не може бути порожнім")
-        if not validate_field(new_username):
+        if not validate_field(new_login):
             raise HTTPException(status_code=400, detail="Логін має бути до 20 символів і містити лише літери та цифри (без крапок та пробілів)")
             
-        if new_username.lower() != old_username.lower():
-            existing = db.get_one("SELECT id FROM users WHERE LOWER(username) = LOWER(%s)", [new_username])
+        if new_login.lower() != old_login.lower():
+            existing = db.get_one("SELECT id FROM users WHERE LOWER(login) = LOWER(%s)", [new_login])
             if existing:
                 raise HTTPException(status_code=400, detail="Користувач з таким логіном вже існує")
             
-            db.execute("UPDATE users SET username = %s WHERE id = %s", [new_username, user["id"]])
+            db.execute("UPDATE users SET login = %s WHERE id = %s", [new_login, user["id"]])
             
-            import urllib.parse
-            response.set_cookie(key="username", value=urllib.parse.quote(new_username), httponly=True)
+            response.set_cookie(key="login", value=urllib.parse.quote(new_login), httponly=True)
+            response.set_cookie(key="username", value=urllib.parse.quote(new_login), httponly=True)
             
     # 2. Зміна нікнейму (nickname)
     if req.new_nickname is not None:
@@ -143,15 +147,22 @@ async def update_profile(req: ProfileUpdateRequest, request: Request, response: 
                         print(f"Error renaming avatar: {e}")
 
     # Отримуємо свіжі дані
-    updated_user = db.get_one("SELECT username, nickname, role FROM users WHERE id = %s", [user["id"]])
-    return {"status": "ok", "username": updated_user["username"], "nickname": updated_user["nickname"]}
+    updated_user = db.get_one("SELECT login, nickname, role FROM users WHERE id = %s", [user["id"]])
+    return {
+        "status": "ok", 
+        "login": updated_user["login"],
+        "username": updated_user["login"], 
+        "nickname": updated_user["nickname"]
+    }
 
 class LoginRequest(BaseModel):
-    username: str
+    login: Optional[str] = None
+    username: Optional[str] = None
     password: str
 
 class RegisterRequest(BaseModel):
-    username: str
+    login: Optional[str] = None
+    username: Optional[str] = None
     password: str
     nickname: Optional[str] = None
 
@@ -175,18 +186,22 @@ def verify_password(password: str, stored_hash: str) -> bool:
 @router.post("/register")
 async def register(req: RegisterRequest):
     db = get_db()
-    username = req.username.strip()
-    nickname = req.nickname.strip() if req.nickname else username
+    raw_login = req.login or req.username
+    if not raw_login:
+        raise HTTPException(status_code=400, detail="Логін є обов'язковим")
+        
+    user_login = raw_login.strip()
+    nickname = req.nickname.strip() if req.nickname else user_login
     
-    if not validate_field(username):
+    if not validate_field(user_login):
         raise HTTPException(status_code=400, detail="Логін має бути від 1 до 20 символів і містити лише літери та цифри (без крапок)")
     if not validate_field(nickname):
         raise HTTPException(status_code=400, detail="Нікнейм має бути від 1 до 20 символів і містити лише літери та цифри (без крапок)")
     if not req.password or len(req.password) < 6:
         raise HTTPException(status_code=400, detail="Пароль має містити не менше 6 символів")
         
-    # Check if username exists
-    existing_user = db.get_one("SELECT id FROM users WHERE LOWER(username) = LOWER(%s)", [username])
+    # Check if login exists
+    existing_user = db.get_one("SELECT id FROM users WHERE LOWER(login) = LOWER(%s)", [user_login])
     if existing_user:
         raise HTTPException(status_code=400, detail="Користувач з таким логіном вже існує")
         
@@ -196,23 +211,24 @@ async def register(req: RegisterRequest):
         raise HTTPException(status_code=400, detail="Користувач з таким нікнеймом вже існує")
     
     pwd_hash = hash_password(req.password)
-    db.execute("INSERT INTO users (username, nickname, password_hash, role) VALUES (%s, %s, %s, 'viewer')", [username, nickname, pwd_hash])
+    db.execute("INSERT INTO users (login, nickname, password_hash, role) VALUES (%s, %s, %s, 'viewer')", [user_login, nickname, pwd_hash])
     return {"status": "ok"}
 
 @router.post("/login")
 async def login(req: LoginRequest, response: Response):
     db = get_db()
-    username = req.username.strip() if req.username else ""
-    user = db.get_one("SELECT * FROM users WHERE username = %s", [username])
+    raw_login = req.login or req.username or ""
+    user_login = raw_login.strip()
+    user = db.get_one("SELECT * FROM users WHERE login = %s", [user_login])
     if not user or not verify_password(req.password, user['password_hash']):
-        raise HTTPException(status_code=401, detail="Невірне ім'я користувача або пароль")
+        raise HTTPException(status_code=401, detail="Невірний логін або пароль")
     
     # Update timestamps
-    db.execute("UPDATE users SET last_login = CURRENT_TIMESTAMP, last_activity = CURRENT_TIMESTAMP WHERE username = %s", [user['username']])
+    db.execute("UPDATE users SET last_login = CURRENT_TIMESTAMP, last_activity = CURRENT_TIMESTAMP WHERE login = %s", [user['login']])
     
     # Store in session
-    import urllib.parse
-    response.set_cookie(key="username", value=urllib.parse.quote(user['username']), httponly=True)
+    response.set_cookie(key="login", value=urllib.parse.quote(user['login']), httponly=True)
+    response.set_cookie(key="username", value=urllib.parse.quote(user['login']), httponly=True)
     response.set_cookie(key="role", value=user['role'], httponly=True)
     
     pref = db.get_one("SELECT site_lang, site_theme FROM user_preferences WHERE user_id = %s", [user['id']])
@@ -224,8 +240,9 @@ async def login(req: LoginRequest, response: Response):
 
     return {
         "logged_in": True,
-        "username": user['username'],
-        "nickname": user['nickname'] or user['username'],
+        "login": user['login'],
+        "username": user['login'],
+        "nickname": user['nickname'] or user['login'],
         "role": user['role'],
         "site_lang": site_lang,
         "site_theme": site_theme,
@@ -236,24 +253,25 @@ async def login(req: LoginRequest, response: Response):
 
 @router.get("/me")
 async def me(request: Request):
-    username = request.cookies.get("username")
+    user_login = get_auth_login_from_cookie(request)
     role = request.cookies.get("role")
-    if not username:
+    if not user_login:
         return {"logged_in": False}
     
     db = get_db()
-    db.execute("UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE username = %s", [username])
+    db.execute("UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE login = %s", [user_login])
 
-    user = db.get_one("SELECT id, nickname, score, level FROM users WHERE username = %s", [username])
+    user = db.get_one("SELECT id, login, nickname, score, level, role FROM users WHERE login = %s", [user_login])
     site_lang = 'uk'
     site_theme = 'light'
-    nickname = username
+    nickname = user_login
     score = 0
     level = 1
     if user:
-        nickname = user['nickname'] or username
+        nickname = user['nickname'] or user_login
         score = user.get('score', 0) or 0
         level = user.get('level', 1) or 1
+        role = user.get('role', role)
         pref = db.get_one("SELECT site_lang, site_theme FROM user_preferences WHERE user_id = %s", [user['id']])
         if pref:
             site_lang = pref['site_lang']
@@ -261,7 +279,8 @@ async def me(request: Request):
 
     return {
         "logged_in": True,
-        "username": username,
+        "login": user_login,
+        "username": user_login,
         "nickname": nickname,
         "role": role,
         "site_lang": site_lang,
@@ -273,12 +292,12 @@ async def me(request: Request):
 
 @router.post("/change-password")
 async def change_password(req: PasswordChangeRequest, request: Request):
-    username = request.cookies.get("username")
-    if not username:
+    user_login = get_auth_login_from_cookie(request)
+    if not user_login:
         raise HTTPException(status_code=401, detail="Not logged in")
         
     db = get_db()
-    user = db.get_one("SELECT id, password_hash FROM users WHERE username = %s", [username])
+    user = db.get_one("SELECT id, password_hash FROM users WHERE login = %s", [user_login])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
@@ -294,6 +313,7 @@ async def change_password(req: PasswordChangeRequest, request: Request):
 
 @router.post("/logout")
 async def logout(response: Response):
+    response.delete_cookie("login")
     response.delete_cookie("username")
     response.delete_cookie("role")
     return {"status": "ok"}
@@ -304,12 +324,12 @@ class PreferencesUpdateRequest(BaseModel):
 
 @router.get("/preferences")
 async def get_preferences(request: Request):
-    username = request.cookies.get("username")
-    if not username:
+    user_login = get_auth_login_from_cookie(request)
+    if not user_login:
         raise HTTPException(status_code=401, detail="Not logged in")
     
     db = get_db()
-    user = db.get_one("SELECT id FROM users WHERE username = %s", [username])
+    user = db.get_one("SELECT id FROM users WHERE login = %s", [user_login])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
@@ -320,8 +340,8 @@ async def get_preferences(request: Request):
 
 @router.post("/preferences")
 async def update_preferences(req: PreferencesUpdateRequest, request: Request):
-    username = request.cookies.get("username")
-    if not username:
+    user_login = get_auth_login_from_cookie(request)
+    if not user_login:
         raise HTTPException(status_code=401, detail="Not logged in")
     
     if req.site_lang is not None and req.site_lang not in ["uk", "en"]:
@@ -332,7 +352,7 @@ async def update_preferences(req: PreferencesUpdateRequest, request: Request):
         raise HTTPException(status_code=400, detail="No preferences to update")
         
     db = get_db()
-    user = db.get_one("SELECT id FROM users WHERE username = %s", [username])
+    user = db.get_one("SELECT id FROM users WHERE login = %s", [user_login])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     

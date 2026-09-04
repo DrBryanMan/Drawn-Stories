@@ -53,10 +53,14 @@ function getRoleIconName(role) {
 }
 
 function renderProfileLayout(container, p, activeTab) {
-    const avatarUrl = `/api/auth/avatar/${encodeURIComponent(p.nickname || p.username)}`;
+    const avatarUrl = `/api/auth/avatar/${encodeURIComponent(p.nickname || p.login || p.username)}`;
     const avatarHtml = getAvatarHtml(avatarUrl, 'user-profile-avatar-img', 200);
-    const isSelf = currentUser && currentUser.username.toLowerCase() === p.username.toLowerCase();
+    const currUserLogin = currentUser ? (currentUser.login || currentUser.username || '').toLowerCase() : '';
+    const profUserLogin = (p.login || p.username || '').toLowerCase();
+    const isSelf = currentUser && (currUserLogin === profUserLogin || (currentUser.nickname && p.nickname && currentUser.nickname.toLowerCase() === p.nickname.toLowerCase()));
+    const canManageRole = currentUser?.role === 'admin' && !isSelf;
     const roleIcon = getRoleIconName(p.role);
+    const profileSlug = encodeURIComponent(p.nickname || p.login || p.username);
 
     const edits = p.edits_stats || { approved: 0, rejected: 0, closed: 0, pending: 0, total: 0 };
 
@@ -81,13 +85,34 @@ function renderProfileLayout(container, p, activeTab) {
                         <button class="btn btn-secondary btn-icon-only" id="btn-share-profile" title="${t('share')}">
                             ${icon('share', 16)}
                         </button>
+                        ${canManageRole ? `
+                            <div class="user-role-menu">
+                                <button class="btn btn-secondary btn-icon-only" id="btn-user-role-menu" type="button" title="Керувати статусом" aria-label="Керувати статусом" aria-expanded="false">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+                                </button>
+                                <div class="user-role-menu__dropdown" role="menu">
+                                    <div class="user-role-menu__title">Статус користувача</div>
+                                    ${[
+                                        ['viewer', 'Читач'],
+                                        ['editor', 'Редактор'],
+                                        ['moderator', 'Модератор'],
+                                        ['admin', 'Адміністратор']
+                                    ].map(([role, label]) => `
+                                        <button class="user-role-menu__item ${p.role === role ? 'is-active' : ''}" type="button" role="menuitem" data-user-role="${role}">
+                                            ${icon(getRoleIconName(role), 15)}
+                                            <span>${label}</span>
+                                        </button>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
                     </div>
                 </div>
 
                 <!-- Info Column -->
                 <div class="user-profile-info">
                     <div class="user-profile-name-row">
-                        <h1>${escapeHtml(p.nickname || p.username)}</h1>
+                        <h1>${escapeHtml(p.nickname || p.login || p.username)}</h1>
                         <span class="user-role-badge user-role-badge--${p.role}" title="${escapeHtml(p.role_title)}">
                             ${icon(roleIcon, 14)}
                         </span>
@@ -110,7 +135,7 @@ function renderProfileLayout(container, p, activeTab) {
                     <div class="user-profile-meta-row">
                         <div class="user-profile-meta-item" title="${t('registration_date')}">
                             ${icon('calendar', 14)}
-                            <span>${t('member_since', { date: escapeHtml((p.created_at_text || '').replace(/^На сайті з\s*/i, '')) })}</span>
+                            <span>${t('member_since', { date: escapeHtml(p.created_at || '') })}</span>
                         </div>
                     </div>
                 </div>
@@ -141,17 +166,17 @@ function renderProfileLayout(container, p, activeTab) {
             <div class="user-profile-tabs-band">
                 <div class="container" style="padding: 0 2em;">
                     <div class="user-profile-tabs" role="tablist">
-                        <a href="#/user/${escapeHtml(p.nickname || p.username)}?tab=overview" class="user-profile-tab ${activeTab === 'overview' ? 'is-active' : ''}">
+                        <a href="#/user/${profileSlug}?tab=overview" class="user-profile-tab ${activeTab === 'overview' ? 'is-active' : ''}">
                             ${icon('sparkles', 14)} ${t('tab_overview_and_edits')}
                         </a>
-                        <a href="#/user/${escapeHtml(p.nickname || p.username)}?tab=readlists" class="user-profile-tab ${activeTab === 'readlists' ? 'is-active' : ''}">
-                            ${icon('bookOpen', 14)} ${t('tab_readlists')} <span class="tab-count">${p.readlists_count}</span>
+                        <a href="#/user/${profileSlug}?tab=readlists" class="user-profile-tab ${activeTab === 'readlists' ? 'is-active' : ''}">
+                            ${icon('bookOpen', 14)} ${t('tab_readlists')} <span class="tab-count">${p.readlists_count ?? 0}</span>
                         </a>
-                        <a href="#/user/${escapeHtml(p.nickname || p.username)}?tab=collections" class="user-profile-tab ${activeTab === 'collections' ? 'is-active' : ''}">
-                            ${icon('collections', 14)} ${t('tab_collections')} <span class="tab-count">${p.collections_count}</span>
+                        <a href="#/user/${profileSlug}?tab=collections" class="user-profile-tab ${activeTab === 'collections' ? 'is-active' : ''}">
+                            ${icon('collections', 14)} ${t('tab_collections')} <span class="tab-count">${p.collections_count ?? 0}</span>
                         </a>
-                        <a href="#/user/${escapeHtml(p.nickname || p.username)}?tab=favorites" class="user-profile-tab ${activeTab === 'favorites' ? 'is-active' : ''}">
-                            ${icon('heart', 14)} ${t('tab_favorites')} <span class="tab-count">${p.favorites_count}</span>
+                        <a href="#/user/${profileSlug}?tab=favorites" class="user-profile-tab ${activeTab === 'favorites' ? 'is-active' : ''}">
+                            ${icon('heart', 14)} ${t('tab_favorites')} <span class="tab-count">${p.favorites_count ?? 0}</span>
                         </a>
                     </div>
                 </div>
@@ -167,13 +192,13 @@ function renderProfileLayout(container, p, activeTab) {
     // Модальне вікно підписників
     const followersBtn = container.querySelector('#btn-open-followers');
     if (followersBtn) {
-        followersBtn.addEventListener('click', () => openUserFollowsModal(p.username, 'followers'));
+        followersBtn.addEventListener('click', () => openUserFollowsModal(p.nickname || p.login || p.username, 'followers'));
     }
 
     // Модальне вікно підписок
     const followingBtn = container.querySelector('#btn-open-following');
     if (followingBtn) {
-        followingBtn.addEventListener('click', () => openUserFollowsModal(p.username, 'following'));
+        followingBtn.addEventListener('click', () => openUserFollowsModal(p.nickname || p.login || p.username, 'following'));
     }
 
     // Кнопка підписки
@@ -208,6 +233,46 @@ function renderProfileLayout(container, p, activeTab) {
         });
     }
 
+    const roleMenu = container.querySelector('.user-role-menu');
+    const roleMenuBtn = container.querySelector('#btn-user-role-menu');
+    if (roleMenu && roleMenuBtn) {
+        roleMenuBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const isOpen = roleMenu.classList.toggle('is-open');
+            roleMenuBtn.setAttribute('aria-expanded', String(isOpen));
+        });
+
+        roleMenu.querySelectorAll('[data-user-role]').forEach((button) => {
+            button.addEventListener('click', async () => {
+                const role = button.dataset.userRole;
+                if (!role || role === p.role) {
+                    roleMenu.classList.remove('is-open');
+                    roleMenuBtn.setAttribute('aria-expanded', 'false');
+                    return;
+                }
+
+                const buttons = roleMenu.querySelectorAll('[data-user-role]');
+                buttons.forEach((item) => { item.disabled = true; });
+                try {
+                    const result = await API.put(`/users/${p.id}/role`, { role });
+                    p.role = result.role;
+                    p.role_title = result.role_title;
+                    renderProfileLayout(container, p, activeTab);
+                } catch (error) {
+                    alert(error.message || 'Не вдалося змінити статус користувача');
+                    buttons.forEach((item) => { item.disabled = false; });
+                }
+            });
+        });
+
+        container.addEventListener('click', (event) => {
+            if (!roleMenu.contains(event.target)) {
+                roleMenu.classList.remove('is-open');
+                roleMenuBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
+
     const tabContent = container.querySelector('#profile-tab-content');
 
     if (activeTab === 'overview') {
@@ -226,18 +291,35 @@ function renderOverviewTab(container, p, edits) {
 
     const editsRowsHtml = recentEdits.length > 0 ? recentEdits.map(e => {
         const statusBadge = renderEditStatusBadge(e.status);
+        // `entity_name` is returned by the current profile API. Keep the old
+        // field as a fallback so an already deployed API cannot leave the cell
+        // blank during a rolling update.
+        const entityName = e.entity_name ?? e.volume_title ?? `#${e.entity_id}`;
+        const awardedScore = Number(e.awarded_score);
+        const score = Number.isFinite(awardedScore) ? awardedScore : 0;
+        const scorePrefix = score > 0 ? '+' : '';
+        const isCreation = Boolean(e.is_creation);
+        const typeIconTitle = isCreation ? 'Створення' : 'Редагування';
 
         return `
             <tr class="edit-row" onclick="window.location.hash='#/edits/${e.id}'">
                 <td style="font-family: var(--font-monos);">#${e.id}</td>
-                <td><strong>${escapeHtml(e.volume_title)}</strong></td>
+                <td><strong>${escapeHtml(entityName)}</strong></td>
                 <td><span class="user-level-badge">${escapeHtml(getEntityTypeLabel(e.entity_type))}</span></td>
-                <td>${statusBadge}</td>
-                <td style="color: var(--purple, #a855f7); font-weight:700;">+${e.score_awarded} ${t('points_short')}</td>
+                <td>
+                    <div class="edit-status-cell-wrap">
+                        <span class="edit-type-icon ${isCreation ? 'edit-type-icon--create' : 'edit-type-icon--edit'}" title="${escapeHtml(typeIconTitle)}">
+                            ${isCreation ? icon('plus', 13) : icon('edit', 13)}
+                        </span>
+                        ${statusBadge}
+                    </div>
+                </td>
+                <td style="color: var(--purple, #a855f7); font-weight:700;">${scorePrefix}${score} ${t('points_short')}</td>
                 <td style="color: var(--text-muted); font-size: 13px;">${formatDate(e.created_at)}</td>
             </tr>
         `;
     }).join('') : `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">${t('user_no_edits')}</td></tr>`;
+
 
     container.innerHTML = `
         <div class="container">
@@ -310,8 +392,8 @@ function renderOverviewTab(container, p, edits) {
                 </table>
             </div>
 
-            <div class="user-all-edits-btn-wrap" style="margin-top: 16px; text-align: center;">
-                <a href="#/edits?proposer=${encodeURIComponent(p.username)}" class="btn btn-secondary">
+            <div class="user-all-edits-btn-wrap">
+                <a href="#/edits?proposer=${encodeURIComponent(p.nickname || p.username)}" class="btn btn-secondary">
                     ${icon('list', 16)} ${t('view_all_edits')}
                 </a>
             </div>

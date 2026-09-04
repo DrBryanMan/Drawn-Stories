@@ -112,5 +112,6 @@
 
 .bookmarks-empty-btn:hover {
     background: var(--accent-h);
+    color: white;
     transform: translateY(-1px);
 }

@@ -54,9 +54,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-body);
+  /* background: var(--bg-body); */
   color: var(--text-muted);
-  border-radius: 50%;
+  /* border-radius: 50%; */
 }
 
 .volume-staff-content {

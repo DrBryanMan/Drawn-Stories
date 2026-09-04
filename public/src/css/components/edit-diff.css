@@ -153,6 +153,11 @@
     border-color: color-mix(in srgb, #dc2626 30%, transparent);
     color: #dc2626;
     opacity: 0.85;
+    text-decoration: line-through;
+}
+
+.diff-theme-chip--removed .diff-chip-icon {
+    text-decoration: none;
 }
 
 /* Image Previews styling */

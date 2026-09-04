@@ -6,11 +6,11 @@ from server.db import get_db
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
 def get_current_user(request: Request):
-    username = request.cookies.get("username")
-    if not username:
+    user_login = request.cookies.get("login") or request.cookies.get("username")
+    if not user_login:
         return None
     db = get_db()
-    user = db.get_one("SELECT id, username, role FROM users WHERE username = %s", [username])
+    user = db.get_one("SELECT id, login, nickname, role FROM users WHERE login = %s", [user_login])
     return user
 
 
@@ -68,17 +68,18 @@ async def get_notifications(
             db.execute("UPDATE notifications SET link = %s WHERE id = %s", [item["link"], item["id"]])
 
         # 3. Збагачення даними модератора для правок
-        if item["type"] in ("edit_approved", "edit_rejected") and not payload.get("actor_username"):
+        if item["type"] in ("edit_approved", "edit_rejected") and not payload.get("actor_login") and not payload.get("actor_username"):
             edit_id = payload.get("edit_id")
             if edit_id:
                 mod_info = db.get_one("""
-                    SELECT u.username, COALESCE(u.nickname, u.username) as name
+                    SELECT u.login, COALESCE(u.nickname, u.login) as name
                     FROM edit_requests er
                     JOIN users u ON er.moderator_id = u.id
                     WHERE er.id = %s
                 """, [edit_id])
                 if mod_info:
-                    payload["actor_username"] = mod_info["username"]
+                    payload["actor_login"] = mod_info["login"]
+                    payload["actor_username"] = mod_info["login"]
                     payload["actor_name"] = mod_info["name"]
                     item["payload"] = payload
                     item["link"] = f"/edits/{edit_id}"

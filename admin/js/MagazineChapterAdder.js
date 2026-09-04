@@ -1,6 +1,7 @@
 import { API } from '/static/js/helpers/api.js';
 import { comicVineImageUrl, escapeHtmlAttribute } from '/static/js/helpers/image.js';
 import { icon } from '/static/js/helpers/icons.js';
+import { langName } from '/static/js/helpers/lang.js';
 
 export class MagazineChapterAdder {
     constructor(issue, chapters, onSuccess) {
@@ -132,6 +133,47 @@ export class MagazineChapterAdder {
                     opacity: 0.4;
                     cursor: default;
                 }
+                .series-select-lang-badge {
+                    position: absolute;
+                    bottom: 6px;
+                    left: 6px;
+                    z-index: 2;
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    background: rgba(15, 23, 42, .78);
+                    backdrop-filter: blur(4px);
+                    color: #fff;
+                    font-family: var(--font-monos);
+                    font-size: 10px;
+                    font-weight: 800;
+                    letter-spacing: .04em;
+                    text-transform: uppercase;
+                    line-height: 1.3;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+                    pointer-events: none;
+                }
+                .series-select-open-link {
+                    position: absolute;
+                    bottom: 6px;
+                    right: 6px;
+                    z-index: 3;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 26px;
+                    height: 26px;
+                    border-radius: 6px;
+                    background: rgba(15, 23, 42, .78);
+                    backdrop-filter: blur(4px);
+                    color: #fff;
+                    text-decoration: none;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+                    transition: .2s;
+                }
+                .series-select-open-link:hover {
+                    background: rgba(15, 23, 42, .92);
+                    color: color-mix(in srgb, var(--accent) 50%, white);
+                }
             </style>
             <div class="ds-modal-overlay" id="chapter-adder-overlay">
                 <div class="ds-modal ds-modal--large" id="chapter-adder-modal">
@@ -235,9 +277,12 @@ export class MagazineChapterAdder {
     renderSelectSeriesView(container) {
         container.innerHTML = `
             <div class="editor-tabs-segmented" style="margin-bottom: 20px; width: 100%;">
-                <button class="editor-tab-btn ${this.activeTab === 'series' ? 'is-active' : ''}" data-tab="series">Серії</button>
-                <button class="editor-tab-btn ${this.activeTab === 'magazine' ? 'is-active' : ''}" data-tab="magazine">Журнал</button>
-                <button class="editor-tab-btn ${this.activeTab === 'ongoing' ? 'is-active' : ''}" data-tab="ongoing">Онгоінги</button>
+                <button class="editor-tab-btn ${this.activeTab === 'series' ? 'is-active' : ''}" data-tab="series">Усі серії</button>
+                <button class="editor-tab-btn ${this.activeTab === 'magazine' ? 'is-active' : ''}" data-tab="magazine">У журналі</button>
+                <button class="editor-tab-btn ${this.activeTab === 'ongoing' ? 'is-active' : ''}" data-tab="ongoing">Онґоінґи журналу</button>
+            </div>
+            <div id="series-tab-description" style="margin: -8px 0 16px; padding: 9px 12px; border: 1px solid var(--border-s); border-radius: var(--r); background: var(--bg-card); color: var(--text-muted); font-size: 12px; line-height: 1.45;">
+                ${this._getTabDescription()}
             </div>
             
             <div class="search-filters-row" style="display: flex; gap: 12px; flex-shrink: 0; width: 100%;">
@@ -266,6 +311,8 @@ export class MagazineChapterAdder {
                     b.classList.remove('is-active');
                 });
                 target.classList.add('is-active');
+                const description = container.querySelector('#series-tab-description');
+                if (description) description.innerHTML = this._getTabDescription();
                 this.loadSeriesData();
             };
         });
@@ -285,6 +332,16 @@ export class MagazineChapterAdder {
 
         // Load data immediately
         this.loadSeriesData();
+    }
+
+    _getTabDescription() {
+        if (this.activeTab === 'magazine') {
+            return 'Лише серії, прив’язані до журналу цього випуску.';
+        }
+        if (this.activeTab === 'ongoing') {
+            return 'Лише серії цього журналу зі статусом «Триває».';
+        }
+        return 'Усі серії; без фільтрів — нещодавно додані серії.';
     }
 
     async fetchMagazineSeries() {
@@ -331,7 +388,7 @@ export class MagazineChapterAdder {
                     }
                 } else {
                     // Make search request
-                    const params = { has_mal: true, limit: 50 };
+                    const params = { limit: 50 };
                     if (this.searchText.trim()) params.search = this.searchText.trim();
                     if (this.malIdText.trim()) params.mal_id = this.malIdText.trim();
                     if (this.volumeIdText.trim()) params.id = this.volumeIdText.trim();
@@ -380,6 +437,10 @@ export class MagazineChapterAdder {
             const isAdded = this.addedVolumeIds.has(item.id);
             const title = escapeHtmlAttribute(item.name_uk || item.name || 'Без назви');
             const origTitle = item.name_uk && item.name_uk !== item.name ? item.name : '';
+            const lang = String(item.lang || '').trim();
+            const langLabel = lang ? langName(lang) : '';
+            const langBadge = lang ? `<span class="series-select-lang-badge" title="${escapeHtmlAttribute(langLabel || lang)}">${escapeHtmlAttribute(lang)}</span>` : '';
+            const openLink = `<a class="series-select-open-link" href="/#/volumes/${item.id}" target="_blank" rel="noopener" title="Відкрити том у новій вкладці">${icon('externalLink', 13, { strokeWidth: 2.2 })}</a>`;
             
             return `
                 <div class="series-select-card ${isAdded ? 'is-disabled' : ''}" 
@@ -389,11 +450,13 @@ export class MagazineChapterAdder {
                         ${image 
                             ? `<img src="${escapeHtmlAttribute(image)}" alt="${title}" style="width: 100%; height: 100%; object-fit: cover;">`
                             : `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--text-muted);">${icon('imagePlaceholder', 32, { strokeWidth: 1.5 })}</div>`}
+                        ${langBadge}
                         ${isAdded ? `
-                            <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: bold; text-transform: uppercase; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">
+                            <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: bold; text-transform: uppercase; text-shadow: 0 1px 3px rgba(0,0,0,0.8); pointer-events: none;">
                                 Вже додано
                             </div>
                         ` : ''}
+                        ${openLink}
                     </div>
                     <div style="padding: 10px; flex-grow: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0;">
                         <div style="font-size: 13px; font-weight: 600; color: var(--text-main); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;" title="${title}">${title}</div>
@@ -407,7 +470,10 @@ export class MagazineChapterAdder {
             `;
         }).join('');
 
-        // Bind clicks
+        grid.querySelectorAll('.series-select-open-link').forEach(link => {
+            link.onclick = (e) => e.stopPropagation();
+        });
+
         grid.querySelectorAll('.series-select-card').forEach(card => {
             const id = Number(card.getAttribute('data-id'));
             const isAdded = card.classList.contains('is-disabled');

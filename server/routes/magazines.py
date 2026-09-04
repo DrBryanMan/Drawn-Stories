@@ -2,10 +2,18 @@ from fastapi import APIRouter, HTTPException, Request
 from ..db import get_db
 from ..helpers.themes import THEME_MAGAZINE, THEME_MANGA
 from typing import Optional
+from urllib.parse import unquote
 
 def check_moderator(request: Request):
-    role = request.cookies.get("role")
-    if role not in {"moderator", "admin"}:
+    login = request.cookies.get("login") or request.cookies.get("username")
+    if not login:
+        raise HTTPException(status_code=401, detail="Необхідна авторизація")
+
+    user = get_db().get_one(
+        "SELECT role FROM users WHERE login = %s",
+        [unquote(login)],
+    )
+    if not user or user.get("role") not in {"moderator", "admin"}:
         raise HTTPException(status_code=403, detail="Доступ заборонено")
 
 router = APIRouter(prefix="/api/magazines", tags=["magazines"])
@@ -72,10 +80,10 @@ async def get_manga_calendar(
     db = get_db()
 
     # Get user_id if logged in
-    username = request.cookies.get("username")
+    user_login = request.cookies.get("login") or request.cookies.get("username")
     user_id = None
-    if username:
-        user_rec = db.get_one("SELECT id FROM users WHERE username = %s", [username])
+    if user_login:
+        user_rec = db.get_one("SELECT id FROM users WHERE login = %s", [user_login])
         if user_rec:
             user_id = user_rec["id"]
 

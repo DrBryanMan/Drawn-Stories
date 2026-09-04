@@ -53,16 +53,19 @@ export async function renderEditDetail(main, params) {
     function renderDetails() {
         const e = editData;
         const statusBadgeHtml = renderEditStatusBadge(e.status);
+        const isCreation = Boolean(e.is_creation);
 
         const entityLabel = getEntityTypeLabel(e.entity_type);
-        const entityName = e.volume_name_uk || e.volume_name || `ID ${e.entity_id}`;
-        const entityLink = getEntityUrl(e.entity_type, e.entity_id);
+        const entityName = e.volume_name_uk || e.volume_name || (isCreation ? 'Нова сутність' : `ID ${e.entity_id}`);
+        const targetId = e.created_entity_id || e.entity_id;
+        const hasValidTarget = targetId && targetId !== 0 && targetId !== '0';
+        const entityLink = hasValidTarget ? getEntityUrl(e.entity_type, targetId) : null;
 
         const patchObj = e.patch_data || {};
         const beforeData = patchObj.before || {};
         const afterData = patchObj.after || patchObj;
 
-        const volumeImg = normalizeImageUrl(e.volume_cv_img || afterData.image || beforeData.image || '');
+        const volumeImg = normalizeImageUrl(e.volume_cv_img || afterData.image || beforeData.image || afterData.cover_img || afterData.portret_img || '');
         const volumeImgHTML = `
             <div class="edit-entity-image-wrap">
                 ${volumeImg 
@@ -80,20 +83,20 @@ export async function renderEditDetail(main, params) {
                    <span class="comment-icon">${icon('messageSquare', 14)}</span>
                    <span class="comment-text"><strong>${t('comment')}:</strong> ${escapeHtml(e.comment)}</span>
                </div>`
-            : `<p class="edit-detail-subtitle">${t('edit_detail_subtitle')}</p>`;
+            : `<p class="edit-detail-subtitle">${isCreation ? 'Заявка на створення нової сутності' : t('edit_detail_subtitle')}</p>`;
 
         // Аватар автора пропозиції
-        const proposerName = e.proposer_nickname || e.proposer_username;
+        const proposerName = e.proposer_nickname || e.proposer_login || e.proposer_username;
         const proposerAvatarUrl = `/api/auth/avatar/${encodeURIComponent(proposerName)}`;
         const proposerAvatarHtml = getAvatarHtml(proposerAvatarUrl, 'person-avatar-img', 44);
 
         // Картка модератора
         let moderatorCardHTML = '';
-        const modName = e.moderator_nickname || e.moderator_username;
+        const modName = e.moderator_nickname || e.moderator_login || e.moderator_username;
         if (e.status !== 'pending' && modName) {
             const moderatorAvatarUrl = `/api/auth/avatar/${encodeURIComponent(modName)}`;
             const moderatorAvatarHtml = getAvatarHtml(moderatorAvatarUrl, 'person-avatar-img', 44);
-            const modAction = e.status === 'approved' ? t('approved_by') : t('rejected_by');
+            const modAction = e.status === 'approved' ? (isCreation ? 'Створено та схвалено' : t('approved_by')) : t('rejected_by');
             const modClass = e.status === 'approved' ? 'moderator-card--approved' : 'moderator-card--rejected';
             const commentMod = e.moderator_comment ? `<div class="person-card-comment"><strong>${t('comment')}:</strong> ${escapeHtml(e.moderator_comment)}</div>` : '';
 
@@ -125,7 +128,7 @@ export async function renderEditDetail(main, params) {
 
             if (isPrivileged) {
                 actionsHTML += `
-                    <button class="btn-admin btn-admin--primary btn-approve-edit-detail" data-id="${e.id}">${t('approve_edit')}</button>
+                    <button class="btn-admin btn-admin--primary btn-approve-edit-detail" data-id="${e.id}">${isCreation ? 'Створити та схвалити (+50 б.)' : t('approve_edit')}</button>
                     <button class="btn-admin btn-admin--danger btn-reject-edit-detail" data-id="${e.id}">${t('reject_edit')}</button>
                 `;
             }
@@ -154,7 +157,8 @@ export async function renderEditDetail(main, params) {
         content.innerHTML = `
             <div class="edit-detail-header-block">
                 <div class="edit-detail-title-line">
-                    <h1 class="edit-detail-main-title">${t('edit_single')} #${e.id}</h1>
+                    <h1 class="edit-detail-main-title">${isCreation ? 'Створення' : t('edit_single')} #${e.id}</h1>
+                    ${isCreation ? `<span class="edit-entity-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 13px; padding: 4px 10px; font-weight: 700;">✨ Нова сутність (+50 б.)</span>` : ''}
                     ${statusBadgeHtml}
                 </div>
                 ${subtitleHTML}
@@ -172,10 +176,11 @@ export async function renderEditDetail(main, params) {
                     <div class="edit-detail-content-card">
                         ${volumeImgHTML}
                         <div class="edit-detail-content-info">
-                            <a href="${entityLink}" class="edit-detail-entity-title">${escapeHtml(entityName)}</a>
+                            ${entityLink ? `<a href="${entityLink}" class="edit-detail-entity-title">${escapeHtml(entityName)}</a>` : `<span class="edit-detail-entity-title" style="cursor: default;">${escapeHtml(entityName)} <em style="font-size: 12px; color: var(--text-muted); font-weight: normal;">(буде створено після схвалення)</em></span>`}
                         </div>
                     </div>
                 </div>
+
 
                 <!-- Блок Автор/Модератор -->
                 <div class="edit-detail-block edit-detail-block--people">
@@ -203,7 +208,11 @@ export async function renderEditDetail(main, params) {
             <div class="edit-detail-block edit-detail-block--diff">
                 <h2 class="edit-detail-block-title">${t('edit_details_diff')}</h2>
                 <div class="edit-diff-container-detail">
-                    ${generateDiffHTML(beforeData, afterData)}
+                    ${generateDiffHTML(
+                        localizeEditValues(beforeData, e.publisher_names),
+                        localizeEditValues(afterData, e.publisher_names),
+                        themesCache
+                    )}
                 </div>
             </div>
 
@@ -213,6 +222,14 @@ export async function renderEditDetail(main, params) {
         `;
 
         attachEvents();
+    }
+
+    function localizeEditValues(data, publisherNames = {}) {
+        if (!data || !Object.prototype.hasOwnProperty.call(data, 'publisher')) return data;
+
+        const publisherId = data.publisher;
+        const publisherName = publisherNames[String(publisherId)];
+        return publisherName ? { ...data, publisher: publisherName } : data;
     }
 
     function formatScoreReasonHTML(reasonStr) {
@@ -235,6 +252,7 @@ export async function renderEditDetail(main, params) {
             'site_link': 'джерело',
             'website': 'вебсайт',
             'publisher': 'видавництво',
+            'verification_status': 'статус достовірності',
             'staff': 'персонал',
             'characters': 'персонажі',
             'theme_ids': 'теми'
@@ -253,7 +271,7 @@ export async function renderEditDetail(main, params) {
 
             details = details.replace(/\s*\(всього\s*[\+\-]?\d+\s*б\.\)/gi, '');
 
-            const items = details.split(', ').map(item => item.trim()).filter(Boolean);
+            const items = splitScoreReasonItems(details);
 
             const tagsHtml = items.map(item => {
                 const ptsMatch = item.match(/\(([^)]*\+?\d+\s*б\.[^)]*)\)/);
@@ -282,6 +300,24 @@ export async function renderEditDetail(main, params) {
         }
 
         return `<div class="score-reason-title score-reason-title--simple">${text}</div>`;
+    }
+
+    function splitScoreReasonItems(details) {
+        const items = [];
+        let start = 0;
+        let depth = 0;
+
+        for (let index = 0; index < details.length; index += 1) {
+            if (details[index] === '(') depth += 1;
+            if (details[index] === ')') depth = Math.max(0, depth - 1);
+            if (details[index] === ',' && depth === 0) {
+                items.push(details.slice(start, index).trim());
+                start = index + 1;
+            }
+        }
+
+        items.push(details.slice(start).trim());
+        return items.filter(Boolean);
     }
 
     function renderScoreHistoryBlock(e) {

@@ -4,7 +4,10 @@ import { Bookmarks } from './helpers/bookmarks.js';
 import { openGlobalAddModal } from './components/GlobalAddModal.js';
 import { t, setLanguage, getCurrentLanguage } from './helpers/i18n.js';
 import { NotificationBell } from './components/NotificationBell.js';
+import { Toast } from './components/Toast.js';
 import { initTheme, toggleTheme, getToggleButtonHtml, getTheme, syncThemeFromServer } from './helpers/themeManager.js';
+
+export { Toast };
 
 // ── Nav config ───────────────────────────────────────
 // ── Nav config ───────────────────────────────────────
@@ -132,11 +135,17 @@ const ICON_BOOKMARK = '<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v
 export let currentUser = null;
 
 const DEFAULT_AVATAR_ICON = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+const AVATAR_CACHE_VERSION = '2';
+
+function getVersionedAvatarUrl(avatarUrl) {
+    const separator = avatarUrl.includes('?') ? '&' : '?';
+    return `${avatarUrl}${separator}v=${AVATAR_CACHE_VERSION}`;
+}
 
 export function getAvatarHtml(avatarUrl, className, size = 20) {
     const iconSvg = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
     return `
-        <img src="${avatarUrl}" alt="Avatar" class="${className}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width:${size}px; height:${size}px;">
+        <img src="${getVersionedAvatarUrl(avatarUrl)}" alt="Avatar" class="${className}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width:${size}px; height:${size}px;">
         <div class="${className} avatar-fallback" style="display:none; width:${size}px; height:${size}px;">${iconSvg}</div>
     `;
 }
@@ -243,7 +252,24 @@ export async function initShell() {
 
   // ── Auth ───────────────────────────────────────────
   window.addEventListener('auth-changed', (e) => {
-    currentUser = e.detail;
+    const newUserData = e.detail;
+    if (newUserData && newUserData.level && prevUserLevel !== null && newUserData.level > prevUserLevel) {
+      const prog = getLevelProgress(newUserData.score || 0);
+      Toast.levelUp({
+        level: newUserData.level,
+        levelTitle: prog.title,
+        score: newUserData.score,
+        nickname: newUserData.nickname || newUserData.login || newUserData.username,
+        login: newUserData.login || newUserData.username,
+        username: newUserData.login || newUserData.username
+      });
+    }
+    if (newUserData && newUserData.level) {
+      prevUserLevel = newUserData.level;
+    } else if (!newUserData) {
+      prevUserLevel = null;
+    }
+    currentUser = newUserData;
     updateAuthUI();
   });
 
@@ -273,10 +299,24 @@ export async function initShell() {
   return document.querySelector('[data-shell-main]');
 }
 
-async function checkAuth() {
+let prevUserLevel = null;
+
+export async function checkAuth() {
   try {
     const data = await API.get('/auth/me');
     if (data.logged_in) {
+      if (prevUserLevel !== null && data.level && data.level > prevUserLevel) {
+        const prog = getLevelProgress(data.score || 0);
+        Toast.levelUp({
+          level: data.level,
+          levelTitle: prog.title,
+          score: data.score,
+          nickname: data.nickname || data.login || data.username,
+          login: data.login || data.username,
+          username: data.login || data.username
+        });
+      }
+      prevUserLevel = data.level || 1;
       currentUser = data;
       if (data.site_theme) {
         syncThemeFromServer(data.site_theme);
@@ -287,9 +327,11 @@ async function checkAuth() {
       }
     } else {
       currentUser = null;
+      prevUserLevel = null;
     }
   } catch (err) {
     currentUser = null;
+    prevUserLevel = null;
   }
   updateAuthUI();
 }
@@ -358,7 +400,7 @@ function updateAuthUI() {
   `;
 
   if (currentUser) {
-    const userIdentifier = currentUser.nickname || currentUser.username;
+    const userIdentifier = currentUser.nickname || currentUser.login || currentUser.username;
     const avatarUrl = `/api/auth/avatar/${encodeURIComponent(userIdentifier)}?t=${new Date().getTime()}`;
     const score = currentUser.score || 0;
     const prog = getLevelProgress(score);
@@ -373,7 +415,6 @@ function updateAuthUI() {
         </button>
         <div class="nav-dropdown-content dropdown-right">
           <a class="dropdown-info dropdown-user-card" href="#/user/${encodeURIComponent(userIdentifier)}" data-route="/user/${encodeURIComponent(userIdentifier)}" data-tab="overview">
-            ${getAvatarHtml(avatarUrl, 'header-avatar', 40)}
             <div class="user-details" style="flex: 1; min-width: 0;">
                 <div class="user-name">${userIdentifier}</div>
                 <div class="user-level-info">Рівень ${prog.levelNum}: ${prog.title}</div>
@@ -494,16 +535,60 @@ function bindThemeToggle(container) {
 }
 
 function bindDropdown(dropdown) {
-  let timeout = null;
+  let openTimeout = null;
+  let closeTimeout = null;
+
   dropdown.addEventListener('mouseenter', () => {
-    clearTimeout(timeout);
-    dropdown.classList.add('is-open');
+    clearTimeout(closeTimeout);
+    openTimeout = setTimeout(() => {
+      dropdown.classList.add('is-open');
+    }, 160);
   });
 
   dropdown.addEventListener('mouseleave', () => {
-    timeout = setTimeout(() => {
+    clearTimeout(openTimeout);
+    closeTimeout = setTimeout(() => {
       dropdown.classList.remove('is-open');
     }, 200);
+  });
+
+  // Support click to toggle dropdown ONLY on touch/mobile devices
+  const trigger = dropdown.querySelector('.nav-dropdown-trigger');
+  if (trigger) {
+    trigger.addEventListener('click', (e) => {
+      const isTouchOrMobile = window.matchMedia('(hover: none), (pointer: coarse), (max-width: 768px)').matches;
+      if (!isTouchOrMobile) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      clearTimeout(openTimeout);
+      clearTimeout(closeTimeout);
+
+      const wasOpen = dropdown.classList.contains('is-open');
+      document.querySelectorAll('.nav-dropdown.is-open').forEach(d => {
+        if (d !== dropdown) d.classList.remove('is-open');
+      });
+      dropdown.classList.toggle('is-open', !wasOpen);
+    });
+  }
+
+  // Close immediately when clicking links inside dropdown
+  dropdown.querySelectorAll('.nav-dropdown-link, .manga-menu-btn, .dropdown-user-card, .logout-btn').forEach(link => {
+    link.addEventListener('click', () => {
+      clearTimeout(openTimeout);
+      clearTimeout(closeTimeout);
+      dropdown.classList.remove('is-open');
+    });
+  });
+}
+
+if (typeof window !== 'undefined' && !window._dropdownOutsideClickBound) {
+  window._dropdownOutsideClickBound = true;
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.nav-dropdown')) {
+      document.querySelectorAll('.nav-dropdown.is-open').forEach(dd => dd.classList.remove('is-open'));
+    }
   });
 }
 

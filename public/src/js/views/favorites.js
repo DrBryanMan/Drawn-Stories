@@ -6,7 +6,11 @@ import { t } from '../helpers/i18n.js';
 
 export async function renderFavorites(main, params) {
     const username = params.username;
-    const isOwnProfile = currentUser && currentUser.username === username;
+    const isOwnProfile = currentUser && (
+        (currentUser.nickname && currentUser.nickname.toLowerCase() === username.toLowerCase()) ||
+        (currentUser.login && currentUser.login.toLowerCase() === username.toLowerCase()) ||
+        (currentUser.username && currentUser.username.toLowerCase() === username.toLowerCase())
+    );
 
     main.innerHTML = `
         <div class="bookmarks-page">

@@ -240,6 +240,11 @@
   color: #6366f1;
 }
 
+.notification-type-badge.level_up {
+  background: #fef3c7;
+  color: #d97706;
+}
+
 .notification-content {
   flex: 1;
   min-width: 0;

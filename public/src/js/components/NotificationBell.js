@@ -1,5 +1,25 @@
 import { API } from '../helpers/api.js';
 import { NotificationDropdown } from './NotificationDropdown.js';
+import { Toast } from './Toast.js';
+import { t } from '../helpers/i18n.js';
+
+function getToastedIds() {
+  try {
+    const raw = sessionStorage.getItem('ds_toasted_notifications');
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function markToastedId(id) {
+  try {
+    const ids = getToastedIds();
+    ids.add(Number(id));
+    const arr = Array.from(ids).slice(-100);
+    sessionStorage.setItem('ds_toasted_notifications', JSON.stringify(arr));
+  } catch {}
+}
 
 export class NotificationBell {
   constructor() {
@@ -8,6 +28,7 @@ export class NotificationBell {
     this.unreadCount = 0;
     this.dropdown = null;
     this.pollingTimer = null;
+    this.isInitialCheck = true;
   }
 
   render() {
@@ -61,10 +82,66 @@ export class NotificationBell {
   async checkUnreadCount() {
     try {
       const res = await API.get('/notifications/unread-count');
-      this.setUnreadCount(res.unread_count || 0);
+      const count = res.unread_count || 0;
+      const previousCount = this.unreadCount;
+      this.setUnreadCount(count);
+
+      if (count > 0 && (count > previousCount || this.isInitialCheck)) {
+        await this.checkAndShowToasts();
+      }
+      this.isInitialCheck = false;
     } catch (err) {
       // Авторизація відсутня або помилка мережі
       this.setUnreadCount(0);
+    }
+  }
+
+  async checkAndShowToasts() {
+    try {
+      const res = await API.get('/notifications', { unread_only: true, limit: 5 });
+      const items = res.notifications || [];
+      const toastedIds = getToastedIds();
+
+      for (const item of items.slice().reverse()) {
+        const numId = Number(item.id);
+        if (toastedIds.has(numId)) continue;
+        markToastedId(numId);
+
+        const payload = item.payload || {};
+        if (item.type === 'level_up') {
+          Toast.levelUp({
+            level: payload.level,
+            levelTitle: payload.level_title,
+            score: payload.score,
+            username: payload.actor_username,
+            link: item.link
+          });
+        } else if (item.type === 'edit_approved') {
+          Toast.success(item.message || t('edit_approved_title'), t('edit_approved_title'), {
+            link: item.link
+          });
+        } else if (item.type === 'edit_rejected') {
+          Toast.error(item.message || t('edit_rejected_title'), t('edit_rejected_title'), {
+            link: item.link
+          });
+        } else if (item.type === 'new_follower') {
+          Toast.info(item.message || t('new_follower_title'), t('new_follower_title'), {
+            link: item.link
+          });
+        } else if (item.type === 'new_issue') {
+          Toast.info(item.message || t('new_issue_title'), t('new_issue_title'), {
+            link: item.link
+          });
+        } else {
+          Toast.show({
+            title: item.title,
+            message: item.message,
+            link: item.link
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('Помилка завантаження сповіщень для тостів:', err);
     }
   }
 
@@ -106,3 +183,4 @@ export class NotificationBell {
     }
   }
 }
+

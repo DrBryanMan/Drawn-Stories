@@ -14,37 +14,68 @@
   border-bottom: 1px solid var(--border-s);
 }
 
-/* Сітка деталей */
+/* Секція та сітка деталей */
+.collection-meta-section {
+  margin-top: 20px;
+}
+
+.collection-meta-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.collection-meta-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-family: var(--font-oswald, sans-serif);
+  margin: 0;
+}
+
 .collection-meta-details {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
-  padding: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+  padding: 14px 16px;
   background: var(--bg-card);
   border: 1px solid var(--border-s);
   border-radius: var(--r);
   transition: border-color 0.2s, background 0.2s;
+  min-height: 48px;
+}
+
+.collection-meta-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 2px 0;
 }
 
 /* Статус перевірки — колір рамки та фону, без зміни кольору тексту */
 .collection-meta-details--unverified {
-  border-color: #fecaca;
-  background: rgba(239, 68, 68, 0.05);
+  border-color: color-mix(in srgb, var(--red, #dc2626) 30%, var(--border-s));
+  background: color-mix(in srgb, var(--red, #dc2626) 4%, var(--bg-card));
 }
 
 .collection-meta-details--open_sources {
-  border-color: #fed7aa;
-  background: rgba(249, 115, 22, 0.05);
+  border-color: color-mix(in srgb, var(--orange, #c2410c) 30%, var(--border-s));
+  background: color-mix(in srgb, var(--orange, #c2410c) 4%, var(--bg-card));
 }
 
 .collection-meta-details--physical {
-  border-color: #bbf7d0;
-  background: rgba(34, 197, 94, 0.05);
+  border-color: color-mix(in srgb, var(--green, #0d9e5e) 30%, var(--border-s));
+  background: color-mix(in srgb, var(--green, #0d9e5e) 4%, var(--bg-card));
 }
 
 .collection-meta-details--announced {
-  border-color: #e2e8f0;
-  background: rgba(148, 163, 184, 0.05);
+  border-color: color-mix(in srgb, var(--text-muted) 25%, var(--border-s));
+  background: color-mix(in srgb, var(--text-muted) 4%, var(--bg-card));
 }
 
 .collection-meta-item {
@@ -107,3 +138,127 @@
   border-radius: 20px;
   font-weight: 600;
 }
+
+/* Блок ціни покупки користувача */
+.user-collection-price-box {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-s);
+  border-radius: var(--r);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  transition: border-color var(--t), background var(--t);
+}
+
+.user-collection-price-box:hover {
+  border-color: var(--border);
+}
+
+.user-collection-price-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-collection-price-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.user-collection-price-val {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.btn-purchase-price-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-s);
+  border-radius: var(--radius-sm, 6px);
+  padding: 5px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--t);
+}
+
+.btn-purchase-price-edit:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--bg-card);
+}
+
+.purchase-price-edit-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.purchase-price-input {
+  width: 90px;
+  height: 32px;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-1);
+  color: var(--text);
+}
+
+.purchase-price-select {
+  height: 32px;
+  padding: 4px 6px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-1);
+  color: var(--text);
+}
+
+.purchase-price-btn-save,
+.purchase-price-btn-cancel {
+  height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.purchase-price-btn-save {
+  background: var(--accent);
+  color: #fff;
+}
+
+.purchase-price-btn-save:hover {
+  background: var(--accent-h);
+}
+
+.purchase-price-btn-cancel {
+  background: var(--bg-2);
+  border-color: var(--border-s);
+  color: var(--text-muted);
+}
+
+.purchase-price-btn-cancel:hover {
+  color: var(--text);
+}
+

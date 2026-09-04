@@ -3,6 +3,8 @@ import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { createPaginator } from '../components/Pagination.js';
 import { mountFilterBar } from '../components/FilterBar.js';
 import { t } from '../helpers/i18n.js';
+import { openEditPersonModal } from '../components/modals/EditPersonModal.js';
+import { icon } from '../helpers/icons.js';
 
 const paginator = createPaginator({ pageSize: 20 });
 const getSortOptions = () => [
@@ -22,8 +24,11 @@ export async function renderPersonnel(container, query) {
   container.innerHTML = `
     <div class="container">
       <div class="catalog-top-row">
-        <div id="catalog-filter-bar-container">
-          <div id="personnel-filter-bar-container"></div>
+        <div id="catalog-filter-bar-container" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;">
+          <div id="personnel-filter-bar-container" style="flex: 1;"></div>
+          <button type="button" class="btn-admin btn-admin--primary btn-add-person" style="height: 38px; display: flex; align-items: center; gap: 6px; white-space: nowrap; padding: 0 14px; flex-shrink: 0;">
+            ${icon('plus', 16)} Додати персону
+          </button>
         </div>
       </div>
 
@@ -39,6 +44,13 @@ export async function renderPersonnel(container, query) {
       </div>
     </div>
   `;
+
+  container.querySelector('.btn-add-person')?.addEventListener('click', () => {
+    openEditPersonModal({}, () => {
+      reloadPersonnel();
+    });
+  });
+
 
   let filterBar = mountFilterBar(container.querySelector('#personnel-filter-bar-container'), {
     resultsCount: 0,

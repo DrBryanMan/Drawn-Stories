@@ -195,7 +195,7 @@ function buildDetailHTML(pub, edits = []) {
             </div>
 
             <div class="pub-detail-actions">
-              <a href="#/catalog?publisher_ids=${pub.id}" class="pub-detail-action-btn pub-detail-action-btn--primary">
+              <a href="#/catalog?content_type=manga&collection=true&publisher_ids=${pub.id}" class="pub-detail-action-btn pub-detail-action-btn--primary">
                 ${icon('book', 14, { strokeWidth: 2.1 })} Всі серії у каталозі
               </a>
               ${pub.website ? `
@@ -242,7 +242,7 @@ function buildDetailHTML(pub, edits = []) {
                   ${factItemHTML('Адреса', pub.address ? escapeHtmlAttribute(pub.address) : null)}
                   ${factItemHTML('Сайт', pub.website ? `<a href="${escapeHtmlAttribute(pub.website)}" target="_blank" rel="noopener">${escapeHtmlAttribute(pub.website)} ${icon('externalLink', 12, { strokeWidth: 2.2 })}</a>` : null)}
                   ${factItemHTML('Псевдоніми', aliases.length ? escapeHtmlAttribute(aliases.join(', ')) : null)}
-                  ${factItemHTML('CV ID', pub.cv_id ? `<a href="https://comicvine.gamespot.com/publisher/${pub.cv_slug || pub.cv_id}/" target="_blank" rel="noopener">${escapeHtmlAttribute(String(pub.cv_id))} ${icon('externalLink', 12, { strokeWidth: 2.2 })}</a>` : null)}
+                  ${factItemHTML('CV ID', pub.cv_id ? `<a href="https://comicvine.gamespot.com/${pub.cv_slug}/4010-${pub.cv_id}/" target="_blank" rel="noopener">${escapeHtmlAttribute(String(pub.cv_id))} ${icon('externalLink', 12, { strokeWidth: 2.2 })}</a>` : null)}
                 </ul>
               </div>
             </aside>
@@ -399,19 +399,17 @@ async function fetchAndRenderVolumes(container, publisherId, filterBar) {
 
   grid.innerHTML = buildVolumeSkeletons(12);
 
+  const isCollectionsTab = currentVolType === 'collections';
   const params = {
     publisher_ids: publisherId,
-    mode: 'volumes',
+    mode: isCollectionsTab ? undefined : 'volumes',
+    view_type: isCollectionsTab ? 'issues' : undefined,
+    collection: isCollectionsTab || undefined,
+    include_collections: !isCollectionsTab,
     search: volumesSearchQuery || undefined,
     page: volumesPaginator.getPage(),
     limit: volumesPaginator.getPageSize(),
   };
-
-  if (currentVolType === 'volumes') {
-    params.exclude_theme_ids = '44';
-  } else if (currentVolType === 'collections') {
-    params.theme_ids = '44';
-  }
 
   try {
     const data = await API.get('/catalog', params);
@@ -425,8 +423,8 @@ async function fetchAndRenderVolumes(container, publisherId, filterBar) {
       grid.innerHTML = `
         <div class="pub-detail-empty" style="grid-column: 1 / -1;">
           ${icon('book', 14, { strokeWidth: 2.1 })}
-          <h3>Серій не знайдено</h3>
-          <p>У цього видавництва поки немає серій у каталозі</p>
+          <h3>${isCollectionsTab ? 'Збірників не знайдено' : 'Серій не знайдено'}</h3>
+          <p>У цього видавництва поки немає ${isCollectionsTab ? 'збірників' : 'серій'} у каталозі</p>
         </div>
       `;
       if (paginationWrap) paginationWrap.innerHTML = '';
@@ -435,7 +433,7 @@ async function fetchAndRenderVolumes(container, publisherId, filterBar) {
 
     grid.innerHTML = '';
     items.forEach(item => {
-      item.type = 'volume';
+      if (!isCollectionsTab) item.type = 'volume';
       const card = createComicCard(item);
       grid.appendChild(card);
     });

@@ -108,7 +108,8 @@
   padding: 6px; display: flex; flex-direction: column; gap: 2px;
   z-index: 1001;
   opacity: 0; visibility: hidden; transform: translateY(8px);
-  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 .nav-dropdown-content.mega-menu {
   left: calc(-260px + 50%);
@@ -121,7 +122,8 @@
   gap: .5em;
 }
 .nav-dropdown.is-open .nav-dropdown-content { 
-  display: flex; opacity: 1; visibility: visible; transform: translateY(4px); 
+  opacity: 1; visibility: visible; transform: translateY(4px); 
+  pointer-events: auto;
 }
 .nav-dropdown.is-open .nav-dropdown-content.mega-menu {
   display: flex;

@@ -527,17 +527,88 @@ body.wanted-page {
 }
 
 /* ── Add Panel (Додавання) ───────────────────────────── */
+.wanted-source-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.wanted-source-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--bg-2);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--t);
+  white-space: nowrap;
+}
+
+.wanted-source-tab:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.wanted-source-tab--cv:hover {
+  border-color: var(--source-cv, #059669);
+  color: var(--source-cv, #059669);
+  background: color-mix(in srgb, var(--source-cv, #059669) 8%, var(--bg-2));
+}
+
+.wanted-source-tab--cv.is-active {
+  background: color-mix(in srgb, var(--source-cv, #059669) 12%, var(--bg-2));
+  border-color: var(--source-cv, #059669);
+  color: var(--source-cv, #059669);
+  font-weight: 600;
+}
+
+.wanted-source-tab--cv.is-active .wanted-chip-count {
+  background: color-mix(in srgb, var(--source-cv, #059669) 20%, transparent);
+  color: var(--source-cv, #059669);
+}
+
+.wanted-source-tab--hikka:hover {
+  border-color: var(--source-hikka, #993bf6);
+  color: var(--source-hikka, #993bf6);
+  background: color-mix(in srgb, var(--source-hikka, #993bf6) 8%, var(--bg-2));
+}
+
+.wanted-source-tab--hikka.is-active {
+  background: color-mix(in srgb, var(--source-hikka, #993bf6) 12%, var(--bg-2));
+  border-color: var(--source-hikka, #993bf6);
+  color: var(--source-hikka, #993bf6);
+  font-weight: 600;
+}
+
+.wanted-source-tab--hikka.is-active .wanted-chip-count {
+  background: color-mix(in srgb, var(--source-hikka, #993bf6) 20%, transparent);
+  color: var(--source-hikka, #993bf6);
+}
+
 .wanted-add-panel {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  margin-top: 10px;
 }
 
 .wanted-add-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .wanted-add-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .wanted-add-card {
@@ -548,7 +619,7 @@ body.wanted-page {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: transform var(--t), box-shadow var(--t);
+  transition: transform var(--t), box-shadow var(--t), border-color var(--t);
 }
 
 .wanted-add-card:hover {
@@ -567,7 +638,6 @@ body.wanted-page {
 }
 
 .wanted-add-card-title svg {
-  color: var(--red);
   flex-shrink: 0;
 }
 
@@ -582,6 +652,15 @@ body.wanted-page {
   gap: 8px;
 }
 
+.wanted-add-card-row--split {
+  display: flex;
+  gap: 8px;
+}
+
+.wanted-add-card-row--split .wanted-add-btn {
+  flex: 1;
+}
+
 .wanted-add-card-row input {
   flex: 1;
   min-width: 0;
@@ -593,12 +672,12 @@ body.wanted-page {
   font-size: 13px;
   background: var(--bg);
   color: var(--text);
-  transition: border-color var(--t);
+  transition: border-color var(--t), box-shadow var(--t);
 }
 
 .wanted-add-card-row input:focus {
   outline: none;
-  border-color: var(--red);
+  border-color: var(--accent);
 }
 
 .wanted-add-btn {
@@ -606,7 +685,7 @@ body.wanted-page {
   padding: 0 16px;
   border: none;
   border-radius: var(--r);
-  background: var(--red);
+  background: var(--accent);
   color: #fff;
   font: inherit;
   font-size: 13px;
@@ -615,13 +694,61 @@ body.wanted-page {
   transition: background var(--t);
 }
 
+.wanted-add-btn--full {
+  width: 100%;
+}
+
 .wanted-add-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--red) 85%, #000);
+  background: color-mix(in srgb, var(--accent) 85%, #000);
 }
 
 .wanted-add-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* ── ComicVine-specific card styles ──────────────────── */
+.wanted-add-card--cv:hover {
+  border-color: color-mix(in srgb, var(--source-cv, #059669) 40%, var(--border-s));
+}
+
+.wanted-add-card--cv .wanted-add-card-title svg {
+  color: var(--source-cv, #059669);
+}
+
+.wanted-add-card--cv .wanted-add-card-row input:focus {
+  border-color: var(--source-cv, #059669);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--source-cv, #059669) 20%, transparent);
+}
+
+.wanted-add-card--cv .wanted-add-btn {
+  background: var(--source-cv, #059669);
+}
+
+.wanted-add-card--cv .wanted-add-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--source-cv, #059669) 85%, #000);
+}
+
+/* ── Hikka-specific card styles ──────────────────────── */
+.wanted-add-card--hikka:hover {
+  border-color: color-mix(in srgb, var(--source-hikka, #993bf6) 40%, var(--border-s));
+}
+
+.wanted-add-card--hikka .wanted-add-card-title svg {
+  color: var(--source-hikka, #993bf6);
+}
+
+.wanted-add-card--hikka .wanted-add-card-row input:focus {
+  border-color: var(--source-hikka, #993bf6);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--source-hikka, #993bf6) 20%, transparent);
+}
+
+.wanted-add-card--hikka .wanted-add-btn {
+  background: var(--source-hikka, #993bf6);
+}
+
+.wanted-add-card--hikka .wanted-add-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--source-hikka, #993bf6) 85%, #000);
 }
 
 .wanted-add-card-status {

@@ -1,20 +1,28 @@
 from fastapi import APIRouter, HTTPException, Request
 from ..db import get_db
 from typing import Optional
+from urllib.parse import unquote
 
 router = APIRouter(prefix="/api/manga-chapters", tags=["manga-chapters"])
 
 def get_current_user_id(request: Request):
-    username = request.cookies.get("username")
-    if not username:
+    user_login = request.cookies.get("login") or request.cookies.get("username")
+    if not user_login:
         return None
     db = get_db()
-    user = db.get_one("SELECT id FROM users WHERE username = %s", [username])
+    user = db.get_one("SELECT id FROM users WHERE login = %s", [user_login])
     return user['id'] if user else None
 
 def check_moderator(request: Request):
-    role = request.cookies.get("role")
-    if role not in {"moderator", "admin"}:
+    login = request.cookies.get("login") or request.cookies.get("username")
+    if not login:
+        raise HTTPException(status_code=401, detail="Необхідна авторизація")
+
+    user = get_db().get_one(
+        "SELECT role FROM users WHERE login = %s",
+        [unquote(login)],
+    )
+    if not user or user.get("role") not in {"moderator", "admin"}:
         raise HTTPException(status_code=403, detail="Доступ заборонено")
 
 @router.get("/{chapter_id}")
@@ -242,20 +250,21 @@ async def list_chapters(
     params = []
 
     if volume_id:
-        conditions.append("mc.volume_id = ?")
+        conditions.append("mc.volume_id = %s")
         params.append(volume_id)
 
     if magazine_id:
-        conditions.append("mv.magazine_id = ?")
+        conditions.append("mv.magazine_id = %s")
         params.append(magazine_id)
 
     if search:
         conditions.append("""(
-            mc.name LIKE %s OR mc.name_uk LIKE %s OR mc.name_en LIKE %s OR mc.name_native LIKE %s
-            OR v.name LIKE %s OR v.name_uk LIKE %s OR v.name_en LIKE %s
+            mc.name ILIKE %s OR mc.name_uk ILIKE %s OR mc.name_en ILIKE %s OR mc.name_native ILIKE %s
+            OR mc.chapter_number ILIKE %s
+            OR v.name ILIKE %s OR v.name_uk ILIKE %s OR v.name_en ILIKE %s OR v.name_native ILIKE %s
         )""")
         s = f"%{search}%"
-        params += [s, s, s, s, s, s, s]
+        params += [s, s, s, s, s, s, s, s, s]
 
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
 

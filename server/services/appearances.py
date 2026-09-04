@@ -13,18 +13,22 @@ def create_scraper_instance():
         delay=10
     )
 
-def fetch_page(scraper, url, log_callback, max_retries=3):
+def fetch_page(scraper, url, log_callback, max_retries=3, return_status=False):
+    is_404 = False
     for attempt in range(max_retries):
         try:
             response = scraper.get(url, timeout=30)
             if response.status_code == 200:
-                return response.text
+                return (response.text, False) if return_status else response.text
+            if response.status_code == 404:
+                log_callback(f"Помилка 404: сторінку {url} не знайдено.")
+                return (None, True) if return_status else None
             log_callback(f"Помилка: статус {response.status_code} для {url}")
         except Exception as e:
             log_callback(f"Помилка завантаження (спроба {attempt + 1}/{max_retries}): {e}")
             if attempt < max_retries - 1:
                 time.sleep(3)
-    return None
+    return (None, is_404) if return_status else None
 
 # ── Link parsing helpers ─────────────────────────────
 def extract_cv_id_from_href(href):
@@ -32,11 +36,75 @@ def extract_cv_id_from_href(href):
     return int(match.group(1)) if match else None
 
 def extract_cv_slug_from_href(href):
+    if not href:
+        return ""
+    href = re.sub(r'^https?://comicvine\.gamespot\.com/', '', href)
     href = href.strip("/")
     parts = href.split("/")
     if len(parts) >= 1:
         return parts[0]
     return ""
+
+def fetch_issue_appearances_via_api(db, scraper, issue, log_callback):
+    cv_id = issue['cv_id']
+    api_key = os.environ.get("CV_API_KEY", "99b8aaa60addd5a3a119afbb1c57625e4c808c26")
+    api_url = f"https://comicvine.gamespot.com/api/issue/4000-{cv_id}/?api_key={api_key}&format=json&field_list=id,name,site_detail_url,character_credits,person_credits,team_credits,location_credits,concept_credits,object_credits"
+    
+    log_callback(f"Запит до ComicVine API: {api_url}")
+    try:
+        resp = scraper.get(api_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=30)
+        if resp.status_code == 404:
+            log_callback(f"Помилка API: випуск 4000-{cv_id} не знайдено (404)")
+            return None, True
+        if resp.status_code != 200:
+            log_callback(f"Помилка API (статус {resp.status_code})")
+            return None, False
+            
+        data = resp.json()
+        if data.get("status_code") != 1 or not data.get("results"):
+            log_callback(f"Помилка API відповіді: {data.get('error')}")
+            return None, False
+            
+        res = data["results"]
+        site_url = res.get("site_detail_url") or ""
+        if site_url:
+            new_slug = extract_cv_slug_from_href(site_url)
+            if new_slug and new_slug != issue.get("cv_slug"):
+                db.execute("UPDATE issues SET cv_slug = %s WHERE id = %s", [new_slug, issue['id']])
+                log_callback(f"Оновлено слаг випуску в БД за допомогою API: {new_slug}")
+                
+        def format_items(item_list):
+            items = []
+            for item in (item_list or []):
+                items.append({
+                    'cv_id': item['id'],
+                    'name': item.get('name', ''),
+                    'cv_slug': extract_cv_slug_from_href(item.get('site_detail_url', ''))
+                })
+            return items
+
+        creators = []
+        for p in (res.get('person_credits') or []):
+            raw_role = p.get('role', '') or 'Writer'
+            roles = [r.strip().title() for r in raw_role.split(',') if r.strip()] or ['Writer']
+            creators.append({
+                'cv_id': p['id'],
+                'name': p.get('name', ''),
+                'cv_slug': extract_cv_slug_from_href(p.get('site_detail_url', '')),
+                'roles': roles
+            })
+
+        return {
+            'characters': format_items(res.get('character_credits')),
+            'creators': creators,
+            'teams': format_items(res.get('team_credits')),
+            'locations': format_items(res.get('location_credits')),
+            'concepts': format_items(res.get('concept_credits')),
+            'objects': format_items(res.get('object_credits'))
+        }, False
+    except Exception as e:
+        log_callback(f"Виняток під час API запиту: {e}")
+        return None, False
 
 def parse_simple_block(block):
     items = []
@@ -434,7 +502,7 @@ def scrape_issue_appearances_logic(db, scraper, issue_id, log_callback):
     issue = db.get_one("SELECT id, volume_id, cv_id, cv_slug, name, issue_number FROM issues WHERE id = %s", [issue_id])
     if not issue:
         log_callback(f"Помилка: Випуск з ID {issue_id} не знайдено в БД.")
-        return False
+        return False, False
 
     cv_id = issue['cv_id']
     slug = issue['cv_slug'] or ''
@@ -451,25 +519,44 @@ def scrape_issue_appearances_logic(db, scraper, issue_id, log_callback):
     log_callback(f"Запит сторінки: {url}")
     
     # 3. Fetch page
-    html = fetch_page(scraper, url, log_callback)
-    if not html:
-        log_callback("Помилка: Не вдалося завантажити сторінку з Comic Vine.")
-        return False
-        
-    # 4. Parse html
-    appearances = parse_issue_html(html)
-    if not appearances:
-        log_callback("Попередження: Появ на сторінці не знайдено.")
-        # Clean up existing relations since there are none now
-        db.execute("DELETE FROM issue_characters WHERE issue_id = %s", [issue_id])
-        db.execute("DELETE FROM issue_persons WHERE issue_id = %s", [issue_id])
-        db.execute("DELETE FROM issue_teams WHERE issue_id = %s", [issue_id])
-        db.execute("DELETE FROM issue_locations WHERE issue_id = %s", [issue_id])
-        db.execute("DELETE FROM issue_concepts WHERE issue_id = %s", [issue_id])
-        db.execute("DELETE FROM issue_objects WHERE issue_id = %s", [issue_id])
-        return True
+    html, is_404 = fetch_page(scraper, url, log_callback, return_status=True)
+    appearances = None
 
-    # 5. Process and insert each type
+    if html:
+        appearances = parse_issue_html(html)
+        if not appearances:
+            log_callback("Попередження: Появ на сторінці не знайдено.")
+            # Clean up existing relations since there are none now
+            db.execute("DELETE FROM issue_characters WHERE issue_id = %s", [issue_id])
+            db.execute("DELETE FROM issue_persons WHERE issue_id = %s", [issue_id])
+            db.execute("DELETE FROM issue_teams WHERE issue_id = %s", [issue_id])
+            db.execute("DELETE FROM issue_locations WHERE issue_id = %s", [issue_id])
+            db.execute("DELETE FROM issue_concepts WHERE issue_id = %s", [issue_id])
+            db.execute("DELETE FROM issue_objects WHERE issue_id = %s", [issue_id])
+            return True, False
+    else:
+        # Fallback to ComicVine REST API ONLY if HTML page failed to load (404 or connection error)
+        log_callback("Спроба отримати дані через резервне ComicVine API...")
+        appearances, api_404 = fetch_issue_appearances_via_api(db, scraper, issue, log_callback)
+        is_404 = is_404 or api_404
+
+        if not appearances:
+            if is_404:
+                log_callback(f"Помилка 404: Не вдалося завантажити сторінку або отримати дані з ComicVine API для випуску {disp_name}.")
+            else:
+                log_callback("Помилка: Не вдалося завантажити сторінку або отримати дані з Comic Vine.")
+            return False, is_404
+
+    # 5. Capture existing appearances before update for diff tracking
+    old_characters = {r['name'] for r in (db.get_all("SELECT c.name FROM issue_characters ic JOIN characters c ON c.id = ic.character_id WHERE ic.issue_id = %s", [issue_id]) or [])}
+    old_creators = {f"{r['name']} ({r['role']})" for r in (db.get_all("SELECT p.name, ip.role FROM issue_persons ip JOIN persons p ON p.id = ip.person_id WHERE ip.issue_id = %s", [issue_id]) or [])}
+    old_teams = {r['name'] for r in (db.get_all("SELECT t.name FROM issue_teams it JOIN teams t ON t.id = it.team_id WHERE it.issue_id = %s", [issue_id]) or [])}
+    old_locations = {r['name'] for r in (db.get_all("SELECT l.name FROM issue_locations il JOIN locations l ON l.id = il.location_id WHERE il.issue_id = %s", [issue_id]) or [])}
+    old_concepts = {r['name'] for r in (db.get_all("SELECT co.name FROM issue_concepts ic JOIN concepts co ON co.id = ic.concept_id WHERE ic.issue_id = %s", [issue_id]) or [])}
+    old_objects = {r['name'] for r in (db.get_all("SELECT o.name FROM issue_objects io JOIN objects o ON o.id = io.object_id WHERE io.issue_id = %s", [issue_id]) or [])}
+    had_previous_data = bool(old_characters or old_creators or old_teams or old_locations or old_concepts or old_objects)
+
+    # 6. Process and insert each type
     totals = {}
     
     # Characters
@@ -552,7 +639,38 @@ def scrape_issue_appearances_logic(db, scraper, issue_id, log_callback):
     totals['objects'] = added_objects
 
     log_callback(f"Успішно збережено: персонажів: {totals['characters']}, творців (ролей): {totals['creators']}, команд: {totals['teams']}, локацій: {totals['locations']}, концептів: {totals['concepts']}, об'єктів: {totals['objects']}")
-    return True
+
+    # Diff logging
+    if had_previous_data:
+        new_characters = {c['name'] for c in appearances.get('characters', []) if c.get('name')} - old_characters
+        new_creators = {f"{c['name']} ({r})" for c in appearances.get('creators', []) for r in c.get('roles', []) if c.get('name')} - old_creators
+        new_teams = {t['name'] for t in appearances.get('teams', []) if t.get('name')} - old_teams
+        new_locations = {l['name'] for l in appearances.get('locations', []) if l.get('name')} - old_locations
+        new_concepts = {co['name'] for co in appearances.get('concepts', []) if co.get('name')} - old_concepts
+        new_objects = {o['name'] for o in appearances.get('objects', []) if o.get('name')} - old_objects
+
+        diff_lines = []
+        if new_characters:
+            diff_lines.append(f"Персонажі (+{len(new_characters)}): {', '.join(sorted(new_characters))}")
+        if new_creators:
+            diff_lines.append(f"Творці (+{len(new_creators)}): {', '.join(sorted(new_creators))}")
+        if new_teams:
+            diff_lines.append(f"Команди (+{len(new_teams)}): {', '.join(sorted(new_teams))}")
+        if new_locations:
+            diff_lines.append(f"Локації (+{len(new_locations)}): {', '.join(sorted(new_locations))}")
+        if new_concepts:
+            diff_lines.append(f"Концепти (+{len(new_concepts)}): {', '.join(sorted(new_concepts))}")
+        if new_objects:
+            diff_lines.append(f"Об'єкти (+{len(new_objects)}): {', '.join(sorted(new_objects))}")
+
+        if diff_lines:
+            log_callback("Знайдено та додано нові появи:")
+            for line in diff_lines:
+                log_callback(f"  • {line}")
+        else:
+            log_callback("Появи без змін (випуск було відредаговано іншими даними).")
+
+    return True, False
 
 def scrape_volume_appearances_logic(db, scraper, volume_id, log_callback):
     # 1. Get volume details
@@ -584,7 +702,8 @@ def scrape_volume_appearances_logic(db, scraper, volume_id, log_callback):
         
         # Run issue scrape logic
         res = scrape_issue_appearances_logic(db, scraper, issue['id'], log_callback)
-        if res:
+        success = res[0] if isinstance(res, tuple) else res
+        if success:
             success_count += 1
             
         log_callback("----------------------------------------")

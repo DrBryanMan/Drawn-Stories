@@ -135,7 +135,7 @@
     border-radius: 2px;
     overflow: hidden;
     margin-top: 4px;
-    width: 120px;
+    /* width: 120px; */
 }
 
 .user-level-progress-bar {

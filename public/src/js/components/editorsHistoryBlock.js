@@ -24,8 +24,7 @@ export function renderEditorsHistoryBlock(edits, currentUser, options = {}) {
     const editors = [];
     
     (edits || []).forEach(e => {
-        const username = e.proposer_username;
-        const nameToUse = e.proposer_nickname || e.proposer_username;
+        const nameToUse = e.proposer_nickname || e.proposer_login || e.proposer_username;
         if (nameToUse && !seenEditors.has(nameToUse)) {
             seenEditors.add(nameToUse);
             editors.push({
@@ -133,15 +132,16 @@ export function openEditHistoryModal(edits) {
         return `
             <div class="edit-history-list">
                 ${edits.map(e => {
-                    const proposerDisp = e.proposer_nickname || e.proposer_username;
+                    const proposerDisp = e.proposer_nickname || e.proposer_login || e.proposer_username;
                     const avatarUrl = `/api/auth/avatar/${encodeURIComponent(proposerDisp)}`;
                     const avatarHtml = getAvatarHtml(avatarUrl, 'contributor-avatar', 44);
                     const patchObj = e.patch_data || {};
                     const beforeData = patchObj.before || {};
                     const afterData = patchObj.after || patchObj;
-                    const badgesHtml = getChangedFieldBadges(beforeData, afterData);
+                    const badgesHtml = getChangedFieldBadges(beforeData, afterData, { isCreation: e.is_creation });
                     
                     return `
+
                         <a href="#/edits/${e.id}" data-edit-id="${e.id}" class="edit-history-item">
                             <div class="edit-history-header">
                                 <div class="edit-history-user">

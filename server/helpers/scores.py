@@ -135,7 +135,9 @@ def calculate_edit_score(
     # Поля списків / відносин
     LIST_FIELDS = {"staff", "characters", "issues", "volumes", "creators", "related_collections", "contents"}
     
-    SKIP_FIELDS = {"themes", "theme_ids", "personas"} | TEXT_FIELDS | IMAGE_FIELDS | LIST_FIELDS
+    # tech_info is a container for technical attributes, not an editable
+    # attribute by itself. Its presence must never earn a generic field score.
+    SKIP_FIELDS = {"themes", "theme_ids", "personas", "tech_info"} | TEXT_FIELDS | IMAGE_FIELDS | LIST_FIELDS
 
     FIELD_LABELS: dict[str, str] = {
         "name": "оригінальну назву",
@@ -300,12 +302,17 @@ def calculate_edit_score(
     return total, parts
 
 
+# Бонус за створення нової сутності
+CREATION_BONUS: int = 50
+
+
 def build_reason_string(
     entity_type: str,
     entity_id: int,
     parts: list[str],
     total: int,
     action: str = "Схвалено",
+    is_creation: bool = False,
 ) -> str:
     """Формує рядок reason для запису в score_history."""
     details = ", ".join(parts) if parts else "без деталей"
@@ -318,4 +325,6 @@ def build_reason_string(
         "collection": "збірника"
     }
     label = label_map.get(entity_type, entity_type)
+    if is_creation:
+        return f"Створено {label} #{entity_id}: {details} (всього +{total} б.)"
     return f"{action} правку {label} #{entity_id}: {details} (всього +{total} б.)"

@@ -4,7 +4,7 @@ import { normalizeImageUrl, escapeHtmlAttribute } from '../helpers/image.js';
 import { openAddIssueModal } from '../components/addIssueModal.js';
 import { renderIssueGridCard } from '../components/cards/IssueGridCard.js';
 import { CollectionEditor } from '../components/modals/EditCollectionModal.js';
-import { formatDate, formatIssueRanges } from '../helpers/lang.js';
+import { formatDate, formatIssueRanges, formatCurrency } from '../helpers/lang.js';
 import { icon } from '../helpers/icons.js';
 import { t } from '../helpers/i18n.js';
 import { fetchEntityEdits, renderEditorsHistoryBlock, initEditorsHistoryBlock } from '../components/editorsHistoryBlock.js';
@@ -33,24 +33,44 @@ function renderSkeleton(container) {
     `;
 }
 
-function getVerificationBadgeHTML(collection) {
+/**
+ * Formats a release_date string (YYYY-MM-DD or YYYY-MM) as "Анонсовано на {Місяць РРРР}"
+ * for future dates shown in the hero badge.
+ */
+function formatAnnouncedDate(dateStr) {
+    if (!dateStr) return '';
+    try {
+        const parts = String(dateStr).trim().split('-');
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        if (isNaN(year) || isNaN(month)) return dateStr;
+        const d = new Date(year, month, 1);
+        const monthName = d.toLocaleDateString('uk-UA', { month: 'long' });
+        const capitalized = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+        return `Анонсовано на ${capitalized} ${year}`;
+    } catch {
+        return dateStr;
+    }
+}
+
+function isFutureDate(dateStr) {
+    if (!dateStr) return false;
+    const clean = String(dateStr).trim();
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const today = `${year}-${month}-${day}`;
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    if (clean.length === 7) {
+        return clean >= today.slice(0, 7);
+    }
+    if (clean.endsWith('-00')) {
+        return clean.slice(0, 7) >= today.slice(0, 7);
+    }
+    return clean > today;
+}
 
-    const isAnnounced = collection.release_date && collection.release_date > today;
-    const status = isAnnounced ? 'announced' : (collection.verification_status || 'unverified');
+function getVerificationBadgeHTML(collection) {
+    const status = collection.verification_status || 'unverified';
 
-    if (status === 'announced') {
-        return `
-            <span class="volume-badge volume-status-announced" title="Збірник анонсовано, дата релізу в майбутньому">
-                ${icon('clock', 13, { strokeWidth: 2.2 })}
-                Анонсовано
-            </span>
-        `;
-    } else if (status === 'physical') {
+    if (status === 'physical') {
         return `
             <span class="volume-badge volume-status-physical" title="Інформація підтверджена з фізичного примірника">
                 ${icon('book', 13, { strokeWidth: 2.2 })}
@@ -104,7 +124,9 @@ export async function renderCollectionDetail(main, params = {}) {
         ]);
         const { collection, issues, themes = [], related_collections } = data;
 
-        const title = escapeHtmlAttribute(collection.name || 'Збірник');
+        const usesNumberedFallbackTitle = !collection.name && !!collection.issue_number;
+        const fallbackTitle = collection.issue_number ? `Книга ${collection.issue_number}` : 'Збірник';
+        const title = escapeHtmlAttribute(collection.name || fallbackTitle);
         const coverUrl = normalizeImageUrl(collection.image);
         const publisherName = escapeHtmlAttribute(collection.publisher_name || 'Невідоме видавництво');
         const isOwned = collection.is_owned;
@@ -127,7 +149,7 @@ export async function renderCollectionDetail(main, params = {}) {
         for (const item of sortedIssues) {
             const volId = item.volume_id;
             if (!volId) continue;
-            
+
             if (!volumesMap.has(volId)) {
                 volumesMap.set(volId, {
                     id: volId,
@@ -135,12 +157,12 @@ export async function renderCollectionDetail(main, params = {}) {
                     numbers: []
                 });
             }
-            
+
             if (item.issue_number != null) {
                 volumesMap.get(volId).numbers.push(String(item.issue_number));
             }
         }
-        
+
         const sortedVolumes = Array.from(volumesMap.values());
         let seriesBlockHtml = '';
         if (sortedVolumes.length > 0) {
@@ -155,7 +177,7 @@ export async function renderCollectionDetail(main, params = {}) {
                     </a>
                 `;
             }).join('');
-            
+
             seriesBlockHtml = `
                 <div class="vol-summary" style="margin-bottom: 24px;">
                     <div class="vol-summary__label">Серії випусків у збірниках</div>
@@ -165,6 +187,46 @@ export async function renderCollectionDetail(main, params = {}) {
                 </div>
             `;
         }
+
+        let tech = {};
+        if (collection.tech_info) {
+            try {
+                tech = typeof collection.tech_info === 'string' ? JSON.parse(collection.tech_info) : (collection.tech_info || {});
+            } catch (e) {
+                tech = {};
+            }
+        }
+        const pagesCount = tech.pages || collection.pages || null;
+        const coverType = tech.cover_type;
+        const dustJacket = tech.dust_jacket;
+        const releasePrice = tech.release_price;
+        const releaseCurrency = tech.release_currency || 'UAH';
+        const dimensions = tech.dimensions;
+        const printRun = tech.print_run;
+        const ageRating = tech.age_rating;
+        const weight = tech.weight;
+        const finish = tech.finish;
+
+        // Date badge logic: future date → "Анонсовано на {Місяць РРРР}", past → regular date
+        const releaseDateBadgeHTML = (() => {
+            const dateStr = collection.release_date;
+            if (!dateStr) return '';
+            if (isFutureDate(dateStr)) {
+                return `
+                    <span class="volume-badge volume-status-announced" title="Збірник анонсовано, дата релізу в майбутньому">
+                        ${icon('clock', 13, { strokeWidth: 2.2 })}
+                        ${formatAnnouncedDate(dateStr)}
+                    </span>
+                `;
+            } else {
+                return `
+                    <span class="volume-badge volume-year-badge volume-year-badge--green" title="Дата виходу">
+                        ${icon('calendar', 13, { strokeWidth: 2.2 })}
+                        ${formatDate(dateStr, '—')}
+                    </span>
+                `;
+            }
+        })();
 
         main.innerHTML = `
             <div class="collection-detail">
@@ -196,6 +258,22 @@ export async function renderCollectionDetail(main, params = {}) {
                                 `}
                             </div>
 
+                            ${isOwned ? `
+                                <div class="user-collection-price-box" id="user-collection-price-box">
+                                    <div class="user-collection-price-info">
+                                        <span class="user-collection-price-label">${t('purchase_price') || 'Ціна покупки'}</span>
+                                        <span class="user-collection-price-val" id="user-price-display">
+                                            ${collection.user_purchase_price !== null && collection.user_purchase_price !== undefined
+                                                ? formatCurrency(collection.user_purchase_price, collection.user_purchase_currency || 'UAH')
+                                                : (releasePrice ? `${formatCurrency(releasePrice, releaseCurrency)} <small style="color:var(--text-muted); font-size:11px; font-weight:normal;">(${t('release_price') || 'релізна'})</small>` : '—')}
+                                        </span>
+                                    </div>
+                                    <button class="btn-purchase-price-edit" id="btn-edit-purchase-price" title="${t('edit_purchase_price') || 'Редагувати ціну покупки'}">
+                                        ${icon('edit', 12)}
+                                    </button>
+                                </div>
+                            ` : ''}
+
                             ${(() => {
                                 const hasLinks = collection.cv_id || collection.site_link;
                                 if (!hasLinks) return '';
@@ -223,31 +301,19 @@ export async function renderCollectionDetail(main, params = {}) {
                             <div class="volume-header">
                                 <div class="volume-title">
                                     <span class="volume-main-title">
-                                        <h1>${title} ${collection.issue_number ? `#${escapeHtmlAttribute(collection.issue_number)}` : ''}</h1>
+                                        <h1>${title}${collection.issue_number && !usesNumberedFallbackTitle ? ` #${escapeHtmlAttribute(collection.issue_number)}` : ''}</h1>
                                     </span>
                                 </div>
                             </div>
 
                             <div class="volume-hero-badges">
                             ${collection.volume_id ? `
-                                <a href="#/volumes/${collection.volume_id}" class="volume-badge volume-volume-badge" title="Серія">
+                                <a href="#/volumes/${collection.volume_id}" class="volume-badge volume-volume-badge" title="Серія: ${escapeHtmlAttribute(collection.volume_name_uk || collection.volume_name || '')}">
                                 ${icon('book', 13, { strokeWidth: 2.2 })}
-                                ${escapeHtmlAttribute(collection.volume_name_uk || collection.volume_name || '')}
+                                <span>${escapeHtmlAttribute(collection.volume_name_uk || collection.volume_name || '')}</span>
                                 </a>
                                 ` : ''}
-                                ${collection.cover_date || collection.release_date ? (() => {
-                                    const dateStr = collection.release_date || collection.cover_date;
-                                    const now = new Date();
-                                    const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-                                    const isFuture = dateStr && dateStr > today;
-                                    const badgeClass = isFuture ? 'volume-year-badge--yellow' : 'volume-year-badge--green';
-                                    return `
-                                        <span class="volume-badge volume-year-badge ${badgeClass}" title="Дата виходу">
-                                            ${icon('calendar', 13, { strokeWidth: 2.2 })}
-                                            ${formatDate(dateStr, '—')}
-                                        </span>
-                                    `;
-                                })() : ''}
+                                ${releaseDateBadgeHTML}
                                 ${getVerificationBadgeHTML(collection)}
                             </div>
 
@@ -270,19 +336,105 @@ export async function renderCollectionDetail(main, params = {}) {
                                 </div>
                             </div>
 
-                            <div class="collection-meta-details collection-meta-details--${(() => {
-                                const now = new Date();
-                                const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-                                if (collection.release_date && collection.release_date > today) return 'announced';
-                                return collection.verification_status || 'unverified';
-                            })()}">
-                                <div class="collection-meta-item">
-                                    <span class="collection-meta-label">ISBN</span>
-                                    <span class="collection-meta-value">${escapeHtmlAttribute(collection.isbn || '—')}</span>
+                            <div class="collection-meta-section">
+                                <div class="collection-meta-header">
+                                    <h2 class="collection-meta-title">${t('tech_characteristics') || 'Технічні характеристики'}</h2>
                                 </div>
-                                <div class="collection-meta-item">
-                                    <span class="collection-meta-label">Сторінок</span>
-                                    <span class="collection-meta-value">${escapeHtmlAttribute(collection.pages || '—')}</span>
+                                <div class="collection-meta-details collection-meta-details--${(() => {
+                                    if (isFutureDate(collection.release_date)) return 'announced';
+                                    return collection.verification_status || 'unverified';
+                                })()}">
+                                    ${(() => {
+                                        const metaItems = [];
+                                        if (collection.isbn) {
+                                            metaItems.push(`
+                                                <div class="collection-meta-item">
+                                                    <span class="collection-meta-label">ISBN</span>
+                                                    <span class="collection-meta-value">${escapeHtmlAttribute(collection.isbn)}</span>
+                                                </div>
+                                            `);
+                                        }
+                                        if (pagesCount) {
+                                            metaItems.push(`
+                                                <div class="collection-meta-item">
+                                                    <span class="collection-meta-label">${t('pages_count') || 'Сторінок'}</span>
+                                                    <span class="collection-meta-value">${escapeHtmlAttribute(String(pagesCount))}</span>
+                                                </div>
+                                            `);
+                                        }
+                                        if (coverType) {
+                                            const coverLabel = coverType === 'hardcover' ? (t('cover_type_hardcover') || 'Тверда (Hardcover)')
+                                                : (coverType === 'softcover' ? (t('cover_type_softcover') || 'М\'яка (Softcover)')
+                                                : (coverType === 'digital' ? (t('cover_type_digital') || 'Цифрова') : coverType));
+                                            metaItems.push(`
+                                                <div class="collection-meta-item">
+                                                    <span class="collection-meta-label">${t('cover_type') || 'Тип видання'}</span>
+                                                    <span class="collection-meta-value">${coverLabel}</span>
+                                                </div>
+                                            `);
+                                        }
+                                        if (dustJacket !== null && dustJacket !== undefined) {
+                                            metaItems.push(`
+                                                <div class="collection-meta-item">
+                                                    <span class="collection-meta-label">${t('dust_jacket') || 'Суперобкладинка'}</span>
+                                                    <span class="collection-meta-value">${dustJacket === true || dustJacket === 'true' ? (t('yes') || 'Так') : (t('no') || 'Ні')}</span>
+                                                </div>
+                                            `);
+                                        }
+                                        if (releasePrice !== null && releasePrice !== undefined && releasePrice !== '') {
+                                            metaItems.push(`
+                                                <div class="collection-meta-item">
+                                                    <span class="collection-meta-label">${t('release_price') || 'Ціна релізу'}</span>
+                                                    <span class="collection-meta-value">${formatCurrency(releasePrice, releaseCurrency)}</span>
+                                                </div>
+                                            `);
+                                        }
+                                        if (dimensions) {
+                                            metaItems.push(`
+                                                <div class="collection-meta-item">
+                                                    <span class="collection-meta-label">${t('dimensions') || 'Розміри'}</span>
+                                                    <span class="collection-meta-value">${escapeHtmlAttribute(dimensions)}</span>
+                                                </div>
+                                            `);
+                                        }
+                                        if (printRun) {
+                                            metaItems.push(`
+                                                <div class="collection-meta-item">
+                                                    <span class="collection-meta-label">${t('print_run') || 'Тираж'}</span>
+                                                    <span class="collection-meta-value">${escapeHtmlAttribute(printRun)}</span>
+                                                </div>
+                                            `);
+                                        }
+                                        if (ageRating) {
+                                            metaItems.push(`
+                                                <div class="collection-meta-item">
+                                                    <span class="collection-meta-label">${t('age_rating') || 'Віковий рейтинг'}</span>
+                                                    <span class="collection-meta-value">${escapeHtmlAttribute(ageRating)}</span>
+                                                </div>
+                                            `);
+                                        }
+                                        if (weight) {
+                                            metaItems.push(`
+                                                <div class="collection-meta-item">
+                                                    <span class="collection-meta-label">${t('weight') || 'Вага'}</span>
+                                                    <span class="collection-meta-value">${escapeHtmlAttribute(weight)}</span>
+                                                </div>
+                                            `);
+                                        }
+                                        if (finish) {
+                                            metaItems.push(`
+                                                <div class="collection-meta-item" style="grid-column: 1 / -1;">
+                                                    <span class="collection-meta-label">${t('finish') || 'Особливості поліграфії'}</span>
+                                                    <span class="collection-meta-value">${escapeHtmlAttribute(finish)}</span>
+                                                </div>
+                                            `);
+                                        }
+
+                                        if (metaItems.length === 0) {
+                                            return `<div class="collection-meta-empty">${icon('helpCircle', 14)} <span>${t('no_tech_info') || 'Технічна інформація ще не додана'}</span></div>`;
+                                        }
+                                        return metaItems.join('');
+                                    })()}
                                 </div>
                             </div>
                         </div>
@@ -373,7 +525,7 @@ export async function renderCollectionDetail(main, params = {}) {
                             </div>
                         ` : `
                             <div class="issues-view-grid" id="collection-issues-grid">
-                                ${sortedIssues.map((issue) => renderIssueGridCard(issue, { 
+                                ${sortedIssues.map((issue) => renderIssueGridCard(issue, {
                                     orderNum: issue.order_num,
                                     chapterTitle: issue.chapter_title,
                                     showOrder: isModerator,
@@ -424,7 +576,7 @@ export async function renderCollectionDetail(main, params = {}) {
             let isSaving = false;
 
             const getCards = () => Array.from(grid.querySelectorAll('.issue-grid-card'));
-            
+
             const updateUIOrder = () => {
                 getCards().forEach((card, index) => {
                     const badge = card.querySelector('.issue-grid-order-badge');
@@ -438,7 +590,7 @@ export async function renderCollectionDetail(main, params = {}) {
                     id: Number(c.dataset.id),
                     type: c.dataset.itemType
                 })).filter(item => !isNaN(item.id));
-                
+
                 isSaving = true;
                 try {
                     await API.put(`/collections/${collectionId}/reorder-issues`, { items });
@@ -479,7 +631,7 @@ export async function renderCollectionDetail(main, params = {}) {
 
                 const rect = targetCard.getBoundingClientRect();
                 const next = (e.clientX - rect.left) > (rect.width / 2);
-                
+
                 grid.insertBefore(draggingCard, next ? targetCard.nextSibling : targetCard);
                 updateUIOrder();
             });
@@ -566,6 +718,62 @@ export async function renderCollectionDetail(main, params = {}) {
             });
         });
 
+        // Edit Purchase Price
+        const priceBox = main.querySelector('#user-collection-price-box');
+        if (priceBox) {
+            const editPriceBtn = priceBox.querySelector('#btn-edit-purchase-price');
+            if (editPriceBtn) {
+                editPriceBtn.addEventListener('click', () => {
+                    const hasUahReleasePrice = tech.release_currency === 'UAH' && releasePrice !== null && releasePrice !== undefined;
+                    const currentVal = collection.user_purchase_price ?? (hasUahReleasePrice ? releasePrice : '');
+                    const currentCurr = collection.user_purchase_currency || 'UAH';
+
+                    priceBox.innerHTML = `
+                        <form class="purchase-price-edit-form" id="purchase-price-form">
+                            <span class="user-collection-price-label" style="width: 100%;">${t('purchase_price') || 'Ціна покупки'}:</span>
+                            <input type="number" step="any" min="0" class="purchase-price-input" id="input-purchase-price" value="${currentVal}" placeholder="0.00">
+                            <select class="purchase-price-select" id="select-purchase-currency">
+                                <option value="UAH" ${currentCurr === 'UAH' ? 'selected' : ''}>UAH (₴)</option>
+                                <option value="USD" ${currentCurr === 'USD' ? 'selected' : ''}>USD ($)</option>
+                                <option value="EUR" ${currentCurr === 'EUR' ? 'selected' : ''}>EUR (€)</option>
+                                <option value="GBP" ${currentCurr === 'GBP' ? 'selected' : ''}>GBP (£)</option>
+                                <option value="JPY" ${currentCurr === 'JPY' ? 'selected' : ''}>JPY (¥)</option>
+                                <option value="PLN" ${currentCurr === 'PLN' ? 'selected' : ''}>PLN (zł)</option>
+                            </select>
+                            <button type="submit" class="purchase-price-btn-save">${t('save') || 'Зберегти'}</button>
+                            <button type="button" class="purchase-price-btn-cancel" id="btn-cancel-price-edit">${t('cancel') || 'Скасувати'}</button>
+                        </form>
+                    `;
+
+                    const form = priceBox.querySelector('#purchase-price-form');
+                    const cancelBtn = priceBox.querySelector('#btn-cancel-price-edit');
+
+                    form.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const rawPrice = form.querySelector('#input-purchase-price').value.trim();
+                        const price = rawPrice !== '' ? parseFloat(rawPrice) : null;
+                        const curr = form.querySelector('#select-purchase-currency').value;
+
+                        try {
+                            await API.put(`/collections/${collectionId}/purchase-price`, {
+                                purchase_price: price,
+                                purchase_currency: curr
+                            });
+                            collection.user_purchase_price = price;
+                            collection.user_purchase_currency = curr;
+                            renderCollectionDetail(main, params);
+                        } catch (err) {
+                            alert('Помилка оновлення ціни: ' + (err.message || 'Невідома помилка'));
+                        }
+                    });
+
+                    cancelBtn.addEventListener('click', () => {
+                        renderCollectionDetail(main, params);
+                    });
+                });
+            }
+        }
+
         // Toggle Collection
         const toggleBtn = main.querySelector('#btn-toggle-collection');
         if (toggleBtn) {
@@ -632,8 +840,8 @@ export async function renderCollectionDetail(main, params = {}) {
                     onAdd: async (items) => {
                         for (const item of items) {
                             try {
-                                const payload = item.is_manga 
-                                    ? { manga_chapter_id: item.id } 
+                                const payload = item.is_manga
+                                    ? { manga_chapter_id: item.id }
                                     : { issue_id: item.id };
                                 await API.post(`/collections/${collectionId}/issues`, payload);
                             } catch (err) {
@@ -667,8 +875,8 @@ export async function renderCollectionDetail(main, params = {}) {
                 let contentsList = [];
                 try {
                     if (collection.contents) {
-                        contentsList = typeof collection.contents === 'string' 
-                            ? JSON.parse(collection.contents) 
+                        contentsList = typeof collection.contents === 'string'
+                            ? JSON.parse(collection.contents)
                             : collection.contents;
                     }
                 } catch (e) {
@@ -676,18 +884,18 @@ export async function renderCollectionDetail(main, params = {}) {
                 }
 
                 const modalHtml = `
-                    <div class="ds-modal-overlay" id="contents-modal-overlay" style="display: flex;">
-                        <div class="ds-modal ds-modal--medium" id="contents-modal">
+                    <div class="ds-modal-overlay" id="contents-modal-overlay" style="display: flex; align-items: center; justify-content: center; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000;">
+                        <div class="ds-modal" style="max-width: 480px; width: 90%; max-height: 80vh; display: flex; flex-direction: column;">
                             <div class="ds-modal-header">
-                                <div class="ds-modal-title">${icon('layers', 14, { strokeWidth: 2.2 })} Зміст збірника</div>
+                                <div class="ds-modal-title">${icon('layers', 16)} Зміст збірника</div>
                                 <button class="ds-modal-close" id="contents-modal-close">&times;</button>
                             </div>
-                            <div class="ds-modal-body">
-                                ${contentsList && contentsList.length > 0 ? `
+                            <div class="ds-modal-body" style="overflow-y: auto; flex: 1; padding: 20px;">
+                                ${contentsList.length > 0 ? `
                                     <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;">
-                                        ${contentsList.map((item, idx) => `
-                                            <li style="background: var(--bg-input); display: flex; align-items: baseline;">
-                                                <span style="color: var(--text-muted); min-width: 20px;">${idx + 1}.</span>
+                                        ${contentsList.map((item, i) => `
+                                            <li style="display: flex; align-items: baseline; gap: 10px; padding: 8px 12px; background: var(--bg-2); border-radius: var(--r); border: 1px solid var(--border-s);">
+                                                <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); min-width: 20px; text-align: right;">${i + 1}.</span>
                                                 <span style="color: var(--text);">${escapeHtmlAttribute(item)}</span>
                                             </li>
                                         `).join('')}
@@ -704,12 +912,12 @@ export async function renderCollectionDetail(main, params = {}) {
                 `;
 
                 document.body.insertAdjacentHTML('beforeend', modalHtml);
-                
+
                 const modal = document.getElementById('contents-modal-overlay');
                 const closeBtn = document.getElementById('contents-modal-close');
-                
+
                 const closeModal = () => modal.remove();
-                
+
                 closeBtn.onclick = closeModal;
                 modal.onclick = (e) => { if (e.target === modal) closeModal(); };
                 // Escape key
@@ -723,4 +931,3 @@ export async function renderCollectionDetail(main, params = {}) {
         main.innerHTML = `<div class="container"><div class="error-state">Помилка завантаження: ${err.message}</div></div>`;
     }
 }
-

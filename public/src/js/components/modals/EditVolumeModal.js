@@ -672,7 +672,7 @@ export class VolumeEditor {
                                 ${this._imgFieldHTML('cover_img', 'Банер', v.cover_img, icon('layout', 14), true)}
 
                                 <div class="admin-form-group${groupClass}">
-                                    <label class="admin-label">${icon('externalLink', 14)} Посилання на сайт джерела</label>
+                                    <label class="admin-label">${icon('externalLink', 14)} Посилання на сайт видавництва</label>
                                     <input type="url" name="site_link" class="admin-input" value="${v.site_link || ''}" placeholder="https://..."${readOnlyAttr}>
                                 </div>
 

@@ -57,12 +57,14 @@ export function formatDate(dateStr, fallback = '—') {
         const cleanStr = String(dateStr).trim().replace(' ', 'T');
         if (cleanStr.includes('-') && !cleanStr.includes('T')) {
             const parts = cleanStr.split('-');
-            if (parts.length === 3 && parts[2] === '00') {
+            if (parts.length === 2 || (parts.length === 3 && parts[2] === '00')) {
                 const year = parseInt(parts[0], 10);
                 const monthIdx = parseInt(parts[1], 10) - 1;
-                const d = new Date(year, monthIdx, 1);
-                const formatted = d.toLocaleDateString(locale, { year: 'numeric', month: 'long' });
-                return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+                if (!isNaN(year) && !isNaN(monthIdx)) {
+                    const d = new Date(year, monthIdx, 1);
+                    const formatted = d.toLocaleDateString(locale, { year: 'numeric', month: 'long' });
+                    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+                }
             }
         }
         const d = new Date(cleanStr);
@@ -177,4 +179,31 @@ export function formatIssueRanges(nums) {
         }
     }
     return parts.join(', ');
+}
+
+export const CURRENCY_SYMBOLS = {
+    UAH: '₴',
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+    JPY: '¥',
+    PLN: 'zł'
+};
+
+export function formatCurrency(amount, currency = 'UAH') {
+    if (amount === null || amount === undefined || isNaN(amount) || amount === '') return '—';
+    const num = parseFloat(amount);
+    const currCode = String(currency || 'UAH').toUpperCase();
+    const symbol = CURRENCY_SYMBOLS[currCode] || currCode;
+    
+    const isInt = num % 1 === 0;
+    const formattedNum = num.toLocaleString('uk-UA', {
+        minimumFractionDigits: isInt ? 0 : 2,
+        maximumFractionDigits: 2
+    });
+
+    if (currCode === 'USD' || currCode === 'GBP' || currCode === 'EUR' || currCode === 'JPY') {
+        return `${symbol}${formattedNum}`;
+    }
+    return `${formattedNum} ${symbol}`;
 }

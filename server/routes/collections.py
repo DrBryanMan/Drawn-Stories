@@ -6,11 +6,11 @@ from pydantic import BaseModel
 router = APIRouter(prefix="/api/collections", tags=["collections"])
 
 def get_current_user_id(request: Request):
-    username = request.cookies.get("username")
-    if not username:
+    user_login = request.cookies.get("login") or request.cookies.get("username")
+    if not user_login:
         raise HTTPException(status_code=401, detail="Not logged in")
     db = get_db()
-    user = db.get_one("SELECT id FROM users WHERE username = %s", [username])
+    user = db.get_one("SELECT id FROM users WHERE LOWER(login) = LOWER(%s) OR LOWER(nickname) = LOWER(%s)", [user_login, user_login])
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
     return user['id']
@@ -21,7 +21,7 @@ async def get_collections(username: Optional[str] = None, content_type: str = "c
     
     target_user_id = user_id
     if username:
-        user = db.get_one("SELECT id FROM users WHERE username = %s", [username])
+        user = db.get_one("SELECT id FROM users WHERE LOWER(nickname) = LOWER(%s) OR LOWER(login) = LOWER(%s)", [username, username])
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         target_user_id = user['id']
@@ -115,17 +115,14 @@ async def get_collections(username: Optional[str] = None, content_type: str = "c
 @router.post("")
 async def create_collection(data: dict):
     db = get_db()
-    
-    if not data.get("name"):
-        raise HTTPException(status_code=400, detail="Назва збірника обов'язкова")
 
     columns = []
     placeholders = []
     params = []
     
     allowed_fields = [
-        "name", "issue_number", "volume_id", "cv_vol_id", "cv_id", "cv_slug", 
-        "image", "cover_date", "release_date", "description", "contents"
+        "name", "issue_number", "volume_id", "cv_vol_id", "cv_id", "cv_slug",
+        "image", "release_date", "description", "contents"
     ]
     
     for key, value in data.items():
@@ -381,8 +378,8 @@ async def update_collection(collection_id: int, data: dict):
     params = []
     
     allowed_fields = [
-        "name", "issue_number", "volume_id", "cv_vol_id", "cv_id", "cv_slug", 
-        "image", "cover_date", "release_date", "description", "synopsis_ua",
+        "name", "issue_number", "volume_id", "cv_vol_id", "cv_id", "cv_slug",
+        "image", "release_date", "description", "synopsis_ua",
         "synopsis", "contents", "publisher", "isbn", "pages", "site_link",
         "verification_status"
     ]
@@ -469,9 +466,9 @@ async def get_collection_detail(collection_id: int, request: Request):
     
     # Визначаємо поточного користувача (для перевірки, чи додано в його колекцію)
     user_id = None
-    username = request.cookies.get("username")
-    if username:
-        user = db.get_one("SELECT id FROM users WHERE username = %s", [username])
+    user_login = request.cookies.get("login") or request.cookies.get("username")
+    if user_login:
+        user = db.get_one("SELECT id FROM users WHERE LOWER(login) = LOWER(%s) OR LOWER(nickname) = LOWER(%s)", [user_login, user_login])
         if user:
             user_id = user['id']
 

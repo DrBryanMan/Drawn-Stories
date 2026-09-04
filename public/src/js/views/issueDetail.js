@@ -330,7 +330,7 @@ function collectionCardHTML(col) {
     const cover = normalizeImageUrl(col.image);
     const name = escapeHtmlAttribute(col.name || t('collection'));
     const volumeLabel = col.volume_name_uk || col.volume_name || '';
-    const date = formatDate(col.release_date || col.cover_date);
+    const date = formatDate(col.release_date);
 
     return `
         <a class="issue-collection-card" href="#/collections/${col.id}">
@@ -433,9 +433,9 @@ export async function renderIssueDetail(container, params = {}) {
 
     // ── Badges ────────────────────────────────────
     const volumeBadge = issue.volume_id
-        ? `<a href="#/volumes/${issue.volume_id}" class="volume-badge volume-series-badge" title="${t('series')}">
+        ? `<a href="#/volumes/${issue.volume_id}" class="volume-badge volume-series-badge" title="${t('series')}: ${escapeHtmlAttribute(volumeName)}">
                ${icon('book', 13, { strokeWidth: 2.2 })}
-               ${escapeHtmlAttribute(volumeName)}
+               <span>${escapeHtmlAttribute(volumeName)}</span>
            </a>`
         : '';
 

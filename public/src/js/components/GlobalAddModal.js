@@ -4,6 +4,7 @@ import { normalizeImageUrl } from '../helpers/image.js';
 import { CharacterPicker } from './CharacterPicker.js';
 import { icon } from '../helpers/icons.js';
 import { getCurrentLanguage } from '../helpers/i18n.js';
+import * as EditorUtils from './modals/editorUtils.js';
 
 // Local helper functions for rendering themes (identical to VolumeEditor / editorUtils)
 function buildThemeChipsHTML(selectedThemes) {
@@ -149,16 +150,18 @@ window._emFilterThemesGlobal = (q) => {
 
 
 const CONTENT_TYPES = [
-  { id: 'volume',        icon: icon('volume', 24),       label: 'Том (комікс)'      },
+  { id: 'volume',        icon: icon('volume', 24),       label: 'Том (Серія)'       },
   { id: 'issue',         icon: icon('issue', 24),        label: 'Випуск'            },
   { id: 'collection',    icon: icon('collection', 24),   label: 'Збірник'           },
-  { id: 'character',     icon: icon('character', 24),    label: 'Персонаж'          },
-  { id: 'essence',       icon: icon('essence', 24),      label: 'Сутність'          },
-  { id: 'reading-order', icon: icon('readingOrder', 24), label: 'Порядок читання'   },
-  { id: 'event',         icon: icon('event', 24),        label: 'Подія'             },
-  { id: 'publisher',     icon: icon('publisher', 24),    label: 'Видавництво'       },
   { id: 'manga-chapter', icon: icon('mangaChapter', 24), label: 'Розділ манґи'      },
+  { id: 'essence',       icon: icon('essence', 24),      label: 'Сутність'          },
+  { id: 'character',     icon: icon('character', 24),    label: 'Персонаж'          },
+  { id: 'person',        icon: icon('user', 24),         label: 'Персона'           },
+  { id: 'publisher',     icon: icon('publisher', 24),    label: 'Видавництво'       },
+  { id: 'event',         icon: icon('event', 24),        label: 'Подія'             },
+  { id: 'reading-order', icon: icon('readingOrder', 24), label: 'Порядок читання'   },
 ];
+
 
 let _modal = null;
 let _currentType = null;
@@ -167,6 +170,178 @@ let _selectedSuggestedThemeIds = new Set();
 let _earthsCache = null;
 let _publishersCache = null;
 let _essencesCache = null;
+const VOLUME_PRESETS_STORAGE_KEY = 'drawn-stories.volume-add-presets.v1';
+
+function getVolumePresets() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(VOLUME_PRESETS_STORAGE_KEY) || '[]');
+    return Array.isArray(stored) ? stored.filter(preset => preset && preset.id && preset.name) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveVolumePresets(presets) {
+  localStorage.setItem(VOLUME_PRESETS_STORAGE_KEY, JSON.stringify(presets));
+}
+
+function getVolumePresetValues(area) {
+  const publisherId = area.querySelector('#gam-volume-publisher-id')?.value || '';
+  const publisherChip = area.querySelector('#gam-volume-publisher-chip .chip');
+  return {
+    start_year: area.querySelector('[name="start_year"]')?.value || '',
+    lang: area.querySelector('[name="lang"]')?.value || '',
+    publisher: publisherId,
+    publisher_name: publisherChip?.textContent.replace('🏢', '').replace('×', '').trim() || '',
+    theme_ids: Array.from(area.querySelectorAll('#themes-list input[type="checkbox"]:checked'))
+      .map(input => Number(input.value))
+      .filter(Number.isInteger),
+  };
+}
+
+function applyVolumePreset(area, preset) {
+  const year = area.querySelector('[name="start_year"]');
+  const lang = area.querySelector('[name="lang"]');
+  if (year) year.value = preset.start_year || '';
+  if (lang) lang.value = preset.lang || '';
+  if (preset.publisher) {
+    window.selectPublisher(
+      'gam-volume-publisher-chip',
+      'gam-volume-publisher-id',
+      'gam-volume-publisher-search',
+      'gam-volume-publisher-results',
+      preset.publisher,
+      preset.publisher_name || `ID: ${preset.publisher}`,
+    );
+  } else {
+    window.clearPublisher('gam-volume-publisher-chip', 'gam-volume-publisher-id', 'gam-volume-publisher-search');
+  }
+
+  const selectedIds = new Set((preset.theme_ids || []).map(Number));
+  area.querySelectorAll('#themes-list input[type="checkbox"]').forEach(input => {
+    input.checked = selectedIds.has(Number(input.value));
+    input.closest('.theme-checkbox-item')?.classList.toggle('theme-checkbox-item--checked', input.checked);
+    input.previousElementSibling?.classList.toggle('theme-cb-box--checked', input.checked);
+  });
+  _selectedSuggestedThemeIds = new Set(selectedIds);
+  window._emThemeChangeGlobal();
+}
+
+function presetSummary(preset) {
+  const themeCount = (preset.theme_ids || []).length;
+  const language = preset.lang ? (LANG_MAP[preset.lang]?.label || preset.lang) : 'мова не вказана';
+  return [preset.start_year || 'рік не вказано', language, preset.publisher_name || (preset.publisher ? `видавець #${preset.publisher}` : 'видавець не вказаний'), `${themeCount} тем`].join(' · ');
+}
+
+function renderVolumePresetPanel(area) {
+  const panel = area.querySelector('#gam-volume-presets');
+  if (!panel) return;
+  const presets = getVolumePresets();
+  panel.innerHTML = `
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+      <div data-preset-list style="display:flex; flex-wrap:wrap; gap:8px;">
+        ${presets.map(preset => `<button type="button" class="chip chip-theme" data-preset-id="${preset.id}" title="${presetSummary(preset)}" style="cursor:pointer; font:inherit;">${icon('tag', 13)} ${preset.name}</button>`).join('')}
+      </div>
+      <button type="button" class="btn-admin btn-admin--secondary" data-preset-action="manage" title="Керувати пресетами" aria-label="Керувати пресетами" style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center; flex:none;">${icon('filter', 16)}</button>
+    </div>
+  `;
+  panel.querySelector('[data-preset-action="manage"]')?.addEventListener('click', () => openVolumePresetManagerModal(area));
+  panel.querySelectorAll('[data-preset-id]').forEach(button => {
+    button.addEventListener('click', () => {
+      const preset = getVolumePresets().find(item => item.id === button.dataset.presetId);
+      if (preset) applyVolumePreset(area, preset);
+    });
+  });
+}
+
+function openVolumePresetManagerModal(area, editingPreset = null) {
+  document.getElementById('gam-volume-presets-modal')?.remove();
+  const presets = getVolumePresets();
+  const preset = editingPreset || { name: '', start_year: '', lang: '', theme_ids: [] };
+  const modal = document.createElement('div');
+  modal.id = 'gam-volume-presets-modal';
+  modal.className = 'ds-modal-overlay';
+  modal.innerHTML = `
+    <div class="ds-modal ds-modal--medium">
+      <div class="ds-modal-header">
+        <div class="ds-modal-title">${icon('tag', 18)} Пресети тому</div>
+        <button class="ds-modal-close" type="button" data-preset-action="close" aria-label="Закрити">&times;</button>
+      </div>
+      <div class="ds-modal-body" style="padding:20px 24px; overflow-y:auto;">
+        <div style="display:flex; gap:8px; margin-bottom:12px;">
+          <button type="button" class="btn-admin btn-admin--secondary" data-preset-action="from-current" title="Створити з поточних значень" aria-label="Створити з поточних значень" style="width:32px; height:32px; padding:0;">${icon('copy', 16)}</button>
+          <button type="button" class="btn-admin btn-admin--secondary" data-preset-action="blank" title="Створити порожній пресет" aria-label="Створити порожній пресет" style="width:32px; height:32px; padding:0;">${icon('plus', 16)}</button>
+        </div>
+        <div data-preset-editor ${editingPreset ? '' : 'style="display:none;"'}></div>
+        <div data-preset-saved-list style="display:${editingPreset ? 'none' : 'grid'}; gap:8px;">
+          ${presets.length ? presets.map(item => `<div style="display:flex; align-items:center; gap:8px; padding:8px; border:1px solid var(--border); border-radius:6px;"><div style="flex:1; min-width:0;"><strong>${item.name}</strong><div style="font-size:.78rem; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${presetSummary(item)}</div></div><button type="button" class="btn-admin btn-admin--secondary" data-preset-edit="${item.id}" title="Редагувати" aria-label="Редагувати" style="width:32px; height:32px; padding:0; flex:none;">${icon('edit', 15)}</button><button type="button" class="btn-admin btn-admin--danger" data-preset-delete="${item.id}" title="Видалити" aria-label="Видалити" style="width:32px; height:32px; padding:0; flex:none;">${icon('trash', 15)}</button></div>`).join('') : '<span style="color:var(--text-muted); font-size:.85rem;">Збережених пресетів ще немає.</span>'}
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  const close = () => modal.remove();
+  modal.addEventListener('click', event => { if (event.target === modal) close(); });
+  modal.querySelector('[data-preset-action="close"]')?.addEventListener('click', close);
+
+  const showEditor = (source) => {
+    const editor = modal.querySelector('[data-preset-editor]');
+    const values = source === 'current' ? getVolumePresetValues(area) : (source || preset);
+    const selected = new Set((values.theme_ids || []).map(Number));
+    editor.style.display = 'grid';
+    modal.querySelector('[data-preset-saved-list]').style.display = 'none';
+    editor.innerHTML = `
+      <input class="admin-input" data-preset-name placeholder="Назва пресету" value="${values.name || ''}">
+      <div class="admin-form-grid" style="margin-top:8px;">
+        <div class="admin-form-group"><label class="admin-label">Рік</label><input type="number" class="admin-input" data-preset-year value="${values.start_year || ''}"></div>
+        <div class="admin-form-group"><label class="admin-label">Мова</label><select class="admin-input" data-preset-lang><option value="">— не вказано</option>${Object.entries(LANG_MAP).map(([code, { flag, label }]) => `<option value="${code}" ${values.lang === code ? 'selected' : ''}>${flag} ${label}</option>`).join('')}</select></div>
+        <div class="admin-form-group admin-form-group--full">${EditorUtils.publisherSearchHTML({ publisherId: values.publisher || '', publisherName: values.publisher_name || '', inputId: 'gam-preset-publisher-search', hiddenId: 'gam-preset-publisher-id', resultsId: 'gam-preset-publisher-results', chipId: 'gam-preset-publisher-chip' })}</div>
+        <div class="admin-form-group admin-form-group--full"><label class="admin-label">Теми</label><select class="admin-input" data-preset-themes multiple size="7">${_allThemes.map(theme => `<option value="${theme.id}" ${selected.has(Number(theme.id)) ? 'selected' : ''}>${theme.ua_name || theme.name}</option>`).join('')}</select></div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:10px;"><button type="button" class="btn-admin btn-admin--primary" data-preset-action="save" title="Зберегти" aria-label="Зберегти" style="width:32px; height:32px; padding:0;">${icon('save', 16)}</button><button type="button" class="btn-admin btn-admin--secondary" data-preset-action="cancel-edit" title="Скасувати" aria-label="Скасувати" style="width:32px; height:32px; padding:0;">${icon('x', 16)}</button></div>
+    `;
+    EditorUtils.initPublisherSearch({
+      inputId: 'gam-preset-publisher-search',
+      hiddenId: 'gam-preset-publisher-id',
+      resultsId: 'gam-preset-publisher-results',
+      chipId: 'gam-preset-publisher-chip',
+      API,
+    });
+    editor.querySelector('[data-preset-action="save"]').addEventListener('click', () => {
+      const name = editor.querySelector('[data-preset-name]').value.trim();
+      if (!name) return;
+      const nextPreset = {
+        id: values.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name,
+        start_year: editor.querySelector('[data-preset-year]').value.trim(),
+        lang: editor.querySelector('[data-preset-lang]').value,
+        publisher: editor.querySelector('#gam-preset-publisher-id').value || '',
+        publisher_name: editor.querySelector('#gam-preset-publisher-chip .chip')?.textContent.replace('🏢', '').replace('×', '').trim() || '',
+        theme_ids: Array.from(editor.querySelector('[data-preset-themes]').selectedOptions).map(option => Number(option.value)),
+      };
+      const updated = getVolumePresets().filter(item => item.id !== nextPreset.id);
+      updated.push(nextPreset);
+      saveVolumePresets(updated);
+      renderVolumePresetPanel(area);
+      openVolumePresetManagerModal(area);
+    });
+    editor.querySelector('[data-preset-action="cancel-edit"]').addEventListener('click', () => openVolumePresetManagerModal(area));
+  };
+
+  modal.querySelector('[data-preset-action="from-current"]')?.addEventListener('click', () => showEditor('current'));
+  modal.querySelector('[data-preset-action="blank"]')?.addEventListener('click', () => showEditor({}));
+  modal.querySelectorAll('[data-preset-edit]').forEach(button => button.addEventListener('click', () => {
+    const selectedPreset = getVolumePresets().find(item => item.id === button.dataset.presetEdit);
+    if (selectedPreset) openVolumePresetManagerModal(area, selectedPreset);
+  }));
+  modal.querySelectorAll('[data-preset-delete]').forEach(button => button.addEventListener('click', () => {
+    saveVolumePresets(getVolumePresets().filter(item => item.id !== button.dataset.presetDelete));
+    renderVolumePresetPanel(area);
+    openVolumePresetManagerModal(area);
+  }));
+
+  if (editingPreset) showEditor(editingPreset);
+}
 
 function slugify(text) {
   if (!text) return '';
@@ -325,6 +500,7 @@ async function selectType(typeId) {
           listEl.innerHTML = buildThemeCheckboxListHTML(_allThemes, _selectedSuggestedThemeIds);
           window._emThemeChangeGlobal();
       }
+      renderVolumePresetPanel(document.getElementById('gam-form-area'));
   }
 }
 
@@ -381,6 +557,7 @@ function imgField(name = 'image', label = 'Обкладинка') {
 const FORMS = {
   'volume': () => `
     <div class="admin-form-grid">
+        <div id="gam-volume-presets" class="admin-form-group admin-form-group--full" style="padding:12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-body);"></div>
         ${fld('Назва тому *', inp('name', 'text', 'The Amazing Spider-Man'), '', true)}
         ${fld('Рік старту', inp('start_year', 'number'))}
         ${fld('Мова видання', `
@@ -389,6 +566,14 @@ const FORMS = {
                 ${Object.entries(LANG_MAP).map(([code, { flag, label }]) => `<option value="${code}">${flag} ${label}</option>`).join('')}
             </select>
         `)}
+        ${EditorUtils.publisherSearchHTML({
+          publisherId: '',
+          publisherName: '',
+          inputId: 'gam-volume-publisher-search',
+          hiddenId: 'gam-volume-publisher-id',
+          resultsId: 'gam-volume-publisher-results',
+          chipId: 'gam-volume-publisher-chip',
+        })}
         ${fld('Теми', `
             <div class="volume-theme-suggestions" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 0.75rem;">
                 <button type="button" class="btn-theme-suggest" data-id="44" style="
@@ -429,11 +614,10 @@ const FORMS = {
   `,
   'collection': () => `
     <div class="admin-form-grid">
-        ${fld('Назва збірника *', inp('name', 'text', 'Vol 1: Great Power'), '', true)}
+        ${fld('Назва збірника', inp('name', 'text', 'Vol 1: Great Power'), '', true)}
         ${fld('Локальний ID тому', inp('volume_id', 'number'), 'ID тому з адресного рядку тому збірника.')}
         ${fld('Порядковий номер', inp('issue_number', 'text', '56 або AB.56'))}
-        ${fld('Дата обкладинки', inp('cover_date', 'date'))}
-        ${fld('Дата релізу', inp('release_date', 'date'))}
+        ${fld('Дата релізу', inp('release_date', 'text', 'YYYY-MM-DD або YYYY-MM'))}
         ${imgField('image')}
     </div>
   `,
@@ -471,7 +655,29 @@ const FORMS = {
         ${imgField('image', 'Зображення / Аватар персонажа')}
     </div>
   `,
+  'person': () => `
+    <div class="admin-form-grid">
+        ${fld('Оригінальне ім\'я *', inp('name', 'text', 'Stan Lee'), '', true)}
+        ${fld('Українське ім\'я', inp('name_uk', 'text', 'Стен Лі'), '', true)}
+        ${fld('Назва мовою оригіналу (Native)', inp('name_native', 'text', 'японська/корейська тощо'))}
+        ${fld('Псевдонім', inp('pseudo', 'text'))}
+        ${fld('Професія / Роль', inp('occupation', 'text', 'Writer, Artist, Editor'), '', true)}
+        ${fld('Дата народження', inp('birth', 'text', 'YYYY-MM-DD'))}
+        ${fld('Місто / Регіон', inp('hometown', 'text'))}
+        ${fld('Країна', inp('country', 'text'))}
+        ${fld('Стать', `
+            <select name="gender" class="admin-input">
+                <option value="">— Не вказано —</option>
+                <option value="1">Чоловіча</option>
+                <option value="2">Жіноча</option>
+            </select>
+        `)}
+        ${fld('Вебсайт', inp('website', 'url'), '', true)}
+        ${imgField('image', 'Фото персони')}
+    </div>
+  `,
   'essence': () => `
+
     <div class="admin-form-grid">
         ${fld('Назва сутності (оригінал) *', inp('essence_name', 'text', 'Spider-Man'), '', true)}
         ${fld('Назва сутності (українською)', inp('essence_name_uk', 'text', 'Людина-Павук'), '', true)}
@@ -516,6 +722,7 @@ const FORMS = {
   'publisher': () => `
     <div class="admin-form-grid">
         ${fld('Назва видавництва *', inp('name'), '', true)}
+        ${fld('Рік заснування', inp('founded_date', 'number'))}
         ${fld('Тип робіт', `
             <select name="work_type" class="admin-input">
                 <option value="comics">Комікси</option>
@@ -530,7 +737,7 @@ const FORMS = {
             </select>
         `)}
         ${fld('Синоніми (через ",")', inp('aliases'), 'Наприклад: DC, DC Comics')}
-        ${fld('Вевсайт', inp('website', 'url'))}
+        ${fld('Вебсайт', inp('website', 'url'))}
         ${imgField('image', 'Логотип видавництва')}
     </div>
   `,
@@ -545,6 +752,15 @@ async function renderForm(typeId) {
   if (typeId === 'character' || typeId === 'essence') {
     await loadDropdownData();
     populateSelects(area);
+  }
+  if (typeId === 'volume') {
+    EditorUtils.initPublisherSearch({
+      inputId: 'gam-volume-publisher-search',
+      hiddenId: 'gam-volume-publisher-id',
+      resultsId: 'gam-volume-publisher-results',
+      chipId: 'gam-volume-publisher-chip',
+      API,
+    });
   }
   if (typeId === 'essence') {
     initSlugAutoGeneration(area);
@@ -704,39 +920,40 @@ async function handleSubmit() {
 
     const result = await submitData(_currentType, data);
 
+    const isPending = result && result.status === 'pending';
+
     status.style.display = 'flex';
     status.style.alignItems = 'center';
     status.style.justifyContent = 'center';
     status.style.gap = '8px';
-    status.style.background = 'rgba(16, 185, 129, 0.1)';
-    status.style.color = '#10b981';
-    status.innerHTML = `${icon('check', 18)} Збережено успішно`;
+    status.style.background = isPending ? 'rgba(234, 179, 8, 0.15)' : 'rgba(16, 185, 129, 0.1)';
+    status.style.color = isPending ? '#eab308' : '#10b981';
+    status.innerHTML = `${icon('check', 18)} ${isPending ? 'Заявку на створення подано на розгляд (+50 б. після схвалення)' : 'Збережено успішно (+50 б.)'}`;
 
     setTimeout(() => {
       let path = null;
-      if (result && (result.id || result.slug)) {
+      if (isPending) {
+        path = `#/edits`;
+      } else if (result && (result.id || result.slug)) {
         if (_currentType === 'volume') path = `#/volumes/${result.id}`;
         else if (_currentType === 'issue' || _currentType === 'manga-chapter') path = `#/issues/${result.id}`;
         else if (_currentType === 'collection') path = `#/collections/${result.id}`;
         else if (_currentType === 'event') path = `#/events/${result.id}`;
         else if (_currentType === 'character') path = `#/characters/${result.id}`;
+        else if (_currentType === 'person') path = `#/personnel/${result.id}`;
+        else if (_currentType === 'publisher') path = `#/publishers/${result.id}`;
         else if (_currentType === 'essence') path = `#/essences/${result.slug || result.id}`;
       }
       
       const typeForRedirect = _currentType;
       closeGlobalAddModal();
 
-      if (result && (result.id || result.slug)) {
-        const supportedTypes = ['volume', 'issue', 'collection', 'event', 'manga-chapter', 'character', 'essence'];
-        if (supportedTypes.includes(typeForRedirect) && path) {
-          window.location.hash = path;
-        } else {
-          window.location.reload();
-        }
+      if (path) {
+        window.location.hash = path;
       } else {
         window.location.reload();
       }
-    }, 1000);
+    }, 1200);
   } catch (err) {
     status.style.display = 'flex';
     status.style.alignItems = 'center';
@@ -775,17 +992,33 @@ function collectFormData(area) {
   return data;
 }
 
-const NUMERIC_FIELDS = ['cv_id', 'cv_vol_id', 'start_year', 'end_year', 'mal_id', 'volume_id'];
+const NUMERIC_FIELDS = ['cv_id', 'cv_vol_id', 'start_year', 'end_year', 'mal_id', 'volume_id', 'publisher', 'pages'];
 
 async function submitData(typeId, data) {
   const typedData = { ...data };
   NUMERIC_FIELDS.forEach(f => { if (typedData[f]) typedData[f] = parseInt(typedData[f]); });
 
+  const EDIT_SUPPORTED_TYPES = ['volume', 'issue', 'collection', 'character', 'person', 'publisher'];
+  if (EDIT_SUPPORTED_TYPES.includes(typeId)) {
+    // Submit via edits system
+    const res = await API.post('/edits', {
+      entity_type: typeId,
+      entity_id: 0,
+      patch_data: typedData,
+      is_creation: true,
+      auto_approve: true,
+      comment: 'Створення нової сутності'
+    });
+    return {
+      id: res.created_entity_id || res.id,
+      status: res.status
+    };
+  }
+
   let endpoint;
   const MAP = {
-    volume: '/volumes', issue: '/issues', collection: '/collections',
-    'reading-order': '/reading-orders', event: '/events', publisher: '/publishers',
-    'manga-chapter': '/issues', character: '/characters', essence: '/essences'
+    'reading-order': '/reading-orders', event: '/events',
+    'manga-chapter': '/issues', essence: '/essences'
   };
   endpoint = MAP[typeId];
 
@@ -795,6 +1028,7 @@ async function submitData(typeId, data) {
 
   return await API.post(endpoint, typedData);
 }
+
 
 export async function openGlobalAddModal(typeId = null, defaultData = null) {
   ensureModal();

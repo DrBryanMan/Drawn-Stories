@@ -102,6 +102,7 @@ const state = {
   sort:        'recent',
   order_dir:   'desc',
   content_type: '',
+  add_source:  'cv',
   page:        1,
   limit:       24,
   counts:      {},        // { volumes: N, ... }
@@ -123,6 +124,12 @@ function readUrlParams() {
   if (params.has('section')) {
     state.section = params.get('section') || 'volumes';
   }
+  if (params.has('source')) {
+    const src = params.get('source');
+    if (src === 'hikka' || src === 'cv') {
+      state.add_source = src;
+    }
+  }
 }
 
 function updateUrlParams() {
@@ -138,6 +145,9 @@ function updateUrlParams() {
   }
   if (state.section) {
     params.set('section', state.section);
+  }
+  if (state.section === 'add' && state.add_source) {
+    params.set('source', state.add_source);
   }
   const queryString = params.toString();
   const newSearch = queryString ? `?${queryString}` : '';
@@ -604,6 +614,155 @@ function renderPagination(container, data) {
 
 // ── Add Panel UI & Events ───────────────────────────────────
 function buildAddPanel(config) {
+  const currentSource = state.add_source || 'cv';
+
+  const cvCards = `
+    <!-- Додати випуск -->
+    <div class="wanted-add-card wanted-add-card--cv" id="card-add-issue">
+      <div class="wanted-add-card-title">
+        ${icon('issues', 18)}
+        Додати випуск (ComicVine)
+      </div>
+      <div class="wanted-add-card-desc">
+        Введіть ComicVine ID випуску. Скрипт завантажить дані з ComicVine API та збереже в базу.
+      </div>
+      <div class="wanted-add-card-row">
+        <input type="number" min="1" class="wanted-add-input" placeholder="CV ID випуску (напр. 306640)" required>
+        <button class="wanted-add-btn">Додати</button>
+      </div>
+      <div class="wanted-add-card-status"></div>
+    </div>
+
+    <!-- Додати том -->
+    <div class="wanted-add-card wanted-add-card--cv" id="card-add-volume">
+      <div class="wanted-add-card-title">
+        ${icon('volumes', 18)}
+        Додати том (ComicVine)
+      </div>
+      <div class="wanted-add-card-desc">
+        Введіть ComicVine ID тому. Скрипт завантажить назву, обкладинку, видавництво та рік початку.
+      </div>
+      <div class="wanted-add-card-row">
+        <input type="number" min="1" class="wanted-add-input" placeholder="CV ID тому (напр. 18138)" required>
+        <button class="wanted-add-btn">Додати</button>
+      </div>
+      <div class="wanted-add-card-status"></div>
+    </div>
+
+    <!-- Всі випуски тому -->
+    <div class="wanted-add-card wanted-add-card--cv" id="card-add-volume-issues">
+      <div class="wanted-add-card-title">
+        ${icon('package', 18)}
+        Всі випуски тому (ComicVine)
+      </div>
+      <div class="wanted-add-card-desc">
+        Завантажить <em>усі</em> випуски вказаного тому. Наявні випуски пропускаються. Може тривати кілька хвилин.
+      </div>
+      <div class="wanted-add-card-row">
+        <input type="number" min="1" class="wanted-add-input" placeholder="CV ID тому (напр. 18138)" required>
+        <button class="wanted-add-btn">Завантажити</button>
+      </div>
+      <div class="wanted-add-card-status"></div>
+    </div>
+
+    <!-- Додати персонажа -->
+    <div class="wanted-add-card wanted-add-card--cv" id="card-add-character">
+      <div class="wanted-add-card-title">
+        ${icon('characters', 18)}
+        Додати персонажа (ComicVine)
+      </div>
+      <div class="wanted-add-card-desc">
+        Введіть ComicVine ID персонажа (напр. <code>1699</code>) або повне посилання.
+      </div>
+      <div class="wanted-add-card-row">
+        <input type="text" class="wanted-add-input" placeholder="ID персонажа або посилання CV" required>
+        <button class="wanted-add-btn">Додати</button>
+      </div>
+      <div class="wanted-add-card-status"></div>
+    </div>
+
+    <!-- Додати персону -->
+    <div class="wanted-add-card wanted-add-card--cv" id="card-add-person">
+      <div class="wanted-add-card-title">
+        ${icon('personnel', 18)}
+        Додати персону / автора (ComicVine)
+      </div>
+      <div class="wanted-add-card-desc">
+        Введіть ComicVine ID персони (напр. <code>3596</code>) або повне посилання.
+      </div>
+      <div class="wanted-add-card-row">
+        <input type="text" class="wanted-add-input" placeholder="ID персони або посилання CV" required>
+        <button class="wanted-add-btn">Додати</button>
+      </div>
+      <div class="wanted-add-card-status"></div>
+    </div>
+
+    <!-- Додати видавництво -->
+    <div class="wanted-add-card wanted-add-card--cv" id="card-add-publisher-volumes">
+      <div class="wanted-add-card-title">
+        ${icon('publishers', 18)}
+        Зв'язати томи видавництва (ComicVine)
+      </div>
+      <div class="wanted-add-card-desc">
+        Введіть ComicVine ID видавництва (напр. <code>4010-6438</code> або просто <code>6438</code>). Скрипт знайде томи видавця на ComicVine та оновить посилання у наявних у базі томах.
+      </div>
+      <div class="wanted-add-card-row">
+        <input type="text" class="wanted-add-input" placeholder="ID видавництва або посилання CV" required>
+        <button class="wanted-add-btn">Оновити томи</button>
+      </div>
+      <div class="wanted-add-card-status"></div>
+    </div>
+  `;
+
+  const hikkaCards = `
+    <!-- Додати манґу -->
+    <div class="wanted-add-card wanted-add-card--hikka" id="card-add-manga">
+      <div class="wanted-add-card-title">
+        ${icon('book', 18)}
+        Додати манґу / манхву (Hikka)
+      </div>
+      <div class="wanted-add-card-desc">
+        Введіть слаґ манґи або повне посилання з Hikka (наприклад, <code>manga-slug</code> або <code>https://hikka.io/manga/manga-slug</code>).
+      </div>
+      <div class="wanted-add-card-row">
+        <input type="text" class="wanted-add-input" placeholder="Слаґ або посилання Hikka" required>
+        <button class="wanted-add-btn">Додати</button>
+      </div>
+      <div class="wanted-add-card-status"></div>
+    </div>
+
+    <!-- Парсер манґи з Hikka -->
+    <div class="wanted-add-card wanted-add-card--hikka" id="card-hikka-manga-parser">
+      <div class="wanted-add-card-title">
+        ${icon('refreshCw', 18)}
+        Парсер манґи з Hikka
+      </div>
+      <div class="wanted-add-card-desc">
+        Імпорт останніх доданих тайтлів або актуалізація статусу онгоінгів (знімає тему онгоїнгу, якщо тайтл вже завершено).
+      </div>
+      <div class="wanted-add-card-row wanted-add-card-row--split">
+        <button class="wanted-add-btn" id="btn-hikka-missing">Парсити останні додані</button>
+        <button class="wanted-add-btn" id="btn-hikka-ongoing">Перевірити онгоінги</button>
+      </div>
+      <div class="wanted-add-card-status"></div>
+    </div>
+
+    <!-- Оновити укр. назви та рейтинги манґи -->
+    <div class="wanted-add-card wanted-add-card--hikka" id="card-update-manga-meta">
+      <div class="wanted-add-card-title">
+        ${icon('refreshCw', 18)}
+        Оновити рейтинги та укр. назви (Hikka / MAL)
+      </div>
+      <div class="wanted-add-card-desc">
+        Оновлює українські назви (<code>name_uk</code>), оцінки Hikka та MAL і кількість голосів для наявних томів манґи.
+      </div>
+      <div class="wanted-add-card-row">
+        <button class="wanted-add-btn wanted-add-btn--full">Запустити оновлення</button>
+      </div>
+      <div class="wanted-add-card-status"></div>
+    </div>
+  `;
+
   return `
     <div class="wanted-section-header">
       <div class="wanted-section-title">
@@ -612,203 +771,91 @@ function buildAddPanel(config) {
       </div>
       <div class="wanted-section-desc">Додавання нових об'єктів до бази даних за допомогою парсерів</div>
     </div>
+
+    <div class="wanted-source-tabs">
+      <button
+        class="wanted-source-tab wanted-source-tab--cv ${currentSource === 'cv' ? 'is-active' : ''}"
+        data-source="cv"
+      >
+        ComicVine
+        <span class="wanted-chip-count">6</span>
+      </button>
+      <button
+        class="wanted-source-tab wanted-source-tab--hikka ${currentSource === 'hikka' ? 'is-active' : ''}"
+        data-source="hikka"
+      >
+        Hikka
+        <span class="wanted-chip-count">3</span>
+      </button>
+    </div>
     
     <div class="wanted-add-panel">
       <div class="wanted-add-grid">
-        
-        <!-- Додати випуск -->
-        <div class="wanted-add-card" id="card-add-issue">
-          <div class="wanted-add-card-title">
-            ${icon('issues', 18)}
-            Додати випуск (ComicVine)
-          </div>
-          <div class="wanted-add-card-desc">
-            Введіть ComicVine ID випуску. Скрипт завантажить дані з ComicVine API та збереже в базу.
-          </div>
-          <div class="wanted-add-card-row">
-            <input type="number" min="1" class="wanted-add-input" placeholder="CV ID випуску (напр. 306640)" required>
-            <button class="wanted-add-btn">Додати</button>
-          </div>
-          <div class="wanted-add-card-status"></div>
-        </div>
-
-        <!-- Додати том -->
-        <div class="wanted-add-card" id="card-add-volume">
-          <div class="wanted-add-card-title">
-            ${icon('volumes', 18)}
-            Додати том (ComicVine)
-          </div>
-          <div class="wanted-add-card-desc">
-            Введіть ComicVine ID тому. Скрипт завантажить назву, обкладинку, видавництво та рік початку.
-          </div>
-          <div class="wanted-add-card-row">
-            <input type="number" min="1" class="wanted-add-input" placeholder="CV ID тому (напр. 18138)" required>
-            <button class="wanted-add-btn">Додати</button>
-          </div>
-          <div class="wanted-add-card-status"></div>
-        </div>
-
-        <!-- Всі випуски тому -->
-        <div class="wanted-add-card" id="card-add-volume-issues">
-          <div class="wanted-add-card-title">
-            ${icon('package', 18)}
-            Всі випуски тому (ComicVine)
-          </div>
-          <div class="wanted-add-card-desc">
-            Завантажить <em>усі</em> випуски вказаного тому. Наявні випуски пропускаються. Може тривати кілька хвилин.
-          </div>
-          <div class="wanted-add-card-row">
-            <input type="number" min="1" class="wanted-add-input" placeholder="CV ID тому (напр. 18138)" required>
-            <button class="wanted-add-btn">Завантажити</button>
-          </div>
-          <div class="wanted-add-card-status"></div>
-        </div>
-
-        <!-- Додати манґу -->
-        <div class="wanted-add-card" id="card-add-manga">
-          <div class="wanted-add-card-title">
-            ${icon('book', 18)}
-            Додати манґу / манхву (Hikka)
-          </div>
-          <div class="wanted-add-card-desc">
-            Введіть слаґ манґи або повне посилання з Hikka (наприклад, <code>manga-slug</code> або <code>https://hikka.io/manga/manga-slug</code>).
-          </div>
-          <div class="wanted-add-card-row">
-            <input type="text" class="wanted-add-input" placeholder="Слаґ або посилання Hikka" required>
-            <button class="wanted-add-btn">Додати</button>
-          </div>
-          <div class="wanted-add-card-status"></div>
-        </div>
-
-        <!-- Додати персонажа -->
-        <div class="wanted-add-card" id="card-add-character">
-          <div class="wanted-add-card-title">
-            ${icon('characters', 18)}
-            Додати персонажа (ComicVine)
-          </div>
-          <div class="wanted-add-card-desc">
-            Введіть ComicVine ID персонажа (напр. <code>1699</code>) або повне посилання.
-          </div>
-          <div class="wanted-add-card-row">
-            <input type="text" class="wanted-add-input" placeholder="ID персонажа або посилання CV" required>
-            <button class="wanted-add-btn">Додати</button>
-          </div>
-          <div class="wanted-add-card-status"></div>
-        </div>
-
-        <!-- Додати персону -->
-        <div class="wanted-add-card" id="card-add-person">
-          <div class="wanted-add-card-title">
-            ${icon('personnel', 18)}
-            Додати персону / автора (ComicVine)
-          </div>
-          <div class="wanted-add-card-desc">
-            Введіть ComicVine ID персони (напр. <code>3596</code>) або повне посилання.
-          </div>
-          <div class="wanted-add-card-row">
-            <input type="text" class="wanted-add-input" placeholder="ID персони або посилання CV" required>
-            <button class="wanted-add-btn">Додати</button>
-          </div>
-          <div class="wanted-add-card-status"></div>
-        </div>
-
-        <!-- Додати видавництво -->
-        <div class="wanted-add-card" id="card-add-publisher-volumes">
-          <div class="wanted-add-card-title">
-            ${icon('publishers', 18)}
-            Зв'язати томи видавництва (ComicVine)
-          </div>
-          <div class="wanted-add-card-desc">
-            Введіть ComicVine ID видавництва (напр. <code>4010-6438</code> або просто <code>6438</code>). Скрипт знайде томи видавця на ComicVine та оновить посилання у наявних у базі томах.
-          </div>
-          <div class="wanted-add-card-row">
-            <input type="text" class="wanted-add-input" placeholder="ID видавництва або посилання CV" required>
-            <button class="wanted-add-btn">Оновити томи</button>
-          </div>
-          <div class="wanted-add-card-status"></div>
-        </div>
-
-        <!-- Парсер манґи з Hikka -->
-        <div class="wanted-add-card" id="card-hikka-manga-parser">
-          <div class="wanted-add-card-title">
-            ${icon('refreshCw', 18)}
-            Парсер манґи з Hikka
-          </div>
-          <div class="wanted-add-card-desc">
-            Імпорт останніх доданих тайтлів або актуалізація статусу онгоінгів (знімає тему онгоїнгу, якщо тайтл вже завершено).
-          </div>
-          <div class="wanted-add-card-row" style="display: flex; gap: 8px;">
-            <button class="wanted-add-btn" id="btn-hikka-missing" style="flex: 1;">Парсити останні додані</button>
-            <button class="wanted-add-btn" id="btn-hikka-ongoing" style="flex: 1;">Перевірити онгоінги</button>
-          </div>
-          <div class="wanted-add-card-status"></div>
-        </div>
-
-        <!-- Оновити укр. назви та рейтинги манґи -->
-        <div class="wanted-add-card" id="card-update-manga-meta">
-          <div class="wanted-add-card-title">
-            ${icon('refreshCw', 18)}
-            Оновити рейтинги та укр. назви (Hikka / MAL)
-          </div>
-          <div class="wanted-add-card-desc">
-            Оновлює українські назви (<code>name_uk</code>), оцінки Hikka та MAL і кількість голосів для наявних томів манґи.
-          </div>
-          <div class="wanted-add-card-row">
-            <button class="wanted-add-btn" style="width: 100%;">Запустити оновлення</button>
-          </div>
-          <div class="wanted-add-card-status"></div>
-        </div>
-
+        ${currentSource === 'cv' ? cvCards : hikkaCards}
       </div>
     </div>
   `;
 }
 
 function attachAddPanelEvents(content) {
-  setupCardOp(content, '#card-add-issue', '/parser/add-issue', (val) => ({ cv_id: parseInt(val, 10) }));
-  setupCardOp(content, '#card-add-volume', '/parser/add-volume', (val) => ({ cv_id: parseInt(val, 10) }));
-  setupCardOp(content, '#card-add-volume-issues', '/parser/add-volume-issues', (val) => ({ cv_vol_id: parseInt(val, 10) }));
-  setupCardOp(content, '#card-add-manga', '/parser/add-manga', (val) => ({ slug: val }));
-  setupCardOp(content, '#card-add-character', '/parser/add-character', (val) => ({ slug: val }));
-  setupCardOp(content, '#card-add-person', '/parser/add-person', (val) => ({ slug: val }));
-  setupCardOp(content, '#card-add-publisher-volumes', '/parser/add-publisher-volumes', (val) => {
-    // extract numeric id if it's a link or slug
-    const match = val.match(/(?:4010-)?(\d+)/);
-    const id = match ? parseInt(match[1], 10) : parseInt(val, 10);
-    return { cv_id: id };
+  content.querySelectorAll('.wanted-source-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const src = tab.dataset.source;
+      if (src === state.add_source) return;
+      state.add_source = src;
+      updateUrlParams();
+      const sectionConfig = SECTIONS.find(s => s.key === 'add');
+      content.innerHTML = buildAddPanel(sectionConfig);
+      attachAddPanelEvents(content);
+    });
   });
 
-  const hikkaMissingBtn = content.querySelector('#btn-hikka-missing');
-  if (hikkaMissingBtn) {
-    hikkaMissingBtn.addEventListener('click', () => {
-      openTerminalLogModal({
-        title: 'Парсинг останніх доданих тайтлів з Hikka',
-        sseUrl: '/api/parser/stream/hikka-manga/missing',
-        autoReload: false
-      });
+  if (state.add_source === 'cv') {
+    setupCardOp(content, '#card-add-issue', '/parser/add-issue', (val) => ({ cv_id: parseInt(val, 10) }));
+    setupCardOp(content, '#card-add-volume', '/parser/add-volume', (val) => ({ cv_id: parseInt(val, 10) }));
+    setupCardOp(content, '#card-add-volume-issues', '/parser/add-volume-issues', (val) => ({ cv_vol_id: parseInt(val, 10) }));
+    setupCardOp(content, '#card-add-character', '/parser/add-character', (val) => ({ slug: val }));
+    setupCardOp(content, '#card-add-person', '/parser/add-person', (val) => ({ slug: val }));
+    setupCardOp(content, '#card-add-publisher-volumes', '/parser/add-publisher-volumes', (val) => {
+      const match = val.match(/(?:4010-)?(\d+)/);
+      const id = match ? parseInt(match[1], 10) : parseInt(val, 10);
+      return { cv_id: id };
     });
-  }
+  } else if (state.add_source === 'hikka') {
+    setupCardOp(content, '#card-add-manga', '/parser/add-manga', (val) => ({ slug: val }));
 
-  const hikkaOngoingBtn = content.querySelector('#btn-hikka-ongoing');
-  if (hikkaOngoingBtn) {
-    hikkaOngoingBtn.addEventListener('click', () => {
-      openTerminalLogModal({
-        title: 'Перевірка онгоінгів з Hikka',
-        sseUrl: '/api/parser/stream/hikka-manga/ongoing',
-        autoReload: false
+    const hikkaMissingBtn = content.querySelector('#btn-hikka-missing');
+    if (hikkaMissingBtn) {
+      hikkaMissingBtn.addEventListener('click', () => {
+        openTerminalLogModal({
+          title: 'Парсинг останніх доданих тайтлів з Hikka',
+          sseUrl: '/api/parser/stream/hikka-manga/missing',
+          autoReload: false
+        });
       });
-    });
-  }
+    }
 
-  const updateMangaBtn = content.querySelector('#card-update-manga-meta .wanted-add-btn');
-  if (updateMangaBtn) {
-    updateMangaBtn.addEventListener('click', () => {
-      openTerminalLogModal({
-        title: 'Оновлення оцінок та назв манґи (Hikka / MAL)',
-        sseUrl: '/api/parser/stream/update-manga-meta',
-        autoReload: false
+    const hikkaOngoingBtn = content.querySelector('#btn-hikka-ongoing');
+    if (hikkaOngoingBtn) {
+      hikkaOngoingBtn.addEventListener('click', () => {
+        openTerminalLogModal({
+          title: 'Перевірка онгоінгів з Hikka',
+          sseUrl: '/api/parser/stream/hikka-manga/ongoing',
+          autoReload: false
+        });
       });
-    });
+    }
+
+    const updateMangaBtn = content.querySelector('#card-update-manga-meta .wanted-add-btn');
+    if (updateMangaBtn) {
+      updateMangaBtn.addEventListener('click', () => {
+        openTerminalLogModal({
+          title: 'Оновлення оцінок та назв манґи (Hikka / MAL)',
+          sseUrl: '/api/parser/stream/update-manga-meta',
+          autoReload: false
+        });
+      });
+    }
   }
 }
 

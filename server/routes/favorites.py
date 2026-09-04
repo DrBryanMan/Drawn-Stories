@@ -7,7 +7,7 @@ router = APIRouter(prefix="/api/user/favorites", tags=["favorites"])
 async def get_user_favorites(username: str):
     db = get_db()
     
-    user = db.get_one("SELECT id FROM users WHERE username = %s", [username])
+    user = db.get_one("SELECT id FROM users WHERE LOWER(nickname) = LOWER(%s) OR LOWER(login) = LOWER(%s)", [username, username])
     if not user:
         raise HTTPException(status_code=404, detail="Користувача не знайдено")
     

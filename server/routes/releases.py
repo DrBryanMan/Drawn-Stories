@@ -84,8 +84,8 @@ async def get_releases_calendar(
                 TRUE as is_collection,
                 c.name,
                 c.issue_number,
-                COALESCE(c.release_date, c.cover_date) as release_date,
-                c.cover_date,
+                c.release_date,
+                NULL as cover_date,
                 c.image,
                 c.volume_id,
                 v.name as volume_name,
@@ -99,8 +99,8 @@ async def get_releases_calendar(
             FROM collections c
             LEFT JOIN volumes v ON c.volume_id = v.id
             LEFT JOIN publishers p ON p.id = COALESCE(c.publisher, v.publisher)
-            WHERE COALESCE(c.release_date, c.cover_date) >= %s 
-              AND COALESCE(c.release_date, c.cover_date) <= %s
+            WHERE c.release_date >= %s 
+              AND c.release_date <= %s
         """
         params = [start_date, end_date]
 
@@ -119,7 +119,7 @@ async def get_releases_calendar(
                 WHERE vt.volume_id = v.id AND vt.theme_id IN ({asian_ids_sql})
             )"""
 
-        sql += " ORDER BY COALESCE(c.release_date, c.cover_date) ASC, c.name ASC"
+        sql += " ORDER BY c.release_date ASC, c.name ASC"
         results = db.get_all(sql, params)
 
     # Форматуємо результат

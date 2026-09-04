@@ -120,9 +120,9 @@ export async function renderMangaChapterDetail(main, params = {}) {
 
     // ── Badges ────────────────────────────────────
     const volumeBadge = chapter.volume_id
-        ? `<a href="#/volumes/${chapter.volume_id}" class="volume-badge volume-series-badge" title="${t('series')}">
+        ? `<a href="#/volumes/${chapter.volume_id}" class="volume-badge volume-series-badge" title="${t('series')}: ${escapeHtmlAttribute(volName || t('series'))}">
                ${icon('book', 13, { strokeWidth: 2.2 })}
-               ${escapeHtmlAttribute(volName || t('series'))}
+               <span>${escapeHtmlAttribute(volName || t('series'))}</span>
            </a>`
         : '';
 

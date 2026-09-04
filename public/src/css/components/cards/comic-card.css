@@ -70,6 +70,29 @@
   background: color-mix(in srgb, var(--source-cv) 75%, rgba(15, 23, 42, .4));
 }
 
+.comic-source-badge--verification {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+}
+
+.comic-source-badge--verification.volume-status-unverified {
+  background: color-mix(in srgb, var(--red, #dc2626) 75%, rgba(15, 23, 42, .4));
+}
+
+.comic-source-badge--verification.volume-status-open-sources {
+  background: color-mix(in srgb, var(--orange, #c2410c) 75%, rgba(15, 23, 42, .4));
+}
+
+.comic-source-badge--verification.volume-status-physical {
+  background: color-mix(in srgb, var(--green, #0d9e5e) 75%, rgba(15, 23, 42, .4));
+}
+
+.comic-source-badge--verification.volume-status-announced {
+  background: color-mix(in srgb, var(--text-muted) 75%, rgba(15, 23, 42, .4));
+}
+
 .comic-stat-badge {
   position: absolute;
   bottom: 8px;
